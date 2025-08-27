@@ -7,7 +7,7 @@ const GUEST_USER_ID = "guest-user";
 // Store paused messages (for when streaming is stopped)
 export const storePausedMessages = mutation({
   args: {
-    chatId: v.id("chats"),
+    chatUuid: v.string(),
     responseMessage: v.object({
       id: v.string(),
       role: v.string(),
@@ -17,6 +17,15 @@ export const storePausedMessages = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    const chat = await ctx.db
+      .query("chats")
+      .withIndex("by_uuid", (q) => q.eq("uuid", args.chatUuid))
+      .unique();
+    
+    if (!chat) {
+      throw new Error("Chat not found");
+    }
+    
     const annotations = [
       {
         hasStopped: true,
@@ -25,7 +34,7 @@ export const storePausedMessages = mutation({
     ];
 
     await ctx.db.insert("messages", {
-      chatId: args.chatId,
+      chatId: chat._id,
       role: args.responseMessage.role,
       parts: args.responseMessage.parts,
       annotations,
@@ -39,6 +48,7 @@ export const storePausedMessages = mutation({
 export const createOrGetChat = mutation({
   args: {
     title: v.string(),
+    uuid: v.optional(v.string()),
   },
   returns: v.id("chats"),
   handler: async (ctx, args) => {
@@ -57,11 +67,15 @@ export const createOrGetChat = mutation({
       return existingChats[0]._id;
     }
 
+    // Generate UUID if not provided
+    const chatUuid = args.uuid || crypto.randomUUID();
+
     // Create new chat
     return await ctx.db.insert("chats", {
       title: args.title,
       userId: GUEST_USER_ID,
       pinned: false,
+      uuid: chatUuid,
     });
   },
 });

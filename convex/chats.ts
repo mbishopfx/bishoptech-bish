@@ -8,13 +8,18 @@ const GUEST_USER_ID = "guest-user";
 export const createChat = mutation({
   args: {
     title: v.string(),
+    uuid: v.optional(v.string()),
   },
   returns: v.id("chats"),
   handler: async (ctx, args) => {
+    // Generate UUID if not provided
+    const chatUuid = args.uuid || crypto.randomUUID();
+    
     return await ctx.db.insert("chats", {
       title: args.title,
       userId: GUEST_USER_ID,
       pinned: false,
+      uuid: chatUuid,
     });
   },
 });
@@ -22,14 +27,23 @@ export const createChat = mutation({
 // Delete a chat
 export const deleteChat = mutation({
   args: {
-    id: v.id("chats"),
+    uuid: v.string(),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    const chat = await ctx.db
+      .query("chats")
+      .withIndex("by_uuid", (q) => q.eq("uuid", args.uuid))
+      .unique();
+    
+    if (!chat) {
+      throw new Error("Chat not found");
+    }
+    
     // Delete all messages in the chat first
     const messages = await ctx.db
       .query("messages")
-      .withIndex("by_chat", (q) => q.eq("chatId", args.id))
+      .withIndex("by_chat", (q) => q.eq("chatId", chat._id))
       .collect();
     
     for (const message of messages) {
@@ -37,7 +51,7 @@ export const deleteChat = mutation({
     }
     
     // Delete the chat
-    await ctx.db.delete(args.id);
+    await ctx.db.delete(chat._id);
     return null;
   },
 });
@@ -45,7 +59,7 @@ export const deleteChat = mutation({
 // Get a chat by ID
 export const getChatById = query({
   args: {
-    id: v.id("chats"),
+    uuid: v.string(),
   },
   returns: v.union(
     v.object({
@@ -54,11 +68,18 @@ export const getChatById = query({
       title: v.string(),
       userId: v.string(),
       pinned: v.boolean(),
+      uuid: v.string(),
     }),
     v.null()
   ),
   handler: async (ctx, args) => {
-    return await ctx.db.get(args.id);
+    // Query by UUID field instead of using the Convex ID
+    const chats = await ctx.db
+      .query("chats")
+      .withIndex("by_uuid", (q) => q.eq("uuid", args.uuid))
+      .collect();
+    
+    return chats.length > 0 ? chats[0] : null;
   },
 });
 
@@ -74,6 +95,7 @@ export const getChatHistory = query({
       title: v.string(),
       userId: v.string(),
       pinned: v.boolean(),
+      uuid: v.string(),
     })
   ),
   handler: async (ctx, args) => {
@@ -88,16 +110,20 @@ export const getChatHistory = query({
 // Toggle chat pin status
 export const toggleChatPin = mutation({
   args: {
-    id: v.id("chats"),
+    uuid: v.string(),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const chat = await ctx.db.get(args.id);
+    const chat = await ctx.db
+      .query("chats")
+      .withIndex("by_uuid", (q) => q.eq("uuid", args.uuid))
+      .unique();
+    
     if (!chat) {
       throw new Error("Chat not found");
     }
     
-    await ctx.db.patch(args.id, {
+    await ctx.db.patch(chat._id, {
       pinned: !chat.pinned,
     });
     return null;

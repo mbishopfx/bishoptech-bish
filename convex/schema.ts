@@ -6,7 +6,8 @@ export default defineSchema({
     title: v.string(),
     userId: v.string(),
     pinned: v.boolean(),
-  }).index("by_user", ["userId"]),
+    uuid: v.string(), // Add UUID field for external references
+  }).index("by_user", ["userId"]).index("by_uuid", ["uuid"]),
 
   messages: defineTable({
     chatId: v.id("chats"),

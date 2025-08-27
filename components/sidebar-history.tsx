@@ -3,6 +3,7 @@
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import ChatList from "./chat-list";
+import { ConvexChat } from "@/lib/utils";
 
 // Use a default guest user ID for all users since we removed authentication
 const GUEST_USER_ID = "guest-user";
@@ -18,14 +19,6 @@ export default function SidebarHistory() {
     return <div>Loading chat history...</div>;
   }
 
-  // Transform Convex data to match the expected format
-  const transformedChats = chatHistory.map(chat => ({
-    id: chat._id,
-    title: chat.title,
-    userId: chat.userId,
-    pinned: chat.pinned,
-    createdAt: new Date(chat._creationTime),
-  }));
-
-  return <ChatList chats={transformedChats} />;
+  // The chatHistory already has the correct ConvexChat structure
+  return <ChatList chats={chatHistory} />;
 }

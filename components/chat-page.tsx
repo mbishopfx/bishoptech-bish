@@ -13,13 +13,16 @@ interface ChatPageProps {
 
 export default function ChatPage({ id }: ChatPageProps) {
   // Load chat data
-  const chat = useQuery(api.chats.getChatById, { id: id as Id<"chats"> });
+  const chat = useQuery(api.chats.getChatById, { uuid: id });
   
-  // Load messages
-  const messages = useQuery(api.messages.getMessagesByChatId, { chatId: id as Id<"chats"> });
+  // Load messages - we need to get the Convex ID first, then query messages
+  const messages = useQuery(
+    api.messages.getMessagesByChatId, 
+    chat?._id ? { chatId: chat._id } : "skip"
+  );
 
   // Handle loading states
-  if (chat === undefined || messages === undefined) {
+  if (chat === undefined || (chat && messages === undefined)) {
     return (
       <div className="relative mx-auto flex h-full w-full max-w-3xl flex-col px-2 pt-14">
         <div className="flex items-center justify-center h-full">

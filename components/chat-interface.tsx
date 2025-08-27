@@ -208,7 +208,7 @@ export default function ChatInterface({
     try {
       if (lastMessage.role === "assistant") {
         await storePausedMessagesMutation({
-          chatId: id as Id<"chats">,
+          chatUuid: id,
           responseMessage: {
             id: lastMessage.id,
             role: "assistant",

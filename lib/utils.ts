@@ -1,4 +1,3 @@
-import { Chat } from "@/server/db/schema";
 import { CoreAssistantMessage, CoreToolMessage } from "ai";
 import { clsx, type ClassValue } from "clsx";
 import { isToday, isYesterday, subMonths, subWeeks } from "date-fns";
@@ -31,28 +30,38 @@ export function generateUUID(): string {
   });
 }
 
-export type GroupedChats = {
-  today: Chat[];
-  yesterday: Chat[];
-  lastWeek: Chat[];
-  lastMonth: Chat[];
-  older: Chat[];
+// Define Convex chat type for grouping
+export type ConvexChat = {
+  _id: string;
+  _creationTime: number;
+  title: string;
+  userId: string;
+  pinned: boolean;
+  uuid: string;
 };
 
-export const groupChatsByDate = (chats: Chat[]): GroupedChats => {
+export type GroupedChats = {
+  today: ConvexChat[];
+  yesterday: ConvexChat[];
+  lastWeek: ConvexChat[];
+  lastMonth: ConvexChat[];
+  older: ConvexChat[];
+};
+
+export const groupChatsByDate = (chats: ConvexChat[]): GroupedChats => {
   const now = new Date();
   const oneWeekAgo = subWeeks(now, 1);
   const oneMonthAgo = subMonths(now, 1);
 
   const sortedChats = chats.sort((a, b) => {
-    const aDate = new Date(a.createdAt);
-    const bDate = new Date(b.createdAt);
+    const aDate = new Date(a._creationTime);
+    const bDate = new Date(b._creationTime);
     return bDate.getTime() - aDate.getTime();
   });
 
   return sortedChats.reduce(
     (groups, chat) => {
-      const chatDate = new Date(chat.createdAt);
+      const chatDate = new Date(chat._creationTime);
 
       if (isToday(chatDate)) {
         groups.today.push(chat);

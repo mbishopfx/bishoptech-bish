@@ -6,17 +6,8 @@ import { useOptimistic, startTransition } from "react";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
-import { groupChatsByDate } from "@/lib/utils";
+import { groupChatsByDate, ConvexChat } from "@/lib/utils";
 import PinChatButton from "./pin-chat-button";
-
-// Define the chat type that matches Convex data
-interface ConvexChat {
-  id: string;
-  title: string;
-  userId: string;
-  pinned: boolean;
-  createdAt: Date;
-}
 
 export default function ChatList({ chats }: { chats: ConvexChat[] }) {
   // Convex mutations
@@ -33,10 +24,10 @@ export default function ChatList({ chats }: { chats: ConvexChat[] }) {
       action: { type: "delete" | "toggle"; chatId: string; chat?: ConvexChat },
     ) => {
       if (action.type === "delete") {
-        return currentHistory.filter((chat) => chat.id !== action.chatId);
+        return currentHistory.filter((chat) => chat.uuid !== action.chatId);
       } else if (action.type === "toggle" && action.chat) {
         // Pin operation: remove from unpinned list
-        return currentHistory.filter((chat) => chat.id !== action.chatId);
+        return currentHistory.filter((chat) => chat.uuid !== action.chatId);
       }
       return currentHistory;
     },
@@ -49,14 +40,14 @@ export default function ChatList({ chats }: { chats: ConvexChat[] }) {
       action: { type: "delete" | "toggle"; chatId: string; chat?: ConvexChat },
     ) => {
       if (action.type === "delete") {
-        return currentPinnedChats.filter((chat) => chat.id !== action.chatId);
+        return currentPinnedChats.filter((chat) => chat.uuid !== action.chatId);
       } else if (action.type === "toggle" && action.chat) {
         const existingChat = currentPinnedChats.find(
-          (c) => c.id === action.chatId,
+          (c) => c.uuid === action.chatId,
         );
         if (existingChat) {
           // Unpin operation: remove from pinned list
-          return currentPinnedChats.filter((chat) => chat.id !== action.chatId);
+          return currentPinnedChats.filter((chat) => chat.uuid !== action.chatId);
         } else {
           // Pin operation: add to pinned list
           return [...currentPinnedChats, { ...action.chat, pinned: true }];
@@ -74,7 +65,7 @@ export default function ChatList({ chats }: { chats: ConvexChat[] }) {
     });
 
     try {
-      await deleteChatMutation({ id: chatId as Id<"chats"> });
+      await deleteChatMutation({ uuid: chatId });
     } catch (error) {
       console.error("Failed to delete chat:", error);
       // Revert optimistic updates on error
@@ -84,7 +75,7 @@ export default function ChatList({ chats }: { chats: ConvexChat[] }) {
 
   const pinChatById = async (chatId: string) => {
     const chatToToggle = [...pinnedChats, ...unpinnedChats].find(
-      (c) => c.id === chatId,
+      (c) => c.uuid === chatId,
     );
     if (!chatToToggle) return;
 
@@ -94,7 +85,7 @@ export default function ChatList({ chats }: { chats: ConvexChat[] }) {
     });
 
     try {
-      await toggleChatPinMutation({ id: chatId as Id<"chats"> });
+      await toggleChatPinMutation({ uuid: chatId });
     } catch (error) {
       console.error("Failed to toggle chat pin:", error);
       // Revert optimistic updates on error
@@ -115,25 +106,25 @@ export default function ChatList({ chats }: { chats: ConvexChat[] }) {
           <ul className="flex flex-col gap-1">
             {optimisticPinnedChats.map((chat) => (
               <li
-                key={chat.id}
+                key={chat.uuid}
                 className="hover:bg-sidebar-border-light group/item relative flex items-center overflow-hidden rounded-lg text-sm"
               >
                 <Link
                   className="text-sidebar-link block h-9 flex-1 truncate px-2 py-2"
-                  href={`/chat/${chat.id}`}
+                  href={`/chat/${chat.uuid}`}
                 >
                   {chat.title}
                 </Link>
                 <div className="absolute right-1 flex translate-x-full items-center transition-transform duration-150 group-focus-within/item:hidden group-focus-within/item:translate-x-0 group-hover/item:translate-x-0">
                   <PinChatButton
-                    chatId={chat.id}
+                    chatId={chat.uuid}
                     isPinned={chat.pinned}
                     onPin={pinChatById}
                   />
                   <DeleteChatDialog
                     onDelete={deleteChatById}
                     title={chat.title}
-                    chatId={chat.id}
+                    chatId={chat.uuid}
                   />
                 </div>
               </li>
@@ -152,25 +143,25 @@ export default function ChatList({ chats }: { chats: ConvexChat[] }) {
               <ul className="flex flex-col gap-1">
                 {chats.map((chat) => (
                   <li
-                    key={chat.id}
+                    key={chat.uuid}
                     className="hover:bg-sidebar-border-light group/item relative flex items-center overflow-hidden rounded-lg text-sm"
                   >
                     <Link
                       className="text-sidebar-link block h-9 flex-1 truncate px-2 py-2"
-                      href={`/chat/${chat.id}`}
+                      href={`/chat/${chat.uuid}`}
                     >
                       {chat.title}
                     </Link>
                     <div className="absolute right-1 flex translate-x-full items-center transition-transform duration-150 group-focus-within/item:hidden group-focus-within/item:translate-x-0 group-hover/item:translate-x-0">
                       <PinChatButton
-                        chatId={chat.id}
+                        chatId={chat.uuid}
                         isPinned={chat.pinned}
                         onPin={pinChatById}
                       />
                       <DeleteChatDialog
                         onDelete={deleteChatById}
                         title={chat.title}
-                        chatId={chat.id}
+                        chatId={chat.uuid}
                       />
                     </div>
                   </li>
