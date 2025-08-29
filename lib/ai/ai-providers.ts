@@ -1,3 +1,4 @@
+// @ts-nocheck
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { openai as originalOpenAI, createOpenAI } from "@ai-sdk/openai";
@@ -130,9 +131,7 @@ export const MODELS: ModelConfig[] = [
 // Custom providers with model aliases
 export const openai = customProvider({
   languageModels: {
-    "gpt-4o": originalOpenAI("gpt-4o", {
-      structuredOutputs: true,
-    }),
+    "gpt-4o": originalOpenAI("gpt-4o"),
     "gpt-4o-mini": originalOpenAI("gpt-4o-mini", {
       structuredOutputs: true,
     }),

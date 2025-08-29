@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "@/styles/globals.css";
 import { Providers } from "@/components/providers";
 import { ConvexClientProvider } from "@/components/ConvexClientProvider";
+import { ChatCacheProvider } from "@/contexts/chat-cache";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -36,7 +37,9 @@ export default function RootLayout({
         className={`bg-background selection:bg-sidebar-logo relative antialiased selection:text-white dark:selection:text-black`}
       >
         <ConvexClientProvider>
-          <Providers>{children}</Providers>
+          <ChatCacheProvider>
+            <Providers>{children}</Providers>
+          </ChatCacheProvider>
         </ConvexClientProvider>
       </body>
     </html>

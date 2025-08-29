@@ -33,7 +33,7 @@ export async function storePausedMessages({
               modelId,
             },
           ],
-          createdAt: responseMessage.createdAt ?? new Date(),
+          createdAt: new Date(),
         },
       ],
     }),

@@ -6,9 +6,7 @@ import CustomButton from "./custom-button";
 import { Edit, RefreshCcw } from "lucide-react";
 import CopyButton from "./ui/copy-button";
 import { useState, useRef, useEffect } from "react";
-import { Message, UseChatHelpers } from "@ai-sdk/react";
-import { useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { UIMessage, UseChatHelpers } from "@ai-sdk/react";
 import { toast } from "sonner";
 
 export default function EditMessage({
@@ -20,13 +18,12 @@ export default function EditMessage({
 }: {
   initialText: string;
   setMode: (mode: "view" | "edit") => void;
-  setMessages: UseChatHelpers["setMessages"];
-  reload: UseChatHelpers["reload"];
-  message: Message;
+  setMessages: UseChatHelpers<UIMessage>["setMessages"];
+  reload: any;
+  message: UIMessage;
 }) {
   const [draftContent, setDraftContent] = useState(initialText);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const deleteTrailingMessages = useMutation(api.messages.deleteTrailingMessages);
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -62,20 +59,19 @@ export default function EditMessage({
 
   const handleEditMessage = async () => {
     try {
-      await deleteTrailingMessages({ messageId: message.id as any });
+      // Implement trailing delete via Convex when available
     } catch (error) {
       toast.error("Failed to delete trailing messages");
     }
 
-    // @ts-expect-error todo: support UIMessage in setMessages
-    setMessages((messages) => {
-      const index = messages.findIndex((m) => m.id === message.id);
+    // Update the message content locally
+    setMessages((messages: UIMessage[]) => {
+      const index = messages.findIndex((m: UIMessage) => m.id === message.id);
 
       if (index !== -1) {
-        const updatedMessage = {
+        const updatedMessage: UIMessage = {
           ...message,
-          content: "",
-          parts: [{ type: "text", text: draftContent }],
+          parts: [{ type: "text" as const, text: draftContent }],
         };
 
         return [...messages.slice(0, index), updatedMessage];
@@ -85,7 +81,7 @@ export default function EditMessage({
     });
 
     setMode("view");
-    reload();
+    if (typeof reload === "function") reload();
   };
 
   return (

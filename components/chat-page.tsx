@@ -5,7 +5,7 @@ import { api } from "@/convex/_generated/api";
 import ChatInterface from "@/components/chat-interface";
 import ErrorMessage from "@/components/error-message";
 import { UIMessage } from "ai";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Authenticated, Unauthenticated } from "convex/react";
 import { ChatInputContainer } from "@/components/chat-input-container";
 import { useMutation } from "convex/react";
@@ -13,6 +13,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useModel } from "@/contexts/model-context";
 import { generateUUID } from "@/lib/utils";
 import { toast } from "sonner";
+import { useChatCache } from "@/contexts/chat-cache";
 
 interface ChatPageProps {
   id: string;
@@ -92,8 +93,17 @@ function ChatInput() {
 }
 
 function Content({ id }: ChatPageProps) {
-  // Load thread info
-  const threadInfo = useQuery(api.threads.getThreadInfo, { threadId: id });
+  const { getMessages, setMessages, getThreadInfo } = useChatCache();
+
+  // Read from cache first for instant UI
+  const cachedMessages = getMessages(id);
+  const cachedInfo = getThreadInfo(id);
+
+  // Skip thread info query if preloaded in cache
+  const threadInfo = useQuery(
+    api.threads.getThreadInfo,
+    cachedInfo ? "skip" : { threadId: id }
+  );
 
   // Load messages with pagination (newest first)
   const { results, status, loadMore } = usePaginatedQuery(
@@ -121,19 +131,45 @@ function Content({ id }: ChatPageProps) {
     };
   }, [status, loadMore]);
 
-  // Handle loading states - queries will return undefined until authentication is complete
-  if (threadInfo === undefined || results === undefined) {
+  // When results arrive, sync cache
+  useEffect(() => {
+    if (!results) return;
+    const msgs = (results as Array<ConvexMessage>)
+      .slice()
+      .reverse()
+      .map((m) => ({
+        id: m.messageId,
+        role: m.role,
+        parts: [{ type: "text" as const, text: m.content }],
+      }));
+    setMessages(id, msgs);
+  }, [results, id, setMessages]);
+
+  const initialMessages = useMemo(() => {
+    if (cachedMessages && cachedMessages.length > 0) return cachedMessages;
+    if (!results) return [] as UIMessage[];
+    return (results as Array<ConvexMessage>)
+      .slice()
+      .reverse()
+      .map((m) => ({
+        id: m.messageId,
+        parts: [{ type: "text" as const, text: m.content }],
+        role: m.role,
+      })) as UIMessage[];
+  }, [cachedMessages, results]);
+
+  // Handle loading states - but still render cached messages instantly
+  if (!cachedInfo && threadInfo === undefined) {
+    // Render shell with messages if present
     return (
-      <div className="relative mx-auto flex h-full w-full max-w-3xl flex-col px-2 pt-14">
-        <div className="flex items-center justify-center h-full">
-          <div></div>
-        </div>
+      <div className="pb-32">
+        <ChatInterface id={id} initialMessages={initialMessages} />
       </div>
     );
   }
 
   // Handle errors - thread not found
-  if (threadInfo === null) {
+  if (!cachedInfo && threadInfo === null) {
     return (
       <ErrorMessage 
         chatError="Thread not found" 
@@ -141,22 +177,6 @@ function Content({ id }: ChatPageProps) {
       />
     );
   }
-
-  // Convert Convex messages to UI messages (reverse to chronological order)
-  function convertToUIMessages(convexMessages: Array<ConvexMessage>): Array<UIMessage> {
-    if (!convexMessages) return [];
-
-    return convexMessages.map((message) => ({
-      id: message.messageId,
-      parts: [{ type: "text", text: message.content }],
-      role: message.role,
-      content: message.content,
-      createdAt: new Date(message.created_at),
-    }));
-  }
-
-  // Results come newest-first; reverse to oldest-first for display
-  const initialMessages = convertToUIMessages((results as Array<ConvexMessage> | undefined || []).slice().reverse());
 
   return (
     <div className="pb-32">

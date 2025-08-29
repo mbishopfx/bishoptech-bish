@@ -2,13 +2,14 @@
 
 import { usePaginatedQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { MessageSquare, Pin } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Authenticated, Unauthenticated, useQuery } from "convex/react";
+import { usePathname, useRouter } from "next/navigation";
+import { Authenticated, Unauthenticated } from "convex/react";
+import { useChatCache } from "@/contexts/chat-cache";
 
 type ThreadItem = {
   _id: string;
@@ -21,6 +22,9 @@ type ThreadItem = {
 
 function Content() {
   const pathname = usePathname();
+  const router = useRouter();
+  const { prefetchThread } = useChatCache();
+  const [loadingThreadId, setLoadingThreadId] = useState<string | null>(null);
   
   // Load threads with pagination (most recent first)
   const { results, status, loadMore } = usePaginatedQuery(
@@ -54,6 +58,17 @@ function Content() {
       return () => viewport.removeEventListener("scroll", handleScroll);
     }
   }, [status, loadMore]);
+
+  const handleClick = useCallback(async (e: React.MouseEvent, threadId: string) => {
+    e.preventDefault();
+    try {
+      setLoadingThreadId(threadId);
+      await prefetchThread(threadId, { numMessages: 20 });
+      router.push(`/chat/${threadId}`);
+    } finally {
+      setLoadingThreadId(null);
+    }
+  }, [prefetchThread, router]);
 
   // Show loading state until we have results or know there are no results
   if (status === "LoadingFirstPage" || results === undefined) {
@@ -112,14 +127,18 @@ function Content() {
               </div>
               {threads.map((thread: ThreadItem) => {
                 const isActive = pathname === `/chat/${thread.threadId}`;
+                const isLoading = loadingThreadId === thread.threadId;
                 
                 return (
                   <Link
                     key={thread.threadId}
                     href={`/chat/${thread.threadId}`}
+                    prefetch={false}
+                    onClick={(e) => void handleClick(e, thread.threadId)}
                     className={`group flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent hover:text-accent-foreground ${
                       isActive ? "bg-accent text-accent-foreground" : "text-muted-foreground"
-                    }`}
+                    } ${isLoading ? "opacity-70" : ""}`}
+                    aria-busy={isLoading}
                   >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">

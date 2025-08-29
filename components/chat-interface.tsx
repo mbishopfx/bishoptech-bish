@@ -105,7 +105,7 @@ export default function ChatInterface({
     const optimisticMessage: UIMessage = {
       id: messageId,
       role: "user",
-      parts: [{ type: "text", text: messageContent }],
+      parts: [{ type: "text" as const, text: messageContent }],
     };
 
     // Add the optimistic message to the UI

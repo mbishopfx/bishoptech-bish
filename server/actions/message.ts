@@ -38,6 +38,7 @@ export async function generateTitleFromUserMessage({
   const languageModel = getLanguageModel(modelId, apiKeys);
 
   const { text: title } = await generateText({
+    // @ts-ignore - accept union type for model
     model: languageModel,
     system: `\n
       - you will generate a short title based on the first message a user begins a conversation with

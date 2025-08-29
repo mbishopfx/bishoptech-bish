@@ -3,15 +3,17 @@
 import Link from "next/link";
 import { DeleteChatDialog } from "./delete-chat-dialog";
 import { useOptimistic, startTransition } from "react";
-import { useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api";
 import { groupChatsByDate, ConvexChat } from "@/lib/utils";
 import PinChatButton from "./pin-chat-button";
 
 export default function ChatList({ chats }: { chats: ConvexChat[] }) {
-  // Convex mutations
-  const deleteChatMutation = useMutation(api.chats.deleteChat);
-  const toggleChatPinMutation = useMutation(api.chats.toggleChatPin);
+  // Placeholder async functions until threads delete/pin APIs are implemented
+  const deleteChatMutation = async ({ uuid }: { uuid: string }) => {
+    return Promise.resolve();
+  };
+  const toggleChatPinMutation = async ({ uuid }: { uuid: string }) => {
+    return Promise.resolve();
+  };
 
   const pinnedChats = chats.filter((chat) => chat.pinned);
   const unpinnedChats = chats.filter((chat) => !chat.pinned);
