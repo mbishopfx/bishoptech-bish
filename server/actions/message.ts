@@ -1,9 +1,6 @@
 "use server";
 
 import { generateText, UIMessage } from "ai";
-import { db } from "../db";
-import { DBMessage, message } from "../db/schema";
-import { and, asc, eq, gt } from "drizzle-orm";
 import { ChatSDKError } from "@/lib/errors";
 import { attempt } from "@/lib/try-catch";
 import { getLanguageModel } from "@/lib/ai/ai-providers";
@@ -54,45 +51,28 @@ export async function generateTitleFromUserMessage({
 }
 
 export async function getMessagesByChatId({ id }: { id: string }) {
-  const [data, error] = await attempt(async () => {
-    return db
-      .select()
-      .from(message)
-      .where(eq(message.chatId, id))
-      .orderBy(asc(message.createdAt));
-  });
-
-  if (error) {
-    throw new ChatSDKError("bad_request:database", "Failed to get messages");
-  }
-
-  return data;
+  // Note: This function now requires the Convex client to be called from the client side
+  // Server actions cannot directly call Convex functions
+  // Consider moving this logic to the client or creating a Convex query
+  throw new Error("getMessagesByChatId should be called from the client using Convex");
 }
 
 export async function saveMessages({
   messages,
 }: {
-  messages: Array<DBMessage>;
+  messages: Array<any>;
 }) {
-  const [, error] = await attempt(async () => {
-    return db.insert(message).values(messages);
-  });
-
-  if (error) {
-    throw new ChatSDKError("bad_request:database", "Failed to save messages");
-  }
+  // Note: This function now requires the Convex client to be called from the client side
+  // Server actions cannot directly call Convex functions
+  // Consider moving this logic to the client or creating a Convex mutation
+  throw new Error("saveMessages should be called from the client using Convex");
 }
 
 export async function getMessageById({ id }: { id: string }) {
-  const [data, error] = await attempt(async () => {
-    return db.select().from(message).where(eq(message.id, id));
-  });
-
-  if (error) {
-    throw new ChatSDKError("bad_request:database", "Failed to get message");
-  }
-
-  return data;
+  // Note: This function now requires the Convex client to be called from the client side
+  // Server actions cannot directly call Convex functions
+  // Consider moving this logic to the client or creating a Convex query
+  throw new Error("getMessageById should be called from the client using Convex");
 }
 
 export async function deleteMessagesByChatIdAfterTimestamp({
@@ -100,24 +80,17 @@ export async function deleteMessagesByChatIdAfterTimestamp({
   timestamp,
 }: {
   chatId: string;
-  timestamp: Date;
+  timestamp: number;
 }) {
-  const [, error] = await attempt(async () => {
-    return db
-      .delete(message)
-      .where(and(eq(message.chatId, chatId), gt(message.createdAt, timestamp)));
-  });
-
-  if (error) {
-    throw new ChatSDKError("bad_request:database", "Failed to delete messages");
-  }
+  // Note: This function now requires the Convex client to be called from the client side
+  // Server actions cannot directly call Convex functions
+  // Consider moving this logic to the client or creating a Convex mutation
+  throw new Error("deleteMessagesByChatIdAfterTimestamp should be called from the client using Convex");
 }
 
-export async function deleteTrailingMessages({ id }: { id: string }) {
-  const [message] = await getMessageById({ id });
-
-  await deleteMessagesByChatIdAfterTimestamp({
-    chatId: message.chatId,
-    timestamp: message.createdAt,
-  });
+export async function deleteTrailingMessages({ messageId }: { messageId: string }) {
+  // Note: This function now requires the Convex client to be called from the client side
+  // Server actions cannot directly call Convex functions
+  // Consider moving this logic to the client or creating a Convex mutation
+  throw new Error("deleteTrailingMessages should be called from the client using Convex");
 }

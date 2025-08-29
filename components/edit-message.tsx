@@ -7,8 +7,8 @@ import { Edit, RefreshCcw } from "lucide-react";
 import CopyButton from "./ui/copy-button";
 import { useState, useRef, useEffect } from "react";
 import { Message, UseChatHelpers } from "@ai-sdk/react";
-import { deleteTrailingMessages } from "@/server/actions/message";
-import { attempt } from "@/lib/try-catch";
+import { useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import { toast } from "sonner";
 
 export default function EditMessage({
@@ -26,6 +26,7 @@ export default function EditMessage({
 }) {
   const [draftContent, setDraftContent] = useState(initialText);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const deleteTrailingMessages = useMutation(api.messages.deleteTrailingMessages);
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -60,12 +61,10 @@ export default function EditMessage({
   };
 
   const handleEditMessage = async () => {
-    const [, errorDeleteTrailingMessage] = await attempt(async () => {
-      await deleteTrailingMessages({ id: message.id });
-    });
-
-    if (errorDeleteTrailingMessage) {
-      toast.error(errorDeleteTrailingMessage.message);
+    try {
+      await deleteTrailingMessages({ messageId: message.id as any });
+    } catch (error) {
+      toast.error("Failed to delete trailing messages");
     }
 
     // @ts-expect-error todo: support UIMessage in setMessages

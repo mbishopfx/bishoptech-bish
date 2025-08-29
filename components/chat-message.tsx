@@ -10,8 +10,8 @@ import { useState } from "react";
 import EditMessage from "./edit-message";
 import { UseChatHelpers } from "@ai-sdk/react";
 import { toast } from "sonner";
-import { deleteTrailingMessages } from "@/server/actions/message";
-import { attempt } from "@/lib/try-catch";
+import { useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
 
 export default function ChatMessage({
   message,
@@ -24,6 +24,7 @@ export default function ChatMessage({
 }) {
   const isUser = message.role === "user";
   const [mode, setMode] = useState<"view" | "edit">("view");
+  const deleteTrailingMessages = useMutation(api.messages.deleteTrailingMessages);
 
   const handleSetMode = (mode: "view" | "edit") => {
     setMode(mode);
@@ -32,12 +33,10 @@ export default function ChatMessage({
   const handleRetry = async (draftContent?: string) => {
     // todo: add retry message for assistant
 
-    const [, errorDeleteTrailingMessage] = await attempt(async () => {
-      await deleteTrailingMessages({ id: message.id });
-    });
-
-    if (errorDeleteTrailingMessage) {
-      toast.error(errorDeleteTrailingMessage.message);
+    try {
+      await deleteTrailingMessages({ messageId: message.id as any });
+    } catch (error) {
+      toast.error("Failed to delete trailing messages");
     }
 
     // @ts-expect-error todo: support UIMessage in setMessages

@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Avatar, AvatarImage } from "./ui/avatar";
 import { Skeleton } from "./ui/skeleton";
 import { useAuth } from "@workos-inc/authkit-nextjs/components";

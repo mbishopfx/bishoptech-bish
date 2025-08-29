@@ -1,11 +1,7 @@
 "use server";
 
 import { attempt } from "@/lib/try-catch";
-
 import type { UIMessage } from "ai";
-import { db } from "../db";
-import { chat } from "../db/schema";
-import { eq, not } from "drizzle-orm";
 import { ChatSDKError } from "@/lib/errors";
 import { saveMessages } from "./message";
 import { revalidateTag, unstable_cache } from "next/cache";
@@ -57,69 +53,32 @@ export async function createChat({
   userId: string;
   title: string;
 }) {
-  const [data, error] = await attempt(async () =>
-    db.insert(chat).values({
-      id,
-      createdAt: new Date(),
-      userId,
-      title,
-    }),
-  );
-  if (error) {
-    throw new ChatSDKError("bad_request:database", "Failed to save chat");
-  }
-
-  revalidateTag("chat-history");
-
-  return data;
+  // Note: This function now requires the Convex client to be called from the client side
+  // Server actions cannot directly call Convex functions
+  // Consider moving this logic to the client or creating a Convex mutation
+  throw new Error("createChat should be called from the client using Convex");
 }
 
 export async function deleteChat({ id }: { id: string }) {
-  const [data, error] = await attempt(async () => {
-    await db.delete(chat).where(eq(chat.id, id));
-  });
-
-  if (error) {
-    throw new ChatSDKError("bad_request:database", "Failed to delete chat");
-  }
-
-  revalidateTag("chat-history");
-
-  return data;
+  // Note: This function now requires the Convex client to be called from the client side
+  // Server actions cannot directly call Convex functions
+  // Consider moving this logic to the client or creating a Convex mutation
+  throw new Error("deleteChat should be called from the client using Convex");
 }
 
 export async function getChatById({ id }: { id: string }) {
-  const [selectedChat, error] = await attempt(async () => {
-    const [chatRow] = await db.select().from(chat).where(eq(chat.id, id));
-    return chatRow;
-  });
-
-  if (error) {
-    throw new ChatSDKError("bad_request:database", "Failed to get chat by id");
-  }
-
-  return selectedChat;
+  // Note: This function now requires the Convex client to be called from the client side
+  // Server actions cannot directly call Convex functions
+  // Consider moving this logic to the client or creating a Convex query
+  throw new Error("getChatById should be called from the client using Convex");
 }
 
 export const getChatHistory = unstable_cache(
   async function getChatHistory({ userId }: { userId: string }) {
-    const [data, error] = await attempt(async () => {
-      const chatHistory = await db
-        .select()
-        .from(chat)
-        .where(eq(chat.userId, userId));
-
-      return chatHistory;
-    });
-
-    if (error) {
-      throw new ChatSDKError(
-        "bad_request:database",
-        "Failed to get chat history",
-      );
-    }
-
-    return data;
+    // Note: This function now requires the Convex client to be called from the client side
+    // Server actions cannot directly call Convex functions
+    // Consider moving this logic to the client or creating a Convex query
+    throw new Error("getChatHistory should be called from the client using Convex");
   },
   ["userId"],
   {
@@ -129,18 +88,8 @@ export const getChatHistory = unstable_cache(
 );
 
 export async function toggleChatPin({ id }: { id: string }) {
-  const [data, error] = await attempt(async () => {
-    await db
-      .update(chat)
-      .set({ pinned: not(chat.pinned) })
-      .where(eq(chat.id, id));
-  });
-
-  if (error) {
-    throw new ChatSDKError("bad_request:database", "Failed to pin chat");
-  }
-
-  revalidateTag("chat-history");
-
-  return data;
+  // Note: This function now requires the Convex client to be called from the client side
+  // Server actions cannot directly call Convex functions
+  // Consider moving this logic to the client or creating a Convex mutation
+  throw new Error("toggleChatPin should be called from the client using Convex");
 }

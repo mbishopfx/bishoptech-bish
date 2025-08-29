@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "@/styles/globals.css";
 import { Providers } from "@/components/providers";
-import { AuthKitProvider } from "@workos-inc/authkit-nextjs/components";
+import { ConvexClientProvider } from "@/components/ConvexClientProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -35,9 +35,9 @@ export default function RootLayout({
       <body
         className={`bg-background selection:bg-sidebar-logo relative antialiased selection:text-white dark:selection:text-black`}
       >
-        <AuthKitProvider>
+        <ConvexClientProvider>
           <Providers>{children}</Providers>
-        </AuthKitProvider>
+        </ConvexClientProvider>
       </body>
     </html>
   );
