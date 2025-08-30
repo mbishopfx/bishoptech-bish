@@ -16,6 +16,7 @@ interface ChatInputContextValue {
   onStop?: () => void;
   variant?: "default" | "unstyled";
   rows?: number;
+  disabled?: boolean;
 }
 
 const ChatInputContext = createContext<ChatInputContextValue>({});
@@ -25,6 +26,7 @@ interface ChatInputProps extends Omit<ChatInputContextValue, "variant"> {
   className?: string;
   variant?: "default" | "unstyled";
   rows?: number;
+  disabled?: boolean;
 }
 
 function ChatInput({
@@ -37,6 +39,7 @@ function ChatInput({
   loading,
   onStop,
   rows = 1,
+  disabled = false,
 }: ChatInputProps) {
   const contextValue: ChatInputContextValue = {
     value,
@@ -46,6 +49,7 @@ function ChatInput({
     onStop,
     variant,
     rows,
+    disabled,
   };
 
   return (
@@ -71,6 +75,7 @@ interface ChatInputTextAreaProps extends React.ComponentProps<typeof Textarea> {
   onChange?: React.ChangeEventHandler<HTMLTextAreaElement>;
   onSubmit?: () => void;
   variant?: "default" | "unstyled";
+  disabled?: boolean;
 }
 
 function ChatInputTextArea({
@@ -79,6 +84,7 @@ function ChatInputTextArea({
   onChange: onChangeProp,
   className,
   variant: variantProp,
+  disabled: disabledProp,
   ...props
 }: ChatInputTextAreaProps) {
   const context = useContext(ChatInputContext);
@@ -86,6 +92,7 @@ function ChatInputTextArea({
   const onChange = onChangeProp ?? context.onChange;
   const onSubmit = onSubmitProp ?? context.onSubmit;
   const rows = context.rows ?? 1;
+  const disabled = disabledProp ?? context.disabled ?? false;
 
   // Convert parent variant to textarea variant unless explicitly overridden
   const variant =
@@ -93,7 +100,7 @@ function ChatInputTextArea({
 
   const textareaRef = useTextareaResize(value, rows);
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (!onSubmit) {
+    if (!onSubmit || disabled) {
       return;
     }
     if (e.key === "Enter" && !e.shiftKey) {
@@ -110,7 +117,7 @@ function ChatInputTextArea({
       ref={textareaRef}
       {...props}
       value={value}
-      onChange={onChange}
+      onChange={disabled ? undefined : onChange}
       onKeyDown={handleKeyDown}
       className={cn(
         "max-h-[400px] min-h-0 resize-none overflow-x-hidden",
@@ -119,6 +126,7 @@ function ChatInputTextArea({
         className,
       )}
       rows={rows}
+      disabled={disabled}
     />
   );
 }
@@ -129,6 +137,7 @@ interface ChatInputSubmitProps extends React.ComponentProps<typeof Button> {
   onSubmit?: () => void;
   loading?: boolean;
   onStop?: () => void;
+  disabled?: boolean;
 }
 
 function ChatInputSubmit({
@@ -136,12 +145,14 @@ function ChatInputSubmit({
   loading: loadingProp,
   onStop: onStopProp,
   className,
+  disabled: disabledProp,
   ...props
 }: ChatInputSubmitProps) {
   const context = useContext(ChatInputContext);
   const loading = loadingProp ?? context.loading;
   const onStop = onStopProp ?? context.onStop;
   const onSubmit = onSubmitProp ?? context.onSubmit;
+  const disabled = disabledProp ?? context.disabled ?? false;
 
   if (loading && onStop) {
     return (
@@ -159,7 +170,7 @@ function ChatInputSubmit({
   }
 
   const isDisabled =
-    typeof context.value !== "string" || context.value.trim().length === 0;
+    typeof context.value !== "string" || context.value.trim().length === 0 || disabled;
 
   return (
     <Button

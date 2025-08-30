@@ -9,7 +9,6 @@ export async function generateMetadata({
 
   return {
     title: `Chat ${id}`,
-    description: "A chat clone built with Next.js, Shadcn, and Tailwind CSS",
   };
 }
 

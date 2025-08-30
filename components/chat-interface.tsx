@@ -20,16 +20,17 @@ import { api } from "@/convex/_generated/api";
 export default function ChatInterface({
   id,
   initialMessages,
+  disableInput = false,
 }: {
   id: string;
   initialMessages?: UIMessage[];
+  disableInput?: boolean;
 }) {
   const router = useRouter();
   const pathname = usePathname();
   const { selectedModel } = useModel();
   const [input, setInput] = useState("");
   
-  const createThread = useMutation(api.threads.createThread);
   const sendMessage = useMutation(api.threads.sendMessage);
 
   const {
@@ -75,6 +76,10 @@ export default function ChatInterface({
   const [containerRef, showScrollButton, scrollToBottom] =
     useScrollToBottom<HTMLDivElement>();
 
+  // Use initialMessages as a first-render fallback to avoid welcome flicker
+  const renderedMessages: UIMessage[] =
+    messages.length > 0 ? messages : initialMessages ?? [];
+
   // TODO: Implement proper stream stopping with Convex integration
   const handleStopStream = async () => {
     stop();
@@ -91,11 +96,12 @@ export default function ChatInterface({
 
   // Implement proper input handling for AI SDK v2
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    if (disableInput) return; // Don't handle input if disabled
     setInput(e.target.value);
   };
 
   const handleSubmit = async () => {
-    if (!input.trim()) return;
+    if (disableInput || !input.trim()) return; // Don't handle submit if disabled
 
     const messageContent = input.trim();
     const messageId = generateUUID();
@@ -115,11 +121,9 @@ export default function ChatInterface({
     setInput("");
 
     try {
-      // Determine if we're in an existing thread or need to create a new one
-      const isExistingThread = pathname.startsWith("/chat/") && pathname !== "/";
-      
-      if (isExistingThread) {
-        // We're in an existing thread, use sendMessage
+      // Only handle messages in existing threads
+      // Root page thread creation is handled by the parent component
+      if (pathname.startsWith("/chat/") && pathname !== "/") {
         const result = await sendMessage({
           threadId: threadId,
           content: messageContent,
@@ -129,19 +133,8 @@ export default function ChatInterface({
 
         console.log("Message sent to existing thread:", result);
       } else {
-        // We're on the home page, create a new thread
-        const result = await createThread({
-          threadId: threadId,
-          content: messageContent,
-          model: selectedModel,
-          messageId: messageId,
-        });
-
-        console.log("Thread and message created:", result);
-        
-        // Route to the newly created thread
-        router.push(`/chat/${threadId}`);
-        router.refresh();
+        // We're on the home page - don't handle thread creation here
+        console.log("On home page - input handling disabled");
       }
       
     } catch (error) {
@@ -173,9 +166,9 @@ export default function ChatInterface({
         ref={containerRef}
         className="relative mx-auto flex h-full w-full max-w-3xl flex-col px-2 pt-14"
       >
-        {messages.length > 0 || input.length > 0 ? (
+        {renderedMessages.length > 0 || input.length > 0 ? (
           <div className="flex flex-col px-4 pb-30">
-            {messages.map((message: UIMessage) => (
+            {renderedMessages.map((message: UIMessage) => (
               <div className="flex-1" key={message.id}>
                 <ChatMessage
                   message={message}
@@ -195,6 +188,7 @@ export default function ChatInterface({
         )}
 
         {/* Input is now handled by the parent component */}
+        
       </div>
     </ChatMessageArea>
   );

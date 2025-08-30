@@ -191,13 +191,13 @@ function Content({ id }: ChatPageProps) {
 export default function ChatPage({ id }: ChatPageProps) {
   return (
     <>
-      <Authenticated>
-        {/* Persistent Input Container - outside Content to prevent recreation */}
-        <div className="fixed bottom-0 left-0 right-0 z-50">
-          <div className="mx-auto max-w-3xl px-4 pt-4">
-            <ChatInput />
-          </div>
+      <div className="fixed bottom-0 left-0 right-0 z-50">
+        <div className="mx-auto max-w-3xl px-4 pt-4">
+          <ChatInput />
         </div>
+      </div>
+      <Authenticated>
+
 
         <Content id={id} />
       </Authenticated>
