@@ -160,7 +160,7 @@ export default function ChatInterface({
   return (
     <ChatMessageArea
       scrollButtonAlignment="center"
-      className="h-screen max-h-screen"
+      className="h-full"
     >
       <div
         ref={containerRef}

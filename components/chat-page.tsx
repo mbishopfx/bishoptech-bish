@@ -160,12 +160,15 @@ function Content({ id }: ChatPageProps) {
 
   // Handle loading states - but still render cached messages instantly
   if (!cachedInfo && threadInfo === undefined) {
-    // Render shell with messages if present
-    return (
-      <div className="pb-32">
-        <ChatInterface id={id} initialMessages={initialMessages} />
-      </div>
-    );
+    // If we have cached messages, render them immediately; otherwise, render an empty shell
+    if (cachedMessages && cachedMessages.length > 0) {
+      return (
+        <div className="pb-32">
+          <ChatInterface id={id} initialMessages={cachedMessages} />
+        </div>
+      );
+    }
+    return <div className="pb-32" />;
   }
 
   // Handle errors - thread not found
@@ -190,20 +193,18 @@ function Content({ id }: ChatPageProps) {
 
 export default function ChatPage({ id }: ChatPageProps) {
   return (
-    <>
-      <div className="fixed bottom-0 left-0 right-0 z-50">
-        <div className="mx-auto max-w-3xl px-4 pt-4">
-          <ChatInput />
-        </div>
-      </div>
+    <div className="flex min-h-screen h-full flex-col">
       <Authenticated>
-
-
-        <Content id={id} />
+        <div className="flex-1">
+          <Content id={id} />
+        </div>
       </Authenticated>
       <Unauthenticated>
         {null}
       </Unauthenticated>
-    </>
+      <div className="mx-auto w-full max-w-3xl px-4 pt-4 mt-auto">
+        <ChatInput />
+      </div>
+    </div>
   );
 }

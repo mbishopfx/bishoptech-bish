@@ -16,20 +16,32 @@ interface ModelContextType {
 
 const ModelContext = createContext<ModelContextType | undefined>(undefined);
 
-export function ModelProvider({ children }: { children: ReactNode }) {
-  const [selectedModel, setSelectedModelState] = useState(DEFAULT_MODEL);
+export function ModelProvider({ children, initialModel }: { children: ReactNode; initialModel?: string }) {
+  // Initialize from server-provided cookie value to avoid hydration mismatch
+  const [selectedModel, setSelectedModelState] = useState<string>(initialModel ?? DEFAULT_MODEL);
 
-  // İlk renderdan sonra localStorage'dan oku
+  // On mount, if no initialModel provided but localStorage has a value, sync it
   useEffect(() => {
-    const stored = localStorage.getItem("selectedModel");
-    if (stored && stored !== selectedModel) {
-      setSelectedModelState(stored);
+    if (!initialModel && typeof window !== "undefined") {
+      const stored = localStorage.getItem("selectedModel");
+      if (stored && stored !== selectedModel) {
+        setSelectedModelState(stored);
+        // Also ensure cookie is set for future SSR
+        document.cookie = `selectedModel=${stored}; path=/; max-age=${60 * 60 * 24 * 365}`;
+      }
     }
-  }, []);
+  // We intentionally exclude selectedModel from deps to avoid re-running when it changes
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialModel]);
 
   const setSelectedModel = (model: string) => {
     setSelectedModelState(model);
-    localStorage.setItem("selectedModel", model);
+    try {
+      localStorage.setItem("selectedModel", model);
+    } catch {}
+    try {
+      document.cookie = `selectedModel=${model}; path=/; max-age=${60 * 60 * 24 * 365}`;
+    } catch {}
   };
 
   return (

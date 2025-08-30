@@ -78,36 +78,33 @@ export default function Home() {
   };
 
   return (
-    <>
-      <Authenticated>
-        <div className="flex flex-col h-screen">
-          <div className="flex-1">
+    <div className="flex min-h-screen h-full flex-col">
+      <div className="flex-1">
+        <Authenticated>
+          <div className="h-full">
             <ChatInterface 
               id="welcome" 
               disableInput={true}
               initialMessages={optimisticMessages}
             />
           </div>
-          
-          {/* Fixed chat input at bottom */}
-          <div className="fixed bottom-0 left-0 right-0 z-50">
-            <div className="mx-auto max-w-3xl px-4 pt-4">
-              <ChatInputContainer
-                input={input}
-                status={status}
-                showScrollButton={false}
-                onInputChange={handleInputChange}
-                onSubmit={handleSubmit}
-                onStop={() => {}}
-                onScrollToBottom={() => {}}
-              />
-            </div>
-          </div>
-        </div>
-      </Authenticated>
-      <Unauthenticated>
-        {null}
-      </Unauthenticated>
-    </>
+        </Authenticated>
+        <Unauthenticated>
+          {null}
+        </Unauthenticated>
+      </div>
+
+      <div className="mx-auto w-full max-w-3xl px-4 pt-4 mt-auto">
+        <ChatInputContainer
+          input={input}
+          status={status}
+          showScrollButton={false}
+          onInputChange={handleInputChange}
+          onSubmit={handleSubmit}
+          onStop={() => {}}
+          onScrollToBottom={() => {}}
+        />
+      </div>
+    </div>
   );
 }
