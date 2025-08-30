@@ -8,11 +8,6 @@ import { useModel } from "@/contexts/model-context";
 import { toast } from "sonner";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ChatShell from "@/components/ai/ChatShell";
-import {
-  Conversation,
-  ConversationContent,
-  ConversationScrollButton,
-} from "@/components/ai/conversation";
 import { Message, MessageContent } from "@/components/ai/message";
 import {
   PromptInput,
@@ -28,12 +23,8 @@ import {
   PromptInputTools,
 } from "@/components/ai/prompt-input";
 import { Response } from "@/components/ai/response";
-import {
-  Source,
-  Sources,
-  SourcesContent,
-  SourcesTrigger,
-} from "@/components/ai/sources";
+import { Actions, Action } from "@/components/ai/actions";
+
 import {
   Reasoning,
   ReasoningContent,
@@ -43,17 +34,9 @@ import { Loader } from "@/components/ai/loader";
 import { MODELS } from "@/lib/ai/ai-providers";
 import { usePaginatedQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useStickToBottomContext } from "use-stick-to-bottom";
-import { GlobeIcon, PaperclipIcon } from "lucide-react";
-
-function AutoScroller({ deps }: { deps: any[] }) {
-  const { scrollToBottom } = useStickToBottomContext();
-  useEffect(() => {
-    scrollToBottom();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, deps);
-  return null;
-}
+import { GlobeIcon, PaperclipIcon, RefreshCwIcon, CopyIcon, GitBranchIcon, EditIcon } from "lucide-react";
+import { Authenticated, Unauthenticated, AuthLoading, useConvexAuth } from "convex/react";
+import { Conversation, ConversationContent, ConversationScrollButton } from "@/components/ai/conversation";
 
 export default function ChatInterface({
   id,
@@ -72,11 +55,14 @@ export default function ChatInterface({
   const [input, setInput] = useState("");
   const [optimisticMessages, setOptimisticMessages] = useState<UIMessage[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { isAuthenticated, isLoading: authLoading } = useConvexAuth();
 
   const isThread = id !== "welcome";
+  
+  // Only run the Convex query when authenticated
   const { results: threadDocs = [] } = usePaginatedQuery(
     api.threads.getThreadMessagesPaginated,
-    isThread ? { threadId: id } : "skip",
+    isThread && isAuthenticated ? { threadId: id } : "skip",
     { initialNumItems: 10 }
   );
 
@@ -132,14 +118,14 @@ export default function ChatInterface({
   }, [initialMessages, setMessages, messages.length]);
 
   useEffect(() => {
-    if (messages.length === 0 && initialFromConvex.length > 0) {
+    if (messages.length === 0 && initialFromConvex.length > 0 && isAuthenticated) {
       setMessages(initialFromConvex);
     }
-  }, [messages.length, initialFromConvex, setMessages]);
+  }, [messages.length, initialFromConvex, setMessages, isAuthenticated]);
 
   // Auto-start assistant generation after redirect when only the first user message is present
   useEffect(() => {
-    if (!isThread) return;
+    if (!isThread || !isAuthenticated) return;
     if (autostartTriggeredRef.current) return;
     if (messages.length === 0) return;
     const hasAssistant = messages.some((m) => m.role === "assistant");
@@ -155,7 +141,7 @@ export default function ChatInterface({
         }, 0);
       }
     }
-  }, [isThread, messages, regenerate]);
+  }, [isThread, messages, regenerate, isAuthenticated]);
 
   const renderedMessages: UIMessage[] = useMemo(
     () => {
@@ -163,18 +149,31 @@ export default function ChatInterface({
       if (optimisticMessages.length > 0) {
         return optimisticMessages;
       }
-      return messages.length > 0 ? messages : (initialMessages ?? initialFromConvex);
+      // Only show Convex messages when authenticated
+      if (isAuthenticated && messages.length > 0) {
+        return messages;
+      }
+      if (isAuthenticated && initialMessages && initialMessages.length > 0) {
+        return initialMessages;
+      }
+      if (isAuthenticated && initialFromConvex.length > 0) {
+        return initialFromConvex;
+      }
+      // Fallback to initial messages for unauthenticated users
+      return initialMessages ?? [];
     },
-    [optimisticMessages, messages, initialMessages, initialFromConvex]
+    [optimisticMessages, messages, initialMessages, initialFromConvex, isAuthenticated]
   );
+
+  const hasAssistantMessage = useMemo(() => renderedMessages.some((m) => m.role === 'assistant'), [renderedMessages]);
 
   const handleStopStream = useCallback(() => {
     stop();
-    if (pathname === "/") {
+    if (pathname === "/" && isAuthenticated) {
       router.push(`/chat/${id}`);
       router.refresh();
     }
-  }, [stop, pathname, router, id]);
+  }, [stop, pathname, router, id, isAuthenticated]);
 
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     if (disableInput) return;
@@ -219,7 +218,7 @@ export default function ChatInterface({
       // Clear optimistic messages on error
       setOptimisticMessages([]);
     }
-  }, [disableInput, input, sendMessage, id, onInitialMessage, setOptimisticMessages]);
+  }, [disableInput, input, sendMessage, id, onInitialMessage, setOptimisticMessages, isAuthenticated]);
 
   const handleAttachClick = useCallback(() => {
     if (disableInput) return;
@@ -244,7 +243,7 @@ export default function ChatInterface({
   const models = MODELS;
 
   const sidebar = useMemo(() => (
-    <div className="h-full w-full">
+    <div className="h-full w-full bg-">
       <div className="p-4">
         <h2 className="mb-2 text-sm font-semibold">Sidebar</h2>
         <p className="text-muted-foreground text-sm">Toggle me to expand/collapse. Content pushes chat and input.</p>
@@ -254,120 +253,188 @@ export default function ChatInterface({
 
   return (
     <ChatShell sidebar={sidebar}>
-      <div className="flex h-full flex-col">
-        <Conversation className="h-full">
-          <AutoScroller deps={[messages.length, status]} />
-          <ConversationContent>
-            <div className="mx-auto w-full max-w-3xl">
-              {renderedMessages.map((message) => (
-                <div key={message.id}>
-                  {message.role === 'assistant' && (
-                    <Sources>
-                      <SourcesTrigger
-                        count={message.parts.filter((part: any) => (part as any).type === 'source-url').length}
-                      />
-                      {message.parts.filter((part: any) => (part as any).type === 'source-url').map((part: any, i: number) => (
-                        <SourcesContent key={`${message.id}-${i}`}>
-                          <Source
-                            key={`${message.id}-${i}`}
-                            href={(part as any).url}
-                            title={(part as any).url}
-                          />
-                        </SourcesContent>
-                      ))}
-                    </Sources>
-                  )}
-                  <Message from={message.role} key={message.id}>
-                    <MessageContent>
-                      {message.parts.map((part: any, i: number) => {
-                        switch ((part as any).type) {
-                          case 'text':
-                            return (
-                              <Response key={`${message.id}-${i}`}>
-                                {(part as any).text}
-                              </Response>
-                            );
-                          case 'reasoning':
-                            return (
-                              <Reasoning
-                                key={`${message.id}-${i}`}
-                                className="w-full"
-                                isStreaming={status === 'streaming'}
-                              >
-                                <ReasoningTrigger />
-                                <ReasoningContent>{(part as any).text}</ReasoningContent>
-                              </Reasoning>
-                            );
-                          default:
-                            return null;
-                        }
-                      })}
-                    </MessageContent>
-                  </Message>
-                </div>
-              ))}
-              {status === 'submitted' && <Loader />}
-            </div>
-          </ConversationContent>
-          <ConversationScrollButton />
-        </Conversation>
+      <div className="flex h-full min-h-0 flex-col relative">
+        {/* Single scrollable area that includes messages and actions - now takes full height */}
+        <div className="flex-1 min-h-0">
+          <Authenticated>
+            <Conversation>
+              <ConversationContent className="mx-auto w-full max-w-3xl p-4 pb-30">
+                {renderedMessages.map((message) => (
+                  <div key={message.id} className="group">
+                    <Message from={message.role} key={message.id}>
+                      <MessageContent from={message.role}>
+                        {message.parts.map((part: any, i: number) => {
+                          switch ((part as any).type) {
+                            case 'text':
+                              return (
+                                <Response key={`${message.id}-${i}`}>
+                                  {(part as any).text}
+                                </Response>
+                              );
+                            case 'reasoning':
+                              return (
+                                <Reasoning
+                                  key={`${message.id}-${i}`}
+                                  className="w-full"
+                                  isStreaming={status === 'streaming'}
+                                >
+                                  <ReasoningTrigger />
+                                  <ReasoningContent>{(part as any).text}</ReasoningContent>
+                                </Reasoning>
+                              );
+                            default:
+                              return null;
+                          }
+                        })}
+                      </MessageContent>
+                    </Message>
+                    {/* Actions appear outside the message */}
+                    {message.role === 'assistant' && (
+                      <div className="px-0">
+                        <Actions className="mt-1 opacity-0 group-hover:opacity-100 transition-opacity justify-start">
+                          <Action
+                            onClick={() => regenerate?.()}
+                            label="Retry"
+                            tooltip="Regenerate response"
+                          >
+                            <RefreshCwIcon className="size-4" />
+                          </Action>
+                          <Action
+                            onClick={() => {
+                              // Get the text content from all parts
+                              const textContent = message.parts
+                                .filter((part: any) => part.type === 'text')
+                                .map((part: any) => part.text)
+                                .join('\n');
+                              navigator.clipboard.writeText(textContent);
+                              toast.success("Copied to clipboard");
+                            }}
+                            label="Copy"
+                            tooltip="Copy to clipboard"
+                          >
+                            <CopyIcon className="size-4" />
+                          </Action>
+                          <Action
+                            onClick={() => {
+                              // TODO: Implement branch functionality
+                              toast.info("Branch feature coming soon");
+                            }}
+                            label="Branch"
+                            tooltip="Create a new branch"
+                          >
+                            <GitBranchIcon className="size-4" />
+                          </Action>
+                        </Actions>
+                      </div>
+                    )}
+                    {/* Actions for user messages */}
+                    {message.role === 'user' && (
+                      <div className="px-0">
+                        <Actions className="mt-1 opacity-0 group-hover:opacity-100 transition-opacity justify-end">
+                          <Action
+                            onClick={() => {
+                              // TODO: Implement retry for user message
+                              toast.info("Retry user message feature coming soon");
+                            }}
+                            label="Retry"
+                            tooltip="Retry message"
+                          >
+                            <RefreshCwIcon className="size-4" />
+                          </Action>
+                          <Action
+                            onClick={() => {
+                              // TODO: Implement edit functionality
+                              toast.info("Edit message feature coming soon");
+                            }}
+                            label="Edit"
+                            tooltip="Edit message"
+                          >
+                            <EditIcon className="size-4" />
+                          </Action>
+                          <Action
+                            onClick={() => {
+                              // Get the text content from all parts
+                              const textContent = message.parts
+                                .filter((part: any) => part.type === 'text')
+                                .map((part: any) => part.text)
+                                .join('\n');
+                              navigator.clipboard.writeText(textContent);
+                              toast.success("Copied to clipboard");
+                            }}
+                            label="Copy"
+                            tooltip="Copy to clipboard"
+                          >
+                            <CopyIcon className="size-4" />
+                          </Action>
+                          <Action
+                            onClick={() => {
+                              // TODO: Implement branch functionality
+                              toast.info("Branch feature coming soon");
+                            }}
+                            label="Branch"
+                            tooltip="Create a new branch"
+                          >
+                            <GitBranchIcon className="size-4" />
+                          </Action>
+                        </Actions>
+                      </div>
+                    )}
+                  </div>
+                ))}
+                {(status === 'submitted' || status === 'streaming') && !hasAssistantMessage && <Loader />}
+              </ConversationContent>
+              <ConversationScrollButton />
+            </Conversation>
+          </Authenticated>
+        </div>
 
-        <div className="mx-auto w-full max-w-3xl">
-          <PromptInput onSubmit={handleSubmit} className="mt-4">
-            <PromptInputTextarea
-              onChange={handleInputChange}
-              value={input}
-              disabled={disableInput}
-            />
-            <PromptInputToolbar>
-              <PromptInputTools>
-                <PromptInputButton onClick={handleAttachClick} aria-label="Add attachments" disabled={disableInput}>
-                  <PaperclipIcon size={16} />
-                </PromptInputButton>
-                <PromptInputButton onClick={handleWebSearch} aria-label="Search the web" disabled={false}>
-                  <GlobeIcon size={16} />
-                  <span>Search</span>
-                </PromptInputButton>
-                <PromptInputModelSelect
-                  onValueChange={(value) => setSelectedModel(value)}
-                  value={selectedModel}
-                  disabled={disableInput}
-                >
-                  <PromptInputModelSelectTrigger>
-                    <PromptInputModelSelectValue />
-                  </PromptInputModelSelectTrigger>
-                  <PromptInputModelSelectContent>
-                    {models.map((m) => (
-                      <PromptInputModelSelectItem key={m.id} value={m.id}>
-                        {m.name}
-                      </PromptInputModelSelectItem>
-                    ))}
-                  </PromptInputModelSelectContent>
-                </PromptInputModelSelect>
-              </PromptInputTools>
-              <PromptInputSubmit disabled={!input || disableInput} status={status} />
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                className="hidden"
-                onChange={handleFilesSelected}
+        {/* Prompt input overlayed at bottom of the main area (not part of scroll flow) */}
+        <div className="absolute bottom-0 left-0 right-0">
+          <div className="mx-auto w-full max-w-3xl px-2">
+            <PromptInput onSubmit={handleSubmit}>
+              <PromptInputTextarea
+                onChange={handleInputChange}
+                value={input}
+                disabled={disableInput || !isAuthenticated}
+                placeholder={!isAuthenticated ? "Sign in to start chatting..." : "Type your message..."}
               />
-            </PromptInputToolbar>
-          </PromptInput>
-
-          {status === 'streaming' && (
-            <div className="mt-2 flex items-center gap-2 text-muted-foreground text-xs">
-              <Loader />
-              <button
-                type="button"
-                className="underline"
-                onClick={handleStopStream}
-              >
-                Stop generating
-              </button>
-            </div>
-          )}
+              <PromptInputToolbar>
+                <PromptInputTools>
+                  <PromptInputButton onClick={handleAttachClick} aria-label="Add attachments" disabled={disableInput || !isAuthenticated}>
+                    <PaperclipIcon size={16} />
+                  </PromptInputButton>
+                  <PromptInputButton onClick={handleWebSearch} aria-label="Search the web" disabled={false}>
+                    <GlobeIcon size={16} />
+                    <span>Search</span>
+                  </PromptInputButton>
+                  <PromptInputModelSelect
+                    onValueChange={(value) => setSelectedModel(value)}
+                    value={selectedModel}
+                    disabled={disableInput || !isAuthenticated}
+                  >
+                    <PromptInputModelSelectTrigger>
+                      <PromptInputModelSelectValue />
+                    </PromptInputModelSelectTrigger>
+                    <PromptInputModelSelectContent>
+                      {models.map((m) => (
+                        <PromptInputModelSelectItem key={m.id} value={m.id}>
+                          {m.name}
+                        </PromptInputModelSelectItem>
+                      ))}
+                    </PromptInputModelSelectContent>
+                  </PromptInputModelSelect>
+                </PromptInputTools>
+                <PromptInputSubmit disabled={!input || disableInput || !isAuthenticated} status={status} />
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  className="hidden"
+                  onChange={handleFilesSelected}
+                />
+              </PromptInputToolbar>
+            </PromptInput>
+          </div>
         </div>
       </div>
     </ChatShell>

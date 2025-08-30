@@ -1,4 +1,4 @@
-import { streamText, UIMessage, convertToModelMessages, createUIMessageStream, createUIMessageStreamResponse, smoothStream } from 'ai';
+import { streamText, UIMessage, convertToModelMessages, createUIMessageStream, createUIMessageStreamResponse } from 'ai';
 import { getLanguageModel } from '@/lib/ai/ai-providers';
 import { api } from '@/convex/_generated/api';
 import { fetchMutation } from 'convex/nextjs';
@@ -14,72 +14,47 @@ export async function POST(req: Request) {
     threadId,
   }: { messages: UIMessage[]; modelId: string; threadId: string } = await req.json();
 
-  const { accessToken } = await withAuth();
-
   const stream = createUIMessageStream({
     originalMessages: messages,
     execute: async ({ writer }) => {
       const assistantMessageId = crypto.randomUUID();
 
-      // Persist the latest user message first to avoid reordering/flicker
-      try {
-        const sanitizedUIMessages: UIMessage[] = (messages || [])
-          .map((m) => ({
-            ...m,
-            parts: (m.parts || []).filter(
-              (p: any) => p?.type === 'text' && typeof p.text === 'string' && p.text.trim().length > 0,
-            ),
-          }))
-          .filter((m) => (m.parts && m.parts.length > 0));
+      // Fetch auth lazily in parallel
+      let accessToken: string | undefined;
+      const authPromise = withAuth()
+        .then(({ accessToken: token }) => { accessToken = token; })
+        .catch((err) => { console.error('withAuth failed', err); });
 
-        const lastUser = [...sanitizedUIMessages].reverse().find((m) => m.role === 'user');
-        const lastUserText = lastUser?.parts?.map((p: any) => p?.type === 'text' ? p.text : '').join('') ?? '';
-        const lastUserId = (lastUser as any)?.id as string | undefined;
-
-        if (lastUser && lastUserText.trim().length > 0 && lastUserId) {
-          await fetchMutation(api.threads.sendMessage, {
-            threadId,
-            content: lastUserText,
-            model: modelId,
-            messageId: lastUserId,
-          }, { token: accessToken });
-        }
-      } catch (err) {
-        console.error('persist user message failed', err);
-      }
-
-      try {
-        await fetchMutation(api.threads.startAssistantMessage, {
-          threadId,
-          messageId: assistantMessageId,
-          model: modelId,
-        }, { token: accessToken });
-      } catch (err) {
-        console.error('startAssistantMessage failed', err);
-      }
-
+      // Immediately signal start to the client so spinner shows instantly
       writer.write({ type: 'start', messageId: assistantMessageId });
 
       const languageModel = getLanguageModel(modelId);
       console.debug('AI streaming with model', modelId);
 
-      // Sanitize messages for Google: remove empty parts/messages
-      const sanitizedUIMessages: UIMessage[] = (messages || [])
-        .map((m) => ({
-          ...m,
-          parts: (m.parts || []).filter(
-            (p: any) => p?.type === 'text' && typeof p.text === 'string' && p.text.trim().length > 0,
-          ),
-        }))
-        .filter((m) => (m.parts && m.parts.length > 0));
-
       // Batch persistence every ~800ms without affecting client stream
       let pendingDelta = '';
       let lastFlushAt = Date.now();
-      const FLUSH_EVERY_MS = 800;
+      const FLUSH_EVERY_MS = 1500;
       let gotAnyDelta = false;
+      let startAssistantPromise: Promise<any> | null = null;
+
+      const ensureAuth = async () => {
+        if (!accessToken) {
+          await authPromise;
+        }
+      };
+
       const flush = async () => {
         if (pendingDelta.length === 0) return;
+        // Ensure assistant message doc exists before appending deltas
+        if (startAssistantPromise) {
+          try {
+            await startAssistantPromise;
+          } catch {
+            // If creation failed, skip persisting deltas
+          }
+        }
+        await ensureAuth();
         const toSend = pendingDelta;
         pendingDelta = '';
         lastFlushAt = Date.now();
@@ -89,10 +64,11 @@ export async function POST(req: Request) {
         }, { token: accessToken }).catch(() => {});
       };
 
+      // Start streaming from the model
       const result = streamText({
         // @ts-ignore accept union model from registry
         model: languageModel,
-        messages: convertToModelMessages(sanitizedUIMessages),
+        messages: convertToModelMessages(messages),
         onChunk: async ({ chunk }) => {
           if (chunk.type === 'text-delta' && chunk.text.length > 0) {
             gotAnyDelta = true;
@@ -105,6 +81,7 @@ export async function POST(req: Request) {
         },
         onFinish: async ({ text }) => {
           await flush();
+          await ensureAuth();
           const ok = gotAnyDelta || (text?.length ?? 0) > 0;
           fetchMutation(api.threads.finalizeAssistantMessage, {
             messageId: assistantMessageId,
@@ -121,12 +98,39 @@ export async function POST(req: Request) {
             error: { type: 'generation', message: 'stream error' },
           }, { token: accessToken }).catch(() => {});
         },
-        experimental_transform: smoothStream({
-          delayInMs: 10,
-          chunking: 'word',
-        }),
       });
       writer.merge(result.toUIMessageStream({ sendStart: false }));
+
+      // Persist the latest user message (non-blocking) to avoid reordering/flicker without delaying stream
+      try {
+        const lastUser = [...messages].reverse().find((m) => m.role === 'user');
+        const lastUserText = lastUser?.parts?.map((p: any) => (p?.type === 'text' ? p.text : '')).join('') ?? '';
+        const lastUserId = (lastUser as any)?.id as string | undefined;
+
+        if (lastUser && lastUserId) {
+          await ensureAuth();
+          fetchMutation(api.threads.sendMessage, {
+            threadId,
+            content: lastUserText,
+            model: modelId,
+            messageId: lastUserId,
+          }, { token: accessToken }).catch(() => {});
+        }
+      } catch (err) {
+        console.error('persist user message failed', err);
+      }
+
+      // Start assistant message doc creation in background and hold the promise for flush gating
+      startAssistantPromise = (async () => {
+        await ensureAuth();
+        return fetchMutation(api.threads.startAssistantMessage, {
+          threadId,
+          messageId: assistantMessageId,
+          model: modelId,
+        }, { token: accessToken });
+      })().catch((err) => {
+        console.error('startAssistantMessage failed', err);
+      });
     },
   });
 

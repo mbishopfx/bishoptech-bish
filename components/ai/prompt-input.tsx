@@ -24,7 +24,7 @@ export type PromptInputProps = HTMLAttributes<HTMLFormElement>;
 export const PromptInput = ({ className, ...props }: PromptInputProps) => (
   <form
     className={cn(
-      'w-full divide-y overflow-hidden rounded-xl border bg-background shadow-sm',
+      'w-full divide-y overflow-hidden rounded-t-xl border bg-background shadow-sm',
       className
     )}
     {...props}
@@ -105,7 +105,6 @@ export const PromptInputTools = ({
   <div
     className={cn(
       'flex items-center gap-1',
-      '[&_button:first-child]:rounded-bl-xl',
       className
     )}
     {...props}
@@ -190,8 +189,9 @@ export const PromptInputModelSelectTrigger = ({
 }: PromptInputModelSelectTriggerProps) => (
   <SelectTrigger
     className={cn(
-      'border-none bg-transparent font-medium text-muted-foreground shadow-none transition-colors',
-      'hover:bg-accent hover:text-foreground [&[aria-expanded="true"]]:bg-accent [&[aria-expanded="true"]]:text-foreground',
+      'border-none font-medium text-muted-foreground shadow-none transition-colors',
+      '!bg-transparent hover:!bg-accent hover:text-foreground',
+      'dark:!bg-transparent dark:hover:!bg-accent',
       className
     )}
     {...props}

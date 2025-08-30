@@ -35,24 +35,23 @@ export default function ChatShell({ children, className, sidebar }: ChatShellPro
           </div>
         </aside>
 
-        <main className={cn("flex h-full flex-1 flex-col", className)}>
-          <div className="flex items-center gap-2 p-3">
-            <button
-              type="button"
-              onClick={toggle}
-              aria-pressed={isOpen}
-              className={cn(
-                "inline-flex h-9 items-center rounded-md border px-3 text-sm transition-colors",
-                "hover:bg-muted"
-              )}
-            >
-              {isOpen ? "Hide sidebar" : "Show sidebar"}
-            </button>
-          </div>
+        <main className={cn("relative flex h-full min-h-0 flex-1 flex-col", className)}>
+          {/* Floating sidebar button */}
+          <button
+            type="button"
+            onClick={toggle}
+            aria-pressed={isOpen}
+            className={cn(
+              "absolute top-4 left-4 z-10 inline-flex h-9 items-center rounded-md border bg-background/80 backdrop-blur-sm px-3 text-sm transition-colors shadow-sm",
+              "hover:bg-background hover:shadow-md"
+            )}
+          >
+            {isOpen ? "Hide sidebar" : "Show sidebar"}
+          </button>
 
-          <div className={cn("flex-1 overflow-hidden")}> 
+          <div className={cn("flex-1 min-h-0")}> 
             {/* Full-width scroll container; pages/components will center content */}
-            <div className="flex h-full flex-col px-4">
+            <div className="flex h-full min-h-0 flex-col">
               {children}
             </div>
           </div>
