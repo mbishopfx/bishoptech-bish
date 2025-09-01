@@ -6,6 +6,7 @@ import {
   createUIMessageStreamResponse,
 } from "ai";
 import { getLanguageModel } from "@/lib/ai/ai-providers";
+import { createToolsForModel, ToolType } from "@/lib/ai/model-tools";
 import { api } from "@/convex/_generated/api";
 import { fetchMutation } from "convex/nextjs";
 import { withAuth } from "@workos-inc/authkit-nextjs";
@@ -21,8 +22,13 @@ export async function POST(req: Request) {
     messages,
     modelId,
     threadId,
-  }: { messages: UIMessage[]; modelId: string; threadId: string } =
-    await req.json();
+    enabledTools = [],
+  }: {
+    messages: UIMessage[];
+    modelId: string;
+    threadId: string;
+    enabledTools?: ToolType[];
+  } = await req.json();
 
   // Return early if request is already aborted
   if (abortSignal?.aborted) {
@@ -172,11 +178,19 @@ export async function POST(req: Request) {
         return;
       }
 
+      // Create tools for the model if any are enabled
+      const tools =
+        enabledTools.length > 0
+          ? createToolsForModel(modelId, enabledTools)
+          : undefined;
+
       // Start streaming from the model
       const result = streamText({
         // Accept union model from registry
         model: languageModel,
         messages: convertToModelMessages(messages),
+        // @ts-expect-error
+        tools,
         abortSignal: abortSignal,
         onChunk: async ({ chunk }) => {
           // Skip processing if aborted

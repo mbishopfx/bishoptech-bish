@@ -1,8 +1,18 @@
-// @ts-nocheck
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { google } from "@ai-sdk/google";
 import { createProviderRegistry } from "ai";
+import { ToolType } from "./model-tools";
+
+// Model capabilities interface
+export interface ModelCapabilities {
+  supportsTools: boolean;
+  supportsSearch: boolean;
+  supportsUrlContext: boolean;
+  supportsStreaming: boolean;
+  maxTokens?: number;
+  contextWindow?: number;
+}
 
 // Model configuration types
 export type ModelConfig = {
@@ -16,6 +26,9 @@ export type ModelConfig = {
     output: number; // per 1M tokens (informational only)
   };
   isPremium: boolean;
+  capabilities: ModelCapabilities;
+  supportedTools: ToolType[];
+  defaultTools: ToolType[];
 };
 
 // Available models configuration (Google only)
@@ -29,6 +42,16 @@ export const MODELS: ModelConfig[] = [
     contextWindow: 1048576,
     pricing: { input: 0, output: 0 },
     isPremium: false,
+    capabilities: {
+      supportsTools: true,
+      supportsSearch: true,
+      supportsUrlContext: true,
+      supportsStreaming: true,
+      maxTokens: 8192,
+      contextWindow: 1048576,
+    },
+    supportedTools: ["google_search", "url_context"],
+    defaultTools: ["url_context"],
   },
   {
     id: "google:gemini-2.5-pro",
@@ -39,6 +62,16 @@ export const MODELS: ModelConfig[] = [
     contextWindow: 1048576,
     pricing: { input: 0, output: 0 },
     isPremium: true,
+    capabilities: {
+      supportsTools: true,
+      supportsSearch: true,
+      supportsUrlContext: true,
+      supportsStreaming: true,
+      maxTokens: 8192,
+      contextWindow: 1048576,
+    },
+    supportedTools: ["google_search", "url_context"],
+    defaultTools: ["url_context"],
   },
   {
     id: "google:gemini-2.0-flash",
@@ -48,6 +81,16 @@ export const MODELS: ModelConfig[] = [
     contextWindow: 1048576,
     pricing: { input: 0, output: 0 },
     isPremium: false,
+    capabilities: {
+      supportsTools: true,
+      supportsSearch: true,
+      supportsUrlContext: true,
+      supportsStreaming: true,
+      maxTokens: 8192,
+      contextWindow: 1048576,
+    },
+    supportedTools: ["google_search", "url_context"],
+    defaultTools: ["url_context"],
   },
   {
     id: "google:gemini-2.0-flash-lite",
@@ -57,6 +100,16 @@ export const MODELS: ModelConfig[] = [
     contextWindow: 1048576,
     pricing: { input: 0, output: 0 },
     isPremium: false,
+    capabilities: {
+      supportsTools: true,
+      supportsSearch: true,
+      supportsUrlContext: true,
+      supportsStreaming: true,
+      maxTokens: 8192,
+      contextWindow: 1048576,
+    },
+    supportedTools: ["google_search", "url_context"],
+    defaultTools: ["url_context"],
   },
 ];
 
@@ -79,11 +132,34 @@ export function getAllProviders(): string[] {
 // Default model configuration (Google)
 export const DEFAULT_MODEL = "google:gemini-2.5-flash";
 
-// Resolve language model (Google only)
-export function getLanguageModel(
+// Enhanced model utilities
+export function getModelCapabilities(
   modelId: string,
-  _customApiKeys?: { google?: string },
-) {
+): ModelCapabilities | undefined {
+  const model = getModelById(modelId);
+  return model?.capabilities;
+}
+
+export function getModelSupportedTools(modelId: string): ToolType[] {
+  const model = getModelById(modelId);
+  return model?.supportedTools || [];
+}
+
+export function getModelDefaultTools(modelId: string): ToolType[] {
+  const model = getModelById(modelId);
+  return model?.defaultTools || [];
+}
+
+export function isModelCapable(
+  modelId: string,
+  capability: keyof ModelCapabilities,
+): boolean {
+  const capabilities = getModelCapabilities(modelId);
+  return Boolean(capabilities?.[capability]) || false;
+}
+
+// Resolve language model (Google only)
+export function getLanguageModel(modelId: string) {
   if (modelId.startsWith("google:")) {
     const modelName = modelId.replace("google:", "");
     return google(modelName as any);

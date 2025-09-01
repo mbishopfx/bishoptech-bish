@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter } from "next/font/google";
 import "@/styles/globals.css";
 import { ConvexClientProvider } from "@/components/ConvexClientProvider";
 import { ThemeProvider } from "next-themes";
@@ -7,14 +7,10 @@ import { Providers } from "./providers";
 import ChatShell from "@/components/ai/ChatShell";
 import ThreadSidebar from "@/components/thread-sidebar";
 import { cookies } from "next/headers";
+import { Inter } from "next/font/google";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const inter = Inter({
+  weight: ["400"],
   subsets: ["latin"],
 });
 
@@ -34,20 +30,14 @@ export default async function RootLayout({
   const initialModel = cookieStore.get("selectedModel")?.value;
 
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable}`}
-      suppressHydrationWarning
-    >
+    <html lang="en" className={`${inter.className}`} suppressHydrationWarning>
       <body
         className={`bg-background selection:bg-sidebar-logo relative antialiased selection:text-white dark:selection:text-black`}
       >
         <ConvexClientProvider>
           <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
             <Providers initialModel={initialModel}>
-              <ChatShell sidebar={<ThreadSidebar />}>
-                {children}
-              </ChatShell>
+              <ChatShell sidebar={<ThreadSidebar />}>{children}</ChatShell>
             </Providers>
           </ThemeProvider>
         </ConvexClientProvider>

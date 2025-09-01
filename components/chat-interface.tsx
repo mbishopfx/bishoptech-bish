@@ -8,6 +8,20 @@ import { useModel } from "@/contexts/model-context";
 import { useInitialMessage } from "@/contexts/initial-message-context";
 import { toast } from "sonner";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ToolType, getDefaultTools } from "@/lib/ai/model-tools";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ai/ui/tooltip";
+import {
+  Tool,
+  ToolHeader,
+  ToolContent,
+  ToolInput,
+  ToolOutput,
+} from "@/components/ai/tool";
 import { Message, MessageContent } from "@/components/ai/message";
 import {
   PromptInput,
@@ -40,6 +54,7 @@ import {
   CopyIcon,
   GitBranchIcon,
   EditIcon,
+  SearchIcon,
 } from "lucide-react";
 import { Authenticated, useConvexAuth } from "convex/react";
 import {
@@ -70,6 +85,28 @@ export default function ChatInterface({
     null,
   );
   const { isAuthenticated } = useConvexAuth();
+
+  const [isSearchEnabled, setIsSearchEnabled] = useState<boolean>(false);
+
+  // Initialize search state from localStorage when model changes
+  useEffect(() => {
+    // Only access localStorage on client side
+    if (typeof window !== "undefined") {
+      const savedSearchState = localStorage.getItem("webSearchEnabled");
+      const searchEnabled = savedSearchState === "true";
+      setIsSearchEnabled(searchEnabled);
+    }
+  }, [selectedModel]);
+
+  const handleSearchToggle = useCallback(() => {
+    const newSearchState = !isSearchEnabled;
+    setIsSearchEnabled(newSearchState);
+
+    // Save to localStorage (client side only)
+    if (typeof window !== "undefined") {
+      localStorage.setItem("webSearchEnabled", newSearchState.toString());
+    }
+  }, [isSearchEnabled]);
 
   const isThread = id !== "welcome";
 
@@ -102,9 +139,26 @@ export default function ChatInterface({
       },
       transport: new DefaultChatTransport({
         api: "/api/chat",
-        prepareSendMessagesRequest: ({ messages }) => ({
-          body: { messages, modelId: selectedModel, threadId: id },
-        }),
+        prepareSendMessagesRequest: ({ messages }) => {
+          // Get current tools state at the time of sending
+          const currentDefaultTools = getDefaultTools(selectedModel);
+          const currentSearchState =
+            typeof window !== "undefined"
+              ? localStorage.getItem("webSearchEnabled") === "true"
+              : false;
+          const currentEnabledTools = currentSearchState
+            ? [...currentDefaultTools, "google_search" as ToolType]
+            : currentDefaultTools;
+
+          return {
+            body: {
+              messages,
+              modelId: selectedModel,
+              threadId: id,
+              enabledTools: currentEnabledTools,
+            },
+          };
+        },
       }),
     });
 
@@ -319,6 +373,87 @@ export default function ChatInterface({
                             </Reasoning>
                           );
                         }
+                        if (part.type === "tool-call") {
+                          const toolCall = part as {
+                            toolName?: string;
+                            args?: unknown;
+                          };
+                          const toolName = toolCall.toolName || "tool";
+
+                          return (
+                            <Tool
+                              key={`${message.id}-${i}`}
+                              className="my-2 border-blue-200 bg-blue-50/50"
+                            >
+                              <ToolHeader
+                                type={`tool-${toolName}` as `tool-${string}`}
+                                state="input-available"
+                              />
+                              <ToolContent>
+                                <ToolInput input={toolCall.args || {}} />
+                              </ToolContent>
+                            </Tool>
+                          );
+                        }
+                        if (part.type === "tool-result") {
+                          const toolResult = part as {
+                            toolName?: string;
+                            result?: unknown;
+                            isError?: boolean;
+                          };
+                          const toolName = toolResult.toolName || "tool";
+
+                          return (
+                            <Tool
+                              key={`${message.id}-${i}`}
+                              className="my-2 border-green-200 bg-green-50/50"
+                            >
+                              <ToolHeader
+                                type={`tool-${toolName}` as `tool-${string}`}
+                                state={
+                                  toolResult.isError
+                                    ? "output-error"
+                                    : "output-available"
+                                }
+                              />
+                              <ToolContent>
+                                <ToolOutput
+                                  output={
+                                    toolName === "google_search" ||
+                                    toolName === "url_context" ? (
+                                      <div className="p-3 text-sm">
+                                        <div className="text-green-700 font-medium mb-2">
+                                          ✓ Successfully retrieved information
+                                        </div>
+                                        <div className="text-xs text-muted-foreground">
+                                          Content has been analyzed and
+                                          integrated into the response above.
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <div className="p-3">
+                                        <pre className="whitespace-pre-wrap text-xs">
+                                          {typeof toolResult.result === "string"
+                                            ? toolResult.result
+                                            : JSON.stringify(
+                                                toolResult.result,
+                                                null,
+                                                2,
+                                              )}
+                                        </pre>
+                                      </div>
+                                    )
+                                  }
+                                  errorText={
+                                    toolResult.isError
+                                      ? "Tool execution failed"
+                                      : ""
+                                  }
+                                />
+                              </ToolContent>
+                            </Tool>
+                          );
+                        }
                         return null;
                       })}
                     </MessageContent>
@@ -455,6 +590,31 @@ export default function ChatInterface({
                 >
                   <PaperclipIcon size={16} />
                 </PromptInputButton>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <PromptInputButton
+                        onClick={handleSearchToggle}
+                        aria-label="Toggle web search"
+                        disabled={disableInput || !isAuthenticated}
+                        variant={isSearchEnabled ? "default" : "ghost"}
+                        className={
+                          isSearchEnabled
+                            ? "bg-blue-600 hover:bg-blue-700 border-blue-600 text-white"
+                            : ""
+                        }
+                      >
+                        <SearchIcon size={16} />
+                      </PromptInputButton>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" align="center">
+                      <p>{isSearchEnabled ? "Disable" : "Enable"} web search</p>
+                      <p className="text-xs text-muted-foreground">
+                        Search the web for current information
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
                 <PromptInputModelSelect
                   value={selectedModel}
                   onValueChange={setSelectedModel}
