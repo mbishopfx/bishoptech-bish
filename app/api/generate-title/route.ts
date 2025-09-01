@@ -31,6 +31,8 @@ export async function POST(request: NextRequest) {
 
 User message: ${userMessage}`,
       temperature: 0.3,
+      maxOutputTokens: 32,
+      maxRetries: 3,
     });
 
     // Clean the generated title - remove any potential markdown, quotes, or symbols

@@ -443,6 +443,7 @@ export const finalizeAssistantMessage = mutation({
   args: {
     messageId: v.string(),
     ok: v.boolean(),
+    finalContent: v.optional(v.string()), // Add final content parameter
     error: v.optional(
       v.object({
         type: v.string(),
@@ -465,12 +466,25 @@ export const finalizeAssistantMessage = mutation({
       throw new Error("Message not found or access denied");
     }
 
-    // Update message
-    await ctx.db.patch(message._id, {
+    // Prepare update object
+    const updateData: {
+      status: "done" | "error";
+      serverError?: { type: string; message: string };
+      updated_at: number;
+      content?: string;
+    } = {
       status: args.ok ? ("done" as const) : ("error" as const),
       serverError: args.ok ? undefined : args.error,
       updated_at: Date.now(),
-    });
+    };
+
+    // If final content is provided (manual stop case), save it directly
+    if (args.finalContent !== undefined && args.finalContent.length > 0) {
+      updateData.content = args.finalContent;
+    }
+
+    // Update message
+    await ctx.db.patch(message._id, updateData);
 
     // Update thread state as well
     const thread = await ctx.db

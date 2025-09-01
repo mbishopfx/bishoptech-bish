@@ -15,6 +15,8 @@ import { Id } from "@/convex/_generated/dataModel";
 export const maxDuration = 30;
 
 export async function POST(req: Request) {
+  // Get abort signal from request for proper cancellation
+  const abortSignal = req.signal;
   const {
     messages,
     modelId,
@@ -22,12 +24,19 @@ export async function POST(req: Request) {
   }: { messages: UIMessage[]; modelId: string; threadId: string } =
     await req.json();
 
+  // Return early if request is already aborted
+  if (abortSignal?.aborted) {
+    return new Response("Request aborted", { status: 499 });
+  }
+
   const stream = createUIMessageStream({
     originalMessages: messages,
     execute: async ({ writer }) => {
       const assistantMessageId = crypto.randomUUID();
       let assistantMessageStarted = false;
       let finalizationPromise: Promise<void> | null = null;
+      let totalContent = ""; // Track complete content for finalization
+      let isAborted = false; // Track if request was manually aborted
 
       // Fetch auth lazily in parallel
       let accessToken: string | undefined;
@@ -61,7 +70,9 @@ export async function POST(req: Request) {
       };
 
       const flush = async () => {
-        if (pendingDelta.length === 0) return;
+        // Double-check abort status before any database operations
+        if (abortSignal?.aborted || pendingDelta.length === 0) return;
+
         // Ensure assistant message doc exists before appending deltas
         if (startAssistantPromise) {
           try {
@@ -74,36 +85,126 @@ export async function POST(req: Request) {
             return;
           }
         }
+
+        // Final abort check before database write
+        if (abortSignal?.aborted) return;
+
         await ensureAuth();
         const toSend = pendingDelta;
         pendingDelta = "";
         lastFlushAt = Date.now();
-        fetchMutation(
-          api.threads.appendAssistantMessageDelta,
-          {
-            messageId: assistantMessageId,
-            delta: toSend,
-          },
-          { token: accessToken },
-        ).catch(() => {});
+
+        // Only write to database if not aborted
+        if (!abortSignal?.aborted) {
+          fetchMutation(
+            api.threads.appendAssistantMessageDelta,
+            {
+              messageId: assistantMessageId,
+              delta: toSend,
+            },
+            { token: accessToken },
+          ).catch(() => {});
+        }
       };
+
+      // Listen for abort from client
+      const handleAbort = async () => {
+        if (isAborted) return; // Prevent double execution
+        isAborted = true;
+
+        // If we abort before starting assistant message, don't try to finalize
+        if (!assistantMessageStarted && !startAssistantPromise) {
+          return;
+        }
+
+        if (!finalizationPromise) {
+          finalizationPromise = (async (): Promise<void> => {
+            try {
+              await ensureAuth();
+
+              // Wait for assistant message to be created first
+              if (startAssistantPromise) {
+                try {
+                  const result = await startAssistantPromise;
+                  if (!result) {
+                    return;
+                  }
+                } catch (e) {
+                  console.error("Failed to create assistant message:", e);
+                  return;
+                }
+              }
+
+              // Send any pending content + accumulated content directly in finalization
+              const contentToSave = totalContent + pendingDelta;
+
+              await fetchMutation(
+                api.threads.finalizeAssistantMessage,
+                {
+                  messageId: assistantMessageId,
+                  ok: true, // Mark as OK since user manually stopped
+                  finalContent: contentToSave, // Send all content including pending
+                  error: undefined,
+                },
+                { token: accessToken },
+              );
+            } catch (e) {
+              console.error("Failed to finalize on abort:", e);
+            }
+          })();
+        }
+
+        return finalizationPromise;
+      };
+
+      // Set up abort listeners
+      if (abortSignal) {
+        abortSignal.addEventListener("abort", handleAbort);
+      }
+
+      if (req.signal) {
+        req.signal.addEventListener("abort", handleAbort);
+      }
+
+      // Check if already aborted
+      if (abortSignal?.aborted || req.signal?.aborted) {
+        await handleAbort();
+        return;
+      }
 
       // Start streaming from the model
       const result = streamText({
         // Accept union model from registry
         model: languageModel,
         messages: convertToModelMessages(messages),
+        abortSignal: abortSignal,
         onChunk: async ({ chunk }) => {
+          // Skip processing if aborted
+          if (abortSignal?.aborted || isAborted) {
+            return;
+          }
+
           if (chunk.type === "text-delta" && chunk.text.length > 0) {
             gotAnyDelta = true;
             pendingDelta += chunk.text;
+            totalContent += chunk.text; // Accumulate total content
             const now = Date.now();
-            if (now - lastFlushAt >= FLUSH_EVERY_MS) {
+            if (
+              now - lastFlushAt >= FLUSH_EVERY_MS &&
+              !abortSignal?.aborted &&
+              !isAborted
+            ) {
               await flush();
             }
           }
         },
         onFinish: async ({ text }) => {
+          // Don't finalize if request was manually aborted
+          if (abortSignal?.aborted || isAborted) {
+            return;
+          }
+
+          // Final flush to ensure all content is saved
           await flush();
 
           // Prevent duplicate finalization with atomic promise
@@ -114,34 +215,79 @@ export async function POST(req: Request) {
           finalizationPromise = (async (): Promise<void> => {
             await ensureAuth();
             const ok = gotAnyDelta || (text?.length ?? 0) > 0;
-            await fetchMutation(
-              api.threads.finalizeAssistantMessage,
-              {
-                messageId: assistantMessageId,
-                ok,
-                error: ok
-                  ? undefined
-                  : {
-                      type: "empty",
-                      message: "No tokens received from provider",
-                    },
-              },
-              { token: accessToken },
-            ).catch(() => {});
+
+            // Wait for assistant message to be created first
+            if (startAssistantPromise) {
+              try {
+                const result = await startAssistantPromise;
+                if (!result) {
+                  return;
+                }
+              } catch (e) {
+                console.error("Assistant message creation failed:", e);
+                return;
+              }
+            }
+
+            // Only finalize if not aborted
+            if (!abortSignal?.aborted) {
+              await fetchMutation(
+                api.threads.finalizeAssistantMessage,
+                {
+                  messageId: assistantMessageId,
+                  ok,
+                  error: ok
+                    ? undefined
+                    : {
+                        type: "empty",
+                        message: "No tokens received from provider",
+                      },
+                },
+                { token: accessToken },
+              ).catch(() => {});
+            }
           })();
 
           return finalizationPromise;
         },
-        onError: async (e) => {
-          console.error("streamText error", e);
+        onError: async ({ error }) => {
+          console.error("streamText error", error);
+
+          // Check if this is an abort error
+          const errorObj = error as Error;
+          const isAbortError =
+            errorObj?.name === "AbortError" ||
+            errorObj?.message?.includes("aborted") ||
+            errorObj?.message?.includes("cancelled") ||
+            abortSignal?.aborted ||
+            isAborted;
+
+          if (isAbortError) {
+            await handleAbort();
+            return;
+          }
+
           await flush();
 
           // Prevent duplicate finalization with atomic promise
           if (finalizationPromise) {
-            return finalizationPromise;
+            return;
           }
 
           finalizationPromise = (async (): Promise<void> => {
+            // Wait for assistant message to be created first
+            if (startAssistantPromise) {
+              try {
+                const result = await startAssistantPromise;
+                if (!result) {
+                  return;
+                }
+              } catch (e) {
+                console.error("Assistant message creation failed:", e);
+                return;
+              }
+            }
+
             await fetchMutation(
               api.threads.finalizeAssistantMessage,
               {
@@ -150,10 +296,12 @@ export async function POST(req: Request) {
                 error: { type: "generation", message: "stream error" },
               },
               { token: accessToken },
-            ).catch(() => {});
+            ).catch((e) => {
+              console.error("Failed to finalize error:", e);
+            });
           })();
 
-          return finalizationPromise;
+          await finalizationPromise;
         },
       });
       writer.merge(result.toUIMessageStream({ sendStart: false }));

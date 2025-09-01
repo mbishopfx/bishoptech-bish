@@ -80,26 +80,33 @@ export default function ChatInterface({
     { initialNumItems: 10 },
   );
 
-  const { messages, status, setMessages, sendMessage, regenerate } = useChat({
-    id,
-    generateId: generateUUID,
-    onFinish() {
-      if (pathname === "/") {
-        router.push(`/chat/${id}`);
-        router.refresh();
-      }
-    },
-    onError(error: Error) {
-      console.error("Chat error:", error);
-      toast.error("An error occurred. Please try again.");
-    },
-    transport: new DefaultChatTransport({
-      api: "/api/chat",
-      prepareSendMessagesRequest: ({ messages }) => ({
-        body: { messages, modelId: selectedModel, threadId: id },
+  const { messages, status, setMessages, sendMessage, regenerate, stop } =
+    useChat({
+      id,
+      generateId: generateUUID,
+      onFinish() {
+        if (pathname === "/") {
+          router.push(`/chat/${id}`);
+          router.refresh();
+        }
+      },
+      onError(error: Error) {
+        console.error("Chat error:", error);
+        // Don't show error toast for aborted requests (user stopped generation)
+        if (
+          !error.message.includes("aborted") &&
+          !error.message.includes("cancelled")
+        ) {
+          toast.error("An error occurred. Please try again.");
+        }
+      },
+      transport: new DefaultChatTransport({
+        api: "/api/chat",
+        prepareSendMessagesRequest: ({ messages }) => ({
+          body: { messages, modelId: selectedModel, threadId: id },
+        }),
       }),
-    }),
-  });
+    });
 
   // Store sendMessage in ref to prevent useEffect from re-running
   sendMessageRef.current = sendMessage;
@@ -467,7 +474,26 @@ export default function ChatInterface({
                   </PromptInputModelSelectContent>
                 </PromptInputModelSelect>
               </PromptInputTools>
-              <PromptInputSubmit disabled={disableInput || !isAuthenticated} />
+              <PromptInputSubmit
+                disabled={disableInput || !isAuthenticated}
+                status={status}
+                onStop={() => {
+                  // Preserve current streaming message content before stopping
+                  const lastMessage = messages[messages.length - 1];
+                  if (lastMessage && lastMessage.role === "assistant") {
+                    setMessages((currentMessages) => {
+                      const updatedMessages = [...currentMessages];
+                      updatedMessages[updatedMessages.length - 1] = {
+                        ...lastMessage,
+                        parts: lastMessage.parts, // Preserve current content
+                      };
+                      return updatedMessages;
+                    });
+                  }
+
+                  stop();
+                }}
+              />
             </PromptInputToolbar>
           </PromptInput>
           <input
