@@ -2,7 +2,6 @@ import { preloadQuery } from "convex/nextjs";
 import { api } from "@/convex/_generated/api";
 import { getAccessToken } from "@/lib/auth";
 import ChatInterfaceWithPreload from "./chat-interface-with-preload";
-import { cn } from "@/lib/utils";
 
 interface ChatMessagesServerProps {
   threadId: string;
@@ -28,19 +27,7 @@ export async function ChatMessagesServer({ threadId }: ChatMessagesServerProps) 
       { token: accessToken },
     );
 
-    return (
-      <>
-        <style dangerouslySetInnerHTML={{
-          __html: `
-            .conversation-content {
-              display: flex !important;
-              flex-direction: column-reverse !important;
-            }
-          `
-        }} />
-        <ChatInterfaceWithPreload id={threadId} preloadedMessages={preloadedMessages} />
-      </>
-    );
+    return <ChatInterfaceWithPreload id={threadId} preloadedMessages={preloadedMessages} />;
   } catch {
     return <ChatInterfaceWithPreload id={threadId} />;
   }
