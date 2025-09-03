@@ -4,6 +4,7 @@ import {
   convertToModelMessages,
   createUIMessageStream,
   createUIMessageStreamResponse,
+  smoothStream,
 } from "ai";
 import {
   getLanguageModel,
@@ -197,6 +198,10 @@ export async function POST(req: Request) {
         messages: convertToModelMessages(messages),
         // @ts-expect-error AI SDK
         tools,
+        experimental_transform: smoothStream({
+          delayInMs: 10,
+          chunking: "word",
+        }),
         abortSignal: abortSignal,
         // Add reasoning support for OpenAI reasoning models
         ...(useReasoning && {

@@ -1,6 +1,6 @@
 import * as React from "react";
 
-export default function OpenRouterIcon(props: React.SVGProps<SVGSVGElement>) {
+export function OpenRouterIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
       width="512"

@@ -4,7 +4,7 @@ import { google } from "@ai-sdk/google";
 import { openai } from "@ai-sdk/openai";
 import { anthropic } from "@ai-sdk/anthropic";
 import { xai } from "@ai-sdk/xai";
-import { mistral } from "@ai-sdk/mistral";
+import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { createProviderRegistry } from "ai";
 import { ToolType } from "./model-tools";
 
@@ -462,13 +462,13 @@ export const MODELS: ModelConfig[] = [
     defaultTools: [],
   },
 
-  // Mistral Models
+  // OpenRouter Models
   {
-    id: "mistral:magistral-small-latest",
+    id: "openrouter:mistralai/magistral-small-latest",
     name: "Magistral Small",
-    provider: "mistral",
+    provider: "openrouter",
     description:
-      "Mistral's latest small reasoning model with step-by-step thinking capabilities.",
+      "Mistral's latest small reasoning model with step-by-step thinking capabilities via OpenRouter.",
     contextWindow: 128000,
     pricing: { input: 2, output: 6 },
     isPremium: false,
@@ -485,11 +485,11 @@ export const MODELS: ModelConfig[] = [
     defaultTools: [],
   },
   {
-    id: "mistral:mistral-medium-latest",
+    id: "openrouter:mistralai/mistral-medium-latest",
     name: "Mistral Medium",
-    provider: "mistral",
+    provider: "openrouter",
     description:
-      "Mistral's balanced medium model with strong performance across tasks.",
+      "Mistral's balanced medium model with strong performance across tasks via OpenRouter.",
     contextWindow: 128000,
     pricing: { input: 3, output: 9 },
     isPremium: false,
@@ -506,13 +506,55 @@ export const MODELS: ModelConfig[] = [
     defaultTools: [],
   },
   {
-    id: "mistral:magistral-small-2506",
-    name: "Magistral Small 2506",
-    provider: "mistral",
+    id: "openrouter:openai/gpt-oss-120b:nitro",
+    name: "GPT-OSS-120B",
+    provider: "openrouter",
     description:
-      "Mistral's latest small reasoning model (January 2025) with enhanced capabilities.",
+      "OpenAI's open-source GPT model with 120B parameters via OpenRouter.",
     contextWindow: 128000,
-    pricing: { input: 2, output: 6 },
+    pricing: { input: 5, output: 15 },
+    isPremium: false,
+    capabilities: {
+      supportsTools: true,
+      supportsSearch: false,
+      supportsUrlContext: false,
+      supportsStreaming: true,
+      supportsReasoning: false,
+      maxTokens: 8192,
+      contextWindow: 128000,
+    },
+    supportedTools: [],
+    defaultTools: [],
+  },
+  {
+    id: "openrouter:deepseek/deepseek-chat-v3.1",
+    name: "DeepSeek Chat v3.1",
+    provider: "openrouter",
+    description:
+      "DeepSeek's latest chat model with enhanced conversational capabilities via OpenRouter.",
+    contextWindow: 64000,
+    pricing: { input: 0.27, output: 1.1 },
+    isPremium: false,
+    capabilities: {
+      supportsTools: true,
+      supportsSearch: false,
+      supportsUrlContext: false,
+      supportsStreaming: true,
+      supportsReasoning: false,
+      maxTokens: 8192,
+      contextWindow: 64000,
+    },
+    supportedTools: [],
+    defaultTools: [],
+  },
+  {
+    id: "openrouter:deepseek/deepseek-r1-0528:free",
+    name: "DeepSeek R1 (Free)",
+    provider: "openrouter",
+    description:
+      "DeepSeek's reasoning model with step-by-step thinking capabilities, free tier via OpenRouter.",
+    contextWindow: 64000,
+    pricing: { input: 0, output: 0 },
     isPremium: false,
     capabilities: {
       supportsTools: true,
@@ -520,6 +562,195 @@ export const MODELS: ModelConfig[] = [
       supportsUrlContext: false,
       supportsStreaming: true,
       supportsReasoning: true,
+      maxTokens: 8192,
+      contextWindow: 64000,
+    },
+    supportedTools: [],
+    defaultTools: [],
+  },
+  {
+    id: "openrouter:tngtech/deepseek-r1t2-chimera:free",
+    name: "DeepSeek R1T2 Chimera (Free)",
+    provider: "openrouter",
+    description:
+      "Enhanced DeepSeek reasoning model with improved capabilities, free tier via OpenRouter.",
+    contextWindow: 64000,
+    pricing: { input: 0, output: 0 },
+    isPremium: false,
+    capabilities: {
+      supportsTools: true,
+      supportsSearch: false,
+      supportsUrlContext: false,
+      supportsStreaming: true,
+      supportsReasoning: true,
+      maxTokens: 8192,
+      contextWindow: 64000,
+    },
+    supportedTools: [],
+    defaultTools: [],
+  },
+  {
+    id: "openrouter:z-ai/glm-4.5",
+    name: "GLM-4.5",
+    provider: "openrouter",
+    description:
+      "Zhipu AI's GLM-4.5 model with strong Chinese and English capabilities via OpenRouter.",
+    contextWindow: 128000,
+    pricing: { input: 1.0, output: 1.0 },
+    isPremium: false,
+    capabilities: {
+      supportsTools: true,
+      supportsSearch: false,
+      supportsUrlContext: false,
+      supportsStreaming: true,
+      supportsReasoning: false,
+      maxTokens: 8192,
+      contextWindow: 128000,
+    },
+    supportedTools: [],
+    defaultTools: [],
+  },
+  {
+    id: "openrouter:z-ai/glm-4.5v",
+    name: "GLM-4.5v",
+    provider: "openrouter",
+    description:
+      "Zhipu AI's GLM-4.5v model with vision capabilities for image understanding via OpenRouter.",
+    contextWindow: 128000,
+    pricing: { input: 1.5, output: 1.5 },
+    isPremium: false,
+    capabilities: {
+      supportsTools: true,
+      supportsSearch: false,
+      supportsUrlContext: false,
+      supportsStreaming: true,
+      supportsReasoning: false,
+      maxTokens: 8192,
+      contextWindow: 128000,
+    },
+    supportedTools: [],
+    defaultTools: [],
+  },
+  {
+    id: "openrouter:qwen/qwen3-30b-a3b",
+    name: "Qwen3 30B",
+    provider: "openrouter",
+    description:
+      "Qwen's 30B parameter model with strong performance across various tasks via OpenRouter.",
+    contextWindow: 128000,
+    pricing: { input: 0.8, output: 0.8 },
+    isPremium: false,
+    capabilities: {
+      supportsTools: true,
+      supportsSearch: false,
+      supportsUrlContext: false,
+      supportsStreaming: true,
+      supportsReasoning: false,
+      maxTokens: 8192,
+      contextWindow: 128000,
+    },
+    supportedTools: [],
+    defaultTools: [],
+  },
+  {
+    id: "openrouter:openrouter/horizon-beta",
+    name: "Horizon Beta",
+    provider: "openrouter",
+    description:
+      "OpenRouter's experimental beta model with cutting-edge capabilities.",
+    contextWindow: 128000,
+    pricing: { input: 2.0, output: 2.0 },
+    isPremium: false,
+    capabilities: {
+      supportsTools: true,
+      supportsSearch: false,
+      supportsUrlContext: false,
+      supportsStreaming: true,
+      supportsReasoning: false,
+      maxTokens: 8192,
+      contextWindow: 128000,
+    },
+    supportedTools: [],
+    defaultTools: [],
+  },
+  {
+    id: "openrouter:moonshotai/kimi-k2",
+    name: "Kimi K2",
+    provider: "openrouter",
+    description:
+      "Moonshot AI's Kimi K2 model with strong Chinese and English capabilities via OpenRouter.",
+    contextWindow: 200000,
+    pricing: { input: 1.2, output: 1.2 },
+    isPremium: false,
+    capabilities: {
+      supportsTools: true,
+      supportsSearch: false,
+      supportsUrlContext: false,
+      supportsStreaming: true,
+      supportsReasoning: false,
+      maxTokens: 8192,
+      contextWindow: 200000,
+    },
+    supportedTools: [],
+    defaultTools: [],
+  },
+  {
+    id: "openrouter:qwen/qwen3-235b-a22b-thinking-2507",
+    name: "Qwen3 235B Thinking",
+    provider: "openrouter",
+    description:
+      "Qwen's largest 235B parameter thinking model with advanced reasoning capabilities via OpenRouter.",
+    contextWindow: 128000,
+    pricing: { input: 8.0, output: 8.0 },
+    isPremium: true,
+    capabilities: {
+      supportsTools: true,
+      supportsSearch: false,
+      supportsUrlContext: false,
+      supportsStreaming: true,
+      supportsReasoning: true,
+      maxTokens: 8192,
+      contextWindow: 128000,
+    },
+    supportedTools: [],
+    defaultTools: [],
+  },
+  {
+    id: "openrouter:meta-llama/llama-4-maverick",
+    name: "Llama 4 Maverick",
+    provider: "openrouter",
+    description:
+      "Meta's Llama 4 Maverick model with enhanced capabilities via OpenRouter.",
+    contextWindow: 128000,
+    pricing: { input: 3.0, output: 3.0 },
+    isPremium: false,
+    capabilities: {
+      supportsTools: true,
+      supportsSearch: false,
+      supportsUrlContext: false,
+      supportsStreaming: true,
+      supportsReasoning: false,
+      maxTokens: 8192,
+      contextWindow: 128000,
+    },
+    supportedTools: [],
+    defaultTools: [],
+  },
+  {
+    id: "openrouter:qwen/qwen3-coder",
+    name: "Qwen3 Coder",
+    provider: "openrouter",
+    description:
+      "Qwen's specialized coding model optimized for programming tasks via OpenRouter.",
+    contextWindow: 128000,
+    pricing: { input: 1.5, output: 1.5 },
+    isPremium: false,
+    capabilities: {
+      supportsTools: true,
+      supportsSearch: false,
+      supportsUrlContext: false,
+      supportsStreaming: true,
+      supportsReasoning: false,
       maxTokens: 8192,
       contextWindow: 128000,
     },
@@ -582,6 +813,9 @@ const REASONING_MODELS = [
   "o3-mini",
   "magistral-small",
   "magistral-small-2506",
+  "deepseek-r1",
+  "deepseek-r1t2-chimera",
+  "qwen3-235b-a22b-thinking",
 ];
 
 // Check if a model is a reasoning model
@@ -623,13 +857,12 @@ export function getLanguageModel(modelId: string) {
     return xai(modelName as any);
   }
 
-  if (modelId.startsWith("mistral:")) {
-    const modelName = modelId.replace("mistral:", "");
-    // Use special handling for reasoning models if needed
-    if (isReasoningModel(modelName)) {
-      return mistral(modelName as any);
-    }
-    return mistral(modelName as any);
+  if (modelId.startsWith("openrouter:")) {
+    const modelName = modelId.replace("openrouter:", "");
+    const openrouter = createOpenRouter({
+      apiKey: process.env.OPENROUTER_API_KEY!,
+    });
+    return openrouter.chat(modelName as any);
   }
 
   // Fallback: use default model

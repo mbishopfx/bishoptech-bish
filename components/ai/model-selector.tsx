@@ -22,7 +22,7 @@ import { AnthropicIcon } from "@/components/ui/icons/anthropic-icon";
 import { TablerBrandOpenai } from "@/components/ui/icons/openai-icon";
 import { GoogleIcon } from "@/components/ui/icons/google-icon";
 import { XAiIcon } from "@/components/ui/icons/xai-icon";
-import { LogosMistralAiIcon } from "@/components/ui/icons/mistral-icon";
+import { OpenRouterIcon } from "@/components/ui/icons/openrouter-icon";
 
 // Provider icon mapping
 const providerIcons = {
@@ -30,7 +30,7 @@ const providerIcons = {
   anthropic: AnthropicIcon,
   google: GoogleIcon,
   xai: XAiIcon,
-  mistral: LogosMistralAiIcon,
+  openrouter: OpenRouterIcon,
 } as const;
 
 // Capability icon mapping
@@ -47,7 +47,7 @@ const providerNames = {
   anthropic: "Anthropic",
   google: "Google",
   xai: "xAI",
-  mistral: "Mistral",
+  openrouter: "OpenRouter",
 } as const;
 
 interface ModelSelectorProps {
