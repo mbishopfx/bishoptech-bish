@@ -32,7 +32,14 @@ interface ThreadSidebarInteractiveProps {
 }
 
 // Constants
-const GROUP_ORDER = ["Pinned", "Today", "Yesterday", "This Week", "This Month", "Older"] as const;
+const GROUP_ORDER = [
+  "Pinned",
+  "Today",
+  "Yesterday",
+  "This Week",
+  "This Month",
+  "Older",
+] as const;
 const MAX_TITLE_LENGTH = 18;
 const BLUR_DELAY = 150;
 
@@ -52,7 +59,8 @@ export function ThreadSidebarInteractive({
 
   // Extract initial data from preloaded prop for instant display
   const initialThreads: Thread[] =
-    (preloadedThreads as { _valueJSON?: { page?: Thread[] } })?._valueJSON?.page || [];
+    (preloadedThreads as { _valueJSON?: { page?: Thread[] } })?._valueJSON
+      ?.page || [];
   const [stableThreads, setStableThreads] = useState<Thread[]>(initialThreads);
 
   // Convex queries and mutations
@@ -69,11 +77,12 @@ export function ThreadSidebarInteractive({
 
   // Derived state
   const threads = stableThreads;
-  const status = preloadedThreads && preloadedResults?.isDone
-    ? "Exhausted"
-    : !preloadedThreads
-      ? fallbackResults.status
-      : "CanLoadMore";
+  const status =
+    preloadedThreads && preloadedResults?.isDone
+      ? "Exhausted"
+      : !preloadedThreads
+        ? fallbackResults.status
+        : "CanLoadMore";
 
   // Effects
   useEffect(() => {
@@ -98,7 +107,9 @@ export function ThreadSidebarInteractive({
   }, [fallbackResults.results, preloadedThreads, stableThreads.length]);
 
   useEffect(() => {
-    const searchInput = document.getElementById("thread-search-input") as HTMLInputElement;
+    const searchInput = document.getElementById(
+      "thread-search-input",
+    ) as HTMLInputElement;
     if (searchInput) {
       searchInput.removeAttribute("readonly");
       searchInput.value = searchQuery;
@@ -140,19 +151,22 @@ export function ThreadSidebarInteractive({
 
   const filterAndGroupThreads = (threads: Thread[], searchQuery: string) => {
     const filtered = threads.filter((thread) =>
-      thread.title.toLowerCase().includes(searchQuery.toLowerCase())
+      thread.title.toLowerCase().includes(searchQuery.toLowerCase()),
     );
 
-    return filtered.reduce((groups, thread) => {
-      const timeClass = getTimeClassification(thread._creationTime);
-      const groupKey = thread.pinned ? "Pinned" : timeClass;
-      
-      if (!groups[groupKey]) {
-        groups[groupKey] = [];
-      }
-      groups[groupKey].push(thread);
-      return groups;
-    }, {} as Record<string, Thread[]>);
+    return filtered.reduce(
+      (groups, thread) => {
+        const timeClass = getTimeClassification(thread._creationTime);
+        const groupKey = thread.pinned ? "Pinned" : timeClass;
+
+        if (!groups[groupKey]) {
+          groups[groupKey] = [];
+        }
+        groups[groupKey].push(thread);
+        return groups;
+      },
+      {} as Record<string, Thread[]>,
+    );
   };
 
   // Event handlers
@@ -181,7 +195,11 @@ export function ThreadSidebarInteractive({
     }
   };
 
-  const handleStartEdit = (threadId: string, currentTitle: string, e: React.MouseEvent) => {
+  const handleStartEdit = (
+    threadId: string,
+    currentTitle: string,
+    e: React.MouseEvent,
+  ) => {
     e.stopPropagation();
     setEditingThreadId(threadId);
     setEditingTitle(currentTitle);
@@ -247,7 +265,7 @@ export function ThreadSidebarInteractive({
 
   const handleInputBlur = (e: React.FocusEvent) => {
     const relatedTarget = e.relatedTarget as HTMLElement;
-    if (!relatedTarget || !relatedTarget.closest('button')) {
+    if (!relatedTarget || !relatedTarget.closest("button")) {
       setTimeout(() => {
         handleCancelEdit();
       }, BLUR_DELAY);
@@ -259,7 +277,9 @@ export function ThreadSidebarInteractive({
     if (filteredThreads.length === 0 && searchQuery) {
       return (
         <div className="p-4 text-center text-muted-foreground">
-          <p className="text-sm">No chats found matching &quot;{searchQuery}&quot;</p>
+          <p className="text-sm">
+            No chats found matching &quot;{searchQuery}&quot;
+          </p>
           <p className="text-xs">Try adjusting your search terms</p>
         </div>
       );
@@ -284,11 +304,14 @@ export function ThreadSidebarInteractive({
       <ContextMenu key={thread.threadId}>
         <ContextMenuTrigger>
           <div
-            onClick={() => !isEditing && router.push(`/chat/${thread.threadId}`)}
+            onClick={() =>
+              !isEditing && router.push(`/chat/${thread.threadId}`)
+            }
             className={cn(
-              "group relative flex items-center gap-2 p-2.5 rounded-lg cursor-pointer transition-colors overflow-hidden",
+              "group relative flex items-center gap-2 p-2.5 mb-1 rounded-lg cursor-pointer transition-colors overflow-hidden",
               "hover:bg-hover hover:text-accent-foreground",
-              pathname === `/chat/${thread.threadId}` && "bg-hover text-accent-foreground",
+              pathname === `/chat/${thread.threadId}` &&
+                "bg-hover text-accent-foreground",
               isEditing && "bg-hover text-accent-foreground",
             )}
           >
@@ -317,7 +340,9 @@ export function ThreadSidebarInteractive({
                     </Button>
                   </div>
                 ) : (
-                  <h3 className="text-sm font-medium truncate h-5 leading-5">{thread.title}</h3>
+                  <h3 className="text-sm font-medium truncate h-5 leading-5">
+                    {thread.title}
+                  </h3>
                 )}
                 {thread.pinned && (
                   <PinIcon className="h-3 w-3 text-popover-text flex-shrink-0" />
@@ -370,7 +395,9 @@ export function ThreadSidebarInteractive({
     return (
       <div key={groupName} className="mb-4">
         <div className="px-5 py-2">
-          <span className="text-xs font-semibold text-black/75">{groupName}</span>
+          <span className="text-xs font-semibold text-black/75">
+            {groupName}
+          </span>
         </div>
         <div className="space-y-0.5 px-5">
           {groupThreads.map(renderThreadItem)}
@@ -381,7 +408,7 @@ export function ThreadSidebarInteractive({
 
   // Main render
   const filteredThreads = threads.filter((thread) =>
-    thread.title.toLowerCase().includes(searchQuery.toLowerCase())
+    thread.title.toLowerCase().includes(searchQuery.toLowerCase()),
   );
   const groupedThreads = filterAndGroupThreads(threads, searchQuery);
 
@@ -389,7 +416,9 @@ export function ThreadSidebarInteractive({
     <>
       {renderEmptyState() || (
         <div className="w-full overflow-hidden">
-          {GROUP_ORDER.map((groupName) => renderThreadGroup(groupName, groupedThreads[groupName]))}
+          {GROUP_ORDER.map((groupName) =>
+            renderThreadGroup(groupName, groupedThreads[groupName]),
+          )}
         </div>
       )}
 

@@ -11,8 +11,12 @@ import {
 import { Textarea } from "@/components/ai/ui/textarea";
 import { cn } from "@/lib/utils";
 import type { ChatStatus } from "ai";
-import Image from "next/image";
-import { SentIcon, LoadingIcon, StopIcon, DeleteIcon } from "@/components/ui/icons/svg-icons";
+import {
+  SentIcon,
+  LoadingIcon,
+  StopIcon,
+  DeleteIcon,
+} from "@/components/ui/icons/svg-icons";
 import type {
   ComponentProps,
   HTMLAttributes,
@@ -163,7 +167,10 @@ export const PromptInputSubmit = ({
 
   return (
     <Button
-      className={cn("gap-1.5 rounded-lg transition-colors shadow-container-small", className)}
+      className={cn(
+        "gap-1.5 rounded-lg transition-colors shadow-container-small",
+        className,
+      )}
       size={size}
       type={isStreaming ? "button" : "submit"}
       variant={variant}
@@ -191,12 +198,7 @@ export const PromptInputModelSelectTrigger = ({
   className,
   ...props
 }: PromptInputModelSelectTriggerProps) => (
-  <SelectTrigger
-    className={cn(
-      className,
-    )}
-    {...props}
-  />
+  <SelectTrigger className={cn(className)} {...props} />
 );
 
 export type PromptInputModelSelectContentProps = ComponentProps<

@@ -31,7 +31,7 @@ export default async function RootLayout({
   return (
     <html lang="en" className={`${inter.className}`} suppressHydrationWarning>
       <body
-        className={`bg-background selection:bg-sidebar-logo relative antialiased selection:text-white dark:selection:text-black`}
+        className={`bg-background relative antialiased`}
       >
         <ConvexClientProvider>
           <ThemeProvider

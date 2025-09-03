@@ -6,8 +6,7 @@ import Link from "next/link";
 import { ThreadSidebarInteractive } from "./thread-sidebar-interactive";
 import { UserProfileSection } from "./user-profile-section";
 import { useRef, useEffect } from "react";
-import Image from "next/image";
-import { PlusIcon, AppLogo } from "@/components/ui/icons/svg-icons";
+import { AppLogo } from "@/components/ui/icons/svg-icons";
 import { Preloaded } from "convex/react";
 import { api } from "@/convex/_generated/api";
 

@@ -9,8 +9,14 @@ import { useInitialMessage } from "@/contexts/initial-message-context";
 import { toast } from "sonner";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ToolType, getDefaultTools } from "@/lib/ai/model-tools";
-import Image from "next/image";
-import { SearchIcon, AttachmentsIcon, RedoIcon, CopyIcon, BranchIcon, EditIcon, GlobeIcon, ReasoningIcon, StopIconAlt, PinIcon, DeleteIcon } from "@/components/ui/icons/svg-icons";
+import {
+  AttachmentsIcon,
+  RedoIcon,
+  CopyIcon,
+  BranchIcon,
+  EditIcon,
+  GlobeIcon,
+} from "@/components/ui/icons/svg-icons";
 import {
   Tooltip,
   TooltipContent,
@@ -43,10 +49,9 @@ import {
   ReasoningTrigger,
 } from "@/components/ai/reasoning";
 import { Loader } from "@/components/ai/loader";
-import { MODELS } from "@/lib/ai/ai-providers";
 import { usePaginatedQuery, usePreloadedQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Authenticated, useConvexAuth, Preloaded } from "convex/react";
+import { useConvexAuth, Preloaded } from "convex/react";
 import {
   Conversation,
   ConversationContent,
@@ -64,7 +69,9 @@ export default function ChatInterface({
   initialMessages?: UIMessage[];
   disableInput?: boolean;
   onInitialMessage?: (message: UIMessage) => Promise<void>;
-  preloadedMessages?: Preloaded<typeof api.threads.getThreadMessagesPaginatedSafe>;
+  preloadedMessages?: Preloaded<
+    typeof api.threads.getThreadMessagesPaginatedSafe
+  >;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -103,7 +110,9 @@ export default function ChatInterface({
   const isThread = id !== "welcome";
 
   // Use preloaded messages if available
-  const preloadedResults = preloadedMessages ? usePreloadedQuery(preloadedMessages) : null;
+  const preloadedResults = preloadedMessages
+    ? usePreloadedQuery(preloadedMessages)
+    : null;
 
   // Only run the Convex query when authenticated and no preloaded messages
   const { results: threadDocs = [] } = usePaginatedQuery(
@@ -348,270 +357,266 @@ export default function ChatInterface({
     [],
   );
 
-  const models = MODELS;
-
   return (
     <div className="flex h-screen w-full min-h-0 flex-col relative">
       {/* Single scrollable area that includes messages and actions - now takes full height */}
       <div className="flex-1 min-h-0">
-          <Conversation>
-            <ConversationContent className="mx-auto w-full max-w-3xl p-4 pb-30">
-              {renderedMessages.map((message) => (
-                <div key={message.id} className="group">
-                  <Message from={message.role} key={message.id}>
-                    <MessageContent from={message.role}>
-                      {(() => {
-                        // Group reasoning parts together
-                        const reasoningParts = message.parts.filter(
-                          (part) => part.type === "reasoning" && "text" in part,
-                        );
-                        const nonReasoningParts = message.parts.filter(
-                          (part) => part.type !== "reasoning",
-                        );
+        <Conversation>
+          <ConversationContent className="mx-auto w-full max-w-3xl p-4 pb-30">
+            {renderedMessages.map((message) => (
+              <div key={message.id} className="group">
+                <Message from={message.role} key={message.id}>
+                  <MessageContent from={message.role}>
+                    {(() => {
+                      // Group reasoning parts together
+                      const reasoningParts = message.parts.filter(
+                        (part) => part.type === "reasoning" && "text" in part,
+                      );
+                      const nonReasoningParts = message.parts.filter(
+                        (part) => part.type !== "reasoning",
+                      );
 
-                        return (
-                          <>
-                            {/* Single reasoning section for all reasoning parts */}
-                            {reasoningParts.length > 0 && (
-                              <Reasoning
-                                key={`${message.id}-reasoning`}
-                                className="w-full mb-4"
-                                isStreaming={status === "streaming"}
-                                defaultOpen={false}
-                              >
-                                <ReasoningTrigger />
-                                <ReasoningContent>
-                                  <div className="bg-gradient-to-r from-blue-50/80 to-purple-50/80 dark:from-blue-950/30 dark:to-purple-950/30 rounded-lg p-5 border border-blue-200/50 dark:border-blue-800/50 shadow-sm">
-                                    <div className="flex items-center gap-2 mb-4 pb-2 border-b border-blue-200/30 dark:border-blue-800/30">
-                                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                                      <div className="text-xs text-blue-700 dark:text-blue-300 font-semibold uppercase tracking-wide">
-                                        AI Reasoning Process
-                                      </div>
-                                    </div>
-                                    <div className="space-y-3">
-                                      {reasoningParts.map((part, i) => (
-                                        <div
-                                          key={i}
-                                          className="relative pl-4 border-l-2 border-blue-300/40 dark:border-blue-700/40"
-                                        >
-                                          <div className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
-                                            {(part as { text: string }).text}
-                                          </div>
-                                          {i < reasoningParts.length - 1 && (
-                                            <div className="mt-3 mb-1 w-full h-px bg-gradient-to-r from-transparent via-blue-200/50 to-transparent dark:via-blue-800/50"></div>
-                                          )}
-                                        </div>
-                                      ))}
+                      return (
+                        <>
+                          {/* Single reasoning section for all reasoning parts */}
+                          {reasoningParts.length > 0 && (
+                            <Reasoning
+                              key={`${message.id}-reasoning`}
+                              className="w-full mb-4"
+                              isStreaming={status === "streaming"}
+                              defaultOpen={false}
+                            >
+                              <ReasoningTrigger />
+                              <ReasoningContent>
+                                <div className="bg-gradient-to-r from-blue-50/80 to-purple-50/80 dark:from-blue-950/30 dark:to-purple-950/30 rounded-lg p-5 border border-blue-200/50 dark:border-blue-800/50 shadow-sm">
+                                  <div className="flex items-center gap-2 mb-4 pb-2 border-b border-blue-200/30 dark:border-blue-800/30">
+                                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                                    <div className="text-xs text-blue-700 dark:text-blue-300 font-semibold uppercase tracking-wide">
+                                      AI Reasoning Process
                                     </div>
                                   </div>
-                                </ReasoningContent>
-                              </Reasoning>
-                            )}
+                                  <div className="space-y-3">
+                                    {reasoningParts.map((part, i) => (
+                                      <div
+                                        key={i}
+                                        className="relative pl-4 border-l-2 border-blue-300/40 dark:border-blue-700/40"
+                                      >
+                                        <div className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
+                                          {(part as { text: string }).text}
+                                        </div>
+                                        {i < reasoningParts.length - 1 && (
+                                          <div className="mt-3 mb-1 w-full h-px bg-gradient-to-r from-transparent via-blue-200/50 to-transparent dark:via-blue-800/50"></div>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              </ReasoningContent>
+                            </Reasoning>
+                          )}
 
-                            {/* Render non-reasoning parts */}
-                            {nonReasoningParts.map((part, i: number) => {
-                              if (part.type === "text" && "text" in part) {
-                                return (
-                                  <Response key={`${message.id}-${i}`}>
-                                    {part.text}
-                                  </Response>
-                                );
-                              }
-                              if (part.type === "tool-call") {
-                                const toolCall = part as {
-                                  toolName?: string;
-                                  args?: unknown;
-                                };
-                                const toolName = toolCall.toolName || "tool";
+                          {/* Render non-reasoning parts */}
+                          {nonReasoningParts.map((part, i: number) => {
+                            if (part.type === "text" && "text" in part) {
+                              return (
+                                <Response key={`${message.id}-${i}`}>
+                                  {part.text}
+                                </Response>
+                              );
+                            }
+                            if (part.type === "tool-call") {
+                              const toolCall = part as {
+                                toolName?: string;
+                                args?: unknown;
+                              };
+                              const toolName = toolCall.toolName || "tool";
 
-                                return (
-                                  <Tool
-                                    key={`${message.id}-${i}`}
-                                    className="my-2 border-blue-200 bg-blue-50/50"
-                                  >
-                                    <ToolHeader
-                                      type={
-                                        `tool-${toolName}` as `tool-${string}`
+                              return (
+                                <Tool
+                                  key={`${message.id}-${i}`}
+                                  className="my-2 border-blue-200 bg-blue-50/50"
+                                >
+                                  <ToolHeader
+                                    type={
+                                      `tool-${toolName}` as `tool-${string}`
+                                    }
+                                    state="input-available"
+                                  />
+                                  <ToolContent>
+                                    <ToolInput input={toolCall.args || {}} />
+                                  </ToolContent>
+                                </Tool>
+                              );
+                            }
+                            if (part.type === "tool-result") {
+                              const toolResult = part as {
+                                toolName?: string;
+                                result?: unknown;
+                                isError?: boolean;
+                              };
+                              const toolName = toolResult.toolName || "tool";
+
+                              return (
+                                <Tool
+                                  key={`${message.id}-${i}`}
+                                  className="my-2 border-green-200 bg-green-50/50"
+                                >
+                                  <ToolHeader
+                                    type={
+                                      `tool-${toolName}` as `tool-${string}`
+                                    }
+                                    state={
+                                      toolResult.isError
+                                        ? "output-error"
+                                        : "output-available"
+                                    }
+                                  />
+                                  <ToolContent>
+                                    <ToolOutput
+                                      output={
+                                        toolName === "google_search" ||
+                                        toolName === "url_context" ? (
+                                          <div className="p-3 text-sm">
+                                            <div className="text-green-700 font-medium mb-2">
+                                              ✓ Successfully retrieved
+                                              information
+                                            </div>
+                                            <div className="text-xs text-muted-foreground">
+                                              Content has been analyzed and
+                                              integrated into the response
+                                              above.
+                                            </div>
+                                          </div>
+                                        ) : (
+                                          <div className="p-3">
+                                            <pre className="whitespace-pre-wrap text-xs">
+                                              {typeof toolResult.result ===
+                                              "string"
+                                                ? toolResult.result
+                                                : JSON.stringify(
+                                                    toolResult.result,
+                                                    null,
+                                                    2,
+                                                  )}
+                                            </pre>
+                                          </div>
+                                        )
                                       }
-                                      state="input-available"
-                                    />
-                                    <ToolContent>
-                                      <ToolInput input={toolCall.args || {}} />
-                                    </ToolContent>
-                                  </Tool>
-                                );
-                              }
-                              if (part.type === "tool-result") {
-                                const toolResult = part as {
-                                  toolName?: string;
-                                  result?: unknown;
-                                  isError?: boolean;
-                                };
-                                const toolName = toolResult.toolName || "tool";
-
-                                return (
-                                  <Tool
-                                    key={`${message.id}-${i}`}
-                                    className="my-2 border-green-200 bg-green-50/50"
-                                  >
-                                    <ToolHeader
-                                      type={
-                                        `tool-${toolName}` as `tool-${string}`
-                                      }
-                                      state={
+                                      errorText={
                                         toolResult.isError
-                                          ? "output-error"
-                                          : "output-available"
+                                          ? "Tool execution failed"
+                                          : undefined
                                       }
                                     />
-                                    <ToolContent>
-                                      <ToolOutput
-                                        output={
-                                          toolName === "google_search" ||
-                                          toolName === "url_context" ? (
-                                            <div className="p-3 text-sm">
-                                              <div className="text-green-700 font-medium mb-2">
-                                                ✓ Successfully retrieved
-                                                information
-                                              </div>
-                                              <div className="text-xs text-muted-foreground">
-                                                Content has been analyzed and
-                                                integrated into the response
-                                                above.
-                                              </div>
-                                            </div>
-                                          ) : (
-                                            <div className="p-3">
-                                              <pre className="whitespace-pre-wrap text-xs">
-                                                {typeof toolResult.result ===
-                                                "string"
-                                                  ? toolResult.result
-                                                  : JSON.stringify(
-                                                      toolResult.result,
-                                                      null,
-                                                      2,
-                                                    )}
-                                              </pre>
-                                            </div>
-                                          )
-                                        }
-                                        errorText={
-                                          toolResult.isError
-                                            ? "Tool execution failed"
-                                            : undefined
-                                        }
-                                      />
-                                    </ToolContent>
-                                  </Tool>
-                                );
-                              }
+                                  </ToolContent>
+                                </Tool>
+                              );
+                            }
 
-                              return null;
-                            })}
-                          </>
-                        );
-                      })()}
-                    </MessageContent>
-                  </Message>
-                  {/* Actions appear outside the message */}
-                  {message.role === "assistant" && (
-                    <div className="px-0">
-                      <Actions className="mt-1 opacity-0 group-hover:opacity-100 transition-opacity justify-start">
-                        <Action
-                          onClick={() => regenerate?.()}
-                          label="Retry"
-                          tooltip="Regenerate response"
-                        >
-                          <RedoIcon className="size-4" />
-                        </Action>
-                        <Action
-                          onClick={async () => {
-                            const textContent = message.parts
-                              .filter((part) => part.type === "text")
-                              .map((part) => (part as { text: string }).text)
-                              .join("\n");
-                            await copyToClipboard(textContent);
-                            toast.success("Copied to clipboard");
-                          }}
-                          label="Copy"
-                          tooltip="Copy to clipboard"
-                        >
-                          <CopyIcon className="size-4" />
-                        </Action>
+                            return null;
+                          })}
+                        </>
+                      );
+                    })()}
+                  </MessageContent>
+                </Message>
+                {/* Actions appear outside the message */}
+                {message.role === "assistant" && (
+                  <div className="px-0">
+                    <Actions className="mt-1 opacity-0 group-hover:opacity-100 transition-opacity justify-start">
+                      <Action
+                        onClick={() => regenerate?.()}
+                        label="Retry"
+                        tooltip="Regenerate response"
+                      >
+                        <RedoIcon className="size-4" />
+                      </Action>
+                      <Action
+                        onClick={async () => {
+                          const textContent = message.parts
+                            .filter((part) => part.type === "text")
+                            .map((part) => (part as { text: string }).text)
+                            .join("\n");
+                          await copyToClipboard(textContent);
+                          toast.success("Copied to clipboard");
+                        }}
+                        label="Copy"
+                        tooltip="Copy to clipboard"
+                      >
+                        <CopyIcon className="size-4" />
+                      </Action>
 
-                        <Action
-                          onClick={() => {
-                            // TODO: Implement branch functionality
-                            toast.info("Branch feature coming soon");
-                          }}
-                          label="Branch"
-                          tooltip="Create a new branch"
-                        >
-                          <BranchIcon className="size-4" />
-                        </Action>
-                      </Actions>
-                    </div>
-                  )}
-                  {/* Actions for user messages */}
-                  {message.role === "user" && (
-                    <div className="px-0">
-                      <Actions className="mt-1 opacity-0 group-hover:opacity-100 transition-opacity justify-end">
-                        <Action
-                          onClick={() => {
-                            // TODO: Implement retry for user message
-                            toast.info(
-                              "Retry user message feature coming soon",
-                            );
-                          }}
-                          label="Retry"
-                          tooltip="Retry message"
-                        >
-                          <RedoIcon className="size-4" />
-                        </Action>
-                        <Action
-                          onClick={() => {
-                            // TODO: Implement edit functionality
-                            toast.info("Edit message feature coming soon");
-                          }}
-                          label="Edit"
-                          tooltip="Edit message"
-                        >
-                          <EditIcon className="size-4" />
-                        </Action>
-                        <Action
-                          onClick={async () => {
-                            const textContent = message.parts
-                              .filter((part) => part.type === "text")
-                              .map((part) => (part as { text: string }).text)
-                              .join("\n");
-                            await copyToClipboard(textContent);
-                          }}
-                          label="Copy"
-                          tooltip="Copy to clipboard"
-                        >
-                          <CopyIcon className="size-4" />
-                        </Action>
+                      <Action
+                        onClick={() => {
+                          // TODO: Implement branch functionality
+                          toast.info("Branch feature coming soon");
+                        }}
+                        label="Branch"
+                        tooltip="Create a new branch"
+                      >
+                        <BranchIcon className="size-4" />
+                      </Action>
+                    </Actions>
+                  </div>
+                )}
+                {/* Actions for user messages */}
+                {message.role === "user" && (
+                  <div className="px-0">
+                    <Actions className="mt-1 opacity-0 group-hover:opacity-100 transition-opacity justify-end">
+                      <Action
+                        onClick={() => {
+                          // TODO: Implement retry for user message
+                          toast.info("Retry user message feature coming soon");
+                        }}
+                        label="Retry"
+                        tooltip="Retry message"
+                      >
+                        <RedoIcon className="size-4" />
+                      </Action>
+                      <Action
+                        onClick={() => {
+                          // TODO: Implement edit functionality
+                          toast.info("Edit message feature coming soon");
+                        }}
+                        label="Edit"
+                        tooltip="Edit message"
+                      >
+                        <EditIcon className="size-4" />
+                      </Action>
+                      <Action
+                        onClick={async () => {
+                          const textContent = message.parts
+                            .filter((part) => part.type === "text")
+                            .map((part) => (part as { text: string }).text)
+                            .join("\n");
+                          await copyToClipboard(textContent);
+                        }}
+                        label="Copy"
+                        tooltip="Copy to clipboard"
+                      >
+                        <CopyIcon className="size-4" />
+                      </Action>
 
-                        <Action
-                          onClick={() => {
-                            // TODO: Implement branch functionality
-                            toast.info("Branch feature coming soon");
-                          }}
-                          label="Branch"
-                          tooltip="Create a new branch"
-                        >
-                          <BranchIcon className="size-4" />
-                        </Action>
-                      </Actions>
-                    </div>
-                  )}
-                </div>
-              ))}
-              {(status === "submitted" || status === "streaming") &&
-                !hasAssistantMessage && <Loader />}
-            </ConversationContent>
-            <ConversationScrollButton />
-          </Conversation>
+                      <Action
+                        onClick={() => {
+                          // TODO: Implement branch functionality
+                          toast.info("Branch feature coming soon");
+                        }}
+                        label="Branch"
+                        tooltip="Create a new branch"
+                      >
+                        <BranchIcon className="size-4" />
+                      </Action>
+                    </Actions>
+                  </div>
+                )}
+              </div>
+            ))}
+            {(status === "submitted" || status === "streaming") &&
+              !hasAssistantMessage && <Loader />}
+          </ConversationContent>
+          <ConversationScrollButton />
+        </Conversation>
       </div>
 
       {/* Prompt input overlayed at bottom of the main area (not part of scroll flow) */}
@@ -621,7 +626,9 @@ export default function ChatInterface({
             <PromptInputTextarea
               onChange={handleInputChange}
               value={input}
-              disabled={disableInput || (!isAuthenticated && !preloadedMessages)}
+              disabled={
+                disableInput || (!isAuthenticated && !preloadedMessages)
+              }
               placeholder={
                 !isAuthenticated && !preloadedMessages
                   ? "Sign in to start chatting..."
@@ -633,7 +640,9 @@ export default function ChatInterface({
                 <PromptInputButton
                   onClick={handleAttachClick}
                   aria-label="Add attachments"
-                  disabled={disableInput || (!isAuthenticated && !preloadedMessages)}
+                  disabled={
+                    disableInput || (!isAuthenticated && !preloadedMessages)
+                  }
                 >
                   <AttachmentsIcon className="size-4" />
                 </PromptInputButton>
@@ -643,7 +652,10 @@ export default function ChatInterface({
                       <PromptInputButton
                         onClick={handleSearchToggle}
                         aria-label="Toggle web search"
-                        disabled={disableInput || (!isAuthenticated && !preloadedMessages)}
+                        disabled={
+                          disableInput ||
+                          (!isAuthenticated && !preloadedMessages)
+                        }
                         variant={isSearchEnabled ? "default" : "ghost"}
                         className={
                           isSearchEnabled
@@ -668,7 +680,9 @@ export default function ChatInterface({
                 />
               </PromptInputTools>
               <PromptInputSubmit
-                disabled={disableInput || (!isAuthenticated && !preloadedMessages)}
+                disabled={
+                  disableInput || (!isAuthenticated && !preloadedMessages)
+                }
                 status={status}
                 onStop={() => {
                   // Preserve current streaming message content before stopping

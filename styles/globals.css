@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@source "../node_modules/streamdown/dist/index.js";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -68,7 +69,7 @@
   --text-muted: oklch(0.5555 0 0);
   --text-placeholder: oklch(0.6 0.021 260);
 
-  /* Base theme colors */ 
+  /* Base theme colors */
   --accent: oklch(0.7036 0.1683 243.43);
   --accent-strong: oklch(0.522 0.1771 255.83);
   --hover: oklch(0.9219 0 0);
@@ -96,7 +97,7 @@
   --muted-foreground: oklch(0.556 0 0); /* #8e8e8e */
   --accent-foreground: oklch(0.205 0 0); /* #343434 */
   --destructive: oklch(0.6417 0.2062 15.77); /* #ef4444 */
-  --border: oklch(0.8483 0 0); /* #eaeaea  */ 
+  --border: oklch(0.8483 0 0); /* #eaeaea  */
   --input: oklch(0.922 0 0); /* #eaeaea */
   --ring: oklch(0.708 0 0); /* #b5b5b5 */
 
@@ -116,6 +117,28 @@
   body {
     @apply bg-background text-foreground;
   }
+  
+  /* Text selection styles */
+  ::selection {
+    background-color: var(--accent);
+    color: white;
+  }
+  
+  ::-moz-selection {
+    background-color: var(--accent);
+    color: white;
+  }
+  
+  /* Dark mode text selection */
+  .dark ::selection {
+    background-color: var(--accent);
+    color: white;
+  }
+  
+  .dark ::-moz-selection {
+    background-color: var(--accent);
+    color: white;
+  }
 }
 
 @layer utilities {
@@ -126,7 +149,7 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none; /* Chrome, Safari and Opera */
   }
-  
+
   .shadow-container {
     box-shadow: 0px 4px 6px -2px rgba(0, 0, 0, 0.05), 0px 10px 15px -3px rgba(0, 0, 0, 0.1);
     border-radius: 12px;
