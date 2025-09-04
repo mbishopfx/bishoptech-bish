@@ -175,3 +175,53 @@
 .animate-slide-up {
   animation: slide-up 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
+@keyframes shiny-gray {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-shiny-gray {
+  background: linear-gradient(
+    90deg,
+    #6b7280 0%,
+    #9ca3af 25%,
+    #d1d5db 50%,
+    #9ca3af 75%,
+    #6b7280 100%
+  );
+  background-size: 200% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shiny-gray 4s ease-in-out infinite;
+}
+
+@keyframes subtle-shine {
+  0% {
+    background-position: -150% 0;
+  }
+  100% {
+    background-position: 150% 0;
+  }
+}
+
+.animate-subtle-shine {
+  background: linear-gradient(
+    90deg,
+    #4b5563 0%,
+    #6b7280 30%,
+    #9ca3af 50%,
+    #6b7280 70%,
+    #4b5563 100%
+  );
+  background-size: 150% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: subtle-shine 5s ease-in-out infinite;
+}

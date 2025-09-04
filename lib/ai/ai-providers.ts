@@ -506,7 +506,7 @@ export const MODELS: ModelConfig[] = [
     defaultTools: [],
   },
   {
-    id: "openrouter:openai/gpt-oss-120b:nitro",
+    id: "openrouter:openai/gpt-oss-120b",
     name: "GPT-OSS-120B",
     provider: "openrouter",
     description:
@@ -778,7 +778,7 @@ export function getAllProviders(): string[] {
 
 // Recommended options mapping
 export const RECOMMENDED_OPTIONS_MAP = {
-  "rec:automatico": "openrouter:openai/gpt-oss-120b:nitro", // GPT-OSS-120B
+  "rec:automatico": "openrouter:openai/gpt-oss-120b", // GPT-OSS-120B
   "rec:problemas-dificiles": "openai:gpt-5", // GPT-5
   "rec:escritura": "anthropic:claude-sonnet-4-20250514", // Claude 4 Sonnet
   "rec:sorpresa": "openrouter:mistralai/magistral-small-latest", // Magistral Small

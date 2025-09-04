@@ -824,3 +824,303 @@ export function EscrituraIcon({ className, ...props }: IconProps) {
     </svg>
   )
 }
+
+// New prompt suggestion icons
+export function IdeaIcon({ className, ...props }: IconProps) {
+  return (
+    <svg 
+      width="36" 
+      height="44" 
+      viewBox="0 0 36 44" 
+      fill="none" 
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+      {...props}
+    >
+      <g clipPath="url(#clip0_28_1140)">
+        <path 
+          opacity="0.4" 
+          d="M4.28572 26C2.8347 23.6164 2 20.8236 2 17.8377C2 9.09078 9.16344 2 18 2C26.8366 2 34 9.09078 34 17.8377C34 20.8236 33.1654 23.6164 31.7142 26" 
+          stroke="currentColor" 
+          strokeWidth="3" 
+          strokeLinecap="round"
+        />
+        <path 
+          d="M8.76574 32.1964C8.582 31.6432 8.49014 31.3666 8.50084 31.1426C8.52348 30.6686 8.82228 30.2524 9.26314 30.081C9.47158 30 9.7621 30 10.3431 30H25.6568C26.238 30 26.5284 30 26.7368 30.081C27.1778 30.2524 27.4766 30.6686 27.4992 31.1426C27.5098 31.3666 27.418 31.6432 27.2342 32.1964C26.8946 33.2188 26.7248 33.7302 26.463 34.144C25.9144 35.0112 25.0544 35.6334 24.0612 35.8816C23.587 36 23.05 36 21.9762 36H14.0238C12.9499 36 12.413 36 11.9389 35.8816C10.9457 35.6334 10.0856 35.0112 9.537 34.144C9.2751 33.7302 9.10532 33.2188 8.76574 32.1964Z" 
+          stroke="currentColor" 
+          strokeWidth="3"
+        />
+        <path 
+          d="M24 36L23.7414 37.2932C23.4586 38.7074 23.3172 39.4144 23.0002 39.9732C22.5104 40.837 21.7164 41.4878 20.7732 41.7988C20.1632 42 19.4422 42 18 42C16.5578 42 15.8368 42 15.2268 41.7988C14.2836 41.4878 13.4897 40.837 12.9997 39.9732C12.6829 39.4144 12.5415 38.7074 12.2586 37.2932L12 36" 
+          stroke="currentColor" 
+          strokeWidth="3"
+        />
+        <path 
+          opacity="0.4" 
+          d="M18 30V20" 
+          stroke="currentColor" 
+          strokeWidth="3" 
+          strokeLinecap="round" 
+          strokeLinejoin="round"
+        />
+      </g>
+      <defs>
+        <clipPath id="clip0_28_1140">
+          <rect width="36" height="44" fill="white"/>
+        </clipPath>
+      </defs>
+    </svg>
+  )
+}
+
+export function BrainPersonIcon({ className, ...props }: IconProps) {
+  return (
+    <svg 
+      width="44" 
+      height="44" 
+      viewBox="0 0 44 44" 
+      fill="none" 
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+      {...props}
+    >
+      <g clipPath="url(#clip0_28_1146)">
+        <path 
+          d="M6.44444 41.9896V34.8902C6.44444 32.3474 5.77854 31.0256 4.46964 28.8156C2.9006 26.1666 2 23.075 2 19.7732C2 9.95732 9.95938 2 19.7778 2C29.5962 2 37.5556 9.95732 37.5556 19.7732C37.5556 20.9326 37.5556 21.5124 37.604 21.8374C37.7196 22.6144 38.0822 23.2828 38.4388 23.9746L42 30.8814L39.2012 32.2804C38.39 32.6858 37.9846 32.8886 37.702 33.2628C37.4194 33.6368 37.34 34.0592 37.1808 34.9038L37.1652 34.9862C36.8008 36.9212 36.3986 39.0572 35.2658 40.4048C34.8658 40.8806 34.3706 41.2672 33.8118 41.5398C32.8894 41.9896 31.7554 41.9896 29.4874 41.9896C28.438 41.9896 27.3856 42.0138 26.3364 41.9884C23.8494 41.9278 22 39.8368 22 37.4088" 
+          stroke="currentColor" 
+          strokeWidth="3" 
+          strokeLinecap="round" 
+          strokeLinejoin="round"
+        />
+        <path 
+          opacity="0.4" 
+          d="M26.776 19.063C25.9234 19.063 25.1458 18.7404 24.5568 18.2096M26.776 19.063C26.776 21.3548 25.4482 23.5316 22.8922 23.5316C20.3362 23.5316 19.0086 25.7082 19.0086 28M26.776 19.063C31.0746 19.063 31.0746 12.3603 26.776 12.3603C26.3854 12.3603 26.0106 12.4281 25.6624 12.5525C25.8724 7.55638 18.6698 6.2 17.0385 10.8804M17.0385 10.8804C18.2266 11.6822 19.0086 13.0465 19.0086 14.5946M17.0385 10.8804C13.3348 8.38068 8.39765 12.8662 10.7465 16.8655C6.80451 17.4565 7.22597 23.5316 11.241 23.5316C12.3669 23.5316 13.3622 22.9688 13.9647 22.1076" 
+          stroke="currentColor" 
+          strokeWidth="3" 
+          strokeLinecap="round" 
+          strokeLinejoin="round"
+        />
+      </g>
+      <defs>
+        <clipPath id="clip0_28_1146">
+          <rect width="44" height="44" fill="white"/>
+        </clipPath>
+      </defs>
+    </svg>
+  )
+}
+
+export function GrowthIcon({ className, ...props }: IconProps) {
+  return (
+    <svg 
+      width="44" 
+      height="40" 
+      viewBox="0 0 44 40" 
+      fill="none" 
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+      {...props}
+    >
+      <g clipPath="url(#clip0_28_1150)">
+        <path 
+          opacity="0.4" 
+          d="M16.6976 18.365C13.4757 20.7782 8.88646 20.52 5.957 17.5906C1.10968 12.7433 2.07914 2.07914 2.07914 2.07914C2.07914 2.07914 12.7433 1.10968 17.5906 5.957C19.5096 7.87606 20.2824 10.5074 19.9086 13" 
+          stroke="currentColor" 
+          strokeWidth="3" 
+          strokeLinecap="round" 
+          strokeLinejoin="round"
+        />
+        <path 
+          opacity="0.4" 
+          d="M27.9276 21.635C25.288 18.7664 25.3594 14.2997 28.1416 11.5173C32.4504 7.2086 41.9296 8.07035 41.9296 8.07035C41.9296 8.07035 42.7914 17.5496 38.4826 21.8584C36.9754 23.3656 34.974 24.0772 33 23.9934" 
+          stroke="currentColor" 
+          strokeWidth="3" 
+          strokeLinecap="round" 
+          strokeLinejoin="round"
+        />
+        <path 
+          d="M34 16C34 16 22 24 22 38" 
+          stroke="currentColor" 
+          strokeWidth="3" 
+          strokeLinecap="round" 
+          strokeLinejoin="round"
+        />
+        <path 
+          d="M10 10C10 10 22 20 22 38" 
+          stroke="currentColor" 
+          strokeWidth="3" 
+          strokeLinecap="round" 
+          strokeLinejoin="round"
+        />
+      </g>
+      <defs>
+        <clipPath id="clip0_28_1150">
+          <rect width="44" height="40" fill="white"/>
+        </clipPath>
+      </defs>
+    </svg>
+  )
+}
+
+export function LampIcon({ className, ...props }: IconProps) {
+  return (
+    <svg 
+      width="40" 
+      height="44" 
+      viewBox="0 0 40 44" 
+      fill="none" 
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+      {...props}
+    >
+      <g clipPath="url(#clip0_28_1162)">
+        <path 
+          d="M31.1238 16.4448L30.0712 18.3C29.081 20.045 28.586 20.9176 27.5078 20.9938C26.4294 21.07 25.9724 20.4462 25.0582 19.1988C24.038 17.8063 23.3918 16.17 23.1628 14.4591C22.9488 12.8605 22.8418 12.0612 22.5828 11.6688C22.1694 11.0423 21.339 10.6977 20.7182 10.333C19.0834 9.37248 18.2658 8.8922 18.0512 8.07694C17.8366 7.2617 18.3084 6.42984 19.2524 4.76612C20.1964 3.1024 20.6684 2.27054 21.4694 2.05208C22.2706 1.83364 23.0882 2.31392 24.723 3.27446C25.3438 3.63918 26.0524 4.1987 26.7922 4.24972C27.2556 4.2817 27.9894 3.97634 29.4568 3.36562C31.0274 2.71196 32.743 2.4633 34.4382 2.66628C35.957 2.84812 36.7164 2.93906 37.1906 3.92738C37.665 4.9157 37.17 5.78822 36.1798 7.53328L35.1286 9.38622M31.1238 16.4448L31.9922 16.955C33.9076 18.0804 36.3568 17.4125 37.4628 15.4633C38.5686 13.5142 37.9124 11.0218 35.997 9.89642L35.1286 9.38622M31.1238 16.4448L35.1286 9.38622" 
+          stroke="currentColor" 
+          strokeWidth="3"
+        />
+        <path 
+          d="M10 24C10 26.2092 8.20914 28 6 28C3.79086 28 2 26.2092 2 24C2 21.7908 3.79086 20 6 20C8.20914 20 10 21.7908 10 24Z" 
+          stroke="currentColor" 
+          strokeWidth="3"
+        />
+        <path 
+          opacity="0.4" 
+          d="M8 22L22 12" 
+          stroke="currentColor" 
+          strokeWidth="3" 
+          strokeLinejoin="round"
+        />
+        <path 
+          d="M10 42H24" 
+          stroke="currentColor" 
+          strokeWidth="3" 
+          strokeLinecap="round" 
+          strokeLinejoin="round"
+        />
+        <path 
+          opacity="0.4" 
+          d="M8 28L18 42" 
+          stroke="currentColor" 
+          strokeWidth="3" 
+          strokeLinecap="round" 
+          strokeLinejoin="round"
+        />
+      </g>
+      <defs>
+        <clipPath id="clip0_28_1162">
+          <rect width="40" height="44" fill="white"/>
+        </clipPath>
+      </defs>
+    </svg>
+  )
+}
+
+export function DeskIcon({ className, ...props }: IconProps) {
+  return (
+    <svg 
+      width="44" 
+      height="44" 
+      viewBox="0 0 44 44" 
+      fill="none" 
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+      {...props}
+    >
+      <g clipPath="url(#clip0_28_1169)">
+        <path 
+          d="M42 22H2" 
+          stroke="currentColor" 
+          strokeWidth="3" 
+          strokeLinecap="round" 
+          strokeLinejoin="round"
+        />
+        <path 
+          opacity="0.4" 
+          d="M38 32H30C26.2288 32 24.3432 32 23.1716 30.8284C22 29.6568 22 27.7712 22 24V22" 
+          stroke="currentColor" 
+          strokeWidth="3" 
+          strokeLinecap="round" 
+          strokeLinejoin="round"
+        />
+        <path 
+          d="M6 22V42M38 22V42" 
+          stroke="currentColor" 
+          strokeWidth="3" 
+          strokeLinecap="round" 
+          strokeLinejoin="round"
+        />
+        <path 
+          d="M28.0802 3.19806C26.6176 1.80626 24.2464 1.80626 22.7838 3.19806C21.9568 3.98494 21.6396 4.8888 22.5534 5.75828L25.3854 8.45338C26.298 9.32174 27.2438 9.03428 28.0802 8.23824C29.5428 6.84644 29.5428 4.58988 28.0802 3.19806ZM28.0802 3.19806C29.0716 2.54648 30.1864 1.63528 31.4246 2.1526C32.0056 2.39532 32.4044 2.98948 33.2016 4.17778L36.1986 8.6446C37.3278 10.3275 37.8924 11.169 37.9862 12.1228C38.0802 13.0765 37.6896 14.0026 36.9084 15.8547L34.3168 22" 
+          stroke="currentColor" 
+          strokeWidth="3" 
+          strokeLinejoin="round"
+        />
+        <path 
+          d="M6 22V13C6 10.7463 6.9012 10 9 10C11.0988 10 12 10.7463 12 13V22" 
+          stroke="currentColor" 
+          strokeWidth="3" 
+          strokeLinecap="round" 
+          strokeLinejoin="round"
+        />
+        <path 
+          d="M12 22V13C12 10.7463 12.9012 10 15 10C17.0988 10 18 10.7463 18 13V22" 
+          stroke="currentColor" 
+          strokeWidth="3" 
+          strokeLinecap="round" 
+          strokeLinejoin="round"
+        />
+      </g>
+      <defs>
+        <clipPath id="clip0_28_1169">
+          <rect width="44" height="44" fill="white"/>
+        </clipPath>
+      </defs>
+    </svg>
+  )
+}
+
+export function StudentIcon({ className, ...props }: IconProps) {
+  return (
+    <svg 
+      width="32" 
+      height="44" 
+      viewBox="0 0 32 44" 
+      fill="none" 
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+      {...props}
+    >
+      <g clipPath="url(#clip0_28_1177)">
+        <path 
+          d="M30 8L16 2L2 8L9 11V15C9 15 11.3333 14 16 14C20.6666 14 23 15 23 15V11L30 8ZM30 8V16" 
+          stroke="currentColor" 
+          strokeWidth="3" 
+          strokeLinecap="round" 
+          strokeLinejoin="round"
+        />
+        <path 
+          opacity="0.4" 
+          d="M23 15V17C23 20.866 19.866 24 16 24C12.134 24 9 20.866 9 17V15" 
+          stroke="currentColor" 
+          strokeWidth="3" 
+          strokeLinecap="round" 
+          strokeLinejoin="round"
+        />
+        <path 
+          opacity="0.4" 
+          d="M7.56512 31.4066C5.36436 32.7756 -0.405877 35.5708 3.10858 39.0684C4.82538 40.777 6.73744 41.999 9.14136 41.999H22.8586C25.2626 41.999 27.1746 40.777 28.8914 39.0684C32.4058 35.5708 26.6356 32.7756 24.4348 31.4066C19.2742 28.1964 12.7258 28.1964 7.56512 31.4066Z" 
+          stroke="currentColor" 
+          strokeWidth="3" 
+          strokeLinecap="round" 
+          strokeLinejoin="round"
+        />
+      </g>
+      <defs>
+        <clipPath id="clip0_28_1177">
+          <rect width="32" height="44" fill="white"/>
+        </clipPath>
+      </defs>
+    </svg>
+  )
+}
