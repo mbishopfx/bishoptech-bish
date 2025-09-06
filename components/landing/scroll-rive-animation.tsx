@@ -26,6 +26,9 @@ export default function ScrollRiveAnimation({
     src,
     stateMachines: stateMachineName,
     autoplay: true,
+  }, {
+    fitCanvasToArtboardHeight: true,
+    useDevicePixelRatio: true,
   });
 
   // Get reference to your scroll input
@@ -84,21 +87,9 @@ export default function ScrollRiveAnimation({
     <div 
       ref={containerRef}
       className={`relative ${className}`}
-      style={{
-        ...style,
-        // Enable hardware acceleration for better performance
-        transform: 'translateZ(0)',
-        backfaceVisibility: 'hidden',
-        perspective: '1000px'
-      }}
     >
       <RiveComponent 
-        className="w-full h-full rive-high-quality"
-        style={{
-          // Enable hardware acceleration
-          transform: 'translateZ(0)',
-          backfaceVisibility: 'hidden'
-        }}
+        className="w-screen h-screen pointer-events-none"
       />
       {children}
     </div>

@@ -1,4 +1,3 @@
-export { default as ChatActionsShowcase } from "./chat-actions-showcase";
 export { default as PricingSection } from "./pricing-section";
 export { default as HeroSection } from "./hero-section";
 export { default as IntegrationsSection } from "./integrations-section";

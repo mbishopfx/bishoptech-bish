@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Button } from "@/components/ai/ui/button";
 
 export default function Footer() {
   return (
@@ -107,7 +106,7 @@ export default function Footer() {
           {/* Support & Legal */}
           <div>
             <h3 className="text-sm font-semibold text-gray-900 mb-4">Soporte</h3>
-            <ul className="space-y-3 mb-6">
+            <ul className="space-y-3">
               <li>
                 <Link href="/help" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">
                   Centro de ayuda
@@ -124,13 +123,6 @@ export default function Footer() {
                 </Link>
               </li>
             </ul>
-
-            {/* CTA Button */}
-            <Button asChild variant="accent" size="sm" className="w-full">
-              <Link href="/sign-up">
-                Comenzar gratis
-              </Link>
-            </Button>
           </div>
         </div>
 

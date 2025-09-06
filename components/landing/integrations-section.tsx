@@ -3,12 +3,12 @@ import { Google, Microsoft, Okta, Scim } from "@/components/ui/icons/svg-icons";
 export default function IntegrationsSection() {
   return (
     <section>
-      <div className="select-none cursor-default gap-8 flex flex-col">
-        <div className="select-none cursor-default gap-2 w-full flex flex-col -mb-4">
-          <span className="select-none cursor-default transition-opacity duration-150 ease-out text-orange-500 font-semibold gap-1.5 items-center flex">
+      <div className=" gap-8 flex flex-col">
+        <div className="gap-2 w-full flex flex-col -mb-4">
+          <span className="transition-opacity duration-150 ease-out text-orange-500 font-semibold gap-1.5 items-center flex">
             Integraciones
           </span>
-          <h4 className="text-4xl leading-[54.4px] tracking-[-0.5px] select-none cursor-default font-bold m-0">
+          <h4 className="text-4xl leading-[54.4px] tracking-[-0.5px] font-bold m-0">
             Conecta a LOOP con tu organizacion
           </h4>
         </div>

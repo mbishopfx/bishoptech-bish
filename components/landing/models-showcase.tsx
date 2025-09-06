@@ -4,7 +4,7 @@ export default function ModelsShowcase() {
   return (
     <>
       {/* Secondary Hero Section */}
-      <section>
+      {/* <section>
         <div className="text-center">
           <div className="text-2xl sm:text-3xl md:text-5xl lg:text-6xl font-bold leading-tight">
             <span className="text-gray-500 bg-green-200 px-1 rounded relative inline-block z-10">
@@ -13,7 +13,7 @@ export default function ModelsShowcase() {
             en un mismo lugar
           </div>
         </div>
-      </section>
+      </section> */}
     </>
   );
 }

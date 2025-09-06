@@ -1,19 +1,26 @@
+import {
+  AIModelsIcon,
+  ExpandIcon,
+  FastMessagesIcon,
+} from "@/components/ui/icons/landing-icons";
+
+import { GlobeIcon } from "@/components/ui/icons/svg-icons";
+
 export default function PerformanceSection() {
   return (
     <>
       {/* Summaries & Action Items Section */}
       <section>
-        <div className="select-none cursor-default gap-8 flex flex-col">
-          <div className="select-none cursor-default gap-2 w-full flex flex-col -mb-4">
-            <span className="select-none cursor-default transition-opacity duration-150 ease-out text-blue-500 font-semibold gap-1.5 items-center flex">
+        <div className="gap-8 flex flex-col">
+          <div className="gap-2 w-full flex flex-col -mb-4">
+            <span className="transition-opacity duration-150 ease-out text-blue-500 font-semibold gap-1.5 items-center flex">
               Rendimiento
             </span>
-            <h4 className="text-4xl leading-[54.4px] tracking-[-0.5px] select-none cursor-default font-bold m-0">
+            <h4 className="text-4xl leading-[54.4px] tracking-[-0.5px] font-bold m-0">
               Velocidad Inigualable
             </h4>
           </div>
           <div className="flex flex-col">
-            <div className="bg-[rgba(235,235,235,0.5)] w-full h-px"></div>
             <p className="text-[rgb(92,92,92)] mb-3">
               Desde la creacion de LOOP, sabiamos que la velocidad era un factor
               clave para la eficiencia de los equipos. Por eso, hemos
@@ -45,83 +52,67 @@ export default function PerformanceSection() {
               </h4>
             </div>
 
-            <p className="text-[rgb(92,92,92)] m-0">
+            <p className="text-[rgb(92,92,92)] m-0 mb-8">
               Acceso a todos los modelos de IA disponibles en el mercado, desde
               ChatGPT, Gemini, Grok, Anthropic, DeepSeek, Mistral, y muchos
               otros modelos especiales.
             </p>
 
-            <div className="mt-4">
-              <div className="flex items-start">
-                <div className="bg-[rgb(204,244,218)] rounded-full flex justify-center items-center flex-shrink-0 w-5 h-5 mt-0.5">
-                  <svg
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                    className="text-[rgb(16,161,66)] w-3 h-3 block"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
+            {/* 2x2 Bento Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0">
+                  <AIModelsIcon className="w-12 h-12 text-emerald-500" />
                 </div>
-                <div className="text-[rgb(92,92,92)] text-base leading-[25.6px] ml-3">
-                  Una Sola Suscripción
+                <div className="flex flex-col gap-2 w-full">
+                  <h4 className="tracking-[-0.5px] font-semibold text-xl leading-7 m-0">
+                    Una Sola Suscripción
+                  </h4>
+                  <p className="text-[rgb(92,92,92)] m-0">
+                    Accede a todos los modelos de IA con una sola suscripción. No necesitas múltiples cuentas ni pagos separados.
+                  </p>
                 </div>
               </div>
-              <div className="flex items-start mt-3">
-                <div className="bg-[rgb(204,244,218)] rounded-full flex justify-center items-center flex-shrink-0 w-5 h-5 mt-0.5">
-                  <svg
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                    className="text-[rgb(16,161,66)] w-3 h-3 block"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
+
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0">
+                  <GlobeIcon className="w-12 h-12 text-blue-500" />
                 </div>
-                <div className="text-[rgb(92,92,92)] text-base leading-[25.6px] ml-3">
-                  Eligente entre decenas de modelos
+                <div className="flex flex-col gap-2 w-full">
+                  <h4 className="tracking-[-0.5px] font-semibold text-xl leading-7 m-0">
+                    Elige entre decenas de modelos
+                  </h4>
+                  <p className="text-[rgb(92,92,92)] m-0">
+                    Selecciona el modelo más adecuado para cada tarea desde nuestra amplia gama de opciones disponibles.
+                  </p>
                 </div>
               </div>
-              <div className="flex items-start mt-3">
-                <div className="bg-[rgb(204,244,218)] rounded-full flex justify-center items-center flex-shrink-0 w-5 h-5 mt-0.5">
-                  <svg
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                    className="text-[rgb(16,161,66)] w-3 h-3 block"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
+
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0">
+                  <ExpandIcon className="w-12 h-12 text-purple-500" />
                 </div>
-                <div className="text-[rgb(92,92,92)] text-base leading-[25.6px] ml-3">
-                  No te limitamos a usar unicamente una empresa de IA
+                <div className="flex flex-col gap-2 w-full">
+                  <h4 className="tracking-[-0.5px] font-semibold text-xl leading-7 m-0">
+                    Sin limitaciones de empresa
+                  </h4>
+                  <p className="text-[rgb(92,92,92)] m-0">
+                    No te limitamos a usar únicamente una empresa de IA. Combina lo mejor de cada proveedor en una sola plataforma.
+                  </p>
                 </div>
               </div>
-              <div className="flex items-start mt-3 mb-0">
-                <div className="bg-[rgb(204,244,218)] rounded-full flex justify-center items-center flex-shrink-0 w-5 h-5 mt-0.5">
-                  <svg
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                    className="text-[rgb(16,161,66)] w-3 h-3 block"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
+
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0">
+                  <FastMessagesIcon className="w-12 h-12 text-amber-500" />
                 </div>
-                <div className="text-[rgb(92,92,92)] text-base leading-[25.6px] ml-3">
-                  Mejores resultados, más rapidez y más seguridad.
+                <div className="flex flex-col gap-2 w-full">
+                  <h4 className="tracking-[-0.5px] font-semibold text-xl leading-7 m-0">
+                    Mejores resultados, más rapidez y más seguridad
+                  </h4>
+                  <p className="text-[rgb(92,92,92)] m-0">
+                    Obtén respuestas más precisas, rápidas y seguras combinando la potencia de múltiples modelos de IA.
+                  </p>
                 </div>
               </div>
             </div>

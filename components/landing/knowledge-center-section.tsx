@@ -4,12 +4,12 @@ import Image from "next/image";
 export default function KnowledgeCenterSection() {
   return (
     <section>
-      <div className="select-none cursor-default gap-8 flex flex-col">
-        <div className="select-none cursor-default gap-2 w-full flex flex-col -mb-4">
-          <span className="select-none cursor-default transition-opacity duration-150 ease-out text-blue-500 font-semibold gap-1.5 items-center flex">
+      <div className="gap-8 flex flex-col">
+        <div className="gap-2 w-full flex flex-col -mb-4">
+          <span className="transition-opacity duration-150 ease-out text-blue-500 font-semibold gap-1.5 items-center flex">
             Centro de Conocimiento
           </span>
-          <h4 className="text-4xl leading-[54.4px] tracking-[-0.5px] select-none cursor-default font-bold m-0">
+          <h4 className="text-4xl leading-[54.4px] tracking-[-0.5px] font-bold m-0">
             Domina a la IA
           </h4>
         </div>
@@ -17,7 +17,7 @@ export default function KnowledgeCenterSection() {
         <p className="text-[rgb(92,92,92)]">
           La Inteligencia artificial suele tener una fama de ser una herramienta
           compleja y difícil de dominar. Sin embargo, nosotros creemos que todos
-          los usuarios de IA pueden tener se pueden beneficiar de conocer como
+          los usuarios se pueden beneficiar de conocer como
           funciona y sus conceptos generales, De esta forma, los usuarios pueden
           generar "Prompt", conocer las limitaciones y aprender como sacar mayor
           provecho a la IA;
@@ -57,7 +57,7 @@ const cardData = [
     alt: "Blog post",
   },
   {
-    svg: "/1.svg",
+    svg: "/2.svg",
     alt: "Social media caption",
   },
   {
