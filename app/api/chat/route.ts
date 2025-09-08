@@ -15,6 +15,8 @@ import { api } from "@/convex/_generated/api";
 import { fetchMutation } from "convex/nextjs";
 import { withAuth } from "@workos-inc/authkit-nextjs";
 import { Id } from "@/convex/_generated/dataModel";
+import { PostHog } from "posthog-node";
+import { withTracing } from "@posthog/ai";
 
 // Allow streaming responses up to 280 seconds
 export const maxDuration = 280;
@@ -50,9 +52,16 @@ export async function POST(req: Request) {
 
       // Fetch auth lazily in parallel
       let accessToken: string | undefined;
+      let user: { id?: string; organizationId?: string } | undefined;
       const authPromise = withAuth()
-        .then(({ accessToken: token }) => {
-          accessToken = token;
+        .then((authResult) => {
+          accessToken = authResult.accessToken;
+          user = authResult.user
+            ? {
+                id: authResult.user.id,
+                organizationId: authResult.organizationId,
+              }
+            : undefined;
         })
         .catch((err) => {
           console.error("withAuth failed", err);
@@ -61,7 +70,56 @@ export async function POST(req: Request) {
       // Immediately signal start to the client so spinner shows instantly
       writer.write({ type: "start", messageId: assistantMessageId });
 
-      const languageModel = getLanguageModel(modelId);
+      // Wait for auth before setting up model
+      await authPromise;
+
+      // Set up PostHog AI tracking
+      let languageModel = getLanguageModel(modelId);
+
+      // Wrap with PostHog tracking if key is available
+      if (process.env.NEXT_PUBLIC_POSTHOG_KEY) {
+        try {
+          const phClient = new PostHog(process.env.NEXT_PUBLIC_POSTHOG_KEY, {
+            host: "https://us.i.posthog.com",
+            flushAt: 1, // Flush immediately to ensure events are sent
+            flushInterval: 0, // Don't wait for interval
+          });
+
+          languageModel = withTracing(languageModel, phClient, {
+            posthogDistinctId: user?.id,
+            posthogTraceId: threadId,
+            posthogProperties: {
+              conversationId: threadId,
+              model: modelId,
+              // Additional context for debugging and analytics
+              requestId: assistantMessageId,
+              enabledTools:
+                enabledTools.length > 0 ? enabledTools.join(",") : undefined,
+            },
+            posthogPrivacyMode: false, // Set to true to avoid logging prompts/responses
+            ...(user?.organizationId && {
+              posthogGroups: { organization: user.organizationId },
+            }),
+          });
+
+          // Clean shutdown after request completes
+          const cleanupPostHog = () => {
+            try {
+              phClient.shutdown();
+            } catch (e) {
+              console.warn("Error shutting down PostHog:", e);
+            }
+          };
+
+          // Register cleanup for various exit scenarios
+          process.on("beforeExit", cleanupPostHog);
+          if (abortSignal) {
+            abortSignal.addEventListener("abort", cleanupPostHog);
+          }
+        } catch (error) {
+          console.warn("Failed to initialize PostHog AI tracking:", error);
+        }
+      }
       console.debug("AI streaming with model", modelId);
 
       // Batch persistence every ~800ms without affecting client stream

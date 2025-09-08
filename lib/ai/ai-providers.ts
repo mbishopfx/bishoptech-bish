@@ -210,7 +210,8 @@ export const MODELS: ModelConfig[] = [
     id: "openai/gpt-3.5-turbo",
     name: "GPT-3.5 Turbo",
     provider: "openai",
-    description: "Modelo rápido y eficiente para la mayoría de tareas conversacionales.",
+    description:
+      "Modelo rápido y eficiente para la mayoría de tareas conversacionales.",
     contextWindow: 16385,
     pricing: { input: 0.5, output: 1.5 },
     isPremium: false,
@@ -872,7 +873,7 @@ export function modelSupportsReasoning(modelId: string): boolean {
 // Resolve language model using Vercel AI Gateway
 export function getLanguageModel(modelId: string) {
   const resolvedModelId = resolveRecommendedModel(modelId);
-  
+
   // Check if AI Gateway is configured
   if (!AI_GATEWAY_API_KEY) {
     throw new Error("AI_GATEWAY_API_KEY environment variable is required");
