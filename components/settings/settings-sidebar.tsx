@@ -18,6 +18,7 @@ import {
   LogOut,
   Shield,
 } from "lucide-react";
+import { OrganizationSwitcherClient } from "./OrganizationSwitcherClient";
 interface SettingsNavItem {
   title: string;
   href: string;
@@ -219,38 +220,7 @@ export function SettingsSidebar() {
         <div className="relative">
           <ul className="flex flex-col -mt-1.5 list-none p-0">
             {/* Organization Header Button */}
-            <button
-              type="button"
-              className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm font-medium text-gray-900 hover:bg-hover transition-all duration-150 ease-in-out my-0.5"
-            >
-              <div className="w-5 h-5 rounded-xl overflow-hidden flex-shrink-0 relative">
-                <div className="w-5 h-5 flex-shrink-0 pointer-events-none">
-                  <div className="absolute inset-0 w-full h-5 bg-gradient-to-t from-gray-400 to-gray-300 rounded-full flex items-center justify-center">
-                    <span className="text-xs font-bold text-gray-50">A</span>
-                  </div>
-                </div>
-              </div>
-              <span className="truncate">Arisay's Organization</span>
-              <span className="ml-auto text-gray-400">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="14"
-                  height="14"
-                  viewBox="0 0 16 16"
-                  fill="none"
-                  className="block align-middle"
-                >
-                  <path
-                    stroke="currentColor"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M12 6.135 8.341 9.55a.5.5 0 0 1-.682 0L4 6.135"
-                  />
-                </svg>
-              </span>
-            </button>
-
+            <OrganizationSwitcherClient />
             {/* Navigation Sections */}
             {settingsSections.map((section, sectionIndex) => (
               <SettingSection

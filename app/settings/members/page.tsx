@@ -1,17 +1,16 @@
-import { 
-  SettingsSection
-} from '@/components/settings';
-import { Box, Card, Flex, Heading, Text } from '@radix-ui/themes';
-import { UsersManagement, WorkOsWidgets } from '@workos-inc/widgets';
-import { withAuth } from '@workos-inc/authkit-nextjs';
-import { workos } from '@/app/api/workos';
-import "./table.css"
-
+import { SettingsSection } from "@/components/settings";
+import { Box, Card, Flex, Heading, Text } from "@radix-ui/themes";
+import { UsersManagement, WorkOsWidgets } from "@workos-inc/widgets";
+import { withAuth } from "@workos-inc/authkit-nextjs";
+import { workos } from "@/app/api/workos";
+import "./table.css";
 
 export default async function MembersPage() {
-  const { user, role, organizationId } = await withAuth({ ensureSignedIn: true });
+  const { user, role, organizationId } = await withAuth({
+    ensureSignedIn: true,
+  });
 
-  if (role !== 'admin') {
+  if (role !== "admin") {
     return (
       <div className="pt-12 pb-12 pl-12 pr-12 flex flex-col max-w-4xl min-w-[520px] w-full min-h-full box-border">
         <h3 className="font-semibold text-xl leading-7 flex items-center mb-5">
@@ -56,7 +55,7 @@ export default async function MembersPage() {
   const authToken = await workos.widgets.getToken({
     organizationId,
     userId: user.id,
-    scopes: ['widgets:users-table:manage'],
+    scopes: ["widgets:users-table:manage"],
   });
 
   return (
@@ -68,7 +67,6 @@ export default async function MembersPage() {
         </button>
         Members
       </h3>
-
       {/* WorkOS Users Management Widget */}
       <SettingsSection
         title="Members Management"
@@ -77,11 +75,11 @@ export default async function MembersPage() {
         <Flex direction="column" gap="3" width="100%">
           <WorkOsWidgets
             theme={{
-              appearance: 'light',
-              accentColor: 'blue',
-              radius: 'medium',
-              fontFamily: 'Inter',
-              panelBackground: 'solid',
+              appearance: "light",
+              accentColor: "blue",
+              radius: "medium",
+              fontFamily: "Inter",
+              panelBackground: "solid",
             }}
           >
             <UsersManagement authToken={authToken} />

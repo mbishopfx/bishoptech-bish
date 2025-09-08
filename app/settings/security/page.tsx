@@ -16,7 +16,6 @@ export default async function SecurityPage() {
       authToken = await workos.widgets.getToken({
         organizationId,
         userId: user.id,
-        scopes: ['widgets:users-table:manage'],
       });
     } catch (error) {
       console.error('Failed to get WorkOS token:', error);
