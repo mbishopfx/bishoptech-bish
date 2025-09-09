@@ -142,7 +142,7 @@ export function ThreadSidebarClient({
           <input
             id="thread-search-input"
             type="text"
-            placeholder="Search chats..."
+            placeholder="Buscar chats..."
             className="w-full px-2 py-1.5 text-xs border-0 rounded-sm bg-transparent text-muted-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:bg-background focus:text-foreground focus:border focus:border-input/50 transition-all duration-200"
             readOnly
           />

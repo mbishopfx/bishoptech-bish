@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     // Generate a short title
     const { text } = await generateText({
       model: TITLE_GENERATION_MODEL,
-      prompt: `Generate a short, descriptive title (maximum 3 words) for this conversation based on the user's message. Only respond with the title, no quotes, no markdown, no punctuation:
+      prompt: `Genera un título corto y descriptivo (máximo 3 palabras) para esta conversación basado en el mensaje del usuario. Solo responde con el título, sin comillas, sin markdown, sin puntuación:
 
 User message: ${userMessage}`,
       temperature: 0.3,
@@ -50,7 +50,7 @@ User message: ${userMessage}`,
       api.threads.autoUpdateThreadTitle,
       {
         threadId,
-        title: cleanTitle || "New Chat",
+        title: cleanTitle || "Nuevo Chat",
       },
       { token: accessToken },
     );

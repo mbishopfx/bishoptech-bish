@@ -41,7 +41,7 @@ export type PromptInputTextareaProps = ComponentProps<typeof Textarea>;
 export const PromptInputTextarea = ({
   onChange,
   className,
-  placeholder = "What would you like to know?",
+  placeholder = "¿Qué te gustaría saber?",
   ...props
 }: PromptInputTextareaProps) => {
   const handleKeyDown: KeyboardEventHandler<HTMLTextAreaElement> = (e) => {
@@ -141,18 +141,18 @@ export const PromptInputSubmit = ({
 }: PromptInputSubmitProps) => {
   let Icon = <SentIcon className="size-5" />;
   let isStreaming = false;
-  let buttonTitle = "Send message";
+  let buttonTitle = "Enviar mensaje";
 
   if (status === "submitted") {
     Icon = <LoadingIcon className="size-5 animate-spin" />;
-    buttonTitle = "Sending...";
+    buttonTitle = "Enviando...";
   } else if (status === "streaming") {
     Icon = <StopIcon className="size-5" />;
     isStreaming = true;
-    buttonTitle = "Stop generation";
+    buttonTitle = "Detener generación";
   } else if (status === "error") {
     Icon = <DeleteIcon className="size-5" />;
-    buttonTitle = "Error occurred";
+    buttonTitle = "Ocurrió un error";
   }
 
   const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {

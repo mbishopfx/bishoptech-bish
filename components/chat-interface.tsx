@@ -550,7 +550,7 @@ export default function ChatInterface({
                                   <div className="flex items-center gap-2 mb-4 pb-2 border-b border-blue-200/30 dark:border-blue-800/30">
                                     <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
                                     <div className="text-xs text-blue-700 dark:text-blue-300 font-semibold uppercase tracking-wide">
-                                      AI Reasoning Process
+                                      Proceso de Razonamiento IA
                                     </div>
                                   </div>
                                   <div className="space-y-3">
@@ -825,9 +825,9 @@ export default function ChatInterface({
                       </PromptInputButton>
                     </TooltipTrigger>
                     <TooltipContent side="top" align="center">
-                      <p>{isSearchEnabled ? "Disable" : "Enable"} web search</p>
+                      <p>{isSearchEnabled ? "Desactivar" : "Activar"} búsqueda web</p>
                       <p className="text-xs text-muted-foreground">
-                        Search the web for current information
+                        Buscar en la web información actual
                       </p>
                     </TooltipContent>
                   </Tooltip>

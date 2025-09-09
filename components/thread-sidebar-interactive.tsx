@@ -33,12 +33,12 @@ interface ThreadSidebarInteractiveProps {
 
 // Constants
 const GROUP_ORDER = [
-  "Pinned",
-  "Today",
-  "Yesterday",
-  "This Week",
-  "This Month",
-  "Older",
+  "Fijados",
+  "Hoy",
+  "Ayer",
+  "Esta Semana",
+  "Este Mes",
+  "Anteriores",
 ] as const;
 const MAX_TITLE_LENGTH = 18;
 const BLUR_DELAY = 150;
@@ -142,11 +142,11 @@ export function ThreadSidebarInteractive({
     const diffInMs = now.getTime() - threadDate.getTime();
     const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
 
-    if (diffInDays === 0) return "Today";
-    if (diffInDays === 1) return "Yesterday";
-    if (diffInDays <= 7) return "This Week";
-    if (diffInDays <= 30) return "This Month";
-    return "Older";
+    if (diffInDays === 0) return "Hoy";
+    if (diffInDays === 1) return "Ayer";
+    if (diffInDays <= 7) return "Esta Semana";
+    if (diffInDays <= 30) return "Este Mes";
+    return "Anteriores";
   };
 
   const filterAndGroupThreads = (threads: Thread[], searchQuery: string) => {
@@ -157,7 +157,7 @@ export function ThreadSidebarInteractive({
     return filtered.reduce(
       (groups, thread) => {
         const timeClass = getTimeClassification(thread._creationTime);
-        const groupKey = thread.pinned ? "Pinned" : timeClass;
+        const groupKey = thread.pinned ? "Fijados" : timeClass;
 
         if (!groups[groupKey]) {
           groups[groupKey] = [];
@@ -188,10 +188,10 @@ export function ThreadSidebarInteractive({
     }
     try {
       await deleteThread({ threadId });
-      toast.success("Thread deleted");
+      toast.success("Hilo eliminado");
     } catch (error) {
       console.error("Failed to delete thread:", error);
-      toast.error("Failed to delete thread");
+      toast.error("Error al eliminar el hilo");
     }
   };
 
@@ -210,7 +210,7 @@ export function ThreadSidebarInteractive({
     e.stopPropagation();
 
     if (!editingTitle.trim()) {
-      toast.error("Title cannot be empty");
+      toast.error("El título no puede estar vacío");
       return;
     }
 
@@ -228,10 +228,10 @@ export function ThreadSidebarInteractive({
       await renameThread({ threadId, title: newTitle });
       setEditingThreadId(null);
       setEditingTitle("");
-      toast.success("Thread renamed");
+      toast.success("Hilo renombrado");
     } catch (error) {
       console.error("Failed to rename thread:", error);
-      toast.error("Failed to rename thread");
+      toast.error("Error al renombrar el hilo");
     }
   };
 
@@ -244,10 +244,10 @@ export function ThreadSidebarInteractive({
     e.stopPropagation();
     try {
       await togglePinThread({ threadId });
-      toast.success("Thread pin status updated");
+      toast.success("Estado de fijado actualizado");
     } catch (error) {
       console.error("Failed to toggle pin:", error);
-      toast.error("Failed to update pin status");
+      toast.error("Error al actualizar el estado de fijado");
     }
   };
 
@@ -278,9 +278,9 @@ export function ThreadSidebarInteractive({
       return (
         <div className="p-4 text-center text-muted-foreground">
           <p className="text-sm">
-            No chats found matching &quot;{searchQuery}&quot;
+            No se encontraron chats que coincidan con &quot;{searchQuery}&quot;
           </p>
-          <p className="text-xs">Try adjusting your search terms</p>
+          <p className="text-xs">Intenta ajustar tus términos de búsqueda</p>
         </div>
       );
     }
@@ -288,8 +288,8 @@ export function ThreadSidebarInteractive({
     if (filteredThreads.length === 0) {
       return (
         <div className="p-4 text-center text-muted-foreground">
-          <p className="text-sm">No chats yet</p>
-          <p className="text-xs">Start a new conversation</p>
+          <p className="text-sm">Aún no hay chats</p>
+          <p className="text-xs">Inicia una nueva conversación</p>
         </div>
       );
     }
@@ -360,7 +360,7 @@ export function ThreadSidebarInteractive({
             }}
           >
             <EditIcon className="h-3 w-3 mr-2" />
-            Rename
+            Renombrar
           </ContextMenuItem>
           <ContextMenuItem
             className="hover:bg-hover"
@@ -370,7 +370,7 @@ export function ThreadSidebarInteractive({
             }}
           >
             <PinIcon className="h-3 w-3 mr-2" />
-            {thread.pinned ? "Unpin" : "Pin"}
+            {thread.pinned ? "Desfijar" : "Fijar"}
           </ContextMenuItem>
           <ContextMenuSeparator />
           <ContextMenuItem
@@ -382,7 +382,7 @@ export function ThreadSidebarInteractive({
             }}
           >
             <DeleteIcon className="h-3 w-3 mr-2" />
-            Delete
+            Eliminar
           </ContextMenuItem>
         </ContextMenuContent>
       </ContextMenu>
@@ -431,7 +431,7 @@ export function ThreadSidebarInteractive({
             size="sm"
             className="w-full"
           >
-            {isLoadingMore ? "Loading..." : "Load More"}
+            {isLoadingMore ? "Cargando..." : "Cargar más"}
           </Button>
         </div>
       )}
