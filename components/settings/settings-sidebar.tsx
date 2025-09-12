@@ -18,7 +18,6 @@ import {
   LogOut,
   Shield,
 } from "lucide-react";
-import { OrganizationSwitcherClient } from "./OrganizationSwitcherClient";
 interface SettingsNavItem {
   title: string;
   href: string;
@@ -215,8 +214,6 @@ export function SettingsSidebar() {
       <nav className="py-12 flex flex-col w-48 ml-auto">
         <div className="relative">
           <ul className="flex flex-col -mt-1.5 list-none p-0">
-            {/* Organization Header Button */}
-            <OrganizationSwitcherClient />
             {/* Navigation Sections */}
             {settingsSections.map((section, sectionIndex) => (
               <SettingSection

@@ -28,7 +28,6 @@ export const GET = async (request: NextRequest) => {
       // If session doesn't have organizationId but user has memberships, refresh session
       if (!session.organizationId) {
         try {
-          // @ts-expect-error will be fixed in the next version of @workos-inc/authkit-nextjs
           session = await refreshSession({
             organizationId: organizationId,
             ensureSignedIn: true,
