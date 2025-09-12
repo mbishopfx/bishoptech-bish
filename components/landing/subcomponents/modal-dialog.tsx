@@ -1,16 +1,15 @@
 "use client";
 
 import React, { useState } from "react";
-import {
-  Button,
-  Callout,
-  Dialog,
-  Flex,
-  Text,
-  TextField,
-} from "@radix-ui/themes";
+import { Button, Callout, Dialog, Flex, Text } from "@radix-ui/themes";
 import { InfoCircledIcon } from "@radix-ui/react-icons";
 import { useRouter } from "next/navigation";
+import {
+  SettingsSection,
+  SettingRow,
+  SettingsInput,
+  SettingsDivider,
+} from "@/components/settings";
 
 /**
  * The 'subscriptionLevel' prop is the name of the subscription plan and is directly tied to the Stripe price lookup key.
@@ -78,44 +77,50 @@ export function ModalDialog({
           {buttonText}
         </button>
       </Dialog.Trigger>
-      <Dialog.Content>
-        <Dialog.Title>Suscribirse a {subscriptionLevel}</Dialog.Title>
-        <Dialog.Description size="2" mb="4">
-          Ingresa los detalles de tu empresa
-        </Dialog.Description>
+      <Dialog.Content className="max-w-sm p-6">
+        <Dialog.Title className="font-semibold text-base leading-6 mb-1">
+          Suscribirse a {subscriptionLevel}
+        </Dialog.Title>
 
-        <Flex direction="column" gap="3">
-          <label>
-            <Text as="div" size="2" mb="1" weight="bold">
+        <div className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
               Nombre de la organización
-            </Text>
-            <TextField.Root
+            </label>
+            <SettingsInput
               placeholder="Ingresa el nombre de tu organización"
-              onBlur={(e) => setOrgName(e.target.value)}
+              value={orgName}
+              onChange={(e) => setOrgName(e.target.value)}
+              width="w-full"
             />
-          </label>
-          {error && (
-            <Callout.Root color="red">
-              <Callout.Icon>
-                <InfoCircledIcon />
-              </Callout.Icon>
-              <Callout.Text>{error}</Callout.Text>
-            </Callout.Root>
-          )}
-        </Flex>
+          </div>
 
-        <Flex gap="3" mt="4" justify="end">
-          <Dialog.Close>
-            <Button variant="soft" color="gray">
-              Cancelar
-            </Button>
-          </Dialog.Close>
-          <Dialog.Close>
-            <Button loading={loading} onClick={handleSubscribe}>
-              Suscribir
-            </Button>
-          </Dialog.Close>
-        </Flex>
+          {error && (
+            <div className="rounded-lg border border-red-200 bg-red-50 p-3">
+              <div className="flex items-center">
+                <InfoCircledIcon className="w-4 h-4 text-red-600 mr-2 flex-shrink-0" />
+                <span className="text-sm text-red-700">{error}</span>
+              </div>
+            </div>
+          )}
+
+          <div className="flex justify-end gap-3">
+            <Dialog.Close>
+              <button className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors duration-200">
+                Cancelar
+              </button>
+            </Dialog.Close>
+            <Dialog.Close>
+              <button
+                onClick={handleSubscribe}
+                disabled={loading}
+                className="px-4 py-2 bg-accent text-white text-sm font-medium rounded-lg hover:bg-accent/90 transition-colors duration-200 disabled:opacity-50"
+              >
+                {loading ? "Procesando..." : "Suscribir"}
+              </button>
+            </Dialog.Close>
+          </div>
+        </div>
       </Dialog.Content>
     </Dialog.Root>
   );
