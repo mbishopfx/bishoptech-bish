@@ -295,8 +295,8 @@ export const syncStripeDataWithPeriod = internalAction({
           status: subscription.status,
           priceId: price?.id || null,
           lookupKey,
-          billingCycleStart: args.billingPeriod?.start,
-          billingCycleEnd: args.billingPeriod?.end,
+          billingCycleStart: subscription.items.data[0]?.current_period_start,
+          billingCycleEnd: subscription.items.data[0]?.current_period_end,
           cancelAtPeriodEnd: subscription.cancel_at_period_end,
           paymentMethodBrand:
             subscription.default_payment_method &&
