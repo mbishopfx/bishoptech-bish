@@ -14,8 +14,7 @@ import { useRouter } from "next/navigation";
 
 /**
  * The 'subscriptionLevel' prop is the name of the subscription plan and is directly tied to the Stripe price lookup key.
- * You will need to have a price in Stripe with the same lookup key as the subscriptionLevel.
- * See https://docs.stripe.com/products-prices/pricing-models for more details
+ * We need to have a price in Stripe with the same lookup key as the subscriptionLevel.
  */
 export function ModalDialog({
   subscriptionLevel,
@@ -35,7 +34,6 @@ export function ModalDialog({
 
   const handleSubscribe = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
-
     setLoading(true);
 
     if (orgName === "") {
@@ -120,5 +118,53 @@ export function ModalDialog({
         </Flex>
       </Dialog.Content>
     </Dialog.Root>
+  );
+}
+
+// New component for handling existing organizations - direct subscription without modal
+export function DirectSubscribeButton({
+  subscriptionLevel,
+  userId,
+  buttonText = "Suscribir",
+}: {
+  subscriptionLevel: string;
+  userId: string;
+  buttonText?: string;
+}) {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+
+  const handleDirectSubscribe = async () => {
+    setLoading(true);
+
+    const res = await fetch("/api/subscribe", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        userId,
+        subscriptionLevel: subscriptionLevel.toLowerCase(),
+      }),
+    });
+
+    const { error, url } = await res.json();
+
+    if (!error) {
+      return router.push(url);
+    }
+
+    setLoading(false);
+    console.error(`Error al suscribirse al plan: ${error}`);
+  };
+
+  return (
+    <button
+      onClick={handleDirectSubscribe}
+      disabled={loading}
+      className="w-full mt-6 px-4 py-2 bg-accent text-white text-sm font-medium rounded-lg hover:bg-accent/90 transition-colors duration-200 disabled:opacity-50"
+    >
+      {loading ? "Procesando..." : buttonText}
+    </button>
   );
 }

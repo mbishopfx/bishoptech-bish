@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/icons/landing-icons";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { ModalDialog } from "./modal-dialog";
+import { SubscriptionButton } from "./subscription-button";
 
 // Plans data structure
 const plans = [
@@ -191,7 +191,7 @@ export default function Pricing({
                 {user &&
                 plan.price !== "Custom" &&
                 !isButtonDisabled(plan.name) ? (
-                  <ModalDialog
+                  <SubscriptionButton
                     subscriptionLevel={plan.name}
                     userId={user.id}
                     buttonText={getButtonText(plan.name)}
