@@ -263,7 +263,7 @@ http.route({
         );
       }
 
-      // Get the organization
+      // Just confirm the organization exists
       const organization = await ctx.runQuery(
         internal.organizations.getByWorkOSId,
         {
@@ -271,9 +271,9 @@ http.route({
         },
       );
 
-      if (!organization?.stripeCustomerId) {
+      if (!organization) {
         return new Response(
-          JSON.stringify({ error: "No Stripe customer found" }),
+          JSON.stringify({ error: "Organization not found" }),
           {
             status: 400,
             headers: { "Content-Type": "application/json" },
@@ -281,20 +281,11 @@ http.route({
         );
       }
 
-      // Sync the latest Stripe data (no billing period from success endpoint)
-      const syncResult = await ctx.runAction(
-        internal.organizations.syncStripeDataWithPeriod,
-        {
-          stripeCustomerId: organization.stripeCustomerId,
-          billingPeriod: undefined,
-        },
-      );
-
       return new Response(
         JSON.stringify({
           status: "success",
-          message: "Stripe data synced successfully",
-          data: syncResult,
+          message:
+            "Payment completed - subscription data will be updated via webhooks",
         }),
         {
           status: 200,
@@ -302,9 +293,9 @@ http.route({
         },
       );
     } catch (error) {
-      console.error("Stripe success sync error:", error);
+      console.error("Stripe success endpoint error:", error);
 
-      return new Response(JSON.stringify({ error: "Sync failed" }), {
+      return new Response(JSON.stringify({ error: "Request failed" }), {
         status: 500,
         headers: { "Content-Type": "application/json" },
       });

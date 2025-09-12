@@ -1,22 +1,24 @@
-import { 
-  SettingsSection, 
-  StatusBadge, 
-  SettingRow, 
-  OrganizationIcon, 
-  SettingsInput, 
-  SettingsDivider 
-} from '@/components/settings';
-import { withAuth } from '@workos-inc/authkit-nextjs';
-import { getOrganizationPlanName, getOrganizationBillingCycle } from '@/actions/getOrganizationSubscription';
+import {
+  SettingsSection,
+  StatusBadge,
+  SettingRow,
+  OrganizationIcon,
+  SettingsInput,
+  SettingsDivider,
+} from "@/components/settings";
+import { withAuth } from "@workos-inc/authkit-nextjs";
 
 export default async function SettingsPage() {
   const { user, accessToken } = await withAuth();
-  let entitlements: Array<string> = ((user as any)?.entitlements as Array<string> | undefined) ?? [];
+  let entitlements: Array<string> =
+    ((user as any)?.entitlements as Array<string> | undefined) ?? [];
   let claimsForDebug: unknown = null;
   if (entitlements.length === 0 && accessToken) {
     try {
-      const [, payload] = accessToken.split('.');
-      const claims = JSON.parse(Buffer.from(payload, 'base64').toString('utf8')) as { entitlements?: Array<string> };
+      const [, payload] = accessToken.split(".");
+      const claims = JSON.parse(
+        Buffer.from(payload, "base64").toString("utf8"),
+      ) as { entitlements?: Array<string> };
       claimsForDebug = claims;
       entitlements = claims.entitlements ?? [];
     } catch {
@@ -25,8 +27,10 @@ export default async function SettingsPage() {
   }
   const debugUser: string = JSON.stringify(user ?? {}, null, 2);
   const debugClaims: string = JSON.stringify(claimsForDebug ?? {}, null, 2);
-  const planName = await getOrganizationPlanName();
-  const billing = await getOrganizationBillingCycle();
+
+  // TODO: Implement subscription data retrieval
+  const planName = null;
+  const billing = null;
   return (
     <div className="pt-12 pb-12 pl-12 pr-12 flex flex-col max-w-4xl min-w-[520px] w-full min-h-full box-border">
       {/* Header */}
@@ -52,10 +56,7 @@ export default async function SettingsPage() {
         title="Organization Name"
         description="The name of your organization visible to all members."
       >
-        <SettingsInput
-          defaultValue="Arisay's Workspace"
-          maxLength={50}
-        />
+        <SettingsInput defaultValue="Arisay's Workspace" maxLength={50} />
       </SettingsSection>
 
       <SettingsDivider />
@@ -69,11 +70,11 @@ export default async function SettingsPage() {
           <SettingRow label="Single Sign-On (SSO) for domain members">
             <StatusBadge status="not-required">Not required</StatusBadge>
           </SettingRow>
-          
+
           <SettingRow label="Single Sign-On (SSO) for guest members">
             <StatusBadge status="not-required">Not required</StatusBadge>
           </SettingRow>
-          
+
           <SettingRow label="Multi-Factor Authentication">
             <StatusBadge status="not-required">Not required</StatusBadge>
           </SettingRow>
@@ -91,7 +92,7 @@ export default async function SettingsPage() {
           <SettingRow label="Directory Sync">
             <StatusBadge status="enabled">Enable</StatusBadge>
           </SettingRow>
-          
+
           <SettingRow label="Just-in-time provisioning">
             <StatusBadge status="disabled">Disable</StatusBadge>
           </SettingRow>
@@ -145,13 +146,15 @@ export default async function SettingsPage() {
       >
         <div className="space-y-2">
           <SettingRow label="Plan">
-            <span className="text-sm font-semibold text-gray-900">{planName ?? 'None found'}</span>
+            <span className="text-sm font-semibold text-gray-900">
+              {planName ?? "None found"}
+            </span>
           </SettingRow>
           <SettingRow label="Billing period">
             <span className="text-sm text-gray-900">
               {billing
                 ? `${new Date(billing.currentPeriodStart * 1000).toLocaleDateString()} – ${new Date(billing.currentPeriodEnd * 1000).toLocaleDateString()}`
-                : '—'}
+                : "—"}
             </span>
           </SettingRow>
         </div>
@@ -166,7 +169,7 @@ export default async function SettingsPage() {
       >
         <div className="rounded-md border border-gray-200 bg-gray-50 p-3 overflow-x-auto">
           <pre className="text-xs leading-5 text-gray-800 whitespace-pre">
-{debugUser}
+            {debugUser}
           </pre>
         </div>
       </SettingsSection>
@@ -180,7 +183,7 @@ export default async function SettingsPage() {
       >
         <div className="rounded-md border border-gray-200 bg-gray-50 p-3 overflow-x-auto">
           <pre className="text-xs leading-5 text-gray-800 whitespace-pre">
-{debugClaims}
+            {debugClaims}
           </pre>
         </div>
       </SettingsSection>
