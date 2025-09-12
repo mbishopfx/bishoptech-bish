@@ -1,20 +1,35 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { Button, Callout, Dialog, Flex, Text, TextField } from '@radix-ui/themes';
-import { InfoCircledIcon } from '@radix-ui/react-icons';
-import { useRouter } from 'next/navigation';
+import React, { useState } from "react";
+import {
+  Button,
+  Callout,
+  Dialog,
+  Flex,
+  Text,
+  TextField,
+} from "@radix-ui/themes";
+import { InfoCircledIcon } from "@radix-ui/react-icons";
+import { useRouter } from "next/navigation";
 
 /**
  * The 'subscriptionLevel' prop is the name of the subscription plan and is directly tied to the Stripe price lookup key.
  * You will need to have a price in Stripe with the same lookup key as the subscriptionLevel.
  * See https://docs.stripe.com/products-prices/pricing-models for more details
  */
-export function ModalDialog({ subscriptionLevel, userId }: { subscriptionLevel: string; userId: string }) {
+export function ModalDialog({
+  subscriptionLevel,
+  userId,
+  buttonText = "Suscribir",
+}: {
+  subscriptionLevel: string;
+  userId: string;
+  buttonText?: string;
+}) {
   const router = useRouter();
 
-  const [orgName, setOrgName] = useState('');
-  const [error, setError] = useState('');
+  const [orgName, setOrgName] = useState("");
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
 
@@ -23,20 +38,26 @@ export function ModalDialog({ subscriptionLevel, userId }: { subscriptionLevel: 
 
     setLoading(true);
 
-    if (orgName === '') {
-      setError('Por favor, completa el nombre de la organización antes de continuar.');
+    if (orgName === "") {
+      setError(
+        "Por favor, completa el nombre de la organización antes de continuar.",
+      );
       setLoading(false);
       return;
     }
 
     // Call API to create a new organization and subscribe to plan
     // The user will be redirected to Stripe Checkout
-    const res = await fetch('/api/subscribe', {
-      method: 'POST',
+    const res = await fetch("/api/subscribe", {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
-      body: JSON.stringify({ userId, orgName, subscriptionLevel: subscriptionLevel.toLowerCase() }),
+      body: JSON.stringify({
+        userId,
+        orgName,
+        subscriptionLevel: subscriptionLevel.toLowerCase(),
+      }),
     });
 
     const { error, url } = await res.json();
@@ -52,12 +73,12 @@ export function ModalDialog({ subscriptionLevel, userId }: { subscriptionLevel: 
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Trigger>
-        <Button 
-          onClick={() => setError('')} 
+        <button
+          onClick={() => setError("")}
           className="w-full mt-6 px-4 py-2 bg-accent text-white text-sm font-medium rounded-lg hover:bg-accent/90 transition-colors duration-200"
         >
-          Suscribir
-        </Button>
+          {buttonText}
+        </button>
       </Dialog.Trigger>
       <Dialog.Content>
         <Dialog.Title>Suscribirse a {subscriptionLevel}</Dialog.Title>
@@ -70,9 +91,9 @@ export function ModalDialog({ subscriptionLevel, userId }: { subscriptionLevel: 
             <Text as="div" size="2" mb="1" weight="bold">
               Nombre de la organización
             </Text>
-            <TextField.Root 
-              placeholder="Ingresa el nombre de tu organización" 
-              onBlur={(e) => setOrgName(e.target.value)} 
+            <TextField.Root
+              placeholder="Ingresa el nombre de tu organización"
+              onBlur={(e) => setOrgName(e.target.value)}
             />
           </label>
           {error && (

@@ -1,10 +1,8 @@
-import { 
-  SettingsSection
-} from '@/components/settings';
-import { Flex } from '@radix-ui/themes';
-import { WorkOsWidgets, UserSessions, UserSecurity } from '@workos-inc/widgets';
-import { withAuth } from '@workos-inc/authkit-nextjs';
-import { workos } from '@/app/api/workos';
+import { SettingsSection } from "@/components/settings";
+import { Flex } from "@radix-ui/themes";
+import { WorkOsWidgets, UserSessions, UserSecurity } from "@workos-inc/widgets";
+import { withAuth } from "@workos-inc/authkit-nextjs";
+import { workos } from "@/app/api/workos";
 
 export default async function SecurityPage() {
   const { user, organizationId } = await withAuth({ ensureSignedIn: true });
@@ -18,27 +16,19 @@ export default async function SecurityPage() {
         userId: user.id,
       });
     } catch (error) {
-      console.error('Failed to get WorkOS token:', error);
+      console.error("Failed to get WorkOS token:", error);
     }
   }
 
   return (
     <div className="pt-12 pb-12 pl-12 pr-12 flex flex-col max-w-4xl min-w-[520px] w-full min-h-full box-border">
-      {/* Header */}
-      <h3 className="font-semibold text-xl leading-7 flex items-center mb-5">
-        <button className="font-semibold text-left transition-transform duration-150 text-gray-500 hover:text-gray-700">
-          Arisay's Workspace<span className="px-1">/</span>
-        </button>
-        Security
-      </h3>
-
       <WorkOsWidgets
         theme={{
-          appearance: 'inherit',
-          accentColor: 'blue',
-          radius: 'large',
-          fontFamily: 'Inter',
-          panelBackground: 'translucent',
+          appearance: "inherit",
+          accentColor: "blue",
+          radius: "large",
+          fontFamily: "Inter",
+          panelBackground: "translucent",
         }}
       >
         <SettingsSection
@@ -52,14 +42,20 @@ export default async function SecurityPage() {
                 <div className="flex flex-col">
                   <div className="flex flex-col mb-5">
                     <div className="flex items-center">
-                      <p className="font-semibold text-base leading-6">Active Sessions</p>
+                      <p className="font-semibold text-base leading-6">
+                        Active Sessions
+                      </p>
                     </div>
                     <p className="text-gray-500 text-sm leading-5 mt-1">
-                      Manage your security preferences and authentication settings.
+                      Manage your security preferences and authentication
+                      settings.
                     </p>
                   </div>
-                  
-                  <UserSessions authToken={authToken} currentSessionId={user.id} />
+
+                  <UserSessions
+                    authToken={authToken}
+                    currentSessionId={user.id}
+                  />
                 </div>
               </>
             )}

@@ -13,12 +13,6 @@ export default async function MembersPage() {
   if (role !== "admin") {
     return (
       <div className="pt-12 pb-12 pl-12 pr-12 flex flex-col max-w-4xl min-w-[520px] w-full min-h-full box-border">
-        <h3 className="font-semibold text-xl leading-7 flex items-center mb-5">
-          <button className="font-semibold text-left transition-transform duration-150 text-gray-500 hover:text-gray-700">
-            Arisay's Workspace<span className="px-1">/</span>
-          </button>
-          Members
-        </h3>
         <Flex direction="column" gap="3" width="100%">
           <Box>
             <Heading>Users Management</Heading>
@@ -34,12 +28,6 @@ export default async function MembersPage() {
   if (!organizationId) {
     return (
       <div className="pt-12 pb-12 pl-12 pr-12 flex flex-col max-w-4xl min-w-[520px] w-full min-h-full box-border">
-        <h3 className="font-semibold text-xl leading-7 flex items-center mb-5">
-          <button className="font-semibold text-left transition-transform duration-150 text-gray-500 hover:text-gray-700">
-            Arisay's Workspace<span className="px-1">/</span>
-          </button>
-          Members
-        </h3>
         <Flex direction="column" gap="3" width="100%">
           <Box>
             <Heading>Users Management</Heading>
@@ -60,13 +48,6 @@ export default async function MembersPage() {
 
   return (
     <div className="pt-12 pb-12 pl-12 pr-12 flex flex-col max-w-4xl min-w-[520px] w-full min-h-full box-border">
-      {/* Header */}
-      <h3 className="font-semibold text-xl leading-7 flex items-center mb-5">
-        <button className="font-semibold text-left transition-transform duration-150 text-gray-500 hover:text-gray-700">
-          Arisay's Workspace<span className="px-1">/</span>
-        </button>
-        Members
-      </h3>
       {/* WorkOS Users Management Widget */}
       <SettingsSection
         title="Members Management"

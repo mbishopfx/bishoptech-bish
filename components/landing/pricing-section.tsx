@@ -1,7 +1,9 @@
 import React from "react";
+import { withAuth } from "@workos-inc/authkit-nextjs";
 import Pricing from "./subcomponents/pricing";
 
-const PricingSection = () => {
+const PricingSection = async () => {
+  const { user } = await withAuth();
   return (
     <section>
       <div className="gap-8 flex flex-col">
@@ -13,8 +15,14 @@ const PricingSection = () => {
             Precios
           </h4>
         </div>
-        <p className="text-[rgb(92,92,92)]">Escogle el plan que mas se adapte a tus requerimientos.</p>
-        <Pricing />
+        <p className="text-[rgb(92,92,92)]">
+          Escogle el plan que mas se adapte a tus requerimientos.
+        </p>
+        <Pricing
+          user={user}
+          showComparisonTable={true}
+          containerWidth="normal"
+        />
       </div>
     </section>
   );

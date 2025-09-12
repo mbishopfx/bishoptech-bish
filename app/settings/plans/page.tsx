@@ -4,8 +4,10 @@ import {
   StatusBadge,
 } from "@/components/settings";
 import Pricing from "@/components/landing/subcomponents/pricing";
+import { withAuth } from "@workos-inc/authkit-nextjs";
 
-export default function PlansPage() {
+export default async function PlansPage() {
+  const { user } = await withAuth();
   return (
     <div className="pt-12 pb-12 pl-12 pr-12 flex flex-col max-w-4xl min-w-[520px] w-full min-h-full box-border">
       <h1 className="text-2xl font-semibold text-gray-900 mb-2">Plans</h1>
@@ -14,12 +16,11 @@ export default function PlansPage() {
       </p>
 
       <div className="space-y-6">
-        <SettingsSection
-          title="Available Plans"
-          description="Choose the plan that works best for your workspace."
-        >
-          <Pricing />
-        </SettingsSection>
+        <Pricing
+          user={user}
+          showComparisonTable={false}
+          containerWidth="wide"
+        />
       </div>
 
       {/* Billing Information */}

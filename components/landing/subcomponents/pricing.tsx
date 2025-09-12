@@ -1,3 +1,5 @@
+"use client";
+
 import { TablerBrandOpenai } from "@/components/ui/icons/openai-icon";
 import { GoogleIcon } from "@/components/ui/icons/google-icon";
 import { AnthropicIcon } from "@/components/ui/icons/anthropic-icon";
@@ -18,7 +20,8 @@ import {
   PremiumIcon,
   TeamsIcon,
 } from "@/components/ui/icons/landing-icons";
-import { withAuth } from "@workos-inc/authkit-nextjs";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import { ModalDialog } from "./modal-dialog";
 
 // Plans data structure
@@ -76,10 +79,65 @@ const plans = [
   },
 ];
 
-export default async function Pricing() {
-  const { user } = await withAuth();
+interface PricingProps {
+  user?: { id: string } | null;
+  showComparisonTable?: boolean;
+  containerWidth?: "normal" | "wide";
+}
+
+export default function Pricing({
+  user,
+  showComparisonTable = true,
+  containerWidth = "normal",
+}: PricingProps) {
+  const currentOrgPlan = useQuery(api.organizations.getCurrentOrganizationPlan);
+
+  const getButtonText = (planName: string) => {
+    if (!user || !currentOrgPlan) {
+      return planName === "Organizacion" ? "Contactar" : "Suscribir";
+    }
+
+    const currentPlan = currentOrgPlan.plan;
+
+    if (planName === "Organizacion") {
+      return "Contactar";
+    }
+
+    if (planName === "Plus") {
+      if (currentPlan === "plus") {
+        return "Plan Actual";
+      } else if (currentPlan === "pro") {
+        return "Degradar";
+      } else {
+        return "Suscribir";
+      }
+    }
+
+    if (planName === "Pro") {
+      if (currentPlan === "pro") {
+        return "Plan Actual";
+      } else if (currentPlan === "plus") {
+        return "Mejorar";
+      } else {
+        return "Suscribir";
+      }
+    }
+
+    return "Suscribir";
+  };
+
+  const isButtonDisabled = (planName: string) => {
+    if (!user || !currentOrgPlan) return false;
+
+    const currentPlan = currentOrgPlan.plan;
+    return (
+      (planName === "Plus" && currentPlan === "plus") ||
+      (planName === "Pro" && currentPlan === "pro")
+    );
+  };
+
   return (
-    <div className="mx-auto">
+    <div className={`mx-auto ${containerWidth === "wide" ? "max-w-6xl" : ""}`}>
       {/* Pricing Cards */}
       <div className="relative">
         <div className="grid grid-cols-1 lg:grid-cols-3">
@@ -130,11 +188,24 @@ export default async function Pricing() {
                   </div>
                 </div>
 
-                {user && plan.price !== "Custom" ? (
-                  <ModalDialog subscriptionLevel={plan.name} userId={user.id} />
+                {user &&
+                plan.price !== "Custom" &&
+                !isButtonDisabled(plan.name) ? (
+                  <ModalDialog
+                    subscriptionLevel={plan.name}
+                    userId={user.id}
+                    buttonText={getButtonText(plan.name)}
+                  />
                 ) : (
-                  <button className="w-full mt-6 px-4 py-2 bg-accent text-white text-sm font-medium rounded-lg hover:bg-accent/90 transition-colors duration-200">
-                    {plan.price === "Custom" ? "Contactar" : "Suscribir"}
+                  <button
+                    className={`w-full mt-6 px-4 py-2 text-sm font-medium rounded-lg transition-colors duration-200 ${
+                      isButtonDisabled(plan.name)
+                        ? "bg-accent text-white cursor-not-allowed"
+                        : "bg-accent text-white hover:bg-accent/90"
+                    }`}
+                    disabled={isButtonDisabled(plan.name)}
+                  >
+                    {getButtonText(plan.name)}
                   </button>
                 )}
               </div>
@@ -212,199 +283,212 @@ export default async function Pricing() {
         </div>
       </div>
 
-      {/* Title Section */}
-      <div className="text-center mb-6">
-        <h3 className="text-2xl font-bold text-gray-900 mt-10">
-          Comparación de Precios
-        </h3>
-        <p className="text-gray-600">
-          Compara nuestros precios con las suscripciones individuales
-        </p>
-      </div>
-
-      {/* Comparison Table */}
-      <div className="max-w-4xl mx-auto">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-200">
-                <th className="text-left py-4 px-4 font-semibold text-gray-900">
-                  Servicio
-                </th>
-                <th className="text-center py-4 px-4 font-semibold text-gray-900">
-                  LOOP Plus
-                </th>
-                <th className="text-center py-4 px-4 font-semibold text-gray-900">
-                  Suscripciones Individuales
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              <tr className="hover:bg-gray-50">
-                <td className="py-4 px-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-gray-900 rounded-lg flex items-center justify-center">
-                      <span className="text-white font-bold text-sm">L</span>
-                    </div>
-                    <span className="font-medium text-gray-900">LOOP Plus</span>
-                  </div>
-                </td>
-                <td className="text-center py-4 px-4">
-                  <span className="text-xl font-bold text-gray-900">
-                    $190 MXN
-                  </span>
-                </td>
-                <td className="text-center py-4 px-4">
-                  <span className="text-lg font-bold text-gray-900">
-                    $0 MXN
-                  </span>
-                </td>
-              </tr>
-              <tr className="hover:bg-gray-50">
-                <td className="py-4 px-4">
-                  <div className="flex items-center gap-3">
-                    <TablerBrandOpenai className="w-6 h-6 text-green-600" />
-                    <span className="font-medium text-gray-900">
-                      ChatGPT Plus
-                    </span>
-                  </div>
-                </td>
-                <td className="text-center py-4 px-4">
-                  <span className="text-lg font-bold text-green-600">
-                    $0 MXN
-                  </span>
-                </td>
-                <td className="text-center py-4 px-4">
-                  <span className="text-lg font-bold text-gray-900">
-                    $400 MXN
-                  </span>
-                </td>
-              </tr>
-              <tr className="hover:bg-gray-50">
-                <td className="py-4 px-4">
-                  <div className="flex items-center gap-3">
-                    <XAiIcon className="w-6 h-6 text-black" />
-                    <span className="font-medium text-gray-900">Grok Pro</span>
-                  </div>
-                </td>
-                <td className="text-center py-4 px-4">
-                  <span className="text-lg font-bold text-green-600">
-                    $0 MXN
-                  </span>
-                </td>
-                <td className="text-center py-4 px-4">
-                  <span className="text-lg font-bold text-gray-900">
-                    $600 MXN
-                  </span>
-                </td>
-              </tr>
-              <tr className="hover:bg-gray-50">
-                <td className="py-4 px-4">
-                  <div className="flex items-center gap-3">
-                    <GoogleIcon className="w-6 h-6 text-purple-600" />
-                    <span className="font-medium text-gray-900">
-                      Gemini Advanced
-                    </span>
-                  </div>
-                </td>
-                <td className="text-center py-4 px-4">
-                  <span className="text-lg font-bold text-green-600">
-                    $0 MXN
-                  </span>
-                </td>
-                <td className="text-center py-4 px-4">
-                  <span className="text-lg font-bold text-gray-900">
-                    $400 MXN
-                  </span>
-                </td>
-              </tr>
-              <tr className="hover:bg-gray-50">
-                <td className="py-4 px-4">
-                  <div className="flex items-center gap-3">
-                    <AnthropicIcon className="w-6 h-6 text-black" />
-                    <span className="font-medium text-gray-900">
-                      Claude Pro
-                    </span>
-                  </div>
-                </td>
-                <td className="text-center py-4 px-4">
-                  <span className="text-lg font-bold text-green-600">
-                    $0 MXN
-                  </span>
-                </td>
-                <td className="text-center py-4 px-4">
-                  <span className="text-lg font-bold text-gray-900">
-                    $400 MXN
-                  </span>
-                </td>
-              </tr>
-              <tr className="hover:bg-gray-50">
-                <td className="py-4 px-4">
-                  <div className="flex items-center gap-3">
-                    <LogosMistralAiIcon className="w-6 h-6 text-orange-500" />
-                    <span className="font-medium text-gray-900">
-                      Mistral AI
-                    </span>
-                  </div>
-                </td>
-                <td className="text-center py-4 px-4">
-                  <span className="text-lg font-bold text-green-600">
-                    $0 MXN
-                  </span>
-                </td>
-                <td className="text-center py-4 px-4">
-                  <span className="text-lg font-bold text-gray-900">
-                    $300 MXN
-                  </span>
-                </td>
-              </tr>
-            </tbody>
-            <tfoot>
-              <tr className="border-t-2 border-gray-300 bg-gray-50">
-                <td className="py-4 px-4 font-bold text-gray-900">Total</td>
-                <td className="text-center py-4 px-4">
-                  <span className="text-2xl font-bold text-green-600">
-                    $190 MXN
-                  </span>
-                </td>
-                <td className="text-center py-4 px-4">
-                  <span className="text-2xl font-bold text-gray-900">
-                    $2,100 MXN
-                  </span>
-                </td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-
-        {/* Savings Highlight */}
-        <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-          <div className="flex items-center gap-2 mb-2">
-            <svg
-              className="w-5 h-5 text-green-600"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"
-              />
-            </svg>
-            <span className="font-semibold text-green-800">
-              Ahorro con LOOP
-            </span>
+      {showComparisonTable && (
+        <>
+          {/* Title Section */}
+          <div className="text-center mb-6">
+            <h3 className="text-2xl font-bold text-gray-900 mt-10">
+              Comparación de Precios
+            </h3>
+            <p className="text-gray-600">
+              Compara nuestros precios con las suscripciones individuales
+            </p>
           </div>
-          <p className="text-sm text-green-700">
-            Con LOOP Plus obtienes acceso a todos estos modelos por solo $190
-            MXN/mes.
-            <span className="font-semibold"> Ahorras $1,910 MXN/mes</span>{" "}
-            comparado con las suscripciones individuales.
-          </p>
-        </div>
-      </div>
+
+          {/* Comparison Table */}
+          <div className="max-w-4xl mx-auto">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="text-left py-4 px-4 font-semibold text-gray-900">
+                      Servicio
+                    </th>
+                    <th className="text-center py-4 px-4 font-semibold text-gray-900">
+                      LOOP Plus
+                    </th>
+                    <th className="text-center py-4 px-4 font-semibold text-gray-900">
+                      Suscripciones Individuales
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  <tr className="hover:bg-gray-50">
+                    <td className="py-4 px-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-gray-900 rounded-lg flex items-center justify-center">
+                          <span className="text-white font-bold text-sm">
+                            L
+                          </span>
+                        </div>
+                        <span className="font-medium text-gray-900">
+                          LOOP Plus
+                        </span>
+                      </div>
+                    </td>
+                    <td className="text-center py-4 px-4">
+                      <span className="text-xl font-bold text-gray-900">
+                        $190 MXN
+                      </span>
+                    </td>
+                    <td className="text-center py-4 px-4">
+                      <span className="text-lg font-bold text-gray-900">
+                        $0 MXN
+                      </span>
+                    </td>
+                  </tr>
+                  <tr className="hover:bg-gray-50">
+                    <td className="py-4 px-4">
+                      <div className="flex items-center gap-3">
+                        <TablerBrandOpenai className="w-6 h-6 text-green-600" />
+                        <span className="font-medium text-gray-900">
+                          ChatGPT Plus
+                        </span>
+                      </div>
+                    </td>
+                    <td className="text-center py-4 px-4">
+                      <span className="text-lg font-bold text-green-600">
+                        $0 MXN
+                      </span>
+                    </td>
+                    <td className="text-center py-4 px-4">
+                      <span className="text-lg font-bold text-gray-900">
+                        $400 MXN
+                      </span>
+                    </td>
+                  </tr>
+                  <tr className="hover:bg-gray-50">
+                    <td className="py-4 px-4">
+                      <div className="flex items-center gap-3">
+                        <XAiIcon className="w-6 h-6 text-black" />
+                        <span className="font-medium text-gray-900">
+                          Grok Pro
+                        </span>
+                      </div>
+                    </td>
+                    <td className="text-center py-4 px-4">
+                      <span className="text-lg font-bold text-green-600">
+                        $0 MXN
+                      </span>
+                    </td>
+                    <td className="text-center py-4 px-4">
+                      <span className="text-lg font-bold text-gray-900">
+                        $600 MXN
+                      </span>
+                    </td>
+                  </tr>
+                  <tr className="hover:bg-gray-50">
+                    <td className="py-4 px-4">
+                      <div className="flex items-center gap-3">
+                        <GoogleIcon className="w-6 h-6 text-purple-600" />
+                        <span className="font-medium text-gray-900">
+                          Gemini Advanced
+                        </span>
+                      </div>
+                    </td>
+                    <td className="text-center py-4 px-4">
+                      <span className="text-lg font-bold text-green-600">
+                        $0 MXN
+                      </span>
+                    </td>
+                    <td className="text-center py-4 px-4">
+                      <span className="text-lg font-bold text-gray-900">
+                        $400 MXN
+                      </span>
+                    </td>
+                  </tr>
+                  <tr className="hover:bg-gray-50">
+                    <td className="py-4 px-4">
+                      <div className="flex items-center gap-3">
+                        <AnthropicIcon className="w-6 h-6 text-black" />
+                        <span className="font-medium text-gray-900">
+                          Claude Pro
+                        </span>
+                      </div>
+                    </td>
+                    <td className="text-center py-4 px-4">
+                      <span className="text-lg font-bold text-green-600">
+                        $0 MXN
+                      </span>
+                    </td>
+                    <td className="text-center py-4 px-4">
+                      <span className="text-lg font-bold text-gray-900">
+                        $400 MXN
+                      </span>
+                    </td>
+                  </tr>
+                  <tr className="hover:bg-gray-50">
+                    <td className="py-4 px-4">
+                      <div className="flex items-center gap-3">
+                        <LogosMistralAiIcon className="w-6 h-6 text-orange-500" />
+                        <span className="font-medium text-gray-900">
+                          Mistral AI
+                        </span>
+                      </div>
+                    </td>
+                    <td className="text-center py-4 px-4">
+                      <span className="text-lg font-bold text-green-600">
+                        $0 MXN
+                      </span>
+                    </td>
+                    <td className="text-center py-4 px-4">
+                      <span className="text-lg font-bold text-gray-900">
+                        $300 MXN
+                      </span>
+                    </td>
+                  </tr>
+                </tbody>
+                <tfoot>
+                  <tr className="border-t-2 border-gray-300 bg-gray-50">
+                    <td className="py-4 px-4 font-bold text-gray-900">Total</td>
+                    <td className="text-center py-4 px-4">
+                      <span className="text-2xl font-bold text-green-600">
+                        $190 MXN
+                      </span>
+                    </td>
+                    <td className="text-center py-4 px-4">
+                      <span className="text-2xl font-bold text-gray-900">
+                        $2,100 MXN
+                      </span>
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+
+            {/* Savings Highlight */}
+            <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <svg
+                  className="w-5 h-5 text-green-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"
+                  />
+                </svg>
+                <span className="font-semibold text-green-800">
+                  Ahorro con LOOP
+                </span>
+              </div>
+              <p className="text-sm text-green-700">
+                Con LOOP Plus obtienes acceso a todos estos modelos por solo
+                $190 MXN/mes.
+                <span className="font-semibold">
+                  {" "}
+                  Ahorras $1,910 MXN/mes
+                </span>{" "}
+                comparado con las suscripciones individuales.
+              </p>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

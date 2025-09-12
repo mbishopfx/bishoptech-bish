@@ -33,20 +33,12 @@ export default async function SettingsPage() {
   const billing = null;
   return (
     <div className="pt-12 pb-12 pl-12 pr-12 flex flex-col max-w-4xl min-w-[520px] w-full min-h-full box-border">
-      {/* Header */}
-      <h3 className="font-semibold text-xl leading-7 flex items-center mb-5">
-        <button className="font-semibold text-left transition-transform duration-150 text-gray-500 hover:text-gray-700">
-          Arisay's Workspace<span className="px-1">/</span>
-        </button>
-        Overview
-      </h3>
-
       {/* Organization Icon Section */}
       <SettingsSection
         title="Organization Icon"
         description="Organization branding visible to all members."
       >
-        <OrganizationIcon name="Arisay's Workspace" />
+        <OrganizationIcon name="Organization" />
       </SettingsSection>
 
       <SettingsDivider />
@@ -56,7 +48,7 @@ export default async function SettingsPage() {
         title="Organization Name"
         description="The name of your organization visible to all members."
       >
-        <SettingsInput defaultValue="Arisay's Workspace" maxLength={50} />
+        <SettingsInput defaultValue="Organization" maxLength={50} />
       </SettingsSection>
 
       <SettingsDivider />

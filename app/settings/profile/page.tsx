@@ -1,10 +1,8 @@
-import { 
-  SettingsSection
-} from '@/components/settings';
-import { Box, Card, Flex, Heading, Text } from '@radix-ui/themes';
-import { WorkOsWidgets, UserProfile } from '@workos-inc/widgets';
-import { withAuth } from '@workos-inc/authkit-nextjs';
-import { workos } from '@/app/api/workos';
+import { SettingsSection } from "@/components/settings";
+import { Box, Card, Flex, Heading, Text } from "@radix-ui/themes";
+import { WorkOsWidgets, UserProfile } from "@workos-inc/widgets";
+import { withAuth } from "@workos-inc/authkit-nextjs";
+import { workos } from "@/app/api/workos";
 
 export default async function ProfilePage() {
   const { user, organizationId } = await withAuth({ ensureSignedIn: true });
@@ -16,23 +14,15 @@ export default async function ProfilePage() {
       authToken = await workos.widgets.getToken({
         organizationId,
         userId: user.id,
-        scopes: ['widgets:users-table:manage'],
+        scopes: ["widgets:users-table:manage"],
       });
     } catch (error) {
-      console.error('Failed to get WorkOS token:', error);
+      console.error("Failed to get WorkOS token:", error);
     }
   }
 
   return (
     <div className="pt-12 pb-12 pl-12 pr-12 flex flex-col max-w-4xl min-w-[520px] w-full min-h-full box-border">
-      {/* Header */}
-      <h3 className="font-semibold text-xl leading-7 flex items-center mb-5">
-        <button className="font-semibold text-left transition-transform duration-150 text-gray-500 hover:text-gray-700">
-          Arisay's Workspace<span className="px-1">/</span>
-        </button>
-        Profile
-      </h3>
-
       {/* WorkOS User Profile Widget or Fallback */}
       <SettingsSection
         title="Profile Management"
@@ -42,11 +32,11 @@ export default async function ProfilePage() {
           {authToken ? (
             <WorkOsWidgets
               theme={{
-                appearance: 'inherit',
-                accentColor: 'blue',
-                radius: 'large',
-                fontFamily: 'Inter',
-                panelBackground: 'translucent',
+                appearance: "inherit",
+                accentColor: "blue",
+                radius: "large",
+                fontFamily: "Inter",
+                panelBackground: "translucent",
               }}
             >
               <UserProfile authToken={authToken} />
@@ -56,19 +46,22 @@ export default async function ProfilePage() {
               <Flex direction="column" gap="3">
                 <Heading size="4">Profile Information</Heading>
                 <Text size="2" color="gray">
-                  First Name: {user.firstName || 'Not provided'}
+                  First Name: {user.firstName || "Not provided"}
                 </Text>
                 <Text size="2" color="gray">
-                  Last Name: {user.lastName || 'Not provided'}
+                  Last Name: {user.lastName || "Not provided"}
                 </Text>
                 <Text size="2" color="gray">
-                  Email: {user.email || 'Not provided'}
+                  Email: {user.email || "Not provided"}
                 </Text>
                 <Text size="2" color="gray">
-                  Profile Picture: {user.profilePictureUrl ? 'Available' : 'Not set'}
+                  Profile Picture:{" "}
+                  {user.profilePictureUrl ? "Available" : "Not set"}
                 </Text>
                 <Text size="1" color="gray">
-                  Note: Full profile management requires an organization. Contact your administrator to join an organization for advanced features.
+                  Note: Full profile management requires an organization.
+                  Contact your administrator to join an organization for
+                  advanced features.
                 </Text>
               </Flex>
             </Card>

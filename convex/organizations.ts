@@ -1,12 +1,15 @@
 import {
+  query,
   internalQuery,
   internalMutation,
   internalAction,
 } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
+import { getAuthUserIdentity } from "./helpers/getUser";
+import { extractOrganizationIdFromJWT } from "./helpers/quota";
 
-// Plan quota configuration
+// Plan quota configuration // Could remove and use stripe metadata to fetch plan details
 const PLAN_QUOTAS = {
   plus: {
     standardQuotaLimit: 500,
@@ -368,5 +371,41 @@ export const getSubscriptionData = internalQuery({
       paymentMethodLast4: organization.paymentMethodLast4,
       stripeCustomerId: organization.stripeCustomerId,
     };
+  },
+});
+
+export const getCurrentOrganizationPlan = query({
+  args: {},
+  handler: async (ctx) => {
+    try {
+      const identity = await getAuthUserIdentity(ctx);
+
+      if (!identity) {
+        return null;
+      }
+
+      const orgId = extractOrganizationIdFromJWT(identity);
+
+      if (!orgId) {
+        return null;
+      }
+
+      const organization = await ctx.db
+        .query("organizations")
+        .withIndex("by_workos_id", (q) => q.eq("workos_id", orgId))
+        .first();
+
+      if (!organization) {
+        return null;
+      }
+
+      return {
+        plan: organization.plan || null,
+        subscriptionStatus: organization.subscriptionStatus || "none",
+      };
+    } catch (error) {
+      console.error("Error getting current organization plan:", error);
+      return null;
+    }
   },
 });

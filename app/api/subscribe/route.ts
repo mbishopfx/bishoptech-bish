@@ -21,19 +21,67 @@ export const POST = async (req: NextRequest) => {
   }
 
   try {
-    const organization = await workos.organizations.createOrganization({
-      name: orgName,
-    });
+    let organization;
+    let shouldCreateOrganization = true;
 
-    await workos.userManagement.createOrganizationMembership({
-      organizationId: organization.id,
-      userId,
-      roleSlug: "admin",
-    });
+    // Check if user has existing organizations
+    try {
+      const memberships =
+        await workos.userManagement.listOrganizationMemberships({
+          userId,
+        });
+
+      if (memberships.data && memberships.data.length > 0) {
+        // User has existing organizations, use the first active one
+        const activeMembership = memberships.data.find(
+          (membership) => membership.status === "active",
+        );
+
+        if (activeMembership) {
+          // Get the full organization details using the organizationId
+          organization = await workos.organizations.getOrganization(
+            activeMembership.organizationId,
+          );
+          shouldCreateOrganization = false;
+          console.log("Using existing organization:", organization.id);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching user organizations:", error);
+      // Continue with creating new organization if fetching fails
+    }
+
+    // Create new organization only if user doesn't have one
+    if (shouldCreateOrganization) {
+      if (!orgName) {
+        return NextResponse.json(
+          { error: "Organization name is required for new organizations" },
+          { status: 400 },
+        );
+      }
+
+      organization = await workos.organizations.createOrganization({
+        name: orgName,
+      });
+
+      await workos.userManagement.createOrganizationMembership({
+        organizationId: organization.id,
+        userId,
+        roleSlug: "admin",
+      });
+
+      console.log("Created new organization:", organization.id);
+    }
 
     // Retrieve price ID from Stripe
-    // The Stripe look up key for the price *must* be the same as the subscription level string
     let price;
+
+    if (!organization) {
+      return NextResponse.json(
+        { error: "Failed to get or create organization" },
+        { status: 500 },
+      );
+    }
 
     console.log("Looking up price with subscription level:", subscriptionLevel);
 
@@ -55,7 +103,7 @@ export const POST = async (req: NextRequest) => {
       }
     } catch (error) {
       console.error(
-        "Error retrieving price from Stripe. This is likely because the products and prices have not been created yet. Run the setup script `pnpm run setup` to automatically create them.",
+        "Error retrieving price from Stripe. This is likely because the products and prices have not been created yet.",
         error,
       );
       return NextResponse.json(
@@ -64,33 +112,15 @@ export const POST = async (req: NextRequest) => {
       );
     }
 
-    const user = await workos.userManagement.getUser(userId);
+    const userDetails = await workos.userManagement.getUser(userId);
 
-    // Create Stripe customer
-    const customer = await stripe.customers.create({
-      email: user.email,
-      metadata: {
-        workOSOrganizationId: organization.id,
-        userId: userId, // This is key for the sync approach
-      },
-    });
+    let stripeCustomerId;
 
-    // Update WorkOS organization with Stripe customer ID
-    // This will allow WorkOS to automatically add entitlements to the access token
-    await workos.organizations.updateOrganization({
-      organization: organization.id,
-      stripeCustomerId: customer.id,
-    });
-
-    // Sync Stripe customer ID into Convex organizations table (protected endpoint)
-    if (!process.env.CONVEX_HTTP || !process.env.CONVEX_SYNC_SECRET) {
-      console.warn(
-        "Missing CONVEX_HTTP or CONVEX_SYNC_SECRET; skipping Convex sync",
-      );
-    } else {
+    // Check if organization already has a Stripe customer ID in Convex
+    if (process.env.CONVEX_HTTP && process.env.CONVEX_SYNC_SECRET) {
       try {
-        const res = await fetch(
-          `${process.env.CONVEX_HTTP}/sync-stripe-customer`,
+        const orgCheckResponse = await fetch(
+          `${process.env.CONVEX_HTTP}/get-organization-by-workos-id`,
           {
             method: "POST",
             headers: {
@@ -99,22 +129,76 @@ export const POST = async (req: NextRequest) => {
             },
             body: JSON.stringify({
               workos_id: organization.id,
-              stripeCustomerId: customer.id,
             }),
           },
         );
-        if (!res.ok) {
-          const text = await res.text();
-          console.error("Convex sync failed", res.status, text);
+
+        if (orgCheckResponse.ok) {
+          const { stripeCustomerId: existingCustomerId } =
+            await orgCheckResponse.json();
+          if (existingCustomerId) {
+            stripeCustomerId = existingCustomerId;
+            console.log("Using existing Stripe customer:", stripeCustomerId);
+          }
         }
-      } catch (e) {
-        console.error("Convex sync error", e);
+      } catch (error) {
+        console.error("Error checking existing organization:", error);
+        // Continue to create new customer if check fails
       }
     }
 
-    // ALWAYS create checkout with a stripeCustomerId
+    // Create Stripe customer only if one doesn't exist
+    if (!stripeCustomerId) {
+      const customer = await stripe.customers.create({
+        email: userDetails.email,
+        metadata: {
+          workOSOrganizationId: organization.id,
+          userId: userId,
+        },
+      });
+      stripeCustomerId = customer.id;
+      console.log("Created new Stripe customer:", stripeCustomerId);
+
+      // Update WorkOS organization with Stripe customer ID
+      await workos.organizations.updateOrganization({
+        organization: organization.id,
+        stripeCustomerId: stripeCustomerId,
+      });
+
+      // Sync Stripe customer ID into Convex organizations table
+      if (process.env.CONVEX_HTTP && process.env.CONVEX_SYNC_SECRET) {
+        try {
+          const res = await fetch(
+            `${process.env.CONVEX_HTTP}/sync-stripe-customer`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                authorization: `Bearer ${process.env.CONVEX_SYNC_SECRET}`,
+              },
+              body: JSON.stringify({
+                workos_id: organization.id,
+                stripeCustomerId: stripeCustomerId,
+              }),
+            },
+          );
+          if (!res.ok) {
+            const text = await res.text();
+            console.error("Convex sync failed", res.status, text);
+          }
+        } catch (e) {
+          console.error("Convex sync error", e);
+        }
+      } else {
+        console.warn(
+          "Missing CONVEX_HTTP or CONVEX_SYNC_SECRET; skipping Convex sync",
+        );
+      }
+    }
+
+    // Create checkout session with existing or new customer
     const session = await stripe.checkout.sessions.create({
-      customer: customer.id, // Customer is guaranteed to exist at this point
+      customer: stripeCustomerId,
       billing_address_collection: "auto",
       line_items: [
         {
@@ -123,7 +207,7 @@ export const POST = async (req: NextRequest) => {
         },
       ],
       mode: "subscription",
-      success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/payment-success?workos_org=${organization.id}`, // Point to payment success page with org ID
+      success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/payment-success?workos_org=${organization.id}`,
       cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/`,
     });
 

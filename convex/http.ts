@@ -42,6 +42,46 @@ http.route({
   }),
 });
 
+// Protected endpoint to get organization by WorkOS ID
+http.route({
+  path: "/get-organization-by-workos-id",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const authHeader = request.headers.get("authorization") || "";
+    const expected = `Bearer ${process.env.CONVEX_SYNC_SECRET ?? ""}`;
+    if (!process.env.CONVEX_SYNC_SECRET || authHeader !== expected) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    const body = await request.json();
+    const { workos_id } = body ?? {};
+    if (!workos_id) {
+      return new Response(JSON.stringify({ error: "Missing workos_id" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    const organization = await ctx.runQuery(
+      internal.organizations.getByWorkOSId,
+      { workos_id },
+    );
+
+    // Return only the stripeCustomerId to minimize data transfer
+    const response = {
+      stripeCustomerId: organization?.stripeCustomerId || null,
+    };
+
+    return new Response(JSON.stringify(response), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  }),
+});
+
 http.route({
   path: "/workos-webhook",
   method: "POST",
