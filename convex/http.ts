@@ -27,10 +27,13 @@ http.route({
       });
     }
 
-    await ctx.runMutation(internal.organizations.setStripeCustomerIdByWorkOSId, {
-      workos_id,
-      stripeCustomerId,
-    });
+    await ctx.runMutation(
+      internal.organizations.setStripeCustomerIdByWorkOSId,
+      {
+        workos_id,
+        stripeCustomerId,
+      },
+    );
 
     return new Response(JSON.stringify({ status: "ok" }), {
       status: 200,
@@ -187,7 +190,7 @@ http.route({
   }),
 });
 
-// Stripe webhook endpoint
+// Stripe webhook endpoint - handles webhooks directly in Convex
 http.route({
   path: "/stripe-webhook",
   method: "POST",
@@ -196,10 +199,13 @@ http.route({
     const sigHeader = request.headers.get("stripe-signature");
 
     if (!sigHeader) {
-      return new Response(JSON.stringify({ error: "Missing stripe-signature header" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ error: "Missing stripe-signature header" }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        },
+      );
     }
 
     try {
@@ -210,25 +216,95 @@ http.route({
       });
 
       // Handle the webhook event
-      const result = await ctx.runAction(internal.stripe.handleStripeWebhook, {
+      const result = await ctx.runAction(internal.stripe.processStripeEvent, {
         event,
       });
 
-      return new Response(JSON.stringify({ 
-        status: "success", 
-        eventType: result.eventType 
-      }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({
+          status: "success",
+          eventType: result.eventType,
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        },
+      );
     } catch (error) {
       console.error("Stripe webhook error:", error);
-      
-      return new Response(JSON.stringify({ 
-        error: "Webhook processing failed",
-        message: error instanceof Error ? error.message : "Unknown error"
-      }), {
-        status: 400,
+
+      return new Response(
+        JSON.stringify({ error: "Webhook processing failed" }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        },
+      );
+    }
+  }),
+});
+
+// Stripe success endpoint - handles post-payment sync directly in Convex
+http.route({
+  path: "/stripe-success",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    try {
+      const body = await request.json();
+      const { workosOrganizationId } = body;
+
+      if (!workosOrganizationId) {
+        return new Response(
+          JSON.stringify({ error: "Missing workosOrganizationId" }),
+          {
+            status: 400,
+            headers: { "Content-Type": "application/json" },
+          },
+        );
+      }
+
+      // Get the organization
+      const organization = await ctx.runQuery(
+        internal.organizations.getByWorkOSId,
+        {
+          workos_id: workosOrganizationId,
+        },
+      );
+
+      if (!organization?.stripeCustomerId) {
+        return new Response(
+          JSON.stringify({ error: "No Stripe customer found" }),
+          {
+            status: 400,
+            headers: { "Content-Type": "application/json" },
+          },
+        );
+      }
+
+      // Sync the latest Stripe data
+      const syncResult = await ctx.runAction(
+        internal.organizations.syncStripeDataToConvex,
+        {
+          stripeCustomerId: organization.stripeCustomerId,
+        },
+      );
+
+      return new Response(
+        JSON.stringify({
+          status: "success",
+          message: "Stripe data synced successfully",
+          data: syncResult,
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        },
+      );
+    } catch (error) {
+      console.error("Stripe success sync error:", error);
+
+      return new Response(JSON.stringify({ error: "Sync failed" }), {
+        status: 500,
         headers: { "Content-Type": "application/json" },
       });
     }

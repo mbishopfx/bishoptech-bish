@@ -1,5 +1,11 @@
-import { internalQuery, internalMutation } from "./_generated/server";
+import {
+  query,
+  internalQuery,
+  internalMutation,
+  internalAction,
+} from "./_generated/server";
 import { v } from "convex/values";
+import { internal } from "./_generated/api";
 
 export const createOrganization = internalMutation({
   args: { workos_id: v.string(), name: v.string() },
@@ -42,6 +48,17 @@ export const getByWorkOSId = internalQuery({
   },
 });
 
+export const getByWorkOSIdPublic = query({
+  args: { workos_id: v.string() },
+  handler: async (ctx, args) => {
+    const organization = await ctx.db
+      .query("organizations")
+      .withIndex("by_workos_id", (q) => q.eq("workos_id", args.workos_id))
+      .first();
+    return organization;
+  },
+});
+
 export const getOrganizationInfo = internalQuery({
   args: { workos_id: v.string() },
   handler: async (ctx, args) => {
@@ -64,20 +81,6 @@ export const getOrganizationInfo = internalQuery({
         organization.billingCycleStart && organization.billingCycleEnd
       ),
     };
-  },
-});
-
-export const updateBillingCycle = internalMutation({
-  args: {
-    organizationId: v.id("organizations"),
-    billingCycleStart: v.number(),
-    billingCycleEnd: v.number(),
-  },
-  handler: async (ctx, args) => {
-    await ctx.db.patch(args.organizationId, {
-      billingCycleStart: args.billingCycleStart,
-      billingCycleEnd: args.billingCycleEnd,
-    });
   },
 });
 
@@ -109,52 +112,163 @@ export const getOrganizationByStripeCustomerId = internalQuery({
   handler: async (ctx, args) => {
     const organization = await ctx.db
       .query("organizations")
-      .withIndex("by_stripe_customer_id", (q) => q.eq("stripeCustomerId", args.stripeCustomerId))
+      .withIndex("by_stripe_customer_id", (q) =>
+        q.eq("stripeCustomerId", args.stripeCustomerId),
+      )
       .first();
     return organization;
   },
 });
 
-export const updateBillingCycleFromStripe = internalMutation({
+export const syncStripeSubscriptionData = internalMutation({
   args: {
     stripeCustomerId: v.string(),
-    billingCycleStart: v.number(),
-    billingCycleEnd: v.number(),
+    subscriptionData: v.object({
+      subscriptionId: v.optional(v.string()),
+      status: v.string(),
+      priceId: v.optional(v.union(v.string(), v.null())),
+      billingCycleStart: v.optional(v.union(v.number(), v.null())),
+      billingCycleEnd: v.optional(v.union(v.number(), v.null())),
+      cancelAtPeriodEnd: v.optional(v.boolean()),
+      paymentMethodBrand: v.optional(v.union(v.string(), v.null())),
+      paymentMethodLast4: v.optional(v.union(v.string(), v.null())),
+    }),
   },
-  returns: v.id("organizations"),
   handler: async (ctx, args) => {
-    console.log('Looking for organization with Stripe customer ID:', args.stripeCustomerId);
-    
     const organization = await ctx.db
       .query("organizations")
-      .withIndex("by_stripe_customer_id", (q) => q.eq("stripeCustomerId", args.stripeCustomerId))
+      .withIndex("by_stripe_customer_id", (q) =>
+        q.eq("stripeCustomerId", args.stripeCustomerId),
+      )
       .first();
 
-    console.log('Found organization:', organization);
-
     if (!organization) {
-      console.log('No organization found, checking all organizations with Stripe customer IDs...');
-      const allOrgs = await ctx.db.query("organizations").collect();
-      const orgsWithStripe = allOrgs.filter(org => org.stripeCustomerId);
-      console.log('Organizations with Stripe customer IDs:', orgsWithStripe.map(org => ({ 
-        id: org._id, 
-        stripeCustomerId: org.stripeCustomerId,
-        name: org.name 
-      })));
-      throw new Error(`Organization not found for Stripe customer ID: ${args.stripeCustomerId}`);
+      throw new Error(
+        `Organization not found for Stripe customer ID: ${args.stripeCustomerId}`,
+      );
     }
 
-    console.log('Updating organization:', organization._id, 'with billing cycle:', {
-      start: args.billingCycleStart,
-      end: args.billingCycleEnd
-    });
-
     await ctx.db.patch(organization._id, {
-      billingCycleStart: args.billingCycleStart,
-      billingCycleEnd: args.billingCycleEnd,
+      subscriptionId: args.subscriptionData.subscriptionId,
+      subscriptionStatus: args.subscriptionData.status as any,
+      priceId: args.subscriptionData.priceId || undefined,
+      cancelAtPeriodEnd: args.subscriptionData.cancelAtPeriodEnd,
+      paymentMethodBrand: args.subscriptionData.paymentMethodBrand || undefined,
+      paymentMethodLast4: args.subscriptionData.paymentMethodLast4 || undefined,
+      // Update billing cycle fields (used by quota system)
+      billingCycleStart: args.subscriptionData.billingCycleStart || undefined,
+      billingCycleEnd: args.subscriptionData.billingCycleEnd || undefined,
     });
-
-    console.log('Successfully updated organization billing cycle');
     return organization._id;
+  },
+});
+
+export const syncStripeDataToConvex = internalAction({
+  args: { stripeCustomerId: v.string() },
+  handler: async (
+    ctx,
+    args,
+  ): Promise<{
+    subscriptionId?: string;
+    status: string;
+    priceId?: string;
+    billingCycleStart?: number;
+    billingCycleEnd?: number;
+    cancelAtPeriodEnd?: boolean;
+    paymentMethodBrand?: string;
+    paymentMethodLast4?: string;
+  }> => {
+    const { default: Stripe } = await import("stripe");
+    const stripe = new Stripe(process.env.STRIPE_API_KEY!);
+
+    try {
+      // Fetch latest subscription data from Stripe
+      const subscriptions = await stripe.subscriptions.list({
+        customer: args.stripeCustomerId,
+        limit: 1,
+        status: "all",
+        expand: ["data.default_payment_method"],
+      });
+
+      let subscriptionData;
+
+      if (subscriptions.data.length === 0) {
+        subscriptionData = {
+          status: "none",
+          billingCycleStart: undefined,
+          billingCycleEnd: undefined,
+        };
+      } else {
+        const subscription = subscriptions.data[0];
+
+        subscriptionData = {
+          subscriptionId: subscription.id,
+          status: subscription.status,
+          priceId: subscription.items.data[0]?.price?.id || null,
+          billingCycleStart: (subscription as any).current_period_start,
+          billingCycleEnd: (subscription as any).current_period_end,
+          cancelAtPeriodEnd: subscription.cancel_at_period_end,
+          paymentMethodBrand:
+            subscription.default_payment_method &&
+            typeof subscription.default_payment_method !== "string"
+              ? (subscription.default_payment_method as any).card?.brand || null
+              : null,
+          paymentMethodLast4:
+            subscription.default_payment_method &&
+            typeof subscription.default_payment_method !== "string"
+              ? (subscription.default_payment_method as any).card?.last4 || null
+              : null,
+        };
+      }
+
+      // Store the data in Convex
+      await ctx.runMutation(internal.organizations.syncStripeSubscriptionData, {
+        stripeCustomerId: args.stripeCustomerId,
+        subscriptionData,
+      });
+
+      // Convert null values to undefined for return type compatibility
+      return {
+        ...subscriptionData,
+        priceId: subscriptionData.priceId || undefined,
+        billingCycleStart: subscriptionData.billingCycleStart || undefined,
+        billingCycleEnd: subscriptionData.billingCycleEnd || undefined,
+        paymentMethodBrand: subscriptionData.paymentMethodBrand || undefined,
+        paymentMethodLast4: subscriptionData.paymentMethodLast4 || undefined,
+      };
+    } catch (error) {
+      console.error(
+        "Failed to sync Stripe data for customer:",
+        args.stripeCustomerId,
+        error,
+      );
+      throw error;
+    }
+  },
+});
+
+export const getSubscriptionData = internalQuery({
+  args: { workos_id: v.string() },
+  handler: async (ctx, args) => {
+    const organization = await ctx.db
+      .query("organizations")
+      .withIndex("by_workos_id", (q) => q.eq("workos_id", args.workos_id))
+      .first();
+
+    if (!organization) {
+      return null;
+    }
+
+    return {
+      subscriptionId: organization.subscriptionId,
+      subscriptionStatus: organization.subscriptionStatus || "none",
+      priceId: organization.priceId,
+      billingCycleStart: organization.billingCycleStart,
+      billingCycleEnd: organization.billingCycleEnd,
+      cancelAtPeriodEnd: organization.cancelAtPeriodEnd,
+      paymentMethodBrand: organization.paymentMethodBrand,
+      paymentMethodLast4: organization.paymentMethodLast4,
+      stripeCustomerId: organization.stripeCustomerId,
+    };
   },
 });

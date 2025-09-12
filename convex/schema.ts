@@ -32,6 +32,24 @@ export default defineSchema({
     billingCycleEnd: v.optional(v.number()),
     standardQuotaLimit: v.optional(v.number()),
     premiumQuotaLimit: v.optional(v.number()),
+    // Stripe subscription data
+    subscriptionId: v.optional(v.string()),
+    subscriptionStatus: v.optional(
+      v.union(
+        v.literal("active"),
+        v.literal("canceled"),
+        v.literal("incomplete"),
+        v.literal("incomplete_expired"),
+        v.literal("past_due"),
+        v.literal("trialing"),
+        v.literal("unpaid"),
+        v.literal("none"),
+      ),
+    ),
+    priceId: v.optional(v.string()),
+    cancelAtPeriodEnd: v.optional(v.boolean()),
+    paymentMethodBrand: v.optional(v.string()),
+    paymentMethodLast4: v.optional(v.string()),
   })
     .index("by_workos_id", ["workos_id"])
     .index("by_stripe_customer_id", ["stripeCustomerId"]),

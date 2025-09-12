@@ -1,9 +1,30 @@
-'use node';
+"use node";
 
-import { internalAction } from './_generated/server';
-import { v } from 'convex/values';
-import { Stripe } from 'stripe';
-import { internal } from './_generated/api';
+import { internalAction } from "./_generated/server";
+import { v } from "convex/values";
+import { Stripe } from "stripe";
+import { internal } from "./_generated/api";
+
+const allowedEvents: Stripe.Event.Type[] = [
+  "checkout.session.completed",
+  "customer.subscription.created",
+  "customer.subscription.updated",
+  "customer.subscription.deleted",
+  "customer.subscription.paused",
+  "customer.subscription.resumed",
+  "customer.subscription.pending_update_applied",
+  "customer.subscription.pending_update_expired",
+  "customer.subscription.trial_will_end",
+  "invoice.paid",
+  "invoice.payment_failed",
+  "invoice.payment_action_required",
+  "invoice.upcoming",
+  "invoice.marked_uncollectible",
+  "invoice.payment_succeeded",
+  "payment_intent.succeeded",
+  "payment_intent.payment_failed",
+  "payment_intent.canceled",
+];
 
 export const verifyStripeWebhook = internalAction({
   args: v.object({
@@ -21,142 +42,51 @@ export const verifyStripeWebhook = internalAction({
   },
 });
 
-
-
-export const handleStripeWebhook = internalAction({
+export const processStripeEvent = internalAction({
   args: {
     event: v.any(),
   },
-  handler: async (ctx, args) => {
+  handler: async (
+    ctx,
+    args,
+  ): Promise<{
+    success: boolean;
+    eventType: string;
+    customerId?: string;
+    syncResult?: any;
+    skipped?: boolean;
+  }> => {
     const event = args.event as Stripe.Event;
-    
-    console.log('Processing Stripe webhook event:', event.type);
-    console.log('Event data:', JSON.stringify(event.data, null, 2));
+
+    // Skip processing if the event isn't one we're tracking
+    if (!allowedEvents.includes(event.type)) {
+      return { success: true, eventType: event.type, skipped: true };
+    }
 
     try {
-      switch (event.type) {
-        case 'customer.subscription.created':
-        case 'customer.subscription.updated': {
-          const subscription = event.data.object as any;
-          const customerId = typeof subscription.customer === 'string' 
-            ? subscription.customer 
-            : subscription.customer.id;
-          
-          // Extract billing period from subscription items
-          let currentPeriodStart: number | null = null;
-          let currentPeriodEnd: number | null = null;
-          
-          console.log('Subscription items:', subscription.items);
-          
-          if (subscription.items && subscription.items.data && subscription.items.data.length > 0) {
-            const firstItem = subscription.items.data[0];
-            currentPeriodStart = firstItem.current_period_start;
-            currentPeriodEnd = firstItem.current_period_end;
-            console.log('Extracted from items - Start:', currentPeriodStart, 'End:', currentPeriodEnd);
-          }
-          
-          // Fallback to subscription-level properties if items don't have them
-          if (!currentPeriodStart || !currentPeriodEnd) {
-            currentPeriodStart = subscription.current_period_start;
-            currentPeriodEnd = subscription.current_period_end;
-            console.log('Fallback to subscription level - Start:', currentPeriodStart, 'End:', currentPeriodEnd);
-          }
-          
-          console.log('Final billing cycle - Start:', currentPeriodStart, 'End:', currentPeriodEnd);
-          console.log('Customer ID:', customerId);
-          
-          if (currentPeriodStart && currentPeriodEnd) {
-            console.log('Updating billing cycle for customer:', customerId);
-            await ctx.runMutation(internal.organizations.updateBillingCycleFromStripe, {
-              stripeCustomerId: customerId,
-              billingCycleStart: currentPeriodStart,
-              billingCycleEnd: currentPeriodEnd,
-            });
-            console.log('Billing cycle updated successfully');
-          } else {
-            console.log('No valid billing cycle found, skipping update');
-          }
-          break;
-        }
+      // All the events we track have a customerId
+      const { customer: customerId } = event?.data?.object as {
+        customer: string;
+      };
 
-        case 'customer.subscription.deleted': {
-          const subscription = event.data.object as any;
-          const customerId = typeof subscription.customer === 'string' 
-            ? subscription.customer 
-            : subscription.customer.id;
-          
-          // Clear billing cycle when subscription is deleted
-          await ctx.runMutation(internal.organizations.updateBillingCycleFromStripe, {
-            stripeCustomerId: customerId,
-            billingCycleStart: 0,
-            billingCycleEnd: 0,
-          });
-          break;
-        }
-
-        case 'customer.subscription.trial_will_end': {
-          const subscription = event.data.object as any;
-          const customerId = typeof subscription.customer === 'string' 
-            ? subscription.customer 
-            : subscription.customer.id;
-          
-          // Extract billing period from subscription items
-          let currentPeriodStart: number | null = null;
-          let currentPeriodEnd: number | null = null;
-          
-          if (subscription.items && subscription.items.data && subscription.items.data.length > 0) {
-            const firstItem = subscription.items.data[0];
-            currentPeriodStart = firstItem.current_period_start;
-            currentPeriodEnd = firstItem.current_period_end;
-          }
-          
-          // Fallback to subscription-level properties if items don't have them
-          if (!currentPeriodStart || !currentPeriodEnd) {
-            currentPeriodStart = subscription.current_period_start;
-            currentPeriodEnd = subscription.current_period_end;
-          }
-          
-          if (currentPeriodStart && currentPeriodEnd) {
-            await ctx.runMutation(internal.organizations.updateBillingCycleFromStripe, {
-              stripeCustomerId: customerId,
-              billingCycleStart: currentPeriodStart,
-              billingCycleEnd: currentPeriodEnd,
-            });
-          }
-          break;
-        }
-
-        case 'invoice.payment_action_required':
-        case 'invoice.payment_failed':
-        case 'invoice.payment_succeeded': {
-          const invoice = event.data.object as any;
-          const customerId = typeof invoice.customer === 'string' 
-            ? invoice.customer 
-            : invoice.customer?.id;
-          
-          if (invoice.subscription && customerId) {
-            // Get the subscription to get current period
-            const stripe = new Stripe(process.env.STRIPE_API_KEY as string);
-            const subscription = await stripe.subscriptions.retrieve(invoice.subscription as string) as any;
-            
-            if (subscription.current_period_start && subscription.current_period_end) {
-              await ctx.runMutation(internal.organizations.updateBillingCycleFromStripe, {
-                stripeCustomerId: customerId,
-                billingCycleStart: subscription.current_period_start,
-                billingCycleEnd: subscription.current_period_end,
-              });
-            }
-          }
-          break;
-        }
-
-        default:
-          console.log(`Unhandled event type: ${event.type}`);
+      // This helps make it typesafe and also lets us know if our assumption is wrong
+      if (typeof customerId !== "string") {
+        throw new Error(
+          `[STRIPE WEBHOOK] Customer ID isn't string. Event type: ${event.type}`,
+        );
       }
 
-      return { success: true, eventType: event.type };
+      // Use the new sync function to update all subscription data
+      const syncResult: any = await ctx.runAction(
+        internal.organizations.syncStripeDataToConvex,
+        {
+          stripeCustomerId: customerId,
+        },
+      );
+
+      return { success: true, eventType: event.type, customerId, syncResult };
     } catch (error) {
-      console.error('Error handling Stripe webhook:', error);
+      console.error("Error processing Stripe event:", error);
       throw error;
     }
   },

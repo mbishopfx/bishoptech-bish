@@ -51,11 +51,12 @@ export const POST = async (req: NextRequest) => {
 
     const user = await workos.userManagement.getUser(userId);
 
-    // Create Stripe customer
+    // Create Stripe customer with userId in metadata - CRITICAL for the guide's approach
     const customer = await stripe.customers.create({
       email: user.email,
       metadata: {
         workOSOrganizationId: organization.id,
+        userId: userId, // This is key for the sync approach
       },
     });
 
@@ -96,8 +97,9 @@ export const POST = async (req: NextRequest) => {
       }
     }
 
+    // ALWAYS create checkout with a stripeCustomerId - following the guide
     const session = await stripe.checkout.sessions.create({
-      customer: customer.id,
+      customer: customer.id, // Customer is guaranteed to exist at this point
       billing_address_collection: "auto",
       line_items: [
         {
@@ -106,7 +108,7 @@ export const POST = async (req: NextRequest) => {
         },
       ],
       mode: "subscription",
-      success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/payment-success`,
+      success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/payment-success?workos_org=${organization.id}`, // Point to payment success page with org ID
       cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/`,
     });
 
