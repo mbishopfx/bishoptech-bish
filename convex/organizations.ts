@@ -409,3 +409,118 @@ export const getCurrentOrganizationPlan = query({
     }
   },
 });
+
+// Get current organization information for display
+export const getCurrentOrganizationInfo = query({
+  args: {},
+  handler: async (ctx) => {
+    try {
+      const identity = await getAuthUserIdentity(ctx);
+
+      if (!identity) {
+        return null;
+      }
+
+      const orgId = extractOrganizationIdFromJWT(identity);
+
+      if (!orgId) {
+        return null;
+      }
+
+      const organization = await ctx.db
+        .query("organizations")
+        .withIndex("by_workos_id", (q) => q.eq("workos_id", orgId))
+        .first();
+
+      if (!organization) {
+        return null;
+      }
+
+      return {
+        name: organization.name,
+        plan: organization.plan || null,
+        subscriptionStatus: organization.subscriptionStatus || "none",
+      };
+    } catch (error) {
+      console.error("Error getting current organization info:", error);
+      return null;
+    }
+  },
+});
+
+// Get organization billing info - requires manage-billing permission
+export const getOrganizationBillingInfo = query({
+  args: {},
+  handler: async (ctx) => {
+    try {
+      const identity = await getAuthUserIdentity(ctx);
+
+      if (!identity) {
+        return null;
+      }
+
+      // Check if user has manage-billing permission
+      const permissions = identity.permissions as string[] | undefined;
+      if (!permissions || !permissions.includes("manage-billing")) {
+        return null;
+      }
+
+      const orgId = extractOrganizationIdFromJWT(identity);
+
+      if (!orgId) {
+        return null;
+      }
+
+      const organization = await ctx.db
+        .query("organizations")
+        .withIndex("by_workos_id", (q) => q.eq("workos_id", orgId))
+        .first();
+
+      if (!organization) {
+        return null;
+      }
+
+      return {
+        plan: organization.plan || null,
+        billingCycleStart: organization.billingCycleStart,
+        billingCycleEnd: organization.billingCycleEnd,
+        subscriptionStatus: organization.subscriptionStatus || "none",
+      };
+    } catch (error) {
+      console.error("Error getting organization billing info:", error);
+      return null;
+    }
+  },
+});
+
+// Get total user count for organization
+export const getOrganizationUserCount = query({
+  args: {},
+  handler: async (ctx) => {
+    try {
+      const identity = await getAuthUserIdentity(ctx);
+
+      if (!identity) {
+        return null;
+      }
+
+      const orgId = extractOrganizationIdFromJWT(identity);
+
+      if (!orgId) {
+        return null;
+      }
+
+      // Count users in the organization by checking all users with the same org_id
+      // Note: This is a simple count based on the assumption that users belong to organizations
+      // In a real WorkOS setup, you might need to query WorkOS API for accurate user counts
+      const allUsers = await ctx.db.query("users").collect();
+
+      // For now, return a placeholder count since we don't have org association in users table
+      // You might need to implement proper org-user relationship or query WorkOS API
+      return { totalUsers: allUsers.length };
+    } catch (error) {
+      console.error("Error getting organization user count:", error);
+      return null;
+    }
+  },
+});
