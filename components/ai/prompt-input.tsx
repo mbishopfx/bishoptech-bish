@@ -22,7 +22,7 @@ import type {
   HTMLAttributes,
   KeyboardEventHandler,
 } from "react";
-import { Children } from "react";
+import { Children, useRef, useEffect, useCallback } from "react";
 
 export type PromptInputProps = HTMLAttributes<HTMLFormElement>;
 
@@ -44,6 +44,22 @@ export const PromptInputTextarea = ({
   placeholder = "¿Qué te gustaría saber?",
   ...props
 }: PromptInputTextareaProps) => {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const adjustHeight = useCallback(() => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.style.height = "auto";
+      const maxHeight = 150;
+      const newHeight = Math.min(textarea.scrollHeight, maxHeight);
+      textarea.style.height = `${newHeight}px`;
+    }
+  }, []);
+
+  useEffect(() => {
+    adjustHeight();
+  }, [adjustHeight, props.value]);
+
   const handleKeyDown: KeyboardEventHandler<HTMLTextAreaElement> = (e) => {
     if (e.key === "Enter") {
       if (e.nativeEvent.isComposing) return;
@@ -59,15 +75,17 @@ export const PromptInputTextarea = ({
 
   return (
     <Textarea
+      ref={textareaRef}
       className={cn(
         "w-full resize-none rounded-none border-none p-3 shadow-none outline-none ring-0",
-        "field-sizing-content max-h-[6lh] bg-transparent dark:bg-transparent",
+        "field-sizing-content bg-transparent dark:bg-transparent max-h-[200px] overflow-y-auto",
         "focus-visible:ring-0",
         className,
       )}
       name="message"
       onChange={(e) => {
         onChange?.(e);
+        adjustHeight();
       }}
       onKeyDown={handleKeyDown}
       placeholder={placeholder}
