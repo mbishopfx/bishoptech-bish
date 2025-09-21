@@ -79,6 +79,15 @@ export function useMessageRegeneration({
           return;
         }
 
+        // Check if there are any messages after the user message to regenerate
+        const hasMessagesAfter =
+          messages.slice(userMessageIndex + 1).length > 0;
+
+        if (!hasMessagesAfter) {
+          toast.info("No messages to regenerate after this point");
+          return;
+        }
+
         // Find the next assistant message after this user message
         const nextAssistantMessage = messages
           .slice(userMessageIndex + 1)
@@ -89,7 +98,12 @@ export function useMessageRegeneration({
           return;
         }
 
-        // Use the assistant message regeneration
+        // Add a small delay to ensure the assistant message is persisted to database
+        // This prevents race conditions where the message exists in UI but not in DB yet
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        // Always use the standard regeneration approach
+        // If the assistant message doesn't exist in DB, the mutation will handle it gracefully
         await regenerateAssistantMessage(nextAssistantMessage.id);
       } catch (error) {
         console.error("Failed to regenerate after user message:", error);

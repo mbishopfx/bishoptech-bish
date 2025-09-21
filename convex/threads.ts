@@ -738,6 +738,8 @@ export const deleteMessagesAfter = mutation({
       .unique();
 
     if (!targetMessage) {
+      // If the target message doesn't exist, there's nothing to delete
+      // This can happen when UI state and database state are out of sync
       console.log(
         `Target message ${args.afterMessageId} not found, skipping deletion`,
       );

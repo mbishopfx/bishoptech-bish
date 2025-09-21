@@ -8,7 +8,7 @@ import { createToolsForModel } from "@/lib/ai/model-tools";
 import { ToolType } from "@/lib/ai/config/base";
 import { createUIMessageStream, createUIMessageStreamResponse } from "ai";
 import { smoothStream } from "ai";
-import { fetchMutation } from "convex/nextjs";
+import { fetchMutation, fetchQuery } from "convex/nextjs";
 import { api } from "@/convex/_generated/api";
 import { withAuth } from "@workos-inc/authkit-nextjs";
 
@@ -149,7 +149,19 @@ export async function POST(req: Request) {
 
     // Handle regeneration: delete messages after the target message
     if (trigger === "regenerate-message" && messageId) {
+      // Validate thread ownership before regeneration
       DatabaseQueue.add(async () => {
+        // First verify the user owns this thread
+        const threadInfo = await fetchQuery(
+          api.threads.getThreadInfo,
+          { threadId },
+          { token: auth.token },
+        );
+
+        if (!threadInfo) {
+          throw new Error("Thread not found or access denied");
+        }
+
         await fetchMutation(
           api.threads.deleteMessagesAfter,
           {
@@ -158,7 +170,6 @@ export async function POST(req: Request) {
           },
           { token: auth.token },
         );
-        console.log("deleteMessagesAfter completed");
       });
     }
 

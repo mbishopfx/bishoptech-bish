@@ -45,7 +45,7 @@ export function getLanguageModel(modelId: string) {
   const resolved = resolveModel(modelId);
   const registryId = resolved.replace("/", ":");
 
-  console.log(`Model resolution: ${modelId} → ${resolved} → ${registryId}`);
+  console.log(`Model: ${registryId}`);
 
   try {
     return registry.languageModel(registryId as `openai:${string}`);
