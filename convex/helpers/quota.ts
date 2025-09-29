@@ -101,10 +101,18 @@ export async function checkQuotaLimit(
       orgWorkosId,
       quotaType,
     );
+    
+    // If no quota limit is defined for the organization, deny usage
+    // Organizations must have proper quota configuration to use the service
     if (!messageLimit) {
-      throw new Error(
-        `No ${quotaType} quota found for organization: ${orgWorkosId}`,
+      console.warn(
+        `No ${quotaType} quota found for organization: ${orgWorkosId}. Usage denied - quota must be configured.`,
       );
+      return {
+        allowed: false,
+        currentUsage: 0,
+        limit: 0,
+      };
     }
 
     // Get user's current quota usage

@@ -190,6 +190,7 @@ export const sendMessage = mutation({
     model: v.string(),
     messageId: v.string(), // Client-generated message ID
     quotaType: v.union(v.literal("standard"), v.literal("premium")),
+    secretToken: v.string(), // Secret token for server-only access
     modelParams: v.optional(
       v.object({
         temperature: v.optional(v.number()),
@@ -207,6 +208,16 @@ export const sendMessage = mutation({
     messageDocId: v.id("messages"),
   }),
   handler: async (ctx, args) => {
+    // Validate secret token first
+    const expectedToken = process.env.CONVEX_SECRET_TOKEN;
+    if (!expectedToken) {
+      throw new Error("Server configuration error - secret token not set");
+    }
+    
+    if (args.secretToken !== expectedToken) {
+      throw new Error("Unauthorized - Just stop here");
+    }
+
     // Get the authenticated user identity (full JWT token)
     const identity = await getAuthUserIdentity(ctx);
     if (!identity) {
@@ -225,20 +236,8 @@ export const sendMessage = mutation({
     // Get organization's billing cycle information
     const billingCycle = await getOrganizationBillingCycle(ctx, orgId);
 
-    // Check quota limits using organization's quota by type
-    const quotaCheck = await checkQuotaLimit(
-      ctx,
-      userId,
-      orgId,
-      args.quotaType,
-      billingCycle?.billingCycleStart,
-    );
-
-    if (!quotaCheck.allowed) {
-      throw new Error(
-        `Message quota exceeded. Usage: ${quotaCheck.currentUsage}/${quotaCheck.limit} messages`,
-      );
-    }
+    // Note: Quota check is handled in the API route before calling this mutation
+    // This ensures quota limits are enforced before AI requests are made
 
     // Get current timestamp
     const now = Date.now();
