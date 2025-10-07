@@ -1,8 +1,8 @@
 ---
 description: Guidelines and best practices for building Convex projects, including database schema design, queries, mutations, and real-world examples
-globs: **/*.ts,**/*.tsx,**/*.js,**/*.jsx
+globs: **/*.ts,**/*.js
+alwaysApply: false
 ---
-
 # Convex guidelines
 ## Function guidelines
 ### New function syntax
