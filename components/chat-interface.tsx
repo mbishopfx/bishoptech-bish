@@ -127,6 +127,8 @@ export default function ChatInterface({
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [uploadedAttachments, setUploadedAttachments] = useState<FileAttachment[]>([]);
   const [isUploading, setIsUploading] = useState<boolean>(false);
+  const [uploadingFiles, setUploadingFiles] = useState<Array<{ file: File; isUploading: boolean }>>([]);
+  const [isSendingMessage, setIsSendingMessage] = useState<boolean>(false);
 
   // Initialize search state from localStorage when model changes
   useEffect(() => {
@@ -478,7 +480,10 @@ export default function ChatInterface({
   const handleFileUpload = useCallback(async (files: File[]): Promise<FileAttachment[]> => {
     if (files.length === 0) return [];
     
-    setIsUploading(true);
+    // Add files to uploading state immediately for instant feedback
+    const newUploadingFiles = files.map(file => ({ file, isUploading: true }));
+    setUploadingFiles(prev => [...prev, ...newUploadingFiles]);
+    
     try {
       const fileList = new DataTransfer();
       files.forEach(file => fileList.items.add(file));
@@ -488,20 +493,25 @@ export default function ChatInterface({
       // Add to uploaded attachments (using R2 URLs directly)
       setUploadedAttachments(prev => [...prev, ...attachments]);
       
+      // Remove from uploading state
+      setUploadingFiles(prev => prev.filter(uf => !files.includes(uf.file)));
+      
       return attachments;
     } catch (error) {
       console.error("File upload error:", error);
       toast.error(`Failed to upload files: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      
+      // Remove from uploading state on error
+      setUploadingFiles(prev => prev.filter(uf => !files.includes(uf.file)));
+      
       return [];
-    } finally {
-      setIsUploading(false);
     }
   }, []);
 
   const handleSubmit = useCallback(
     async (e?: React.FormEvent) => {
       e?.preventDefault();
-      if (disableInput || (!input.trim() && uploadedAttachments.length === 0)) return;
+      if (disableInput || (!input.trim() && uploadedAttachments.length === 0 && uploadingFiles.length === 0)) return;
 
       const messageContent = input.trim();
       const messageId = generateUUID();
@@ -509,22 +519,33 @@ export default function ChatInterface({
       // Clear any existing quota error when user tries to send a new message
       setQuotaError(null);
       setInput("");
+      
+      // Set sending state and clear attachments immediately
+      setIsSendingMessage(true);
+      
+      // Capture attachments before clearing state
+      const currentAttachments = uploadedAttachments;
+      
+      // Clear attachments immediately
+      setUploadedAttachments([]);
+      setSelectedFiles([]);
+      setUploadingFiles([]);
 
       try {
-        // Build message parts using already uploaded attachments
+        // Build message parts using captured attachments
         const parts: any[] = [];
         
         if (messageContent) {
           parts.push({ type: "text", text: messageContent });
         }
         
-        // Use already uploaded attachments
-        uploadedAttachments.forEach(attachment => {
+        // Use captured uploaded attachments
+        currentAttachments.forEach(attachment => {
           parts.push({ 
             type: "file", 
             mediaType: attachment.mediaType,
             url: attachment.url,
-            attachmentId: attachment.attachmentId, // Include attachment ID for persistence
+            attachmentId: attachment.attachmentId,
           });
         });
 
@@ -551,24 +572,33 @@ export default function ChatInterface({
           });
         }
 
-        // Clear uploaded attachments after sending
-        setUploadedAttachments([]);
-        setSelectedFiles([]);
+        // Reset sending state
+        setIsSendingMessage(false);
       } catch (error) {
         console.error("Failed to send message:", error);
         toast.error("Failed to send message. Please try again.");
         setInput(messageContent);
         // Clear optimistic messages on error
         setMessages([]);
+        // Reset sending state on error
+        setIsSendingMessage(false);
       }
     },
-    [disableInput, input, uploadedAttachments, id, onInitialMessage, setMessages, sendMessage],
+    [disableInput, input, id, onInitialMessage, setMessages, sendMessage],
   );
 
   const handleAttachClick = useCallback(() => {
     if (disableInput) return;
+    
+    // Check if we've reached the file limit
+    const currentTotalFiles = uploadedAttachments.length + uploadingFiles.length;
+    if (currentTotalFiles >= 5) {
+      toast.error("Maximum of 5 files allowed per message");
+      return;
+    }
+    
     fileInputRef.current?.click();
-  }, [disableInput]);
+  }, [disableInput, uploadedAttachments.length, uploadingFiles.length]);
 
   const handleFilesSelected = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -576,6 +606,21 @@ export default function ChatInterface({
       if (!files || files.length === 0) return;
       
       const fileArray = Array.from(files);
+      
+      // Check total file count limit (5 files max)
+      const currentTotalFiles = uploadedAttachments.length + uploadingFiles.length;
+      const newTotalFiles = currentTotalFiles + fileArray.length;
+      
+      if (newTotalFiles > 5) {
+        const remainingSlots = 5 - currentTotalFiles;
+        if (remainingSlots <= 0) {
+          toast.error("Maximum of 5 files allowed per message");
+          return;
+        } else {
+          toast.error(`You can only add ${remainingSlots} more file${remainingSlots === 1 ? '' : 's'}. Maximum of 5 files allowed per message.`);
+          return;
+        }
+      }
       
       // Validate file types
       const unsupportedFiles = fileArray.filter(file => !isSupportedFileType(file));
@@ -594,16 +639,29 @@ export default function ChatInterface({
       // Add to selected files for preview
       setSelectedFiles(prev => [...prev, ...fileArray]);
       
-      // Upload immediately
-      await handleFileUpload(fileArray);
+      // Upload immediately in background - don't await
+      handleFileUpload(fileArray);
     },
-    [handleFileUpload],
+    [handleFileUpload, uploadedAttachments.length, uploadingFiles.length],
   );
 
   const handleRemoveFile = useCallback((index: number) => {
+    // Check if it's an uploading file or uploaded attachment
+    // Order is: uploadedAttachments first, then uploadingFiles
+    const uploadedCount = uploadedAttachments.length;
+    
+    if (index < uploadedCount) {
+      // Remove from uploaded attachments
+      setUploadedAttachments(prev => prev.filter((_, i) => i !== index));
+    } else {
+      // Remove from uploading files
+      const uploadingIndex = index - uploadedCount;
+      setUploadingFiles(prev => prev.filter((_, i) => i !== uploadingIndex));
+    }
+    
+    // Also remove from selected files (this might need adjustment based on your logic)
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
-    setUploadedAttachments(prev => prev.filter((_, i) => i !== index));
-  }, []);
+  }, [uploadedAttachments.length]);
 
   return (
     <div className="flex h-screen w-full min-h-0 flex-col relative">
@@ -804,71 +862,7 @@ export default function ChatInterface({
                             </Reasoning>
                           )}
 
-                          {/* Render file attachments */}
-                          {fileParts.length > 0 && (
-                            <div className="space-y-3 mb-4">
-                          {fileParts.map((part, i) => {
-                            const filePart = part as { 
-                              type: "file";
-                              mediaType: string;
-                              url: string;
-                              attachmentType?: "image" | "pdf" | "file";
-                            };
-                            
-                            const { mediaType, url, attachmentType } = filePart;
-                                
-                                if (attachmentType === "image" || mediaType.startsWith("image/")) {
-                                  return (
-                                    <div key={`${message.id}-file-${i}`} className="rounded-lg overflow-hidden border">
-                                      <img
-                                        src={url}
-                                        alt="Uploaded image"
-                                        className="max-w-full h-auto max-h-96 object-contain"
-                                        loading="lazy"
-                                      />
-                                    </div>
-                                  );
-                                }
-                                
-                                if (attachmentType === "pdf" || mediaType === "application/pdf") {
-                                  return (
-                                    <div key={`${message.id}-file-${i}`} className="rounded-lg overflow-hidden border">
-                                      <iframe
-                                        src={url}
-                                        width="100%"
-                                        height="600"
-                                        className="border-0"
-                                        title="Uploaded PDF"
-                                      />
-                                    </div>
-                                  );
-                                }
-                                
-                                // Fallback for other file types
-                                return (
-                                  <div key={`${message.id}-file-${i}`} className="flex items-center gap-2 p-3 border rounded-lg bg-muted">
-                                    <AttachmentsIcon className="size-4" />
-                                    <div className="flex-1">
-                                      <div className="font-medium">File</div>
-                                      <div className="text-sm text-muted-foreground">
-                                        {mediaType}
-                                      </div>
-                                    </div>
-                                    <a
-                                      href={url}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="text-blue-600 hover:text-blue-800"
-                                    >
-                                      View
-                                    </a>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
-
-                          {/* Render non-reasoning, non-source parts */}
+                          {/* Render non-reasoning, non-source parts (text content) */}
                           {nonReasoningParts.map((part, i: number) => {
                             if (part.type === "text" && "text" in part) {
                               {/* Edit mode disabled for now
@@ -1034,6 +1028,73 @@ export default function ChatInterface({
 
                             return null;
                           })}
+
+                          {/* Render file attachments at the bottom */}
+                          {fileParts.length > 0 && (
+                            <div className="space-y-3">
+                              {fileParts.map((part, i) => {
+                                const filePart = part as { 
+                                  type: "file";
+                                  mediaType: string;
+                                  url: string;
+                                  attachmentType?: "image" | "pdf" | "file";
+                                };
+                                
+                                const { mediaType, url, attachmentType } = filePart;
+                                    
+                                if (attachmentType === "image" || mediaType.startsWith("image/")) {
+                                  return (
+                                    <div key={`${message.id}-file-${i}`} className="rounded-lg overflow-hidden border">
+                                      <img
+                                        src={url}
+                                        alt="Uploaded image"
+                                        className="max-w-full h-auto max-h-96 object-contain"
+                                        loading="lazy"
+                                      />
+                                    </div>
+                                  );
+                                }
+                                
+                                if (attachmentType === "pdf" || mediaType === "application/pdf") {
+                                  return (
+                                    <a
+                                      key={`${message.id}-file-${i}`}
+                                      href={url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-block w-16 h-16 rounded-lg border-2 border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/20 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+                                      title="View PDF"
+                                    >
+                                      <div className="w-full h-full flex items-center justify-center bg-red-100 dark:bg-red-900/30 rounded-lg">
+                                        <span className="text-red-600 dark:text-red-400 font-bold text-lg">PDF</span>
+                                      </div>
+                                    </a>
+                                  );
+                                }
+                                
+                                // Fallback for other file types
+                                return (
+                                  <div key={`${message.id}-file-${i}`} className="flex items-center gap-2 p-3 border rounded-lg bg-muted">
+                                    <AttachmentsIcon className="size-4" />
+                                    <div className="flex-1">
+                                      <div className="font-medium">File</div>
+                                      <div className="text-sm text-muted-foreground">
+                                        {mediaType}
+                                      </div>
+                                    </div>
+                                    <a
+                                      href={url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-blue-600 hover:text-blue-800"
+                                    >
+                                      View
+                                    </a>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
                         </>
                       );
                     })()}
@@ -1228,20 +1289,25 @@ export default function ChatInterface({
           )}
           <PromptInput onSubmit={handleSubmit}>
             <PromptInputFilePreview
-              files={uploadedAttachments.map(att => ({
-                name: att.fileName,
-                size: typeof att.fileSize === 'string' ? parseInt(att.fileSize, 10) : att.fileSize || 0,
-                type: att.mediaType,
-                lastModified: Date.now(),
-                webkitRelativePath: "",
-                arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
-                bytes: () => Promise.resolve(new Uint8Array(0)),
-                slice: () => new Blob(),
-                stream: () => new ReadableStream(),
-                text: () => Promise.resolve(""),
-              } as File))}
+              files={
+                isSendingMessage ? [] : [
+                  // Show uploaded attachments first
+                  ...uploadedAttachments.map(att => ({
+                    name: att.fileName || 'Unknown file',
+                    type: att.mediaType,
+                    url: att.url,
+                    isUploading: false,
+                  })),
+                  // Then show uploading files at the end
+                  ...uploadingFiles.map(uf => ({
+                    name: uf.file.name,
+                    type: uf.file.type,
+                    isUploading: true,
+                  }))
+                ]
+              }
               onRemoveFile={handleRemoveFile}
-              disabled={disableInput || isUploading}
+              disabled={disableInput}
             />
             <PromptInputTextarea
               onChange={handleInputChange}
@@ -1259,7 +1325,12 @@ export default function ChatInterface({
                 <PromptInputButton
                   onClick={handleAttachClick}
                   aria-label="Add attachments"
-                  disabled={disableInput || isUploading}
+                  disabled={disableInput || (uploadedAttachments.length + uploadingFiles.length) >= 5}
+                  title={
+                    (uploadedAttachments.length + uploadingFiles.length) >= 5
+                      ? "Maximum of 5 files allowed per message"
+                      : "Add attachments"
+                  }
                 >
                   <AttachmentsIcon className="size-4" />
                 </PromptInputButton>
@@ -1297,8 +1368,8 @@ export default function ChatInterface({
                 />
               </PromptInputTools>
               <PromptInputSubmit
-                disabled={disableInput || isUploading}
-                status={isUploading ? "submitted" : status}
+                disabled={disableInput}
+                status={status}
                 onStop={() => {
                   // Preserve current streaming message content before stopping
                   const lastMessage = messages[messages.length - 1];

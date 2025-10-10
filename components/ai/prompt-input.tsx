@@ -16,6 +16,8 @@ import {
   LoadingIcon,
   StopIcon,
   DeleteIcon,
+  XIcon,
+  AttachmentsIcon,
 } from "@/components/ui/icons/svg-icons";
 import type {
   ComponentProps,
@@ -288,7 +290,7 @@ export const PromptInputFileUpload = ({
 };
 
 export type PromptInputFilePreviewProps = {
-  files: File[];
+  files: (File | { name: string; type: string; url?: string; isUploading?: boolean })[];
   onRemoveFile?: (index: number) => void;
   disabled?: boolean;
 };
@@ -302,26 +304,55 @@ export const PromptInputFilePreview = ({
 
   return (
     <div className="flex flex-wrap gap-2 p-2 border-t bg-muted/50">
-      {files.map((file, index) => (
-        <div
-          key={`${file.name}-${index}`}
-          className="flex items-center gap-2 px-2 py-1 bg-background border rounded-md text-sm"
-        >
-          <span className="truncate max-w-[200px]">{file.name}</span>
-          <span className="text-muted-foreground">
-            ({(file.size / 1024).toFixed(1)} KB)
-          </span>
-          {!disabled && onRemoveFile && (
-            <button
-              type="button"
-              onClick={() => onRemoveFile(index)}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              ×
-            </button>
-          )}
-        </div>
-      ))}
+      {files.map((file, index) => {
+        const isImage = file.type.startsWith('image/');
+        const isPdf = file.type === 'application/pdf';
+        const isUploading = 'isUploading' in file ? file.isUploading : false;
+        
+        // Check if it's a File object or a FileAttachment-like object
+        const isFileObject = file instanceof File;
+        const imageSrc = isFileObject 
+          ? URL.createObjectURL(file as File)
+          : (file as { url?: string }).url;
+        
+        return (
+          <div
+            key={`${file.name}-${index}`}
+            className="relative group w-16 h-16 rounded-lg overflow-hidden border-2 border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800"
+          >
+            {isUploading ? (
+              <div className="w-full h-full flex items-center justify-center bg-gray-50 dark:bg-gray-800">
+                <LoadingIcon className="w-6 h-6 text-gray-500 dark:text-gray-400 animate-spin" />
+              </div>
+            ) : isImage && imageSrc ? (
+              <img
+                src={imageSrc}
+                alt={file.name}
+                className="w-full h-full object-cover"
+              />
+            ) : isPdf ? (
+              <div className="w-full h-full flex items-center justify-center bg-red-50 dark:bg-red-950/20">
+                <span className="text-red-600 dark:text-red-400 font-bold text-lg">PDF</span>
+              </div>
+            ) : (
+              <div className="w-full h-full flex items-center justify-center bg-blue-50 dark:bg-blue-950/20">
+                <AttachmentsIcon className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              </div>
+            )}
+            
+            {!disabled && onRemoveFile && !isUploading && (
+              <button
+                type="button"
+                onClick={() => onRemoveFile(index)}
+                className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center"
+                title={`Remove ${file.name}`}
+              >
+                <XIcon className="w-6 h-6 text-white" />
+              </button>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 };
