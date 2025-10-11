@@ -44,7 +44,7 @@
     "@types/uuid": "^11.0.0",
     "@vercel/functions": "^2.2.13",
     "@vercel/kv": "^3.0.0",
-    "@workos-inc/authkit-nextjs": "^2.10.0",
+    "@workos-inc/authkit-nextjs": "^2.7.1",
     "@workos-inc/node": "^7.71.0",
     "@workos-inc/widgets": "^1.4.2",
     "ai": "^5.0.68",
