@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { isAdmin, getCurrentUserEmail } from "@/lib/admin-auth";
+import AdminDashboardClient from "./AdminDashboardClient";
 
 export default async function AdminPage() {
   // Check if user is admin
@@ -16,14 +17,14 @@ export default async function AdminPage() {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-7xl mx-auto">
           {/* Header */}
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-foreground mb-2">
               Admin Dashboard
             </h1>
             <p className="text-muted-foreground">
-              Welcome to the admin panel. You have administrative access to this system.
+              Manage organizations, assign plans, and reset billing cycles.
             </p>
           </div>
 
@@ -58,6 +59,9 @@ export default async function AdminPage() {
               </div>
             </div>
           </div>
+
+          {/* Organizations Management */}
+          <AdminDashboardClient />
         </div>
       </div>
     </div>

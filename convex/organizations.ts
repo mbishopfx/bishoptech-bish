@@ -242,6 +242,32 @@ export const syncStripeSubscriptionData = internalMutation({
   },
 });
 
+export const resetOrganizationBillingCycle = internalMutation({
+  args: { organizationId: v.id("organizations") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const organization = await ctx.db.get(args.organizationId);
+    if (!organization) {
+      throw new Error(`Organization not found: ${args.organizationId}`);
+    }
+    
+    const now = Date.now();
+    const thirtyDaysFromNow = now + (30 * 24 * 60 * 60 * 1000);
+    
+    await ctx.db.patch(args.organizationId, {
+      billingCycleStart: now,
+      billingCycleEnd: thirtyDaysFromNow,
+    });
+    
+    // Schedule next reset - creates perpetual cycle
+    await ctx.scheduler.runAt(
+      thirtyDaysFromNow,
+      internal.organizations.resetOrganizationBillingCycle,
+      { organizationId: args.organizationId }
+    );
+  },
+});
+
 export const syncStripeDataWithPeriod = internalAction({
   args: {
     stripeCustomerId: v.string(),

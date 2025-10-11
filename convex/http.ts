@@ -418,4 +418,90 @@ http.route({
   }),
 });
 
+// Admin endpoints - protected with CONVEX_ADMIN_TOKEN
+http.route({
+  path: "/admin/organizations",
+  method: "GET",
+  handler: httpAction(async (ctx, request) => {
+    const authHeader = request.headers.get("authorization") || "";
+    const expected = `Bearer ${process.env.CONVEX_ADMIN_TOKEN ?? ""}`;
+    
+    if (!process.env.CONVEX_ADMIN_TOKEN || authHeader !== expected) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    try {
+      const organizations = await ctx.runQuery(
+        internal.admin.organizations.listAllOrganizations,
+        {},
+      );
+
+      return new Response(JSON.stringify(organizations), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    } catch (error) {
+      console.error("Admin organizations list error:", error);
+      return new Response(JSON.stringify({ error: "Failed to fetch organizations" }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+  }),
+});
+
+http.route({
+  path: "/admin/organizations/set-plan",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const authHeader = request.headers.get("authorization") || "";
+    const expected = `Bearer ${process.env.CONVEX_ADMIN_TOKEN ?? ""}`;
+    if (!process.env.CONVEX_ADMIN_TOKEN || authHeader !== expected) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    try {
+      const body = await request.json();
+      const { organizationId, plan } = body ?? {};
+      
+      if (!organizationId || !plan) {
+        return new Response(JSON.stringify({ error: "Missing organizationId or plan" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      if (plan !== "plus" && plan !== "pro") {
+        return new Response(JSON.stringify({ error: "Invalid plan. Must be 'plus' or 'pro'" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      await ctx.runMutation(internal.admin.organizations.setOrganizationPlan, {
+        organizationId,
+        plan,
+      });
+
+      return new Response(JSON.stringify({ status: "success" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    } catch (error) {
+      console.error("Admin set plan error:", error);
+      return new Response(JSON.stringify({ error: "Failed to set organization plan" }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+  }),
+});
+
+
 export default http;
