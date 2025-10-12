@@ -2,10 +2,11 @@ import { gateway } from "ai";
 import { OPENAI_MODELS } from "./providers/openai";
 import { XAI_MODELS } from "./providers/xai";
 import { ANTHROPIC_MODELS } from "./providers/anthropic";
+import { GOOGLE_MODELS } from "./providers/google";
 import { type BaseModelConfig, type ModelCapabilities } from "./config/base";
 
 // All models in one array
-export const MODELS: BaseModelConfig[] = [...OPENAI_MODELS, ...XAI_MODELS, ...ANTHROPIC_MODELS];
+export const MODELS: BaseModelConfig[] = [...OPENAI_MODELS, ...XAI_MODELS, ...ANTHROPIC_MODELS, ...GOOGLE_MODELS];
 
 const gatewayProvider = gateway;
 
@@ -61,6 +62,7 @@ export const getProviderOptions = (modelId: string) => {
 
   const isAnthropicModel = modelId.startsWith("anthropic/");
   const isOpenAIModel = modelId.startsWith("openai/");
+  const isGoogleModel = modelId.startsWith("google/");
 
   return {
     openai: isOpenAIModel && supportsReasoning(modelId)
@@ -76,6 +78,15 @@ export const getProviderOptions = (modelId: string) => {
           thinking: {
             type: "enabled" as const,
             budgetTokens: 3200,
+          },
+        }
+      : baseOptions,
+    google: isGoogleModel && supportsReasoning(modelId)
+      ? {
+          ...baseOptions,
+          thinkingConfig: {
+            thinkingBudget: 3200,
+            includeThoughts: true,
           },
         }
       : baseOptions,
@@ -100,3 +111,4 @@ export const modelSupportsReasoning = supportsReasoning;
 export const getModelCapabilities = getCapabilities;
 export const isModelCapable = isCapable;
 export const getDefaultProviderOptions = getProviderOptions;
+

@@ -8,7 +8,6 @@ import {
 
 // Re-export ToolType for external use
 export type { ToolType };
-import { resolveRecommendedModel, getModelById } from "./ai-providers";
 
 // Enhanced tool configurations with provider support
 export const TOOL_CONFIGS: Record<
@@ -21,7 +20,7 @@ export const TOOL_CONFIGS: Record<
   },
   web_search: {
     ...BASE_TOOL_CONFIGS.web_search,
-    supportedProviders: ["openai", "xai", "anthropic"],
+    supportedProviders: ["openai", "xai", "anthropic", "google"],
   },
 };
 
