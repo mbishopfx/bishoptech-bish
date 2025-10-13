@@ -35,7 +35,7 @@ interface ThreadItemInteractiveProps {
   thread: Thread;
 }
 
-const MAX_TITLE_LENGTH = 18;
+const MAX_TITLE_LENGTH = 35;
 const BLUR_DELAY = 150;
 
 export const ThreadItemInteractive = memo(function ThreadItemInteractive({ thread }: ThreadItemInteractiveProps) {
