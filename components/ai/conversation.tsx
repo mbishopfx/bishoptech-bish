@@ -34,7 +34,8 @@ export const ConversationContent = ({
   children,
   ...props
 }: ConversationContentProps) => (
-  <StickToBottom.Content className={cn('relative h-full flex-1 min-h-0 overflow-y-auto flex flex-col-reverse justify-end', className)} {...props}>
+  <StickToBottom.Content className={cn('relative h-full flex-1 min-h-0 overflow-y-auto flex flex-col-reverse', className)} {...props}>
+    <div className="flex-1" />
     <div className="mx-auto w-full max-w-3xl p-4 pb-30">
       {children}
     </div>
