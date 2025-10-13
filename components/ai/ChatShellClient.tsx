@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 type ChatShellClientProps = {
   children: React.ReactNode;
@@ -41,7 +42,7 @@ export function ChatShellClient({ children, className, sidebar }: ChatShellClien
       <div className="flex h-full w-full">
         <aside
           className={cn(
-            "relative hidden shrink-0 border-r bg-background transition-[width] duration-200 ease-in-out md:block",
+            "relative hidden shrink-0 border-r bg-background dark:bg-popover-main dark:backdrop-blur-sm transition-[width] duration-200 ease-in-out md:block",
           )}
           style={sidebarStyle}
         >
@@ -51,23 +52,27 @@ export function ChatShellClient({ children, className, sidebar }: ChatShellClien
         </aside>
 
         <main className={cn("relative flex h-full min-h-0 flex-1 flex-col", className)}>
-          {/* Floating sidebar button */}
-          <button
-            type="button"
-            onClick={toggle}
-            aria-pressed={isOpen}
-            title={`${isOpen ? 'Hide' : 'Show'} sidebar (⌘+B)`}
-            className={cn(
-              "absolute top-4 left-4 z-10 inline-flex h-8 w-8 items-center justify-center rounded-md border bg-background/80 backdrop-blur-sm transition-colors shadow-sm",
-              "hover:bg-background hover:shadow-md"
-            )}
-          >
-            {isOpen ? (
-              <ChevronLeftIcon className="size-4" />
-            ) : (
-              <ChevronRightIcon className="size-4" />
-            )}
-          </button>
+          {/* Floating buttons */}
+          <div className="absolute top-4 left-4 z-10 flex gap-2">
+            <button
+              type="button"
+              onClick={toggle}
+              aria-pressed={isOpen}
+              title={`${isOpen ? 'Hide' : 'Show'} sidebar (⌘+B)`}
+              className={cn(
+                "inline-flex h-8 w-8 items-center justify-center rounded-md border bg-background/80 backdrop-blur-sm transition-colors shadow-sm dark:bg-popover-main dark:border-border",
+                "hover:bg-background hover:shadow-md cursor-pointer",
+                "outline-none"
+              )}
+            >
+              {isOpen ? (
+                <ChevronLeftIcon className="size-4" />
+              ) : (
+                <ChevronRightIcon className="size-4" />
+              )}
+            </button>
+            <ThemeToggle size="md" />
+          </div>
 
           <div className={cn("flex-1 min-h-0")}>
             {/* Full-width scroll container; pages/components will center content */}

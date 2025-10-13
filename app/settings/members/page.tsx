@@ -56,7 +56,7 @@ export default async function MembersPage() {
         <Flex direction="column" gap="3" width="100%">
           <WorkOsWidgets
             theme={{
-              appearance: "light",
+              appearance: "inherit",
               accentColor: "blue",
               radius: "medium",
               fontFamily: "Inter",

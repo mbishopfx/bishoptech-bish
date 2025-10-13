@@ -18,7 +18,7 @@ export function UserProfileSection() {
 
   return (
     <div
-      className="border-t border-border p-4 flex-shrink-0"
+      className="border-t border-border p-4 flex-shrink-0 flex items-center"
       style={{ minHeight: "80px" }}
     >
       {!isHydrated ? (
@@ -37,15 +37,6 @@ export function UserProfileSection() {
           </Avatar>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium">Loading...</p>
-            <span
-              className="text-xs px-2 py-0.5 rounded-full font-medium opacity-0"
-              style={{
-                backgroundColor: "rgb(204,244,218,1)",
-                color: "rgb(16,161,66,1)",
-              }}
-            >
-              Plus
-            </span>
           </div>
         </div>
       ) : loading ? (
@@ -70,7 +61,7 @@ export function UserProfileSection() {
       ) : user ? (
         // Authenticated state
         <Link href="/settings" className="w-full">
-          <div className="flex items-center gap-3 hover:bg-gray-50 rounded-lg p-2 -m-2 cursor-pointer transition-colors">
+          <div className="flex items-center gap-3 hover:bg-popover-main hover:text-popover-text dark:hover:bg-hover/60 rounded-lg p-2 -m-2 cursor-pointer transition-colors">
             <Avatar className="h-8 w-8">
               <AvatarImage
                 src={user?.profilePictureUrl || "/avatar.png"}
@@ -92,15 +83,6 @@ export function UserProfileSection() {
                   ? `${user.firstName} ${user.lastName}`
                   : user?.firstName || "User"}
               </p>
-              <span
-                className="text-xs px-2 py-0.5 rounded-full font-medium"
-                style={{
-                  backgroundColor: "rgb(204,244,218,1)",
-                  color: "rgb(16,161,66,1)",
-                }}
-              >
-                Plus
-              </span>
             </div>
           </div>
         </Link>

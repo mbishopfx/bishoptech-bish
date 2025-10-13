@@ -14,9 +14,10 @@ interface WelcomeScreenProps {
     firstName?: string | null;
     lastName?: string | null;
   } | null;
+  onSuggestionClick?: (prompt: string) => void;
 }
 
-export function WelcomeScreen({ user }: WelcomeScreenProps) {
+export function WelcomeScreen({ user, onSuggestionClick }: WelcomeScreenProps) {
   return (
     <div className="flex items-center justify-center min-h-[70vh]">
       <div className="text-center max-w-2xl">
@@ -150,7 +151,8 @@ export function WelcomeScreen({ user }: WelcomeScreenProps) {
           ].map((item, index) => (
             <div
               key={index}
-              className="bg-white/50 dark:bg-gray-800/50 rounded-3xl p-4 border border-gray-200 dark:border-gray-700 hover:bg-white/70 dark:hover:bg-gray-800/70 transition-colors shadow-container-small cursor-pointer"
+              onClick={() => onSuggestionClick?.(item.prompt)}
+              className="bg-white/50 dark:bg-popover-main rounded-3xl p-4 border border-gray-200 dark:border-border hover:bg-white/70 dark:hover:bg-hover/60 shadow-container-small cursor-pointer"
             >
               <h3 className="font-medium text-gray-800 dark:text-gray-200 mb-2 flex items-center gap-2">
                 {item.icon} {item.title}

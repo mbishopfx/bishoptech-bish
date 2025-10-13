@@ -29,7 +29,7 @@
 
 .rt-TableRoot {
   border-radius: var(--radius);
-  background-color: var(--background-settings);
+  /* Let WorkOS widgets handle their own background colors */
   height: auto;
   min-height: auto;
 }
@@ -51,7 +51,7 @@
 
 .woswidgets-text-field {
   display: flex;
-  background-color: var(--background-settings);
+  /* Let WorkOS widgets handle their own background colors */
   border-radius: var(--radius);
   border: 0px;
 }
@@ -70,7 +70,7 @@
 
 /* Style the "All" filter button */
 .woswidgets-select {
-  background-color: var(--background-settings);
+  /* Let WorkOS widgets handle their own background colors */
   border: none;
   border-radius: var(--radius);
   min-height: 36px;
@@ -81,7 +81,7 @@
 }
 
 .woswidgets-select:hover {
-  background-color: var(--background-settings);
+  /* Let WorkOS widgets handle their own hover colors */
 }
 
 .woswidgets-select:focus {

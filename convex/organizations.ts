@@ -482,50 +482,6 @@ export const getCurrentOrganizationInfo = query({
   },
 });
 
-// Get organization billing info - requires manage-billing permission
-export const getOrganizationBillingInfo = query({
-  args: {},
-  handler: async (ctx) => {
-    try {
-      const identity = await getAuthUserIdentity(ctx);
-
-      if (!identity) {
-        return null;
-      }
-
-      // Check if user has manage-billing permission
-      const permissions = identity.permissions as string[] | undefined;
-      if (!permissions || !permissions.includes("manage-billing")) {
-        return null;
-      }
-
-      const orgId = extractOrganizationIdFromJWT(identity);
-
-      if (!orgId) {
-        return null;
-      }
-
-      const organization = await ctx.db
-        .query("organizations")
-        .withIndex("by_workos_id", (q) => q.eq("workos_id", orgId))
-        .first();
-
-      if (!organization) {
-        return null;
-      }
-
-      return {
-        plan: organization.plan || null,
-        billingCycleStart: organization.billingCycleStart,
-        billingCycleEnd: organization.billingCycleEnd,
-        subscriptionStatus: organization.subscriptionStatus || "none",
-      };
-    } catch (error) {
-      console.error("Error getting organization billing info:", error);
-      return null;
-    }
-  },
-});
 
 // Get total user count for organization
 export const getOrganizationUserCount = query({

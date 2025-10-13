@@ -439,7 +439,7 @@ export function ThreadSidebarInteractive({
     return (
       <div key={groupName} className="mb-4">
         <div className="px-5 py-2">
-          <span className="text-xs font-semibold text-black/75">
+          <span className="text-xs font-semibold text-black/75 dark:text-popover-text/75">
             {groupName}
           </span>
         </div>

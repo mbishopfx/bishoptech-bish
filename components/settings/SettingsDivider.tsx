@@ -16,7 +16,7 @@ export function SettingsDivider({ className = "", invisible = false, spacing = '
 
   return (
     <div className={`${spacingClasses[spacing]} ${className}`}>
-      <hr className={`h-px w-full border-0 ${invisible ? 'bg-transparent' : 'bg-gray-200'}`} />
+      <hr className={`h-px w-full border-0 ${invisible ? 'bg-transparent' : 'bg-gray-200 dark:bg-border'}`} />
     </div>
   );
 }

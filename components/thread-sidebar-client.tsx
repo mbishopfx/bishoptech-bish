@@ -114,21 +114,20 @@ export function ThreadSidebarClient({
         {scrollbarStyles}
       </style>
       <div
-        className="h-full w-full bg-background border-r flex flex-col"
-        style={{ borderColor: "#EAEAEA" }}
+        className="h-full w-full bg-background dark:bg-popover-main dark:backdrop-blur-sm border-r border-[#EAEAEA] dark:border-border flex flex-col"
       >
         {/* Header */}
         <div className="p-6 flex-shrink-0">
           <div className="flex items-center justify-center">
-            <AppLogo className="h-8 text-foreground" />
+            <AppLogo className="h-8 text-foreground dark:text-white" />
           </div>
         </div>
 
         <div className="px-3 pb-3 flex-shrink-0">
           <div className="mb-3">
             <Link href="/chat">
-              <Button size="lg" variant="outline" className="w-full">
-                Crear nuevo chat
+              <Button size="lg" variant="outline" className="w-full dark:bg-[#111111] dark:border-border outline-none">
+                Nuevo Chat
               </Button>
             </Link>
           </div>

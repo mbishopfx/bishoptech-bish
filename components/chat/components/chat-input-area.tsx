@@ -198,6 +198,7 @@ export const ChatInputArea = React.memo(function ChatInputArea({
                     ? "Maximum of 5 files allowed per message"
                     : "Add attachments"
                 }
+                className="text-secondary hover:bg-popover-main hover:text-popover-text dark:hover:bg-hover/60"
               >
                 <AttachmentsIcon className="size-4" />
               </PromptInputButton>
@@ -212,7 +213,7 @@ export const ChatInputArea = React.memo(function ChatInputArea({
                       className={
                         isSearchEnabled
                           ? "bg-blue-600 hover:bg-blue-700 border-blue-600 text-white"
-                          : ""
+                          : "text-secondary hover:bg-popover-main hover:text-popover-text dark:hover:bg-hover/60"
                       }
                     >
                       <GlobeIcon className="size-4" />

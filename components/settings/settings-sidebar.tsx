@@ -49,19 +49,19 @@ function SettingItem({
   const isActive = pathname === href;
 
   const baseClasses = `
-    w-full flex items-center px-2 py-1.5 mb-0.5 rounded-lg text-sm font-medium
+    w-full flex items-center px-2 py-1.5 mb-0.5 rounded-lg text-sm font-medium transition-colors
     ${
       isLogout
-        ? "text-red-600 hover:bg-red-50"
+        ? "text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/20"
         : isActive
-          ? "text-gray-900 bg-gray-200"
-          : "text-gray-600 hover:bg-hover"
+          ? "text-gray-900 bg-gray-200 dark:text-white dark:bg-popover-secondary"
+          : "text-gray-600 hover:bg-hover dark:text-text-secondary dark:hover:bg-hover/60"
     }
   `;
 
   const iconClasses = `
     w-5 h-5 mr-2 flex-shrink-0
-    ${isLogout ? "text-red-500" : isActive ? "text-gray-700" : "text-gray-500"}
+    ${isLogout ? "text-red-500 dark:text-red-400" : isActive ? "text-gray-700 dark:text-white" : "text-gray-500 dark:text-text-muted"}
   `;
 
   const content = (
@@ -93,7 +93,7 @@ function SettingSection({
 }) {
   return (
     <div className="">
-      <span className="text-xs font-semibold text-gray-500 px-2 py-1.5 mt-4 mb-1.5 block">
+      <span className="text-xs font-semibold text-gray-500 dark:text-text-muted px-2 py-1.5 mt-4 mb-1.5 block">
         {title}
       </span>
 
@@ -108,7 +108,7 @@ function SettingSection({
 
       {!isLast && (
         <div className="px-2 my-4">
-          <hr className="border-gray-200" />
+          <hr className="border-gray-200 dark:border-border" />
         </div>
       )}
     </div>
@@ -222,7 +222,7 @@ export function SettingsSidebar() {
   };
 
   return (
-    <div className="w-80 bg-background-settings h-screen overflow-y-auto scrollbar-hide select-none pr-6">
+    <div className="w-80 bg-background-settings dark:bg-popover-main dark:backdrop-blur-sm h-screen overflow-y-auto scrollbar-hide select-none pr-6">
       <nav className="py-12 flex flex-col w-48 ml-auto">
         <div className="relative">
           <ul className="flex flex-col -mt-1.5 list-none p-0">
@@ -238,7 +238,7 @@ export function SettingsSidebar() {
 
             {/* Footer Divider */}
             <div className="px-2 my-2.5">
-              <hr className="border-gray-200" />
+              <hr className="border-gray-200 dark:border-border" />
             </div>
 
             {/* Footer Items */}
@@ -253,7 +253,7 @@ export function SettingsSidebar() {
 
             {/* Final Divider */}
             <div className="px-2 my-2.5">
-              <hr className="border-gray-200" />
+              <hr className="border-gray-200 dark:border-border" />
             </div>
 
             {/* Logout Button */}

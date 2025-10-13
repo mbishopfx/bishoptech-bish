@@ -32,7 +32,7 @@ export type PromptInputProps = HTMLAttributes<HTMLFormElement>;
 export const PromptInput = ({ className, ...props }: PromptInputProps) => (
   <form
     className={cn(
-      "w-full divide-y overflow-hidden rounded-t-xl border bg-background shadow-sm",
+      "w-full divide-y overflow-hidden rounded-t-xl border bg-background shadow-sm dark:bg-popover-main dark:backdrop-blur-sm",
       className,
     )}
     {...props}
@@ -304,7 +304,7 @@ export const PromptInputFilePreview = ({
   if (files.length === 0) return null;
 
   return (
-    <div className="flex flex-wrap gap-2 p-2 border-t bg-muted/50">
+    <div className="flex flex-wrap gap-2 p-2 border-t dark:bg-black/25">
       {files.map((file, index) => {
         const isImage = file.type.startsWith('image/');
         const isPdf = file.type === 'application/pdf';
@@ -319,10 +319,10 @@ export const PromptInputFilePreview = ({
         return (
           <div
             key={`${file.name}-${index}`}
-            className="relative group w-16 h-16 rounded-lg overflow-hidden border-2 border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800"
+            className="relative group w-16 h-16 rounded-lg overflow-hidden border-2 border-gray-200 dark:border-border bg-gray-50 dark:bg-popover-main"
           >
             {isUploading ? (
-              <div className="w-full h-full flex items-center justify-center bg-gray-50 dark:bg-gray-800">
+              <div className="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-popover-main">
                 <LoadingIcon className="w-6 h-6 text-gray-500 dark:text-gray-400 animate-spin" />
               </div>
             ) : isImage && imageSrc ? (
