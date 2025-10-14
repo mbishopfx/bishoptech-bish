@@ -1,5 +1,7 @@
 import { SettingsSidebar } from "@/components/settings/settings-sidebar";
 import Link from 'next/link';
+import { withAuth } from "@workos-inc/authkit-nextjs";
+import { hasPermissions } from "@/lib/permissions";
 
 // Custom scrollbar styles matching the chat interface
 const scrollbarStyles = `
@@ -41,16 +43,29 @@ const scrollbarStyles = `
   }
 `;
 
-export default function SettingsLayout({
+export default async function SettingsLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // Batch permission checks to avoid duplicate JWT parsing within this request
+  const batch = await hasPermissions([
+    "WIDGETS_USERS_TABLE_MANAGE",
+    "WIDGETS_DOMAIN_VERIFICATION_MANAGE",
+    "VIEW_ORG_ANALYTICS",
+  ]);
+  const canManageMembers = batch.WIDGETS_USERS_TABLE_MANAGE;
+  const canManageDomainSso = batch.WIDGETS_DOMAIN_VERIFICATION_MANAGE;
+  const canViewAnalytics = batch.VIEW_ORG_ANALYTICS;
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: scrollbarStyles }} />
       <div className="h-screen flex bg-background dark:bg-popover-main">
-        <SettingsSidebar />
+        <SettingsSidebar 
+          canManageMembers={canManageMembers}
+          canManageDomainSso={canManageDomainSso}
+          canViewAnalytics={canViewAnalytics}
+        />
         <main className="flex-1 overflow-y-auto relative bg-background dark:bg-popover-main settings-scroll-container">
           {/* Close button - positioned fixed in top right to stay visible when scrolling */}
           <div className="fixed top-4 right-4 z-50">

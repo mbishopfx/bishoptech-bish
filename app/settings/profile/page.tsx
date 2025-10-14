@@ -1,10 +1,28 @@
-import { SettingsSection } from "@/components/settings";
+import { SettingsSection, SettingsDivider } from "@/components/settings";
 import { withAuth } from "@workos-inc/authkit-nextjs";
 import { workos } from "@/app/api/workos";
 import { ProfileWidget } from "@/components/settings/widgets/ProfileWidget";
+import { AdvancedDebugWidget } from "@/components/settings/widgets/AdvancedDebugWidget";
 
 export default async function ProfilePage() {
-  const { user, organizationId } = await withAuth({ ensureSignedIn: true });
+  const { user, organizationId, accessToken } = await withAuth({ ensureSignedIn: true });
+
+  // Process debug information
+  let claimsForDebug: unknown = null;
+  if (accessToken) {
+    try {
+      const [, payload] = accessToken.split(".");
+      const claims = JSON.parse(
+        Buffer.from(payload, "base64").toString("utf8"),
+      ) as { permissions?: Array<string> };
+      claimsForDebug = claims;
+    } catch {
+      // ignore decode errors
+    }
+  }
+
+  const debugUser: string = JSON.stringify(user ?? {}, null, 2);
+  const debugClaims: string = JSON.stringify(claimsForDebug ?? {}, null, 2);
 
   // Show fallback content immediately, load WorkOS widget asynchronously
   const authTokenPromise = organizationId 
@@ -26,6 +44,16 @@ export default async function ProfilePage() {
         description="Gestiona tu información personal y preferencias."
       >
         <ProfileWidget authTokenPromise={authTokenPromise} />
+      </SettingsSection>
+
+      <SettingsDivider />
+
+      {/* Advanced Debug Section */}
+      <SettingsSection
+        title="Avanzado"
+        description="Información de depuración para desarrolladores."
+      >
+        <AdvancedDebugWidget debugUser={debugUser} debugClaims={debugClaims} />
       </SettingsSection>
     </div>
   );

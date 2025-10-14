@@ -233,7 +233,15 @@ const footerItems: SettingsNavItem[] = [
     icon: Mail,
   },
 ];
-export function SettingsSidebar() {
+export function SettingsSidebar({
+  canManageMembers = false,
+  canManageDomainSso = false,
+  canViewAnalytics = false,
+}: {
+  canManageMembers?: boolean;
+  canManageDomainSso?: boolean;
+  canViewAnalytics?: boolean;
+}) {
   const { signOut } = useAuth();
 
   const handleLogout = async () => {
@@ -250,14 +258,31 @@ export function SettingsSidebar() {
         <div className="relative">
           <ul className="flex flex-col -mt-1.5 list-none p-0">
             {/* Navigation Sections */}
-            {settingsSections.map((section, sectionIndex) => (
-              <SettingSection
-                key={section.title}
-                title={section.title}
-                items={section.items}
-                isLast={sectionIndex === settingsSections.length - 1}
-              />
-            ))}
+            {settingsSections.map((section, sectionIndex) => {
+              const filteredItems =
+                section.title === "Organización"
+                  ? section.items.filter((item) => {
+                      if (item.href === "/settings/members") {
+                        return canManageMembers;
+                      }
+                      if (item.href === "/settings/domain-sso") {
+                        return canManageDomainSso;
+                      }
+                      if (item.href === "/settings/insights") {
+                        return canViewAnalytics;
+                      }
+                      return true;
+                    })
+                  : section.items;
+              return (
+                <SettingSection
+                  key={section.title}
+                  title={section.title}
+                  items={filteredItems}
+                  isLast={sectionIndex === settingsSections.length - 1}
+                />
+              );
+            })}
 
             {/* Footer Divider */}
             <div className="px-2 my-2.5">

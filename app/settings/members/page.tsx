@@ -2,14 +2,16 @@ import { MembersWidget } from "@/components/settings/widgets/MembersWidget";
 import { Box, Card, Flex, Heading, Text } from "@radix-ui/themes";
 import { withAuth } from "@workos-inc/authkit-nextjs";
 import { workos } from "@/app/api/workos";
+import { hasPermission } from "@/lib/permissions";
 import "./table.css";
 
 export default async function MembersPage() {
-  const { user, role, organizationId } = await withAuth({
+  const { user, accessToken, organizationId } = await withAuth({
     ensureSignedIn: true,
   });
 
-  if (role !== "admin") {
+  const userHasPermission = await hasPermission("WIDGETS_USERS_TABLE_MANAGE");
+  if (!userHasPermission) {
     return (
       <div className="pt-12 pb-12 pl-12 pr-12 flex flex-col max-w-4xl min-w-[520px] w-full min-h-full box-border">
         <Flex direction="column" gap="3" width="100%">

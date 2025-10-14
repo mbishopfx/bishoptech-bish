@@ -9,16 +9,9 @@ import {
 import { api } from "@/convex/_generated/api";
 import { useQuery } from "convex/react";
 
-interface SettingsPageContentProps {
-  debugUser: string;
-  debugClaims: string;
-  hasManageBillingPermission: boolean;
-}
+interface SettingsPageContentProps {}
 
-export default function SettingsPageContent({
-  debugUser,
-  debugClaims,
-}: SettingsPageContentProps) {
+export default function SettingsPageContent({}: SettingsPageContentProps) {
   const orgInfo = useQuery(api.organizations.getCurrentOrganizationInfo);
 
   return (
@@ -39,35 +32,6 @@ export default function SettingsPageContent({
         )}
       </SettingsSection>
 
-      <SettingsDivider />
-
-      {/* Debug: Auth User */}
-      <SettingsSection
-        title="Debug: Auth User"
-        description="Raw WorkOS user object for debugging."
-      >
-        <div className="rounded-md border border-gray-200 dark:border-border bg-gray-50 dark:bg-popover-secondary p-3 overflow-x-auto">
-          <pre className="text-xs leading-5 text-gray-800 dark:text-text-secondary whitespace-pre">
-            {debugUser}
-          </pre>
-        </div>
-      </SettingsSection>
-
-      <SettingsDivider />
-
-      {/* Debug: Access Token Claims */}
-      <SettingsSection
-        title="Debug: Access Token Claims"
-        description="Decoded JWT claims (source of entitlements when not on user)."
-      >
-        <div className="rounded-md border border-gray-200 dark:border-border bg-gray-50 dark:bg-popover-secondary p-3 overflow-x-auto">
-          <pre className="text-xs leading-5 text-gray-800 dark:text-text-secondary whitespace-pre">
-            {debugClaims}
-          </pre>
-        </div>
-      </SettingsSection>
-
-      <SettingsDivider />
 
     </div>
   );

@@ -8,3 +8,4 @@ export async function getAccessToken(): Promise<string | undefined> {
     return undefined;
   }
 }
+
