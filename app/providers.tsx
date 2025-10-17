@@ -15,6 +15,7 @@ export function Providers({ children, initialModel }: ProvidersProps) {
   return (
     <Theme>
       <ModelProvider initialModel={initialModel}>
+      <AIDevtools />
         <InitialMessageProvider>{children}</InitialMessageProvider>
       </ModelProvider>
     </Theme>
