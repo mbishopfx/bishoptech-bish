@@ -120,7 +120,7 @@ export default function ChatInterface({
   }, [paginatedMessages, isThread]);
 
   // Force useChat to re-initialize when model changes
-  const { messages, status, setMessages, sendMessage, regenerate, stop } =
+  const { messages, status, setMessages, sendMessage, stop } =
     useChat({
       id: `${id}-${chatKey}`,
       generateId: generateUUID,

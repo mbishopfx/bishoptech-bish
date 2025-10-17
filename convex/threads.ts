@@ -846,61 +846,6 @@ export const deleteMessage = mutation({
 });
 
 /**
- * Atomically edit a message and delete subsequent messages
- */
-export const editMessage = mutation({
-  args: {
-    threadId: v.string(),
-    messageId: v.string(),
-    content: v.string(),
-  },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-
-    // Validate input constraints
-    if (args.content.length > 10000) {
-      throw new Error("Content too long");
-    }
-
-    // Find message with user ownership validation
-    const message = await ctx.db
-      .query("messages")
-      .withIndex("by_messageId_and_userId", (q) =>
-        q.eq("messageId", args.messageId).eq("userId", userId),
-      )
-      .unique();
-
-    if (
-      !message ||
-      message.threadId !== args.threadId ||
-      message.role !== "user"
-    ) {
-      throw new Error("Message not found or access denied");
-    }
-
-    // Update message and delete subsequent messages
-    await ctx.db.patch(message._id, {
-      content: args.content,
-      updated_at: Date.now(),
-    });
-
-    // Delete messages that came after the edited message
-    const subsequentMessages = await ctx.db
-      .query("messages")
-      .withIndex("by_thread_and_userId", (q) =>
-        q.eq("threadId", args.threadId).eq("userId", userId),
-      )
-      .filter((q) => q.gt(q.field("created_at"), message.created_at))
-      .collect();
-
-    await Promise.all(subsequentMessages.map((msg) => ctx.db.delete(msg._id)));
-
-    return null;
-  },
-});
-
-/**
  * Increment tool call quota for a user (server-side only)
  * This mutation is secured with a secret token to prevent client-side abuse
  */
