@@ -32,7 +32,6 @@ export const config = {
     '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
     // Always run for API routes - using more explicit patterns
     '/api/chat',
-    '/api/chat/edit',
     '/api/generate-title',
     '/api/subscribe',
     '/api/upload',

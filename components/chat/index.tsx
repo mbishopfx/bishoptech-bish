@@ -6,8 +6,6 @@ import { usePathname, useRouter } from "next/navigation";
 import { generateUUID } from "@/lib/utils";
 import { useModel } from "@/contexts/model-context";
 import { useInitialMessage } from "@/contexts/initial-message-context";
-import { useMessageRegeneration } from "@/hooks/use-message-regeneration";
-import { useMessageEdit } from "@/hooks/use-message-edit";
 import { toast } from "sonner";
 import { useCallback, useEffect, useRef, useMemo, useState } from "react";
 import { ToolType, getDefaultTools } from "@/lib/ai/model-tools";
@@ -225,10 +223,6 @@ export default function ChatInterface({
             ? [...currentDefaultTools, "web_search" as ToolType]
             : currentDefaultTools;
 
-          // For regeneration, we need to handle the messageId and trigger
-          if (trigger === "regenerate-message" && messageId) {
-          }
-
           // Build request context: merge server-fetched base with current chat hook messages
           const base = initialMessages && initialMessages.length > 0
             ? initialMessages
@@ -258,10 +252,6 @@ export default function ChatInterface({
       }),
     });
 
-  // Initialize regeneration hook
-  const { regenerateAssistantMessage, regenerateAfterUserMessage } =
-    useMessageRegeneration();
-
   // Cleanup effect when thread ID changes - reset all UI state
   useEffect(() => {
     if (prevIdRef.current !== id) {
@@ -282,19 +272,16 @@ export default function ChatInterface({
     }
   }, [id, setInput, setSelectedFiles, setUploadedAttachments, setUploadingFiles, setIsUploading, setIsSendingMessage, setQuotaError, setShowNoSubscriptionDialog]);
 
-  // Initialize edit hook
-  const {
-    editText,
-    startEditing,
-    cancelEditing,
-    saveEdit,
-    updateEditText,
-    isEditing,
-    isLoading,
-  } = useMessageEdit({
-    regenerateAfterUserMessage,
-    threadId: id,
-  });
+  // Dummy handlers for regeneration buttons
+  const handleRegenerateAssistant = useCallback((messageId: string) => {
+    console.log("Regenerate assistant message:", messageId);
+    toast.info("Message regeneration is currently disabled");
+  }, []);
+
+  const handleRegenerateAfterUser = useCallback((messageId: string) => {
+    console.log("Regenerate after user message:", messageId);
+    toast.info("Message regeneration is currently disabled");
+  }, []);
 
   // Store sendMessage in ref to prevent useEffect from re-running
   const sendMessageRef = useRef<((message: UIMessage) => Promise<void>) | null>(null);
@@ -507,8 +494,8 @@ export default function ChatInterface({
                   key={message.id}
                   message={message}
                   isStreaming={isStreaming}
-                  onRegenerateAssistantMessage={regenerateAssistantMessage}
-                  onRegenerateAfterUserMessage={regenerateAfterUserMessage}
+                  onRegenerateAssistantMessage={handleRegenerateAssistant}
+                  onRegenerateAfterUserMessage={handleRegenerateAfterUser}
                 />
               );
             })}
