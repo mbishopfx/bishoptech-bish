@@ -283,25 +283,7 @@ export const ChatInputArea = React.memo(function ChatInputArea({
             />
           </PromptInputToolbar>
         </PromptInput>
-        <input
-          ref={fileInputRef}
-          type="file"
-          multiple
-          className="hidden"
-          onChange={(e) => {
-            const files = e.target.files;
-            if (!files || files.length === 0) return;
-            const fileArray = Array.from(files);
-            const currentTotalFiles = uploadedAttachments.length + uploadingFiles.length;
-            const newTotalFiles = currentTotalFiles + fileArray.length;
-            if (newTotalFiles > 5) {
-              const remaining = 5 - currentTotalFiles;
-              if (remaining <= 0) return;
-              return;
-            }
-            setSelectedFiles((prev) => [...prev, ...fileArray]);
-          }}
-        />
+        {/* Hidden file input handled by PromptInputFileUpload above via the same ref */}
       </div>
     </div>
   );

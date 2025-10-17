@@ -43,14 +43,7 @@ export default function ChatInterface({
   const prevIdRef = useRef(id);
   const autoStartTriggeredRef = useRef(false);
 
-  const input = useChatUIStore((s) => s.input);
-  const selectedFiles = useChatUIStore((s) => s.selectedFiles);
-  const uploadedAttachments = useChatUIStore((s) => s.uploadedAttachments);
-  const uploadingFiles = useChatUIStore((s) => s.uploadingFiles);
-  const isSendingMessage = useChatUIStore((s) => s.isSendingMessage);
-  const isSearchEnabled = useChatUIStore((s) => s.isSearchEnabled);
-  const quotaError = useChatUIStore((s) => s.quotaError);
-  const showNoSubscriptionDialog = useChatUIStore((s) => s.showNoSubscriptionDialog);
+  // Avoid subscribing to fast-changing slices to prevent keystroke re-renders
   const chatKey = useChatUIStore((s) => s.chatKey);
   const setInput = useChatUIStore((s) => s.setInput);
   const setSelectedFiles = useChatUIStore((s) => s.setSelectedFiles);
@@ -133,6 +126,7 @@ export default function ChatInterface({
     useChat({
       id: `${id}-${chatKey}`,
       generateId: generateUUID,
+      experimental_throttle: 50,
       onFinish() {
         if (pathname === "/") {
           router.push(`/chat/${id}`);
@@ -340,6 +334,7 @@ export default function ChatInterface({
   const handleSubmit = useCallback(
     async (e?: React.FormEvent) => {
       e?.preventDefault();
+      const { input, uploadedAttachments, uploadingFiles } = useChatUIStore.getState();
       if (disableInput || (!input.trim() && uploadedAttachments.length === 0 && uploadingFiles.length === 0)) return;
 
       const messageContent = input.trim();
@@ -413,7 +408,7 @@ export default function ChatInterface({
         setIsSendingMessage(false);
       }
     },
-    [disableInput, input, uploadedAttachments, uploadingFiles, id, onInitialMessage, setMessages, sendMessage, setQuotaError, setInput, setIsSendingMessage, setUploadedAttachments, setSelectedFiles, setUploadingFiles],
+    [disableInput, id, onInitialMessage, setMessages, sendMessage, setQuotaError, setInput, setIsSendingMessage, setUploadedAttachments, setSelectedFiles, setUploadingFiles],
   );
 
   const handleStop = useCallback(() => {
