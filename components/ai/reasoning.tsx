@@ -9,6 +9,7 @@ import {
 import { cn } from "@/lib/utils";
 import { ChevronDownIcon } from "lucide-react";
 import { ReasoningIcon } from "@/components/ui/icons/svg-icons";
+import { Shimmer } from "@/components/ai/shimmer";
 import type { ComponentProps } from "react";
 import { createContext, memo, useContext, useEffect, useState } from "react";
 
@@ -128,7 +129,9 @@ export const ReasoningTrigger = memo(
           <>
             <ReasoningIcon className="size-4" />
             {isStreaming ? (
-              <p>Pensando paso a paso...</p>
+              <Shimmer duration={1.5} spread={1.5}>
+                Pensando paso a paso...
+              </Shimmer>
             ) : (
               <p>Ver proceso de razonamiento</p>
             )}
