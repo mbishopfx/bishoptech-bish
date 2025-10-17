@@ -86,6 +86,7 @@ export const OPENAI_MODELS: BaseModelConfig[] = [
       supportsStreaming: true,
       supportsReasoning: true,
       supportsImageInput: true,
+      supportsPDFInput: true,
       supportsObjectGeneration: true,
       maxTokens: 16384,
     }),
@@ -101,6 +102,7 @@ export const OPENAI_MODELS: BaseModelConfig[] = [
       supportsTools: true,
       supportsReasoning: true,
       supportsImageInput: true,
+      supportsPDFInput: true,
       supportsStreaming: true,
       supportsObjectGeneration: true,
       maxTokens: 16384,
@@ -119,6 +121,7 @@ export const OPENAI_MODELS: BaseModelConfig[] = [
       supportsReasoning: true,
       supportsStreaming: true,
       supportsImageInput: true,
+      supportsPDFInput: true,
       supportsObjectGeneration: true,
       maxTokens: 16384,
     }),
@@ -152,6 +155,7 @@ export const OPENAI_MODELS: BaseModelConfig[] = [
       supportsReasoning: true,
       supportsStreaming: true,
       supportsImageInput: true,
+      supportsPDFInput: true,
       supportsObjectGeneration: true,
       maxTokens: 16384,
     }),
@@ -166,6 +170,7 @@ export const OPENAI_MODELS: BaseModelConfig[] = [
     capabilities: mergeCapabilities({
       supportsTools: true,
       supportsImageInput: true,
+      supportsPDFInput: true,
       supportsStreaming: true,
       supportsObjectGeneration: true,
       maxTokens: 8192,
@@ -181,6 +186,7 @@ export const OPENAI_MODELS: BaseModelConfig[] = [
     capabilities: mergeCapabilities({
       supportsTools: true,
       supportsImageInput: true,
+      supportsPDFInput: true,
       supportsStreaming: true,
       supportsObjectGeneration: true,
       maxTokens: 8192,
@@ -196,6 +202,7 @@ export const OPENAI_MODELS: BaseModelConfig[] = [
     capabilities: mergeCapabilities({
       supportsTools: true,
       supportsImageInput: true,
+      supportsPDFInput: true,
       supportsStreaming: true,
       supportsObjectGeneration: true,
       maxTokens: 16384,
@@ -211,6 +218,7 @@ export const OPENAI_MODELS: BaseModelConfig[] = [
     capabilities: mergeCapabilities({
       supportsTools: true,
       supportsImageInput: true,
+      supportsPDFInput: true,
       supportsStreaming: true,
       supportsObjectGeneration: true,
       maxTokens: 16384,

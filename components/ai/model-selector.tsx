@@ -8,11 +8,12 @@ import {
   CheckIcon,
   ChevronDownIcon,
   SparklesIcon,
-  ZapIcon,
   BrainIcon,
   WrenchIcon,
   HelpCircleIcon,
   FileIcon,
+  ImageIcon,
+  FileTextIcon,
 } from "lucide-react";
 import {
   Tooltip,
@@ -57,15 +58,16 @@ const providerIcons = {
 const capabilityIcons = {
   supportsTools: WrenchIcon,
   supportsReasoning: BrainIcon,
-  supportsStreaming: ZapIcon,
-  supportsImageInput: FileIcon,
+  supportsImageInput: ImageIcon,
+  supportsPDFInput: FileTextIcon,
 } as const;
 
 // Capability descriptions for tooltips
 const capabilityDescriptions = {
   supportsTools: "Puede usar herramientas como buscar en internet",
   supportsReasoning: "El modelo puede razonar",
-  supportsImageInput: "Puede procesar imágenes y PDFs",
+  supportsImageInput: "Puede procesar imágenes",
+  supportsPDFInput: "Puede procesar archivos PDF",
 } as const;
 
 // Provider display names
@@ -431,13 +433,11 @@ const ModelItem = React.memo(function ModelItem({ model }: ModelItemProps) {
               // Exclude specific capabilities from display
               const excludedCapabilities = [
                 'supportsStreaming',
-                'supportsPDFInput', 
                 'supportsObjectGeneration',
                 'supportsImageOutput'
               ];
               return !excludedCapabilities.includes(capability);
             })
-            .slice(0, 4) // Show max 4 capability badges
             .map(([capability]) => {
               const IconComponent =
                 capabilityIcons[capability as keyof typeof capabilityIcons];
@@ -458,34 +458,6 @@ const ModelItem = React.memo(function ModelItem({ model }: ModelItemProps) {
                 </Tooltip>
               );
             })}
-          {Object.entries(model.capabilities)
-            .filter(([, enabled]) => enabled)
-            .filter(([capability]) => {
-              const excludedCapabilities = [
-                'supportsStreaming',
-                'supportsPDFInput', 
-                'supportsObjectGeneration',
-                'supportsImageOutput'
-              ];
-              return !excludedCapabilities.includes(capability);
-            }).length > 4 && (
-            <div className="inline-flex items-center justify-center w-6 h-6 rounded-md bg-popover-secondary text-popover-text">
-              <span className="text-xs">
-                +
-                {Object.entries(model.capabilities)
-                  .filter(([, enabled]) => enabled)
-                  .filter(([capability]) => {
-                    const excludedCapabilities = [
-                      'supportsStreaming',
-                      'supportsPDFInput', 
-                      'supportsObjectGeneration',
-                      'supportsImageOutput'
-                    ];
-                    return !excludedCapabilities.includes(capability);
-                  }).length - 4}
-              </span>
-            </div>
-          )}
         </div>
         </div>
       </div>

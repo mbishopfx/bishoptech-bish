@@ -57,15 +57,17 @@ class StreamError extends Error {
   }
 }
 
-// Helper function to filter image attachments for models that don't support images
+// Helper function to filter attachments for models that don't support them
 function filterMessagesForModel(messages: UIMessage[], modelId: string): UIMessage[] {
   const supportsImages = isCapable(modelId, "supportsImageInput");
+  const supportsPDFs = isCapable(modelId, "supportsPDFInput");
   
-  if (supportsImages) {
+  // If model supports both images and PDFs, return messages as-is
+  if (supportsImages && supportsPDFs) {
     return messages;
   }
   
-  // Filter out file/image parts from all messages
+  // Filter out unsupported file types from all messages
   return messages.map(msg => {
     if (!msg.parts || msg.parts.length === 0) {
       return msg;
@@ -73,7 +75,26 @@ function filterMessagesForModel(messages: UIMessage[], modelId: string): UIMessa
     
     return {
       ...msg,
-      parts: msg.parts.filter(part => part.type !== "file"),
+      parts: msg.parts.filter(part => {
+        if (part.type !== "file") {
+          return true; // Keep non-file parts
+        }
+        
+        // Check if this is an image file
+        const isImage = part.mediaType?.startsWith("image/");
+        if (isImage && !supportsImages) {
+          return false; // Remove image files if model doesn't support images
+        }
+        
+        // Check if this is a PDF file
+        const isPDF = part.mediaType === "application/pdf";
+        if (isPDF && !supportsPDFs) {
+          return false; // Remove PDF files if model doesn't support PDFs
+        }
+        
+        // Keep other file types or supported file types
+        return true;
+      }),
     };
   });
 }
@@ -379,7 +400,7 @@ export async function POST(req: Request) {
         try {
           const result = streamText({
             model,
-            messages: convertToModelMessages(filterMessagesForModel(messages as UIMessage[], modelId)), // Filter images for non-supporting models
+            messages: convertToModelMessages(filterMessagesForModel(messages as UIMessage[], modelId)), // Filter unsupported file types for non-supporting models
             tools,
             stopWhen: stepCountIs(5), // Allow multi-step tool usage for web search
             experimental_transform: smoothStream({
