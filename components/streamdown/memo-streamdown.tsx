@@ -2,6 +2,7 @@
 import { memo, useId, useMemo } from 'react';
 import ReactMarkdown, { type Options } from 'react-markdown';
 import rehypeKatex from 'rehype-katex';
+import rehypeRaw from 'rehype-raw';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import 'katex/dist/katex.min.css';
@@ -79,7 +80,7 @@ export const Streamdown = memo(
               ...components,
             }}
             key={`${generatedId}-block_${index}`}
-            rehypePlugins={[rehypeKatex, ...(rehypePlugins ?? [])]}
+            rehypePlugins={[rehypeKatex, rehypeRaw, ...(rehypePlugins ?? [])]}
             remarkPlugins={[remarkGfm, remarkMath, ...(remarkPlugins ?? [])]}
           />
         ))}
