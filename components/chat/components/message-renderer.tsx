@@ -5,6 +5,7 @@ import {
   RedoIcon,
   CopyIcon,
   CheckIcon,
+  EditIcon,
 } from "@/components/ui/icons/svg-icons";
 import {
   Tool,
@@ -103,24 +104,24 @@ const MessageActions = React.memo(function MessageActions({
         <Actions className="mt-1 opacity-0 group-hover:opacity-100 transition-opacity justify-end">
           <Action
             onClick={handleRegenerateAfterUser}
-            label="Retry"
-            tooltip="Retry message"
+            label="Reintentar"
+            tooltip="Regenerar respuesta"
           >
             <RedoIcon className="size-4" />
           </Action>
           {onStartEdit && (
             <Action
               onClick={onStartEdit}
-              label="Edit"
-              tooltip="Edit and regenerate"
+              label="Editar"
+              tooltip="Editar"
             >
-              <RedoIcon className="size-4" />
+              <EditIcon className="size-4" />
             </Action>
           )}
           <Action
             onClick={handleCopyUser}
-            label="Copy"
-            tooltip="Copy to clipboard"
+            label="Copiar"
+            tooltip="Copiar texto"
           >
             {isCopied ? <CheckIcon className="size-4" /> : <CopyIcon className="size-4" />}
           </Action>
@@ -424,7 +425,7 @@ export const MessageRenderer = React.memo(function MessageRenderer({
       {isEditing && message.role === "user" ? (
         // Break out of Message component constraints for editing
         <div className="w-full max-w-none px-4">
-          <div className="w-full max-w-[75%] ml-auto">
+          <div className="w-full max-w-[80%] ml-auto">
             <div className="bg-hover text-secondary rounded-lg py-3 px-4">
               <textarea
                 ref={textAreaRef}
@@ -436,14 +437,14 @@ export const MessageRenderer = React.memo(function MessageRenderer({
               <div className="flex justify-end gap-1 mt-2">
                 <button
                   className="inline-flex items-center justify-center w-8 h-8 rounded-md bg-hover text-secondary shadow-container-small hover:bg-popover-main hover:text-popover-text dark:bg-popover-main/50 dark:hover:bg-popover-main transition-colors"
-                  title="Cancel"
+                  title="Cancelar"
                   onClick={cancelEdit}
                 >
                   ✕
                 </button>
                 <button
                   className="inline-flex items-center justify-center w-8 h-8 rounded-md bg-hover text-secondary shadow-container-small hover:bg-popover-main hover:text-popover-text dark:bg-popover-main/50 dark:hover:bg-popover-main transition-colors"
-                  title="Save & Regenerate"
+                  title="Guardar y Regenerar"
                   onClick={submitEdit}
                 >
                   ✓
