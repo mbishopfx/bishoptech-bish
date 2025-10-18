@@ -29,17 +29,19 @@ import {
 } from "@/components/ai/sources";
 import { Loader } from "@/components/ai/loader";
 import type { UIMessage } from "@ai-sdk-tools/store";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 
 // Memoized action buttons component
 const MessageActions = React.memo(function MessageActions({
   message,
   onRegenerateAssistantMessage,
   onRegenerateAfterUserMessage,
+  onStartEdit,
 }: {
   message: UIMessage;
   onRegenerateAssistantMessage: (messageId: string) => void;
   onRegenerateAfterUserMessage: (messageId: string) => void;
+  onStartEdit?: () => void;
 }) {
   const [isCopied, setIsCopied] = useState(false);
 
@@ -106,6 +108,15 @@ const MessageActions = React.memo(function MessageActions({
           >
             <RedoIcon className="size-4" />
           </Action>
+          {onStartEdit && (
+            <Action
+              onClick={onStartEdit}
+              label="Edit"
+              tooltip="Edit and regenerate"
+            >
+              <RedoIcon className="size-4" />
+            </Action>
+          )}
           <Action
             onClick={handleCopyUser}
             label="Copy"
@@ -129,6 +140,7 @@ interface MessageRendererProps {
   isStreaming: boolean;
   onRegenerateAssistantMessage: (messageId: string) => void;
   onRegenerateAfterUserMessage: (messageId: string) => void;
+  onEditUserMessage?: (messageId: string, newText: string) => Promise<void> | void;
 }
 
 export const MessageRenderer = React.memo(function MessageRenderer({
@@ -136,7 +148,61 @@ export const MessageRenderer = React.memo(function MessageRenderer({
   isStreaming,
   onRegenerateAssistantMessage,
   onRegenerateAfterUserMessage,
+  onEditUserMessage,
 }: MessageRendererProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const textValue = message.parts
+    .filter((part) => part.type === "text")
+    .map((part) => (part as { text: string }).text)
+    .join("\n");
+  const [draft, setDraft] = useState<string>(textValue);
+  const textAreaRef = React.useRef<HTMLTextAreaElement | null>(null);
+
+  const startEdit = useCallback(() => {
+    setDraft(textValue);
+    setIsEditing(true);
+    setTimeout(() => {
+      textAreaRef.current?.focus();
+      textAreaRef.current?.select();
+    }, 0);
+  }, [textValue]);
+
+  const submitEdit = useCallback(async () => {
+    if (!onEditUserMessage) {
+      setIsEditing(false);
+      return;
+    }
+    const trimmed = draft.trim();
+    if (trimmed.length === 0) {
+      setIsEditing(false);
+      return;
+    }
+    await onEditUserMessage(message.id, trimmed);
+    setIsEditing(false);
+  }, [onEditUserMessage, draft, message.id]);
+
+  const cancelEdit = useCallback(() => {
+    setDraft(textValue);
+    setIsEditing(false);
+  }, [textValue]);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && e.ctrlKey) {
+      e.preventDefault();
+      submitEdit();
+    }
+  }, [submitEdit]);
+
+  useEffect(() => {
+    if (!isEditing) return;
+    const ta = textAreaRef.current;
+    if (!ta) return;
+    // Autosize: grow with content up to max height; then scroll
+    ta.style.height = "auto";
+    const max = 320; // px
+    const next = Math.min(ta.scrollHeight, max);
+    ta.style.height = `${next}px`;
+  }, [isEditing, draft]);
   const hasTextParts = message.parts.some(
     (p) => p.type === "text" && (p as any).text && (p as any).text.length > 0,
   );
@@ -350,21 +416,54 @@ export const MessageRenderer = React.memo(function MessageRenderer({
         )}
       </>
     );
-  }, [message, isStreaming]);
+  }, [message, isStreaming, isEditing, draft]);
 
 
   return (
     <div className="group">
-      <Message from={message.role} key={message.id}>
-        <MessageContent from={message.role}>
-          {renderMessageContent()}
-          {showInlineLoader ? (
-            <div className="py-1">
-              <Loader />
+      {isEditing && message.role === "user" ? (
+        // Break out of Message component constraints for editing
+        <div className="w-full max-w-none px-4">
+          <div className="w-full max-w-[75%] ml-auto">
+            <div className="bg-hover text-secondary rounded-lg py-3 px-4">
+              <textarea
+                ref={textAreaRef}
+                className="w-full min-h-[120px] max-h-[700px] resize-none overflow-auto border-0 px-0 py-0 text-sm leading-relaxed outline-none focus:outline-none focus:ring-0 bg-transparent text-inherit"
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={handleKeyDown}
+              />
+              <div className="flex justify-end gap-1 mt-2">
+                <button
+                  className="inline-flex items-center justify-center w-8 h-8 rounded-md bg-hover text-secondary shadow-container-small hover:bg-popover-main hover:text-popover-text dark:bg-popover-main/50 dark:hover:bg-popover-main transition-colors"
+                  title="Cancel"
+                  onClick={cancelEdit}
+                >
+                  ✕
+                </button>
+                <button
+                  className="inline-flex items-center justify-center w-8 h-8 rounded-md bg-hover text-secondary shadow-container-small hover:bg-popover-main hover:text-popover-text dark:bg-popover-main/50 dark:hover:bg-popover-main transition-colors"
+                  title="Save & Regenerate"
+                  onClick={submitEdit}
+                >
+                  ✓
+                </button>
+              </div>
             </div>
-          ) : null}
-        </MessageContent>
-      </Message>
+          </div>
+        </div>
+      ) : (
+        <Message from={message.role} key={message.id}>
+          <MessageContent from={message.role}>
+            {renderMessageContent()}
+            {showInlineLoader ? (
+              <div className="py-1">
+                <Loader />
+              </div>
+            ) : null}
+          </MessageContent>
+        </Message>
+      )}
       
       {/* Sources section for assistant messages - only show when sources exist and response is completed */}
       {message.role === "assistant" && 
@@ -399,6 +498,7 @@ export const MessageRenderer = React.memo(function MessageRenderer({
         message={message}
         onRegenerateAssistantMessage={onRegenerateAssistantMessage}
         onRegenerateAfterUserMessage={onRegenerateAfterUserMessage}
+        onStartEdit={message.role === "user" && !!onEditUserMessage ? () => setIsEditing(true) : undefined}
       />
     </div>
   );

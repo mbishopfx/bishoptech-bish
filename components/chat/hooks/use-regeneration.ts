@@ -67,12 +67,37 @@ export function useRegeneration({ setMessages, status, stop, regenerate }: UseRe
     [status, stop, setMessages, pruneAt, regenerate],
   );
 
+  const handleEditUserMessage = useCallback(
+    async (
+      messageId: string,
+      newContent: string,
+      renderedMessages: UIMessage[],
+      persistEdit: (messageId: string, newContent: string) => Promise<void>,
+    ) => {
+      // Persist the edit first
+      await persistEdit(messageId, newContent);
+      // Then trigger regeneration using the same user-anchor prune semantics
+      const target = renderedMessages.find((m) => m.id === messageId);
+      const role = (target?.role ?? "user") as Role;
+      regenerateAnchorRef.current = { id: messageId, role };
+      if (status === "streaming") stop();
+      setMessages((curr: UIMessage[]) => pruneAt(curr, messageId, role));
+      try {
+        await regenerate({ messageId });
+      } catch (e) {
+        // Swallow; caller should toast/log
+      }
+    },
+    [status, stop, setMessages, pruneAt, regenerate],
+  );
+
   return {
     regenerateAnchorRef,
     hiddenIdsRef,
     pruneAt,
     handleRegenerateAssistant,
     handleRegenerateAfterUser,
+    handleEditUserMessage,
   } as const;
 }
 

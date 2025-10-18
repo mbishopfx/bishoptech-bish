@@ -11,7 +11,7 @@ import { useCallback, useEffect, useRef, useMemo, useState } from "react";
 import { useRegeneration, filterHiddenForRender } from "./hooks/use-regeneration";
 import { ToolType, getDefaultTools } from "@/lib/ai/model-tools";
 import { useAuth } from "@workos-inc/authkit-nextjs/components";
-import { useConvexAuth, usePaginatedQuery } from "convex/react";
+import { useConvexAuth, usePaginatedQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Loader } from "@/components/ai/loader";
 import {
@@ -229,8 +229,9 @@ export default function ChatInterface({
             ? initialMessages
             : historicalMessages;
 
-          const base = baseBeforePrune;
-          const hookMessages = messages;
+          const anchor = regenerateAnchorRef.current;
+          const base = anchor ? pruneAt(baseBeforePrune, anchor.id, anchor.role) : baseBeforePrune;
+          const hookMessages = anchor ? pruneAt(messages, anchor.id, anchor.role) : messages;
 
           const usedIds = new Set<string>();
           const requestMessages = base.map((m) => {
@@ -266,6 +267,7 @@ export default function ChatInterface({
     pruneAt,
     handleRegenerateAssistant,
     handleRegenerateAfterUser,
+    handleEditUserMessage,
   } = useRegeneration({
     setMessages,
     status,
@@ -276,6 +278,8 @@ export default function ChatInterface({
       }
     },
   });
+
+  const updateUserMessageContent = useMutation(api.threads.updateUserMessageContent);
 
   // Merge historical messages with AI SDK streaming messages (overlay stream onto base by id)
   const renderedMessages: UIMessage[] = useMemo(() => {
@@ -528,6 +532,33 @@ export default function ChatInterface({
                   isStreaming={isStreaming}
                   onRegenerateAssistantMessage={onRegenerateAssistant}
                   onRegenerateAfterUserMessage={onRegenerateAfterUser}
+                  onEditUserMessage={async (messageId: string, newContent: string) => {
+                    try {
+                      // Persist edit to Convex
+                      await updateUserMessageContent({ messageId, content: newContent });
+
+                      // Optimistically update local hook store so new content is used immediately
+                      setMessages((curr: UIMessage[]) =>
+                        curr.map((m) =>
+                          m.id === messageId
+                            ? {
+                                ...m,
+                                parts: [
+                                  ...m.parts.filter((p: any) => p.type !== "text"),
+                                  { type: "text", text: newContent } as any,
+                                ],
+                              }
+                            : m,
+                        ),
+                      );
+
+                      // Then trigger regeneration (prune-after-user semantics)
+                      handleRegenerateAfterUser(messageId, renderedMessages);
+                    } catch (e) {
+                      console.error("Edit message failed", e);
+                      toast.error("Failed to edit message.");
+                    }
+                  }}
                 />
               );
             })}

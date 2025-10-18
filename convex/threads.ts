@@ -864,6 +864,53 @@ export const deleteMessage = mutation({
 });
 
 /**
+ * Update a user's own message content (edit message).
+ * Ensures the message belongs to the authenticated user and patches content safely.
+ */
+export const updateUserMessageContent = mutation({
+  args: {
+    messageId: v.string(),
+    content: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+
+    const message = await ctx.db
+      .query("messages")
+      .withIndex("by_messageId_and_userId", (q) =>
+        q.eq("messageId", args.messageId).eq("userId", userId),
+      )
+      .unique();
+
+    if (!message) {
+      throw new Error("Message not found or access denied");
+    }
+
+    await ctx.db.patch(message._id, {
+      content: args.content,
+      updated_at: Date.now(),
+    });
+
+    // Optionally also update the parent thread's updatedAt
+    const thread = await ctx.db
+      .query("threads")
+      .withIndex("by_user_and_threadId", (q) =>
+        q.eq("userId", userId).eq("threadId", message.threadId),
+      )
+      .unique();
+
+    if (thread) {
+      await ctx.db.patch(thread._id, {
+        updatedAt: Date.now(),
+      });
+    }
+
+    return null;
+  },
+});
+
+/**
  * Increment tool call quota for a user (server-side only)
  * This mutation is secured with a secret token to prevent client-side abuse
  */
