@@ -4,6 +4,7 @@ import type { StateCreator } from 'zustand';
 import type { UseChatHelpers } from '@ai-sdk/react';
 import type { ChatState, ChatStatus, UIMessage } from 'ai';
 import { throttle } from '@/lib/stores/throttle';
+import { markLastAction } from './performance-monitoring';
 
 export interface BaseChatStoreState<UI_MESSAGE extends UIMessage>
   extends ChatState<UI_MESSAGE> {
@@ -29,7 +30,7 @@ export interface BaseChatStoreState<UI_MESSAGE extends UIMessage>
     helpers: Pick<
       UseChatHelpers<UI_MESSAGE>,
       'stop' | 'sendMessage' | 'regenerate'
-    >
+    >,
   ) => void;
 
   // Getters
@@ -41,20 +42,22 @@ export interface BaseChatStoreState<UI_MESSAGE extends UIMessage>
 }
 
 export function createBaseStateCreator<UI_MESSAGE extends UIMessage>(
-  initialMessages: UI_MESSAGE[] = []
+  initialMessages: UI_MESSAGE[] = [],
 ): StateCreator<BaseChatStoreState<UI_MESSAGE>, [], []> {
   return (set, get) => {
-    const MESSAGES_THROTTLE_MS = 0; // No throttle for instant updates
+    const MESSAGES_THROTTLE_MS = 100;
     const throttledEffects = new Set<() => void>();
     let throttledMessagesUpdater: (() => void) | null = null;
     if (!throttledMessagesUpdater) {
       throttledMessagesUpdater = throttle(() => {
+        console.log('executing throttledMessagesUpdater');
         const state = get();
         set({ _throttledMessages: [...state.messages] });
         throttledEffects.forEach((cb) => {
           try {
             cb();
           } catch (err) {
+            // eslint-disable-next-line no-console
             console.warn('[chat-store-base] throttled effect error', err);
           }
         });
@@ -68,23 +71,29 @@ export function createBaseStateCreator<UI_MESSAGE extends UIMessage>(
       currentChatHelpers: null,
       _throttledMessages: [...initialMessages],
       setId: (id) => {
+        markLastAction('chat:setId');
         set({ id });
       },
       setMessages: (messages) => {
+        markLastAction('chat:setMessages');
         set({ messages: [...messages] });
         throttledMessagesUpdater();
       },
       setStatus: (status) => {
+        markLastAction('chat:setStatus');
         set({ status });
       },
       setError: (error) => {
+        markLastAction('chat:setError');
         set({ error });
       },
       setNewChat: (id, messages) => {
+        markLastAction('chat:setNewChat');
         set({ id, messages: [...messages], status: 'ready', error: undefined });
         throttledMessagesUpdater();
       },
       setCurrentChatHelpers: (helpers) => {
+        markLastAction('chat:setCurrentChatHelpers');
         set({ currentChatHelpers: helpers });
       },
       getThrottledMessages: () => {
@@ -108,15 +117,18 @@ export function createBaseStateCreator<UI_MESSAGE extends UIMessage>(
         throttledMessagesUpdater();
       },
       pushMessage: (message) => {
+        markLastAction('chat:pushMessage');
         set((state) => ({ messages: [...state.messages, message] }));
         throttledMessagesUpdater();
       },
       popMessage: () => {
+        markLastAction('chat:popMessage');
         set((state) => ({ messages: state.messages.slice(0, -1) }));
         throttledMessagesUpdater();
       },
       snapshot: <T,>(value: T): T => structuredClone(value),
       replaceMessage: (index, message) => {
+        markLastAction('chat:replaceMessage');
         set((state) => ({
           messages: [
             ...state.messages.slice(0, index),
@@ -131,10 +143,10 @@ export function createBaseStateCreator<UI_MESSAGE extends UIMessage>(
 }
 
 export function createBaseStore<UI_MESSAGE extends UIMessage>(
-  initialMessages: UI_MESSAGE[] = []
+  initialMessages: UI_MESSAGE[] = [],
 ) {
   return createStore<BaseChatStoreState<UI_MESSAGE>>()(
-    createBaseStateCreator<UI_MESSAGE>(initialMessages)
+    createBaseStateCreator<UI_MESSAGE>(initialMessages),
   );
 }
 
@@ -143,4 +155,3 @@ export type BaseSC<UM extends UIMessage> = StateCreator<
   [],
   []
 >;
-

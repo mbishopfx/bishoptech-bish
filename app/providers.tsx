@@ -17,7 +17,6 @@ export function Providers({ children, initialModel }: ProvidersProps) {
     <Theme>
       <ModelProvider initialModel={initialModel}>
         <AIStoreProvider initialMessages={[]}>
-          <AIDevtools />
           <InitialMessageProvider>{children}</InitialMessageProvider>
         </AIStoreProvider>
       </ModelProvider>
