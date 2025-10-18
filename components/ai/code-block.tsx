@@ -4,12 +4,8 @@ import { Button } from '@/components/ai/ui/button';
 import { cn } from '@/lib/utils';
 import { CheckIcon, CopyIcon } from 'lucide-react';
 import type { ComponentProps, HTMLAttributes, ReactNode } from 'react';
-import { createContext, useContext, useState } from 'react';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import {
-  oneDark,
-  oneLight,
-} from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { createContext, useContext, useState, useEffect, useRef, memo } from 'react';
+import { type BundledLanguage, codeToHtml } from 'shiki';
 
 type CodeBlockContextType = {
   code: string;
@@ -26,78 +22,101 @@ export type CodeBlockProps = HTMLAttributes<HTMLDivElement> & {
   children?: ReactNode;
 };
 
-export const CodeBlock = ({
+async function highlightCode(code: string, language: string) {
+  try {
+    return await Promise.all([
+      codeToHtml(code, {
+        lang: language as BundledLanguage,
+        theme: 'github-light',
+        colorReplacements: {
+          '#fff': 'transparent',
+        },
+      }),
+      codeToHtml(code, {
+        lang: language as BundledLanguage,
+        theme: 'github-dark',
+        colorReplacements: {
+          '#24292e': 'transparent',
+        },
+      }),
+    ]);
+  } catch (error) {
+    // Fallback to plaintext if language is not supported
+    return await Promise.all([
+      codeToHtml(code, {
+        lang: 'plaintext',
+        theme: 'github-light',
+        colorReplacements: {
+          '#fff': 'transparent',
+        },
+      }),
+      codeToHtml(code, {
+        lang: 'plaintext',
+        theme: 'github-dark',
+        colorReplacements: {
+          '#24292e': 'transparent',
+        },
+      }),
+    ]);
+  }
+}
+
+export const CodeBlock = memo(({
   code,
   language,
   showLineNumbers = false,
   className,
   children,
   ...props
-}: CodeBlockProps) => (
-  <CodeBlockContext.Provider value={{ code }}>
-    <div
-      className={cn(
-        'relative w-full overflow-hidden rounded-md border bg-background text-foreground',
-        className
-      )}
-      {...props}
-    >
-      <div className="relative">
-        <SyntaxHighlighter
-          className="overflow-hidden dark:hidden"
-          codeTagProps={{
-            className: 'font-mono text-sm',
-          }}
-          customStyle={{
-            margin: 0,
-            padding: '1rem',
-            fontSize: '0.875rem',
-            background: 'hsl(var(--background))',
-            color: 'hsl(var(--foreground))',
-          }}
-          language={language}
-          lineNumberStyle={{
-            color: 'hsl(var(--muted-foreground))',
-            paddingRight: '1rem',
-            minWidth: '2.5rem',
-          }}
-          showLineNumbers={showLineNumbers}
-          style={oneLight}
-        >
-          {code}
-        </SyntaxHighlighter>
-        <SyntaxHighlighter
-          className="hidden overflow-hidden dark:block"
-          codeTagProps={{
-            className: 'font-mono text-sm',
-          }}
-          customStyle={{
-            margin: 0,
-            padding: '1rem',
-            fontSize: '0.875rem',
-            background: 'hsl(var(--background))',
-            color: 'hsl(var(--foreground))',
-          }}
-          language={language}
-          lineNumberStyle={{
-            color: 'hsl(var(--muted-foreground))',
-            paddingRight: '1rem',
-            minWidth: '2.5rem',
-          }}
-          showLineNumbers={showLineNumbers}
-          style={oneDark}
-        >
-          {code}
-        </SyntaxHighlighter>
-        {children && (
-          <div className="absolute top-2 right-2 flex items-center gap-2">
-            {children}
-          </div>
+}: CodeBlockProps) => {
+  const [html, setHtml] = useState<string>('');
+  const [darkHtml, setDarkHtml] = useState<string>('');
+  const mounted = useRef(false);
+
+  useEffect(() => {
+    mounted.current = true;
+    highlightCode(code, language).then(([light, dark]) => {
+      if (mounted.current) {
+        setHtml(light);
+        setDarkHtml(dark);
+      }
+    });
+
+    return () => {
+      mounted.current = false;
+    };
+  }, [code, language]);
+
+  return (
+    <CodeBlockContext.Provider value={{ code }}>
+      <div
+        className={cn(
+          'relative w-full overflow-hidden rounded-md border bg-background text-foreground',
+          className
         )}
+        {...props}
+      >
+        <div className="relative">
+          <div
+            className="overflow-hidden dark:hidden [&>pre]:bg-transparent! [&>pre]:p-4"
+            dangerouslySetInnerHTML={{ __html: html }}
+          />
+          <div
+            className="hidden overflow-hidden dark:block [&>pre]:bg-transparent! [&>pre]:p-4"
+            dangerouslySetInnerHTML={{ __html: darkHtml }}
+          />
+          {children && (
+            <div className="absolute top-2 right-2 flex items-center gap-2">
+              {children}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
-  </CodeBlockContext.Provider>
-);
+    </CodeBlockContext.Provider>
+  );
+}, (prev, next) => prev.code === next.code && prev.language === next.language);
+
+CodeBlock.displayName = 'CodeBlock';
 
 export type CodeBlockCopyButtonProps = ComponentProps<typeof Button> & {
   onCopy?: () => void;

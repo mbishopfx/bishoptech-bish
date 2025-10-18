@@ -25,8 +25,10 @@ import { WelcomeScreen } from "./components/welcome-screen";
 import { MessageRenderer } from "./components/message-renderer";
 import { ChatInputArea } from "./components/chat-input-area";
 import type { ChatInterfaceProps } from "./types";
+import { ChatStoreProvider, useChatStateInstance } from "@/lib/stores/hooks";
 
-export default function ChatInterface({
+// Internal component that uses the store
+function ChatInterfaceInternal({
   id,
   initialMessages,
   hasMoreMessages = false,
@@ -260,6 +262,12 @@ export default function ChatInterface({
   const { messages, status, setMessages, sendMessage, stop } = chatHelpers as any;
   const regenerateRef = useRef<null | ((opts?: { messageId?: string }) => Promise<void>)>(null);
   regenerateRef.current = (chatHelpers as any).regenerate ?? null;
+
+  // Sync AI SDK messages to Zustand store for optimized rendering
+  const chatStateInstance = useChatStateInstance();
+  useEffect(() => {
+    chatStateInstance.syncFromAISDK(messages, status === 'streaming' ? 'streaming' : 'ready');
+  }, [messages, status, chatStateInstance]);
 
   const {
     regenerateAnchorRef,
@@ -579,5 +587,14 @@ export default function ChatInterface({
         onStop={handleStop}
       />
     </div>
+  );
+}
+
+// Wrapper component that provides the store
+export default function ChatInterface(props: ChatInterfaceProps) {
+  return (
+    <ChatStoreProvider initialMessages={props.initialMessages || []}>
+      <ChatInterfaceInternal {...props} />
+    </ChatStoreProvider>
   );
 }

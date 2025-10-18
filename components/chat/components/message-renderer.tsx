@@ -16,6 +16,7 @@ import {
 } from "@/components/ai/tool";
 import { Message, MessageContent } from "@/components/ai/message";
 import { Response } from "@/components/ai/response";
+import { MemoResponse } from "@/components/ai/memo-response";
 import { Actions, Action } from "@/components/ai/actions";
 import {
   Reasoning,
@@ -54,26 +55,18 @@ const MessageActions = React.memo(function MessageActions({
     onRegenerateAfterUserMessage(message.id);
   }, [onRegenerateAfterUserMessage, message.id]);
 
-  const handleCopyAssistant = useCallback(async () => {
+  const handleCopy = useCallback(async () => {
     const textContent = message.parts
       .filter((part) => part.type === "text")
       .map((part) => (part as { text: string }).text)
       .join("\n");
     await copyToClipboard(textContent);
-    toast.success("Copied to clipboard");
+    if (message.role === "assistant") {
+      toast.success("Copied to clipboard");
+    }
     setIsCopied(true);
     setTimeout(() => setIsCopied(false), 2000);
-  }, [message.id]);
-
-  const handleCopyUser = useCallback(async () => {
-    const textContent = message.parts
-      .filter((part) => part.type === "text")
-      .map((part) => (part as { text: string }).text)
-      .join("\n");
-    await copyToClipboard(textContent);
-    setIsCopied(true);
-    setTimeout(() => setIsCopied(false), 2000);
-  }, [message.id]);
+  }, [message.id, message.role, message.parts]);
 
   if (message.role === "assistant") {
     return (
@@ -87,7 +80,7 @@ const MessageActions = React.memo(function MessageActions({
             <RedoIcon className="size-4" />
           </Action>
           <Action
-            onClick={handleCopyAssistant}
+            onClick={handleCopy}
             label="Copy"
             tooltip="Copy to clipboard"
           >
@@ -119,7 +112,7 @@ const MessageActions = React.memo(function MessageActions({
             </Action>
           )}
           <Action
-            onClick={handleCopyUser}
+            onClick={handleCopy}
             label="Copiar"
             tooltip="Copiar texto"
           >
@@ -204,19 +197,18 @@ export const MessageRenderer = React.memo(function MessageRenderer({
     const next = Math.min(ta.scrollHeight, max);
     ta.style.height = `${next}px`;
   }, [isEditing, draft]);
+
+  // Compute derived values for showing loader
   const hasTextParts = message.parts.some(
     (p) => p.type === "text" && (p as any).text && (p as any).text.length > 0,
   );
   const hasReasoningParts = message.parts.some((p) => p.type === "reasoning");
-  // Hide loader if reasoning UI is shown, otherwise show loader only when no text yet
   const showInlineLoader = isStreaming && message.role === "assistant" && !hasTextParts && !hasReasoningParts;
+
   const renderMessageContent = useCallback(() => {
     // Group reasoning parts together
     const reasoningParts = message.parts.filter(
       (part) => part.type === "reasoning" && "text" in part,
-    );
-    const nonReasoningParts = message.parts.filter(
-      (part) => part.type !== "reasoning" && part.type !== "source-url",
     );
     const fileParts = message.parts.filter(
       (part) => part.type === "file",
@@ -249,10 +241,26 @@ export const MessageRenderer = React.memo(function MessageRenderer({
         )}
 
         {/* Render non-reasoning, non-source parts (text content) */}
-        {nonReasoningParts.map((part, i: number) => {
+        {message.parts.map((part, partIdx: number) => {
+          // Skip reasoning, source-url, and file parts (handled separately)
+          if (part.type === "reasoning" || part.type === "source-url" || part.type === "file") {
+            return null;
+          }
+
           if (part.type === "text" && "text" in part) {
+            // Use optimized MemoResponse for assistant messages
+            if (message.role === "assistant") {
+              return (
+                <MemoResponse 
+                  key={`${message.id}-${partIdx}`}
+                  messageId={message.id}
+                  partIdx={partIdx}
+                />
+              );
+            }
+            // Use regular Response for user messages (no need to optimize)
             return (
-              <Response key={`${message.id}-${i}`}>
+              <Response key={`${message.id}-${partIdx}`}>
                 {part.text}
               </Response>
             );
@@ -266,7 +274,7 @@ export const MessageRenderer = React.memo(function MessageRenderer({
 
             return (
               <Tool
-                key={`${message.id}-${i}`}
+                key={`${message.id}-${partIdx}`}
                 className="my-2 border-blue-200 bg-blue-50/50"
               >
                 <ToolHeader
@@ -291,7 +299,7 @@ export const MessageRenderer = React.memo(function MessageRenderer({
 
             return (
               <Tool
-                key={`${message.id}-${i}`}
+                key={`${message.id}-${partIdx}`}
                 className="my-2 border-green-200 bg-green-50/50"
               >
                 <ToolHeader
@@ -417,7 +425,7 @@ export const MessageRenderer = React.memo(function MessageRenderer({
         )}
       </>
     );
-  }, [message, isStreaming, isEditing, draft]);
+  }, [message, isStreaming]);
 
 
   return (
