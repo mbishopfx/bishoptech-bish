@@ -9,6 +9,7 @@ import { Button } from "@/components/ai/ui/button";
 import { ColumnDef, Row, Table } from "@tanstack/react-table";
 import { File, Image as ImageIcon, FileText, Trash2 } from "lucide-react";
 import { Checkbox } from "@/components/ai/ui/checkbox";
+import { logAttachmentDeleted, logAttachmentsBulkDeleted } from "@/actions/audit";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -115,7 +116,10 @@ export function FilesClient() {
         return next;
       });
       try {
+        // get metadata before server deletion
+        const att = visibleAttachments.find(a => a._id === pendingDeleteId);
         await deleteAttachment({ attachmentId: pendingDeleteId as any });
+        void logAttachmentDeleted(String(pendingDeleteId), att?.fileName, att?.mimeType, att?.fileSize);
       } catch (err) {
         // Rollback on error
         setHiddenIds(prev => {
@@ -149,7 +153,13 @@ export function FilesClient() {
         return next;
       });
       try {
+        // collect meta before deletion
+        const items = ids.map(id => {
+          const att = visibleAttachments.find(a => a._id === id);
+          return { id: String(id), name: att?.fileName, mimeType: att?.mimeType, size: att?.fileSize };
+        });
         await bulkDeleteAttachments({ attachmentIds: ids as any });
+        void logAttachmentsBulkDeleted(items);
       } catch (err) {
         // Rollback on error
         setHiddenIds(prev => {

@@ -3,6 +3,7 @@ import { withAuth } from "@workos-inc/authkit-nextjs";
 import { fetchMutation } from "convex/nextjs";
 import { api } from "@/convex/_generated/api";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { logAttachmentUploaded } from "@/actions/audit";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -105,6 +106,8 @@ export async function POST(req: NextRequest): Promise<NextResponse<UploadRespons
       },
       { token: auth.accessToken }
     );
+
+    await logAttachmentUploaded(String(attachmentId), file.name, file.type, file.size);
 
     return NextResponse.json({
       success: true,

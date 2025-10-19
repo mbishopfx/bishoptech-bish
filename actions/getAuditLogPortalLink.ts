@@ -9,10 +9,6 @@ export async function getAuditLogPortalLink(organizationId: string): Promise<str
   // We add a check here since the client side check is not secure enough
   const { entitlements } = await withAuth({ ensureSignedIn: true });
 
-  if (!entitlements?.includes('audit-logs')) {
-    throw new Error('Audit logs entitlement is required to view audit logs.');
-  }
-
   const { link } = await workos.portal.generateLink({
     organization: organizationId,
     intent: GeneratePortalLinkIntent.AuditLogs,

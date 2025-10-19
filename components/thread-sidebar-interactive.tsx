@@ -8,6 +8,7 @@ import { Button } from "@/components/ai/ui/button";
 import { Loader } from "@/components/ai/loader";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { logThreadRemoved, logThreadRenamed } from "@/actions/audit";
 import { CheckIcon, AlertTriangleIcon } from "lucide-react";
 import { EditIcon, DeleteIcon, PinIcon } from "@/components/ui/icons/svg-icons";
 import {
@@ -297,7 +298,10 @@ export function ThreadSidebarInteractive({
     }
 
     try {
+      // Capture title before deletion for audit log target name
+      const thread = combinedThreads.find((t) => t.threadId === threadId);
       await deleteThread({ threadId });
+      await logThreadRemoved(String(threadId), thread?.title);
       toast.success("Hilo eliminado");
     } catch (error) {
       console.error("Failed to delete thread:", error);
@@ -343,6 +347,7 @@ export function ThreadSidebarInteractive({
 
     try {
       await renameThread({ threadId, title: trimmedTitle });
+      await logThreadRenamed(threadId, trimmedTitle, originalThread.title);
       // Clear optimistic after success
       setOptimisticTitles(prev => {
         const newTitles = { ...prev };

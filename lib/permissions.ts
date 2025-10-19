@@ -8,6 +8,7 @@ export const PERMISSIONS = {
   WIDGETS_SSO_MANAGE: "widgets:sso:manage",
   VIEW_ORG_ANALYTICS: "view-org-analytics",
   MANAGE_BILLING: "manage-billing",
+  AUDIT_LOGS: "audit-logs",
 } as const;
 
 export type PermissionKey = keyof typeof PERMISSIONS;

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useAuth } from "@workos-inc/authkit-nextjs/components";
+import authkitSignOut from "@/actions/signout";
 import {
   Users,
   Home,
@@ -253,11 +253,9 @@ export function SettingsSidebar({
   canManageDomainSso?: boolean;
   canViewAnalytics?: boolean;
 }) {
-  const { signOut } = useAuth();
-
   const handleLogout = async () => {
     try {
-      await signOut();
+      await authkitSignOut();
     } catch (error) {
       console.error("Error signing out:", error);
     }

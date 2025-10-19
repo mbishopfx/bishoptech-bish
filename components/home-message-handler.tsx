@@ -8,6 +8,7 @@ import { useInitialMessage } from "@/contexts/initial-message-context";
 import { generateUUID } from "@/lib/utils";
 import { UIMessage } from "@ai-sdk-tools/store";
 import { ReactNode } from "react";
+import { logThreadCreated } from "@/actions/audit";
 
 interface HomeMessageHandlerProps {
   action: (
@@ -33,6 +34,16 @@ export function HomeMessageHandler({ action }: HomeMessageHandlerProps) {
         threadId: newThreadId,
         model: selectedModel,
       });
+
+      try {
+        const hasAttachment = Boolean(
+          message.parts?.some((p) => p.type !== "text"),
+        );
+        const attachmentCount = message.parts?.filter((p) => p.type !== "text").length || 0;
+        void logThreadCreated(newThreadId, selectedModel, hasAttachment, attachmentCount);
+      } catch (e) {
+        console.warn("Failed to log thread.create:", e);
+      }
 
       // Trigger title generation in the background
       fetch("/api/generate-title", {
