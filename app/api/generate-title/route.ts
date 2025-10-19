@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateText } from "ai";
-import { withTracing } from "@posthog/ai";
-import { PostHog } from "posthog-node";
-import { createOpenAI } from "@ai-sdk/openai";
 import { api } from "@/convex/_generated/api";
 import { fetchMutation } from "convex/nextjs";
 import { withAuth } from "@workos-inc/authkit-nextjs";
@@ -26,28 +23,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Prepare traced model for PostHog LLM analytics
-    const phClient = new PostHog(process.env.POSTHOG_KEY || "", {
-      host: process.env.POSTHOG_HOST,
-    });
-    // Use OpenAI provider wrapper to create a model name compatible with ai SDK
-    const openai = createOpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-      compatibility: "strict",
-    });
-    const baseModel = openai("gpt-4o-mini");
-    const tracedModel = withTracing(baseModel, phClient, {
-      posthogDistinctId: "title-generator",
-      posthogTraceId: `title-${Date.now()}`,
-      posthogProperties: { threadId },
-      posthogPrivacyMode: false,
-    });
-
     // Generate a short title
     const { text } = await generateText({
-      model: tracedModel,
+      model: TITLE_GENERATION_MODEL,
       prompt: `Summarize user message in 5 words or fewer in a descriptive way. Be as concise as possible without losing the context, respond in the same language as the user message and do not compress words.
-      
+
       User message: ${userMessage}`,
       temperature: 0.5,
       maxOutputTokens: 50,
@@ -74,12 +54,9 @@ export async function POST(request: NextRequest) {
       { token: accessToken },
     );
 
-    phClient.shutdown();
     return NextResponse.json({ title: cleanTitle });
   } catch (error) {
     console.error("Error generating title:", error);
-    // Ensure PostHog flush on error
-    try { new PostHog(process.env.POSTHOG_KEY || "", { host: process.env.POSTHOG_HOST }).shutdown(); } catch {}
     return NextResponse.json(
       { error: "Failed to generate title" },
       { status: 500 },
