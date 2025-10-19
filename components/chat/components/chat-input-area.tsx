@@ -110,8 +110,9 @@ export const ChatInputArea = React.memo(function ChatInputArea({
                   />
                 </svg>
                 <div className="font-semibold">
-                  {quotaError.type === "premium" ? "Premium" : "Standard"}{" "}
-                  quota exceeded
+                  Cuota
+                  {quotaError.type === "premium" ? " Premium" : " Standard"}{" "}
+                  excedida
                 </div>
               </div>
               <button

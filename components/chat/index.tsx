@@ -90,7 +90,12 @@ function ChatInterfaceInternal({
     loadMore 
   } = usePaginatedQuery(
     api.threads.getThreadMessagesPaginatedSafe,
-    isThread && (!initialMessages || enableClientPagination) ? { threadId: id } : "skip",
+    // If initialMessages is undefined OR an empty array, fetch from client.
+    isThread && (
+      !initialMessages || (Array.isArray(initialMessages) && initialMessages.length === 0) || enableClientPagination
+    )
+      ? { threadId: id }
+      : "skip",
     { initialNumItems: 5 }
   );
 
@@ -122,15 +127,29 @@ function ChatInterfaceInternal({
     }));
   }, [paginatedMessages, isThread]);
 
-  // Force useChat to re-initialize when model changes
+  // Access chat state instance early so we can seed useChat with last throttled messages
+  const chatStateInstance = useChatStateInstance();
+
+  // Force useChat to re-initialize when model changes, but seed with last known messages
   const chatHelpers =
     useChat({
       id: `${id}-${chatKey}`,
       generateId: generateUUID,
-      // Seed chat store so the hook has initial history context instantly
-      ...(isThread && initialMessages && initialMessages.length > 0
-        ? { messages: initialMessages }
-        : {}),
+      // Seed chat hook with last throttled messages from Zustand if available,
+      // otherwise fall back to SSR initial messages when present.
+      ...((() => {
+        try {
+          const state = chatStateInstance.getState();
+          const throttled = state.getThrottledMessages?.() || state.messages || [];
+          if (Array.isArray(throttled) && throttled.length > 0) {
+            return { messages: throttled as UIMessage[] };
+          }
+        } catch {}
+        if (isThread && initialMessages && initialMessages.length > 0) {
+          return { messages: initialMessages };
+        }
+        return {};
+      })()),
       onFinish() {
         if (pathname === "/") {
           router.push(`/chat/${id}`);
@@ -264,7 +283,6 @@ function ChatInterfaceInternal({
   regenerateRef.current = (chatHelpers as any).regenerate ?? null;
 
   // Sync AI SDK messages to Zustand store for optimized rendering
-  const chatStateInstance = useChatStateInstance();
   useEffect(() => {
     chatStateInstance.syncFromAISDK(messages, status === 'streaming' ? 'streaming' : 'ready');
   }, [messages, status, chatStateInstance]);
@@ -313,6 +331,22 @@ function ChatInterfaceInternal({
     });
     return filterHiddenForRender(result, hiddenIdsRef);
   }, [isThread, historicalMessages, messages, initialMessages, pruneAt]);
+
+  // Preserve last non-empty render while pagination is loading to prevent flicker on model change
+  const lastNonEmptyRenderRef = useRef<UIMessage[]>([]);
+  useEffect(() => {
+    if (renderedMessages.length > 0) {
+      lastNonEmptyRenderRef.current = renderedMessages;
+    }
+  }, [renderedMessages]);
+
+  const displayMessages: UIMessage[] = useMemo(() => {
+    const loadingHistory = paginationStatus === "LoadingFirstPage" || paginationStatus === "LoadingMore";
+    if (renderedMessages.length === 0 && isThread && loadingHistory) {
+      return lastNonEmptyRenderRef.current;
+    }
+    return renderedMessages;
+  }, [renderedMessages, isThread, paginationStatus]);
 
   // Cleanup effect when thread ID changes - reset all UI state
   useEffect(() => {
@@ -530,8 +564,8 @@ function ChatInterfaceInternal({
                 onSuggestionClick={handleSuggestionClick}
               />
             )}
-            {renderedMessages.map((message, index) => {
-              const isLast = index === renderedMessages.length - 1;
+            {displayMessages.map((message, index) => {
+              const isLast = index === displayMessages.length - 1;
               const isStreaming = isLast && (status === "streaming");
               return (
                 <MessageRenderer
