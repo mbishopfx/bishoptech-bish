@@ -8,7 +8,7 @@ const REDIRECT_ORIGIN =
     ? 'https://rift.mx'
     : process.env.VERCEL_ENV === 'preview'
     ? 'https://dev.rift.mx'
-    : 'http://localhost:3000';
+    : 'http://192.168.0.160:3000';
 
 const REDIRECT_URI = new URL(REDIRECT_PATHNAME, REDIRECT_ORIGIN);
 

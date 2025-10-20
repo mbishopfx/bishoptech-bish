@@ -269,10 +269,10 @@ function ModelSelector({
       <SelectPrimitive.Portal>
         <SelectPrimitive.Content
           className={cn(
-            "bg-popover-main backdrop-blur-sm text-popover-text data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 relative z-50 max-h-[600px] w-[700px] origin-top overflow-hidden rounded-xl border shadow-lg",
+            "bg-popover-main backdrop-blur-sm text-popover-text data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 relative z-50 max-h-[80vh] w-full max-w-[90vw] md:w-[700px] md:max-w-[700px] origin-top overflow-hidden rounded-xl border shadow-lg md:shadow-2xl",
           )}
           position="popper"
-          sideOffset={4}
+          sideOffset={8}
         >
           <Tabs
             value={activeTab}
@@ -280,51 +280,51 @@ function ModelSelector({
               setActiveTab(value as "recomendado" | "avanzado")
             }
           >
-            <TabsList className="w-fit mx-auto bg-popover-secondary p-1 mt-4">
+            <TabsList className="w-full md:w-fit mx-auto justify-start md:justify-center bg-popover-secondary p-1 mt-4 overflow-x-auto scrollbar-none">
               <TabsTrigger
                 value="recomendado"
-                className="text-secondary data-[state=active]:bg-popover-main data-[state=active]:text-white px-4 py-2"
+                className="text-secondary data-[state=active]:bg-popover-main data-[state=active]:text-white px-4 py-3 min-w-max flex-shrink-0"
               >
                 Recomendado
               </TabsTrigger>
               <TabsTrigger
                 value="avanzado"
-                className="text-secondary data-[state=active]:bg-popover-main data-[state=active]:text-white px-4 py-2"
+                className="text-secondary data-[state=active]:bg-popover-main data-[state=active]:text-white px-4 py-3 min-w-max flex-shrink-0"
               >
                 Avanzado
               </TabsTrigger>
             </TabsList>
           </Tabs>
 
-          <SelectPrimitive.Viewport className="max-h-[600px] overflow-y-auto">
+          <SelectPrimitive.Viewport className="max-h-[80vh] overflow-y-auto p-0">
             {activeTab === "recomendado" && (
-              <div className="px-6 pb-6 pt-2 space-y-6">
-                <div className="text-center mb-6">
-                  <h3 className="text-lg font-semibold text-popover-text mb-2">
+              <div className="px-4 py-4 md:px-6 md:py-6 space-y-4 md:space-y-6">
+                <div className="text-center mb-4 md:mb-6">
+                  <h3 className="text-base md:text-lg font-semibold text-popover-text mb-2">
                     Selección Recomendada
                   </h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
+                  <p className="text-sm text-muted-foreground leading-relaxed px-2">
                     Opciones optimizadas para diferentes tipos de tareas
                   </p>
                 </div>
-                <div className="grid grid-cols-2 gap-0.5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-0.5">
                   {renderRecommendedItems()}
                 </div>
               </div>
             )}
 
             {activeTab === "avanzado" && (
-              <div className="p-6">
-                <div className="text-center mb-6">
-                  <h3 className="text-lg font-semibold text-popover-text mb-2">
+              <div className="px-4 py-4 md:px-6 md:py-6">
+                <div className="text-center mb-4 md:mb-6">
+                  <h3 className="text-base md:text-lg font-semibold text-popover-text mb-2">
                     Selección Avanzada
                   </h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
+                  <p className="text-sm text-muted-foreground leading-relaxed px-2">
                     Elige manualmente entre todos los modelos disponibles
                   </p>
                 </div>
-                <div className="grid grid-cols-2 gap-8">
-                  <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
+                  <div className="space-y-4 md:space-y-6 order-2 md:order-1">
                     {leftColumn.map(({ provider, models }: { provider: string; models: BaseModelConfig[] }) => {
                       const ProviderIcon =
                         providerIcons[provider as keyof typeof providerIcons];
@@ -347,7 +347,7 @@ function ModelSelector({
                       );
                     })}
                   </div>
-                  <div className="space-y-6">
+                  <div className="space-y-4 md:space-y-6 order-1 md:order-2 mb-4 md:mb-0">
                     {rightColumn.map(({ provider, models }: { provider: string; models: BaseModelConfig[] }) => {
                       const ProviderIcon =
                         providerIcons[provider as keyof typeof providerIcons];
@@ -393,7 +393,7 @@ const ModelItem = React.memo(function ModelItem({ model }: ModelItemProps) {
     <SelectPrimitive.Item
       value={model.id}
       className={cn(
-        "focus:bg-popover-secondary focus:text-accent-foreground data-[highlighted]:bg-popover-secondary/40 data-[highlighted]:text-popover-text data-[state=checked]:bg-popover-secondary data-[state=checked]:text-popover-text relative grid grid-cols-[auto_1fr] w-full cursor-pointer rounded-lg p-3 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 transition-colors border border-transparent hover:border-border/50 hover:bg-popover-secondary/20 mb-2 gap-3",
+        "focus:bg-popover-secondary focus:text-accent-foreground data-[highlighted]:bg-popover-secondary/40 data-[highlighted]:text-popover-text data-[state=checked]:bg-popover-secondary data-[state=checked]:text-popover-text relative grid grid-cols-[auto_1fr] w-full cursor-pointer rounded-lg p-3 md:p-4 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 transition-colors border border-transparent hover:border-border/50 hover:bg-popover-secondary/20 mb-2 gap-3 min-h-[72px]",
       )}
     >
       {/* Icon column */}
@@ -418,7 +418,7 @@ const ModelItem = React.memo(function ModelItem({ model }: ModelItemProps) {
             {model.description}
           </p>
         </div>
-      </SelectPrimitive.ItemText>
+        </SelectPrimitive.ItemText>
 
         {/* Context and capabilities positioned at the bottom */}
         <div className="flex items-center justify-between w-full mt-2">

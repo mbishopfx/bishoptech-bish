@@ -100,7 +100,7 @@ export const WelcomeScreen = React.memo(function WelcomeScreen({ user, onSuggest
         </h2>
 
         {/* Prompt suggestions */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
+        <div className="hidden md:grid md:grid-cols-2 gap-4 text-left">
           {[
             {
               icon: (
