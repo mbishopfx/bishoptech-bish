@@ -14,6 +14,7 @@ import { useAuth } from "@workos-inc/authkit-nextjs/components";
 import { useConvexAuth, usePaginatedQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Loader } from "@/components/ai/loader";
+import { AttachmentsIcon } from "@/components/ui/icons/svg-icons";
 import {
   Conversation,
   ConversationContent,
@@ -26,6 +27,7 @@ import { MessageRenderer } from "./components/message-renderer";
 import { ChatInputArea } from "./components/chat-input-area";
 import type { ChatInterfaceProps } from "./types";
 import { ChatStoreProvider, useChatStateInstance } from "@/lib/stores/hooks";
+import { uploadFiles, isSupportedFileType } from "@/lib/file-utils";
 
 // Internal component that uses the store
 function ChatInterfaceInternal({
@@ -57,6 +59,56 @@ function ChatInterfaceInternal({
   const setShowNoSubscriptionDialog = useChatUIStore((s) => s.setShowNoSubscriptionDialog);
   const setChatKey = useChatUIStore((s) => s.setChatKey);
   const handleSearchToggle = useChatUIStore((s) => s.handleSearchToggle);
+  const [isDragActive, setIsDragActive] = useState(false);
+  const dragCounterRef = useRef(0);
+
+  // Centralized file processing for drag-and-drop uploads
+  const handleProcessFiles = useCallback(async (fileArray: File[]) => {
+    if (!fileArray || fileArray.length === 0) return;
+
+    const state = useChatUIStore.getState();
+    const currentTotal = state.uploadedAttachments.length + state.uploadingFiles.length;
+    const newTotal = currentTotal + fileArray.length;
+    if (newTotal > 5) {
+      const remaining = 5 - currentTotal;
+      if (remaining <= 0) {
+        toast.error("Máximo de 5 archivos permitidos por mensaje");
+      } else {
+        toast.error(`Solo puedes agregar ${remaining} más archivo${remaining === 1 ? '' : 's'}. Máximo de 5 archivos permitidos por mensaje.`);
+      }
+      return;
+    }
+
+    const unsupported = fileArray.filter((f) => !isSupportedFileType(f));
+    if (unsupported.length > 0) {
+      toast.error(`Tipos de archivo no permitido: ${unsupported.map((f) => f.name).join(", ")}`);
+      return;
+    }
+
+    const oversized = fileArray.filter((f) => f.size > 10 * 1024 * 1024);
+    if (oversized.length > 0) {
+      toast.error(`Archivo demasiado grande: ${oversized.map((f) => f.name).join(", ")}`);
+      return;
+    }
+
+    setSelectedFiles((prev: File[]) => [...prev, ...fileArray]);
+    setUploadingFiles((prev: any[]) => [
+      ...prev,
+      ...fileArray.map((file) => ({ file, isUploading: true })),
+    ]);
+
+    try {
+      const dt = new DataTransfer();
+      fileArray.forEach((f) => dt.items.add(f));
+      const attachments = await uploadFiles(dt.files);
+      setUploadedAttachments((prev: any[]) => [...prev, ...attachments]);
+    } catch (err) {
+      console.error("Error al subir archivos:", err);
+      toast.error("Error al subir archivos");
+    } finally {
+      setUploadingFiles((prev: any[]) => prev.filter((uf) => !fileArray.includes(uf.file)));
+    }
+  }, [setSelectedFiles, setUploadingFiles, setUploadedAttachments]);
 
   // Apply model change effects
   const prevModelRef = useRef(selectedModel);
@@ -551,7 +603,44 @@ function ChatInterfaceInternal({
   }, [paginationStatus, loadMore, initialMessages, enableClientPagination]);
 
   return (
-    <div className="flex h-screen w-full min-h-0 flex-col relative">
+    <div
+      className="flex h-screen w-full min-h-0 flex-col relative"
+      onDragEnter={(e) => {
+        const dt = e.dataTransfer;
+        const hasFiles = !!dt && Array.from(dt.types || []).includes("Files");
+        if (!hasFiles) return;
+        e.preventDefault();
+        e.stopPropagation();
+        dragCounterRef.current += 1;
+        setIsDragActive(true);
+      }}
+      onDragOver={(e) => {
+        const dt = e.dataTransfer;
+        const hasFiles = !!dt && Array.from(dt.types || []).includes("Files");
+        if (!hasFiles) return;
+        e.preventDefault();
+        dt.dropEffect = "copy";
+        setIsDragActive(true);
+      }}
+      onDragLeave={(e) => {
+        e.preventDefault();
+        if (dragCounterRef.current > 0) {
+          dragCounterRef.current -= 1;
+        }
+        if (dragCounterRef.current <= 0) {
+          setIsDragActive(false);
+        }
+      }}
+      onDrop={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dragCounterRef.current = 0;
+        setIsDragActive(false);
+        const files = Array.from(e.dataTransfer?.files || []);
+        if (!files || files.length === 0) return;
+        void handleProcessFiles(files);
+      }}
+    >
       <div className="flex-1 min-h-0">
         <Conversation>
           <ConversationContent className="mx-auto w-full max-w-3xl p-4 pb-30">
@@ -630,6 +719,19 @@ function ChatInterfaceInternal({
         onSubmit={handleSubmit}
         onStop={handleStop}
       />
+
+      {isDragActive && (
+        <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center pointer-events-none">
+          <div className="mx-4 w-full max-w-md rounded-2xl border border-white/20 bg-white/80 dark:bg-popover-main backdrop-blur-sm shadow-xl p-8 text-center">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-blue-600/10">
+              <AttachmentsIcon className="h-7 w-7 text-blue-600" />
+            </div>
+            <h3 className="text-lg font-semibold mb-1">Arrastra y suelta archivos</h3>
+            <p className="text-sm text-muted-foreground mb-2">Archivos de imagen y PDF hasta 10MB cada uno</p>
+            <p className="text-xs text-muted-foreground">Máximo 5 archivos por mensaje</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
