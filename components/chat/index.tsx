@@ -20,6 +20,7 @@ import {
   ConversationContent,
   ConversationScrollButton,
 } from "@/components/ai/conversation";
+import { Message, MessageContent } from "@/components/ai/message";
 
 import { useChatUIStore } from "./ui-store";
 import { WelcomeScreen } from "./components/welcome-screen";
@@ -704,7 +705,15 @@ function ChatInterfaceInternal({
               );
             })}
             {(status === "submitted" || status === "streaming") &&
-              !hasAssistantMessage && <Loader />}
+              !hasAssistantMessage && (
+                <Message from={"assistant"}>
+                  <MessageContent from={"assistant"}>
+                    <div className="py-1">
+                      <Loader />
+                    </div>
+                  </MessageContent>
+                </Message>
+              )}
           </ConversationContent>
           <ConversationScrollButton />
         </Conversation>
