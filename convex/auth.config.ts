@@ -4,16 +4,16 @@ const authConfig = {
   providers: [
     {
       type: "customJwt",
-      issuer: `https://api.workos.com/`,
+      issuer: `https://auth.rift.mx/`,
       algorithm: "RS256",
       applicationID: clientId,
-      jwks: `https://api.workos.com/sso/jwks/${clientId}`,
+      jwks: `https://auth.rift.mx/sso/jwks/${clientId}`,
     },
     {
       type: "customJwt",
-      issuer: `https://api.workos.com/user_management/${clientId}`,
+      issuer: `https://auth.rift.mx/user_management/${clientId}`,
       algorithm: "RS256",
-      jwks: `https://api.workos.com/sso/jwks/${clientId}`,
+      jwks: `https://auth.rift.mx/sso/jwks/${clientId}`,
       applicationID: clientId,
     },
   ],
