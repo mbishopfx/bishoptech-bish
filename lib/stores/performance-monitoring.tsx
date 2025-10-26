@@ -1,5 +1,4 @@
 'use client';
-// --- Freeze detector (RAF jitter) and action correlation ---
 let __freezeDetectorStarted = false;
 let __freezeRafId = 0;
 let __freezeLastTs = 0;
@@ -16,7 +15,6 @@ export function markLastAction(label: string) {
   }
 }
 function startFreezeDetector({
-  thresholdMs = 80,
 }: {
   thresholdMs?: number;
 } = {}): void {
@@ -26,15 +24,6 @@ function startFreezeDetector({
   const tick = (now: number) => {
     const expected = __freezeLastTs + 16.7;
     const blockedMs = now - expected;
-    // if (blockedMs > thresholdMs) {
-    //   // eslint-disable-next-line no-1
-    //   console.warn(
-    //     '[Freeze]',
-    //     `${Math.round(blockedMs)}ms`,
-    //     'lastAction=',
-    //     __lastActionLabel,
-    //   );
-    // }
     __freezeLastTs = now;
     __freezeRafId = window.requestAnimationFrame(tick);
   };
