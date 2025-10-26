@@ -163,11 +163,11 @@ const settingsSections: SettingsSection[] = [
       //   href: "/settings/plans",
       //   icon: ReceiptText,
       // },
-      {
-        title: "Análisis",
-        href: "/settings/insights",
-        icon: BarChart3,
-      },
+      // {
+      //   title: "Análisis",
+      //   href: "/settings/insights",
+      //   icon: BarChart3,
+      // },
     ],
   },
   {
