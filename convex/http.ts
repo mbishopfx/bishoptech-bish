@@ -102,9 +102,9 @@ http.route({
           await ctx.runMutation(internal.users.createUser, {
             email: data.email,
             workos_id: data.id,
-            firstName: data.first_name,
-            lastName: data.last_name,
-            profilePictureUrl: data.profile_picture_url || undefined,
+            firstName: data.first_name ?? undefined,
+            lastName: data.last_name ?? undefined,
+            profilePictureUrl: data.profile_picture_url ?? undefined,
           });
           break;
         }
@@ -141,9 +141,9 @@ http.route({
             id: user._id,
             patch: { 
               email: data.email,
-              firstName: data.first_name,
-              lastName: data.last_name,
-              profilePictureUrl: data.profile_picture_url || undefined,
+              firstName: data.first_name ?? undefined,
+              lastName: data.last_name ?? undefined,
+              profilePictureUrl: data.profile_picture_url ?? undefined,
             },
           });
 
@@ -223,6 +223,13 @@ http.route({
           );
         }
       }
+
+      console.error("WorkOS webhook processing error:", {
+        event,
+        error: e instanceof Error ? e.message : String(e),
+        stack: e instanceof Error ? e.stack : undefined,
+        payload: bodyText,
+      });
 
       return new Response(
         JSON.stringify({
