@@ -67,7 +67,7 @@ export default function AppearancePage() {
           {themeOptions.map((themeOption) => (
             <div
               key={themeOption.id}
-              className={`border-2 ${themeOption.borderColor} rounded-lg p-4 cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-popover-main`}
+              className={`border-2 ${themeOption.borderColor} rounded-lg p-4 cursor-pointer transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-popover-main`}
               onClick={() => handleThemeChange(themeOption.id)}
               onKeyDown={(e) => handleKeyDown(e, themeOption.id)}
               tabIndex={0}
