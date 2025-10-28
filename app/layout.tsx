@@ -11,13 +11,37 @@ const inter = Inter({
   subsets: ["latin"],
 });
 
+const productionDomain = process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL; // Domains without protocol
+const baseUrl = productionDomain ? `https://${productionDomain}` : "http://localhost:3000";
+
 export const metadata: Metadata = {
   title: {
     template: "%s | Rift",
     default: "Rift",
   },
+  description: "Rift AI",
+  applicationName: "Rift",
+  metadataBase: new URL(baseUrl),
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    title: "Rift",
+    description: "Rift AI",
+    url: baseUrl,
+    siteName: "Rift",
+    type: "website",
+    images: [
+      {
+        url: "/opengraph-image.png",
+      },
+    ],
+  },
   twitter: {
     card: "summary_large_image",
+    title: "Rift",
+    description: "Rift AI",
+    images: ["/twitter-image.png"],
   },
 };
 
