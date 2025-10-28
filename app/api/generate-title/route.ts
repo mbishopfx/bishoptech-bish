@@ -28,8 +28,7 @@ export async function POST(request: NextRequest) {
     // Generate a short title
     const { text } = await generateText({
       model: TITLE_GENERATION_MODEL,
-      prompt: `Summarize user message in 5 words or fewer in a descriptive way. Be as concise as possible without losing the context, respond in the same language as the user message and do not compress words.
-
+      prompt: `Summarize user message in few words. Be as concise without losing the context, respond in the same language as the user message, Do not respond to the user message, Do not use markdown or html.
       User message: ${trimmedMessage}`,
       temperature: 0.5,
       maxOutputTokens: 50,

@@ -497,11 +497,64 @@ export async function POST(req: Request) {
         // Periodic flush (every 2 seconds)
         const flushInterval = setInterval(() => flushUpdate(), 2000);
 
-        const cleanup = () => {
-          clearInterval(flushInterval);
+        // Handle abort signal BEFORE the connection is severed
+        const handleAbort = () => {
+          if (isComplete) return;
+          isComplete = true;
+          cleanup();
+          
+          // Send finish event to client
+          try {
+            writer.write({ type: "finish" });
+          } catch (e) {
+            // Stream might already be closed, ignore
+          }
+          
+          // Handle remaining cleanup
+          (async () => {
+            // Flush any pending updates
+            await flushUpdate();
+            
+            // Finalize in database
+            await finalizeWithRetry({
+              ok: true,
+              finalContent: content.length > 0 ? content : undefined,
+              finalReasoning: reasoning || undefined,
+              context: "abort",
+            });
+
+            // Ensure PostHog flush
+            phClient.shutdown();
+
+            // Increment tool call quota if any tools were used
+            if (toolCallCount > 0) {
+              DatabaseQueue.add(async () => {
+                try {
+                  await fetch(`${process.env.CONVEX_SITE_URL}/increment-tool-call-quota`, {
+                    method: "POST",
+                    headers: {
+                      "Content-Type": "application/json",
+                      "Authorization": `Bearer ${process.env.CONVEX_SECRET_TOKEN}`,
+                    },
+                    body: JSON.stringify({
+                      userId: auth.userId,
+                      toolCallCount,
+                    }),
+                  });
+                } catch (error) {
+                  console.error("Failed to increment tool call quota (abort):", error);
+                }
+              });
+            }
+          })();
         };
 
-        req.signal?.addEventListener("abort", cleanup);
+        const cleanup = () => {
+          clearInterval(flushInterval);
+          req.signal?.removeEventListener("abort", handleAbort);
+        };
+
+        req.signal?.addEventListener("abort", handleAbort);
 
         console.log(`Starting streamText call: ${Date.now() - start}ms`);
 
@@ -630,54 +683,22 @@ export async function POST(req: Request) {
             },
             onError: async (error) => {
               if (isComplete) return;
-              isComplete = true;
-              cleanup();
-
+              
               const errorObj = error.error as Error;
-              const isAbort =
-                errorObj.name === "AbortError" || req.signal?.aborted;
+              const isAbort = errorObj.name === "AbortError" || req.signal?.aborted;
+              
+              // Aborts are handled by the dedicated abort listener above
               if (isAbort) {
-                // Handle graceful abort
-                await flushUpdate();
-                await finalizeWithRetry({
-                  ok: true,
-                  finalContent: content.length > 0 ? content : undefined,
-                  finalReasoning: reasoning || undefined,
-                  context: "abort",
-                });
-
-                // Increment tool call quota when abort
-                // Ensure PostHog flush on abort
-                phClient.shutdown();
-
-                if (toolCallCount > 0) {
-                  DatabaseQueue.add(async () => {
-                    try {
-                      await fetch(`${process.env.CONVEX_SITE_URL}/increment-tool-call-quota`, {
-                        method: "POST",
-                        headers: {
-                          "Content-Type": "application/json",
-                          "Authorization": `Bearer ${process.env.CONVEX_SECRET_TOKEN}`,
-                        },
-                        body: JSON.stringify({
-                          userId: auth.userId,
-                          toolCallCount,
-                        }),
-                      });
-                      console.log(`Incremented tool call quota by ${toolCallCount} for user (abort)`);
-                    } catch (error) {
-                      console.error("Failed to increment tool call quota (abort):", error);
-                      // Don't fail the request if quota increment fails
-                    }
-                  });
-                }
                 return;
               }
 
               // Handle actual errors
-              console.error("Stream error:", error);
+              isComplete = true;
+              cleanup();
+              
+              console.error("Stream error:", error);           
               // Ensure PostHog flush on error
-              phClient.shutdown();
+              phClient.shutdown();            
               await finalizeWithRetry({
                 ok: false,
                 error: {
@@ -687,10 +708,14 @@ export async function POST(req: Request) {
                 context: "error",
               });
 
-              writer.write({
-                type: "error",
-                errorText: "Generation failed. Please try again.",
-              });
+              try {
+                writer.write({
+                  type: "error",
+                  errorText: "Generation failed. Please try again.",
+                });
+              } catch (e) {
+                // Stream might be closed, ignore
+              }
             },
           });
 

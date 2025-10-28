@@ -559,22 +559,12 @@ function ChatInterfaceInternal({
   );
 
   const handleStop = useCallback(() => {
-    // Preserve current streaming message content before stopping
-    setMessages((currentMessages: UIMessage[]) => {
-      const lastMessage = currentMessages[currentMessages.length - 1];
-      if (lastMessage && lastMessage.role === "assistant") {
-        const updatedMessages = [...currentMessages];
-        updatedMessages[updatedMessages.length - 1] = {
-          ...lastMessage,
-          parts: lastMessage.parts, // Preserve current content
-        };
-        return updatedMessages;
-      }
-      return currentMessages;
-    });
-
+    // Abort the request
     stop();
-  }, [setMessages, stop]);
+    
+    // Manually force status to 'ready' since AI SDK doesn't properly update on abort
+    chatStateInstance.getState().setStatus('ready');
+  }, [stop, chatStateInstance]);
 
   const handleSuggestionClick = useCallback((prompt: string) => {
     setInput(prompt);
