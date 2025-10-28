@@ -3,8 +3,8 @@ import { fetchQuery } from "convex/nextjs";
 import { api } from "@/convex/_generated/api";
 import { getAccessToken } from "@/lib/auth";
 import Link from "next/link";
-import { Button } from "@/components/ai/ui/button";
 import Image from "next/image";
+import { Button } from "@/components/ai/ui/button";
 
 export async function UserProfileSection() {
   const accessToken = await getAccessToken();
@@ -22,7 +22,7 @@ export async function UserProfileSection() {
 
   return (
     <div
-      className="border-t border-border p-4 flex-shrink-0 flex items-center"
+      className="border-t border-border p-4 flex-shrink-0 flex items-center justify-center"
       style={{ minHeight: "80px" }}
     >
       {user ? (
@@ -61,13 +61,13 @@ export async function UserProfileSection() {
         </Link>
       ) : (
         // Unauthenticated state
-        <div className="flex items-center justify-center px-2">
-          <Link href="/sign-in" className="w-full">
-            <Button size="sm" className="w-full h-10">
-              Login
-            </Button>
-          </Link>
-        </div>
+        <Link href="/sign-in" className="w-full">
+          <Button
+            className="w-full bg-accent hover:bg-accent/90 text-white rounded-lg font-medium"
+          >
+            Iniciar sesión
+          </Button>
+        </Link>
       )}
     </div>
   );

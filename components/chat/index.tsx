@@ -43,7 +43,7 @@ function ChatInterfaceInternal({
   const pathname = usePathname();
   const { selectedModel, setSelectedModel } = useModel();
   const { consumeInitialMessage } = useInitialMessage();
-  const { isAuthenticated } = useConvexAuth();
+  const { isAuthenticated, isLoading: authLoading } = useConvexAuth();
   const { user } = useAuth();
   const prevIdRef = useRef(id);
   const autoStartTriggeredRef = useRef(false);
@@ -482,7 +482,14 @@ function ChatInterfaceInternal({
     async (e?: React.FormEvent) => {
       e?.preventDefault();
       const { input, uploadedAttachments, uploadingFiles } = useChatUIStore.getState();
-      if (disableInput || (!input.trim() && uploadedAttachments.length === 0 && uploadingFiles.length === 0)) return;
+      // Prevent sending when input is disabled, unauthenticated, or while auth is (re)loading
+      if (
+        disableInput ||
+        authLoading ||
+        !isAuthenticated ||
+        (!input.trim() && uploadedAttachments.length === 0 && uploadingFiles.length === 0)
+      )
+        return;
 
       const messageContent = input.trim();
       const messageId = generateUUID();
@@ -565,7 +572,7 @@ function ChatInterfaceInternal({
         setIsSendingMessage(false);
       }
     },
-    [disableInput, id, onInitialMessage, setMessages, sendMessage, setQuotaError, setInput, setIsSendingMessage, setUploadedAttachments, setSelectedFiles, setUploadingFiles],
+    [disableInput, authLoading, isAuthenticated, id, onInitialMessage, setMessages, sendMessage, setQuotaError, setInput, setIsSendingMessage, setUploadedAttachments, setSelectedFiles, setUploadingFiles],
   );
 
   const handleStop = useCallback(() => {
@@ -722,7 +729,7 @@ function ChatInterfaceInternal({
 
       {/* Prompt input overlayed at bottom of the main area */}
       <ChatInputArea
-        disableInput={disableInput}
+        disableInput={disableInput || !isAuthenticated || authLoading}
         selectedModel={selectedModel}
         orgName={`orgName`}
         onModelChange={setSelectedModel}
