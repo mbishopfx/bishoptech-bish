@@ -74,7 +74,6 @@ export const getProviderOptions = (modelId: string) => {
   const isAnthropicModel = modelId.startsWith("anthropic/");
   const isOpenAIModel = modelId.startsWith("openai/");
   const isGoogleModel = modelId.startsWith("google/");
-  const isMoonshotModel = modelId.startsWith("moonshotai/");
 
   return {
     openai: isOpenAIModel && supportsReasoning(modelId)
@@ -99,13 +98,7 @@ export const getProviderOptions = (modelId: string) => {
           ...getReasoningSettings(modelId),
         }
       : baseOptions,
-    moonshotai: isMoonshotModel && supportsReasoning(modelId)
-      ? {
-          ...baseOptions,
-          reasoningEffort: "medium" as const,
-          reasoningSummary: "detailed" as const,
-        }
-      : baseOptions,
+    moonshotai: baseOptions,
   };
 };
 

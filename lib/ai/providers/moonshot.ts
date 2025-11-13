@@ -17,15 +17,12 @@ export interface MoonshotSettings {
   timeout?: number;
   // Moonshot-specific options
   parallelToolCalls?: boolean;
-  reasoningEffort?: "minimal" | "low" | "medium" | "high";
-  reasoningSummary?: "auto" | "detailed";
 }
 
 // Default Moonshot settings
 export const DEFAULT_MOONSHOT_SETTINGS: MoonshotSettings = {
   ...DEFAULT_PROVIDER_SETTINGS,
   parallelToolCalls: true,
-  reasoningEffort: "medium",
   maxRetries: 3,
 };
 
@@ -43,7 +40,6 @@ export const MOONSHOT_MODELS: BaseModelConfig[] = [
       supportsTools: true,
       supportsStreaming: true,
       supportsImageInput: true,
-      supportsImageOutput: true,
       supportsPDFInput: true,
       supportsObjectGeneration: true,
       maxTokens: 16384,
@@ -62,7 +58,6 @@ export const MOONSHOT_MODELS: BaseModelConfig[] = [
       supportsStreaming: true,
       supportsReasoning: true,
       supportsImageInput: true,
-      supportsImageOutput: true,
       supportsPDFInput: true,
       supportsObjectGeneration: true,
       maxTokens: 16384,
