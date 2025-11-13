@@ -80,8 +80,8 @@ export const OPENAI_MODELS: BaseModelConfig[] = [
     provider: "openai",
     description:
       "Versión conversacional y cálida con razonamiento adaptativo y mejor seguimiento de instrucciones",
-    contextWindow: 400000,
-    isPremium: false,
+    contextWindow: 128000,
+    isPremium: true,
     capabilities: mergeCapabilities({
       supportsTools: true,
       supportsStreaming: true,
