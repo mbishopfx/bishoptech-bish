@@ -5,10 +5,11 @@ import { ANTHROPIC_MODELS } from "./providers/anthropic";
 import { GOOGLE_MODELS, getReasoningSettings } from "./providers/google";
 import { DEEPSEEK_MODELS } from "./providers/deepseek";
 import { MISTRAL_MODELS } from "./providers/mistral";
+import { MOONSHOT_MODELS } from "./providers/moonshot";
 import { type BaseModelConfig, type ModelCapabilities } from "./config/base";
 
 // All models in one array
-export const MODELS: BaseModelConfig[] = [...OPENAI_MODELS, ...XAI_MODELS, ...ANTHROPIC_MODELS, ...GOOGLE_MODELS, ...DEEPSEEK_MODELS, ...MISTRAL_MODELS];
+export const MODELS: BaseModelConfig[] = [...OPENAI_MODELS, ...XAI_MODELS, ...ANTHROPIC_MODELS, ...GOOGLE_MODELS, ...DEEPSEEK_MODELS, ...MISTRAL_MODELS, ...MOONSHOT_MODELS];
 
 // Configure gateway provider with app attribution headers
 export const gateway = createGateway({
@@ -73,6 +74,7 @@ export const getProviderOptions = (modelId: string) => {
   const isAnthropicModel = modelId.startsWith("anthropic/");
   const isOpenAIModel = modelId.startsWith("openai/");
   const isGoogleModel = modelId.startsWith("google/");
+  const isMoonshotModel = modelId.startsWith("moonshotai/");
 
   return {
     openai: isOpenAIModel && supportsReasoning(modelId)
@@ -95,6 +97,13 @@ export const getProviderOptions = (modelId: string) => {
       ? {
           ...baseOptions,
           ...getReasoningSettings(modelId),
+        }
+      : baseOptions,
+    moonshotai: isMoonshotModel && supportsReasoning(modelId)
+      ? {
+          ...baseOptions,
+          reasoningEffort: "medium" as const,
+          reasoningSummary: "detailed" as const,
         }
       : baseOptions,
   };
