@@ -13,12 +13,12 @@ import { extractOrganizationIdFromJWT } from "./helpers/quota";
 // Plan quota configuration // Could remove and use stripe metadata to fetch plan details
 const PLAN_QUOTAS = {
   plus: {
-    standardQuotaLimit: 500,
+    standardQuotaLimit: 1000,
     premiumQuotaLimit: 100,
   },
   pro: {
-    standardQuotaLimit: 1500,
-    premiumQuotaLimit: 300,
+    standardQuotaLimit: 2700,
+    premiumQuotaLimit: 270,
   },
 } as const;
 

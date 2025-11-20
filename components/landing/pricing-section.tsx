@@ -4,6 +4,9 @@ import { Button } from "@/components/ai/ui/button";
 import { Check, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { motion } from "motion/react";
+import { useConvexAuth } from "convex/react";
+import { useAuth } from "@workos-inc/authkit-nextjs/components";
+import { useRouter } from "next/navigation";
 import {
   StandarIcon,
   PremiumIcon,
@@ -84,6 +87,19 @@ function getFeatureIcon(feature: string) {
 }
 
 export default function PricingSection() {
+  const { isAuthenticated } = useConvexAuth();
+  const router = useRouter();
+
+  const handlePlanSelection = (planName: string) => {
+    if (isAuthenticated) {
+      // If user is authenticated, redirect to the subscribe page with the plan
+      router.push(`/subscribe?plan=${planName.toLowerCase()}`);
+    } else {
+      // If not authenticated, redirect to sign-up with the plan
+      router.push(`/sign-up?plan=${planName.toLowerCase()}`);
+    }
+  };
+
   return (
     <section className="py-24 relative" id="pricing">
       <div className="container px-4 md:px-6 mx-auto">
@@ -145,6 +161,19 @@ export default function PricingSection() {
                 })}
               </ul>
 
+              {plan.name !== "Enterprise" ? (
+                 <Button
+                    onClick={() => handlePlanSelection(plan.name)}
+                    variant={plan.popular ? "default" : "outline"}
+                    className={`w-full ${
+                      plan.popular
+                        ? "bg-accent hover:bg-accent/80 text-white"
+                        : "hover:bg-accent/10 dark:hover:bg-accent/20"
+                    }`}
+                  >
+                    {plan.buttonText}
+                  </Button>
+              ) : (
               <Button
                 asChild
                 variant={plan.popular ? "default" : "outline"}
@@ -156,6 +185,7 @@ export default function PricingSection() {
               >
                 <Link href={plan.href}>{plan.buttonText}</Link>
               </Button>
+              )}
             </motion.div>
           ))}
         </div>
