@@ -7,6 +7,7 @@ import "./table.css";
 import { getAuditLogPortalLink } from "@/actions/getAuditLogPortalLink";
 import { SettingsSection } from "@/components/settings";
 import { getOrganizationMembers, OrganizationMembershipWithUser } from "@/actions/getOrganizationMembers";
+import { Invitation } from "@workos-inc/node";
 
 export default async function MembersPage() {
   const { user, organizationId } = await withAuth({
@@ -32,8 +33,12 @@ export default async function MembersPage() {
   const canViewAuditLogs = await hasPermission("AUDIT_LOGS");
 
   let members: OrganizationMembershipWithUser[] = [];
+  let invitations: Invitation[] = [];
+
   if (userHasPermission) {
-    members = await getOrganizationMembers(organizationId);
+    const data = await getOrganizationMembers(organizationId);
+    members = data.members;
+    invitations = data.invitations;
   }
 
   let auditLogsLink: string | null = null;
@@ -70,7 +75,7 @@ export default async function MembersPage() {
       
       <div className="w-full">
         {userHasPermission ? (
-          <MembersList members={members} organizationId={organizationId} currentUserId={user.id} />
+          <MembersList members={members} invitations={invitations} organizationId={organizationId} currentUserId={user.id} />
         ) : (
           <Card>
             <Text>No tienes permisos para ver la lista de miembros.</Text>

@@ -2,11 +2,12 @@
 
 import { useMemo, useState } from "react"
 import { CaretDownIcon, CaretSortIcon, CaretUpIcon, DotsHorizontalIcon, MagnifyingGlassIcon, PlusIcon, CheckCircledIcon, ExclamationTriangleIcon, ReloadIcon } from "@radix-ui/react-icons"
-import { OrganizationMembership, User } from "@workos-inc/node"
+import { OrganizationMembership, User, Invitation as WorkOSInvitation } from "@workos-inc/node"
 import { inviteUser } from "@/actions/inviteUser"
 import { updateRole } from "@/actions/updateRole"
 import { removeMember } from "@/actions/removeMember"
 import { useRouter } from "next/navigation"
+import { revokeInvitation } from "@/actions/revokeInvitation"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ai/ui/avatar"
 import { Badge } from "@/components/ai/ui/badge"
@@ -44,19 +45,20 @@ export interface OrganizationMembershipWithUser extends OrganizationMembership {
 
 interface MembersListProps {
   members: OrganizationMembershipWithUser[]
+  invitations?: WorkOSInvitation[]
   organizationId: string
   currentUserId: string
 }
 
-type SortField = "name" | "email" | "role" | "lastSignInAt"
+type SortField = "name" | "email" | "role" | "status"
 type SortDirection = "asc" | "desc"
 
-interface Invitation {
+interface InvitationFormData {
   email: string
   role: string
 }
 
-export function MembersList({ members, organizationId, currentUserId }: MembersListProps) {
+export function MembersList({ members, invitations = [], organizationId, currentUserId }: MembersListProps) {
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState("")
   const [sortField, setSortField] = useState<SortField>("name")
@@ -64,7 +66,7 @@ export function MembersList({ members, organizationId, currentUserId }: MembersL
   const [isInviteOpen, setIsInviteOpen] = useState(false)
   
   // State for invite dialog
-  const [invitations, setInvitations] = useState<Invitation[]>([
+  const [invitationForms, setInvitationForms] = useState<InvitationFormData[]>([
     { email: "", role: "member" }
   ])
   const [isInviting, setIsInviting] = useState(false)
@@ -84,16 +86,22 @@ export function MembersList({ members, organizationId, currentUserId }: MembersL
   const [isRemoving, setIsRemoving] = useState(false)
   const [removeError, setRemoveError] = useState<string | null>(null)
 
+  // State for revoke invitation
+  const [isRevokeOpen, setIsRevokeOpen] = useState(false)
+  const [invitationToRevoke, setInvitationToRevoke] = useState<WorkOSInvitation | null>(null)
+  const [isRevoking, setIsRevoking] = useState(false)
+  const [revokeError, setRevokeError] = useState<string | null>(null)
+
   const handleAddInvitation = () => {
-    if (invitations.length < 10) {
-      setInvitations([...invitations, { email: "", role: "member" }])
+    if (invitationForms.length < 10) {
+      setInvitationForms([...invitationForms, { email: "", role: "member" }])
     }
   }
 
-  const handleInvitationChange = (index: number, field: keyof Invitation, value: string) => {
-    const newInvitations = [...invitations]
+  const handleInvitationChange = (index: number, field: keyof InvitationFormData, value: string) => {
+    const newInvitations = [...invitationForms]
     newInvitations[index] = { ...newInvitations[index], [field]: value }
-    setInvitations(newInvitations)
+    setInvitationForms(newInvitations)
   }
 
   const handleInvite = async (e: React.FormEvent) => {
@@ -103,7 +111,7 @@ export function MembersList({ members, organizationId, currentUserId }: MembersL
     
     try {
       const results = await Promise.all(
-        invitations
+        invitationForms
           .filter(inv => inv.email.trim() !== "")
           .map(inv => inviteUser(organizationId, inv.email, inv.role))
       )
@@ -132,7 +140,7 @@ export function MembersList({ members, organizationId, currentUserId }: MembersL
   const resetInviteState = () => {
     setIsSuccess(false)
     setInviteError(null)
-    setInvitations([{ email: "", role: "member" }])
+    setInvitationForms([{ email: "", role: "member" }])
   }
 
   const closeInviteDialog = () => {
@@ -197,6 +205,33 @@ export function MembersList({ members, organizationId, currentUserId }: MembersL
     }
   }
 
+  const openRevokeDialog = (invitation: WorkOSInvitation) => {
+    setInvitationToRevoke(invitation)
+    setRevokeError(null)
+    setIsRevokeOpen(true)
+  }
+
+  const handleRevokeInvitation = async () => {
+    if (!invitationToRevoke) return
+
+    setIsRevoking(true)
+    setRevokeError(null)
+    try {
+      const result = await revokeInvitation(invitationToRevoke.id)
+      if (result.success) {
+        setIsRevokeOpen(false)
+        router.refresh()
+      } else {
+        setRevokeError("Error al revocar la invitación: " + result.error)
+      }
+    } catch (error) {
+      console.error(error)
+      setRevokeError("Ocurrió un error inesperado")
+    } finally {
+      setIsRevoking(false)
+    }
+  }
+
   const handleSort = (field: SortField) => {
     if (sortField === field) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc")
@@ -215,41 +250,50 @@ export function MembersList({ members, organizationId, currentUserId }: MembersL
     )
   }
 
-  const processedMembers = useMemo(() => {
+  const processedData = useMemo(() => {
     const query = searchQuery.toLowerCase()
 
-    const filtered = members.filter((member) => {
-      const user = member.user
-      const name =
-        user?.firstName && user?.lastName
-          ? `${user.firstName} ${user.lastName}`
-          : user?.firstName || user?.lastName || "Nombre Desconocido"
-      const email = user?.email || ""
+    const memberRows = members.map(m => ({
+        id: m.id,
+        name: m.user ? (m.user.firstName && m.user.lastName ? `${m.user.firstName} ${m.user.lastName}` : m.user.firstName || m.user.lastName || "Nombre Desconocido") : "Usuario Desconocido",
+        email: m.user?.email || "",
+        role: (typeof m.role === 'object' ? m.role?.slug : m.role) || "member",
+        status: m.user?.lastSignInAt ? "active" : "inactive",
+        lastActivity: m.user?.lastSignInAt || null,
+        avatarUrl: m.user?.profilePictureUrl,
+        rawMember: m,
+        rawInvitation: null,
+        isInvitation: false
+    }))
 
-      return name.toLowerCase().includes(query) || email.toLowerCase().includes(query)
+    const invitationRows = invitations.map(i => ({
+        id: i.id,
+        name: i.email, 
+        email: i.email,
+        role: "member", // Invitations from list might not have role easily
+        status: "pending",
+        lastActivity: i.createdAt,
+        avatarUrl: undefined,
+        rawMember: null,
+        rawInvitation: i,
+        isInvitation: true
+    }))
+
+    const all = [...memberRows, ...invitationRows]
+
+    const filtered = all.filter((item) => {
+      return item.name.toLowerCase().includes(query) || item.email.toLowerCase().includes(query)
     })
 
     return filtered.sort((a, b) => {
-      const userA = a.user
-      const userB = b.user
-
-      const nameA =
-        userA?.firstName && userA?.lastName
-          ? `${userA.firstName} ${userA.lastName}`
-          : userA?.firstName || userA?.lastName || "Nombre Desconocido"
-      const nameB =
-        userB?.firstName && userB?.lastName
-          ? `${userB.firstName} ${userB.lastName}`
-          : userB?.firstName || userB?.lastName || "Nombre Desconocido"
-
-      const emailA = userA?.email || ""
-      const emailB = userB?.email || ""
-
-      const roleA = typeof a.role === "object" ? a.role?.slug : a.role
-      const roleB = typeof b.role === "object" ? b.role?.slug : b.role
-
-      const dateA = userA?.lastSignInAt ? new Date(userA.lastSignInAt).getTime() : 0
-      const dateB = userB?.lastSignInAt ? new Date(userB.lastSignInAt).getTime() : 0
+      const nameA = a.name
+      const nameB = b.name
+      const emailA = a.email
+      const emailB = b.email
+      const roleA = a.role
+      const roleB = b.role
+      const statusA = a.status
+      const statusB = b.status
 
       let comparison = 0
       switch (sortField) {
@@ -260,16 +304,16 @@ export function MembersList({ members, organizationId, currentUserId }: MembersL
           comparison = emailA.localeCompare(emailB)
           break
         case "role":
-          comparison = (roleA || "").localeCompare(roleB || "")
+          comparison = roleA.localeCompare(roleB)
           break
-        case "lastSignInAt":
-          comparison = dateA - dateB
+        case "status":
+          comparison = statusA.localeCompare(statusB)
           break
       }
 
       return sortDirection === "asc" ? comparison : -comparison
     })
-  }, [members, searchQuery, sortField, sortDirection])
+  }, [members, invitations, searchQuery, sortField, sortDirection])
 
   const renderDate = (date?: string | null) => {
     if (!date) return "Nunca"
@@ -301,12 +345,53 @@ export function MembersList({ members, organizationId, currentUserId }: MembersL
       "bg-muted/60 text-muted-foreground border border-border/70 dark:bg-[#1F1F22] dark:text-[#D4D4D8] dark:border-[#3F3F46]/60",
   }
 
+  const statusPillStyles: Record<string, string> = {
+    active:
+      "bg-[#DEF7EC] text-[#047857] border border-[#ACEAD3]/70 dark:bg-[#0E3A2F] dark:text-[#BBF7D0] dark:border-[#10B981]/60",
+    inactive:
+      "bg-[#F5F5F7] text-[#3F3F46] border border-[#E4E4E7]/70 dark:bg-[#27272A] dark:text-[#E4E4E7] dark:border-[#52525B]/70",
+    pending:
+      "bg-[#FFF1DA] text-[#A8550B] border border-[#FFD4A8]/70 dark:bg-[#3B2411] dark:text-[#FFD9B0] dark:border-[#F97316]/60",
+    default:
+      "bg-muted/60 text-muted-foreground border border-border/70 dark:bg-[#1F1F22] dark:text-[#D4D4D8] dark:border-[#3F3F46]/60",
+  }
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case "active":
+        return "Activo"
+      case "inactive":
+        return "Inactivo"
+      case "pending":
+        return "Pendiente"
+      default:
+        return status
+    }
+  }
+
+  const getRoleLabel = (role: string) => {
+    switch (role.toLowerCase()) {
+      case "owner":
+        return "Owner"
+      case "admin":
+        return "Admin"
+      case "manager":
+        return "Gerente"
+      case "member":
+        return "Miembro"
+      case "guest":
+        return "Invitado"
+      default:
+        return role
+    }
+  }
+
   return (
     <div className="space-y-2">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between bg-transparent border-none">
         <div>
           <p className="text-sm font-medium text-muted-foreground">
-            {processedMembers.length} {processedMembers.length === 1 ? "miembro" : "miembros"}
+            {processedData.length} {processedData.length === 1 ? "miembro" : "miembros"}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -375,7 +460,7 @@ export function MembersList({ members, organizationId, currentUserId }: MembersL
                   </div>
                   
                   <div className="space-y-3 max-h-[60vh] overflow-y-auto p-1">
-                    {invitations.map((invitation, index) => (
+                    {invitationForms.map((invitation, index) => (
                       <div key={index} className="grid grid-cols-[1fr_200px] gap-4 items-start">
                         <Input
                           placeholder="usuario@ejemplo.com"
@@ -407,7 +492,7 @@ export function MembersList({ members, organizationId, currentUserId }: MembersL
                     <Button
                       type="button"
                       onClick={handleAddInvitation}
-                      disabled={invitations.length >= 10}
+                      disabled={invitationForms.length >= 10}
                       className="cursor-pointer rounded-lg font-medium gap-2 min-w-[150px]"
                     >
                       <PlusIcon className="size-4" />
@@ -556,6 +641,51 @@ export function MembersList({ members, organizationId, currentUserId }: MembersL
         </DialogContent>
       </Dialog>
 
+      {/* Revoke Invitation Dialog */}
+      <Dialog open={isRevokeOpen} onOpenChange={setIsRevokeOpen}>
+        <DialogContent className="max-w-md rounded-2xl border border-border/50 bg-white/95 dark:bg-popover-main shadow-2xl">
+          <div className="space-y-6 p-2">
+            <DialogHeader className="space-y-2">
+              <DialogTitle className="text-2xl font-bold text-destructive dark:text-destructive">
+                Revocar invitación
+              </DialogTitle>
+              <DialogDescription className="text-base text-muted-foreground leading-relaxed">
+                ¿Estás seguro que deseas revocar la invitación para {invitationToRevoke?.email}?
+              </DialogDescription>
+            </DialogHeader>
+            
+            {revokeError && (
+              <div className="flex items-center gap-2 text-sm text-destructive">
+                <ExclamationTriangleIcon className="size-4 shrink-0" />
+                <span>{revokeError}</span>
+              </div>
+            )}
+
+            <div className="flex justify-end pt-4 gap-2">
+              <Button type="button" onClick={() => setIsRevokeOpen(false)} className="cursor-pointer rounded-lg">
+                Cancelar
+              </Button>
+              <Button 
+                variant="destructive"
+                onClick={handleRevokeInvitation}
+                disabled={isRevoking}
+                className="cursor-pointer rounded-lg font-medium gap-2 min-w-[120px]"
+              >
+                {isRevoking ? (
+                  <>
+                    Revocando
+                  </>
+                ) : (
+                  <>
+                    Revocar
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <div className="rounded-2xl border border-border/60 bg-white/95 shadow-lg shadow-black/5 backdrop-blur-sm dark:bg-popover-secondary/80 dark:shadow-black/30 overflow-hidden">
         <Table className="min-w-full">
           <TableHeader>
@@ -592,11 +722,11 @@ export function MembersList({ members, organizationId, currentUserId }: MembersL
               </TableHead>
               <TableHead
                 className="group cursor-pointer select-none"
-                onClick={() => handleSort("lastSignInAt")}
+                onClick={() => handleSort("status")}
               >
                 <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide">
-                  Última Actividad
-                  {getSortIcon("lastSignInAt")}
+                  Estado
+                  {getSortIcon("status")}
                 </span>
               </TableHead>
               <TableHead className="w-12" />
@@ -604,22 +734,16 @@ export function MembersList({ members, organizationId, currentUserId }: MembersL
           </TableHeader>
 
           <TableBody>
-            {processedMembers.map((member, index) => {
-              const user = member.user
-              const name =
-                user?.firstName && user?.lastName
-                  ? `${user.firstName} ${user.lastName}`
-                  : user?.firstName || user?.lastName || "Nombre Desconocido"
-              const email = user?.email || "Sin correo"
-              const profilePictureUrl = user?.profilePictureUrl
-              const roleSlug = typeof member.role === "object" ? member.role?.slug : member.role
-              const role = roleSlug || "Miembro"
-              const lastSignInAt = renderDate(user?.lastSignInAt)
-              const isCurrentUser = member.userId === currentUserId
-
+            {processedData.map((item, index) => {
+              const name = item.name
+              const email = item.email
+              const profilePictureUrl = item.avatarUrl
+              const role = item.role
+              const isCurrentUser = item.isInvitation ? false : item.rawMember?.userId === currentUserId
+              
               return (
                 <TableRow
-                  key={member.id}
+                  key={item.id}
                   className={cn(
                     "border-border/50 transition",
                     index % 2 === 0 ? "bg-black/0 dark:bg-transparent" : "bg-black/[0.015] dark:bg-transparent",
@@ -650,14 +774,22 @@ export function MembersList({ members, organizationId, currentUserId }: MembersL
                       variant="secondary"
                       className={cn(
                         "rounded-full px-3 py-1 text-[11px] font-medium uppercase",
-                        rolePillStyles[(roleSlug ?? "default").toLowerCase()] ?? rolePillStyles.default,
+                        rolePillStyles[(role ?? "default").toLowerCase()] ?? rolePillStyles.default,
                       )}
                     >
-                      {role}
+                      {getRoleLabel(role)}
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <span className="text-sm text-muted-foreground">{lastSignInAt}</span>
+                    <Badge
+                      variant="secondary"
+                      className={cn(
+                        "rounded-full px-3 py-1 text-[11px] font-medium uppercase",
+                        statusPillStyles[item.status] ?? statusPillStyles.default,
+                      )}
+                    >
+                      {getStatusLabel(item.status)}
+                    </Badge>
                   </TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
@@ -668,7 +800,7 @@ export function MembersList({ members, organizationId, currentUserId }: MembersL
                           disabled={isCurrentUser}
                           className="cursor-pointer text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-hover/40 disabled:opacity-50"
                         >
-                          <span className="sr-only">Abrir acciones del miembro</span>
+                          <span className="sr-only">Abrir acciones</span>
                           <DotsHorizontalIcon className="size-4" />
                         </Button>
                       </DropdownMenuTrigger>
@@ -676,19 +808,31 @@ export function MembersList({ members, organizationId, currentUserId }: MembersL
                         align="end"
                         className="min-w-[190px] rounded-2xl border border-border/60 bg-white/95 p-1.5 shadow-xl shadow-black/10 backdrop-blur-sm dark:bg-popover-secondary/85"
                       >
-                        <DropdownMenuItem 
-                          className="cursor-pointer rounded-xl px-3 py-2 text-sm font-medium text-foreground/80 hover:bg-black/[0.04] dark:hover:bg-hover/40"
-                          onClick={() => openUpdateRoleDialog(member)}
-                        >
-                          Actualizar rol
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          variant="destructive"
-                          className="cursor-pointer rounded-xl px-3 py-2 text-sm font-medium text-destructive hover:bg-destructive/10 focus:text-destructive"
-                          onClick={() => openRemoveDialog(member)}
-                        >
-                          Eliminar miembro
-                        </DropdownMenuItem>
+                        {item.isInvitation ? (
+                          <DropdownMenuItem
+                            variant="destructive"
+                            className="cursor-pointer rounded-xl px-3 py-2 text-sm font-medium text-destructive hover:bg-destructive/10 focus:text-destructive"
+                            onClick={() => openRevokeDialog(item.rawInvitation!)}
+                          >
+                            Revocar invitación
+                          </DropdownMenuItem>
+                        ) : (
+                          <>
+                            <DropdownMenuItem 
+                              className="cursor-pointer rounded-xl px-3 py-2 text-sm font-medium text-foreground/80 hover:bg-black/[0.04] dark:hover:bg-hover/40"
+                              onClick={() => openUpdateRoleDialog(item.rawMember!)}
+                            >
+                              Actualizar rol
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              variant="destructive"
+                              className="cursor-pointer rounded-xl px-3 py-2 text-sm font-medium text-destructive hover:bg-destructive/10 focus:text-destructive"
+                              onClick={() => openRemoveDialog(item.rawMember!)}
+                            >
+                              Eliminar miembro
+                            </DropdownMenuItem>
+                          </>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -696,9 +840,9 @@ export function MembersList({ members, organizationId, currentUserId }: MembersL
               )
             })}
 
-            {processedMembers.length === 0 && (
+            {processedData.length === 0 && (
               <TableRow>
-                <TableCell colSpan={5} className="py-12 text-center text-sm text-muted-foreground">
+                <TableCell colSpan={6} className="py-12 text-center text-sm text-muted-foreground">
                   No hay miembros que coincidan con tu búsqueda.
                 </TableCell>
               </TableRow>
@@ -709,3 +853,4 @@ export function MembersList({ members, organizationId, currentUserId }: MembersL
     </div>
   )
 }
+

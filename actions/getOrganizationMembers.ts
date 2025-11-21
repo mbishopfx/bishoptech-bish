@@ -1,15 +1,21 @@
 import { workos } from "@/app/api/workos";
-import { OrganizationMembership, User } from "@workos-inc/node";
+import { OrganizationMembership, User, Invitation } from "@workos-inc/node";
 
 export interface OrganizationMembershipWithUser extends OrganizationMembership {
   user: User | null;
 }
 
-export async function getOrganizationMembers(organizationId: string): Promise<OrganizationMembershipWithUser[]> {
+export interface OrganizationData {
+  members: OrganizationMembershipWithUser[];
+  invitations: Invitation[];
+}
+
+export async function getOrganizationMembers(organizationId: string): Promise<OrganizationData> {
   try {
-    const [memberships, users] = await Promise.all([
+    const [memberships, users, invitations] = await Promise.all([
       getAllMemberships(organizationId),
-      getAllUsers(organizationId)
+      getAllUsers(organizationId),
+      getAllInvitations(organizationId)
     ]);
 
     const userMap = new Map<string, User>();
@@ -17,14 +23,22 @@ export async function getOrganizationMembers(organizationId: string): Promise<Or
       userMap.set(user.id, user);
     });
 
-    return memberships.map(membership => ({
+    const members = memberships.map(membership => ({
       ...membership,
       user: userMap.get(membership.userId) || null
     }));
 
+    // Filter invitations to show only pending ones
+    const pendingInvitations = invitations.filter(inv => inv.state === 'pending');
+
+    return { 
+      members, 
+      invitations: pendingInvitations 
+    };
+
   } catch (error) {
     console.error("Error fetching organization members:", error);
-    return [];
+    return { members: [], invitations: [] };
   }
 }
 
@@ -62,4 +76,22 @@ async function getAllUsers(organizationId: string) {
   } while (after);
 
   return allUsers;
+}
+
+async function getAllInvitations(organizationId: string) {
+  let allInvitations: Invitation[] = [];
+  let after: string | undefined = undefined;
+
+  do {
+    const { data, listMetadata } = await workos.userManagement.listInvitations({
+      organizationId,
+      after,
+      limit: 100,
+    });
+    
+    allInvitations = allInvitations.concat(data);
+    after = listMetadata.after;
+  } while (after);
+
+  return allInvitations;
 }
