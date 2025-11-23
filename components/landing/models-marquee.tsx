@@ -31,14 +31,42 @@ const MarqueeCard = ({ model }: { model: typeof MODELS[0] }) => {
 
   return (
     <div className="flex-shrink-0 w-[300px] mx-3 h-full" style={{ willChange: 'transform' }}>
-      <div className="h-full border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 rounded-xl p-5 flex flex-col justify-between" style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
-        <div>
+      <div className="h-full relative overflow-hidden flex flex-col justify-between p-5" style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
+         {/* Top border */}
+        <div className="absolute inset-x-0 top-0 flex w-full items-center justify-center">
+          <svg width="100%" height="1" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" className="inline-block h-auto w-full will-change-transform">
+            <line x1="0" y1="0.5" x2="100%" y2="0.5" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" strokeOpacity="0.12" strokeDasharray="4 6" vectorEffect="non-scaling-stroke" className="stroke-[color(display-p3_0.1725490196_0.1764705882_0.1882352941/1)] dark:stroke-white" />
+          </svg>
+        </div>
+
+        {/* Left border */}
+        <div className="absolute inset-y-0 left-0 flex h-full items-center justify-center">
+          <svg width="1" height="100%" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" className="inline-block h-full max-w-full will-change-transform">
+            <line x1="0.5" y1="0" x2="0.5" y2="100%" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" strokeOpacity="0.12" strokeDasharray="4 6" vectorEffect="non-scaling-stroke" className="stroke-[color(display-p3_0.1725490196_0.1764705882_0.1882352941/1)] dark:stroke-white" />
+          </svg>
+        </div>
+
+        {/* Right border */}
+        <div className="absolute inset-y-0 right-0 flex h-full items-center justify-center">
+          <svg width="1" height="100%" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" className="inline-block h-full max-w-full will-change-transform">
+            <line x1="0.5" y1="0" x2="0.5" y2="100%" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" strokeOpacity="0.12" strokeDasharray="4 6" vectorEffect="non-scaling-stroke" className="stroke-[color(display-p3_0.1725490196_0.1764705882_0.1882352941/1)] dark:stroke-white" />
+          </svg>
+        </div>
+
+        {/* Bottom border */}
+        <div className="absolute inset-x-0 bottom-0 flex w-full items-center justify-center">
+          <svg width="100%" height="1" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" className="inline-block h-auto w-full will-change-transform">
+            <line x1="0" y1="0.5" x2="100%" y2="0.5" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" strokeOpacity="0.12" strokeDasharray="4 6" vectorEffect="non-scaling-stroke" className="stroke-[color(display-p3_0.1725490196_0.1764705882_0.1882352941/1)] dark:stroke-white" />
+          </svg>
+        </div>
+
+        <div className="z-[2]">
           <div className="flex items-start justify-between mb-3">
             <div className="flex items-center space-x-2">
               {ProviderIcon ? (
-                <ProviderIcon className="size-5 text-gray-700 dark:text-gray-300" />
+                <ProviderIcon className="size-5 text-[color(display-p3_0.1725490196_0.1764705882_0.1882352941/1)] dark:text-white" />
               ) : null}
-              <span className="text-xs font-medium text-gray-500 dark:text-gray-400 capitalize">
+              <span className="text-xs font-medium text-[color(display-p3_0.1725490196_0.1764705882_0.1882352941/0.6)] dark:text-zinc-400 capitalize">
                 {model.provider === 'xai' ? 'xAI' : 
                  model.provider === 'moonshotai' ? 'Moonshot' :
                  model.provider.charAt(0).toUpperCase() + model.provider.slice(1)}
@@ -46,11 +74,11 @@ const MarqueeCard = ({ model }: { model: typeof MODELS[0] }) => {
             </div>
           </div>
           
-          <h4 className="font-semibold text-gray-900 dark:text-white mb-2 text-base">
+          <h4 className="font-semibold text-[color(display-p3_0.1725490196_0.1764705882_0.1882352941/1)] dark:text-white mb-2 text-base">
             {model.name}
           </h4>
           
-          <p className="text-sm text-gray-600 dark:text-gray-400">
+          <p className="text-sm text-[color(display-p3_0.1725490196_0.1764705882_0.1882352941/0.6)] dark:text-zinc-400">
             {model.description}
           </p>
         </div>
@@ -59,21 +87,17 @@ const MarqueeCard = ({ model }: { model: typeof MODELS[0] }) => {
   );
 };
 
-const MarqueeRow = ({ 
-  models, 
-  reverse = false, 
-  duration = "40s" 
-}: { 
-  models: typeof MODELS, 
-  reverse?: boolean, 
-  duration?: string 
+const MarqueeRow = ({
+  models,
+  reverse = false,
+  duration = "40s",
+}: {
+  models: typeof MODELS;
+  reverse?: boolean;
+  duration?: string;
 }) => {
   return (
     <div className="flex overflow-hidden w-full group relative py-3">
-       {/* Mask gradients - Made wider for better fade effect */}
-       <div className="absolute left-0 top-0 bottom-0 w-32 z-10 bg-gradient-to-r from-background to-transparent pointer-events-none" />
-       <div className="absolute right-0 top-0 bottom-0 w-32 z-10 bg-gradient-to-l from-background to-transparent pointer-events-none" />
-       
       <div 
         className={cn(
           "flex min-w-full shrink-0 items-stretch gap-0",

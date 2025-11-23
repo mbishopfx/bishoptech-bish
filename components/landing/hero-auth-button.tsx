@@ -19,7 +19,7 @@ export default function HeroAuthButton() {
       
       <Unauthenticated>
         <Button asChild variant="accent" size="lg" className="font-semibold">
-          <Link href="#pricing" className="font-semibold">Suscribirse</Link>
+          <Link href="/#pricing" className="font-semibold">Suscribirse</Link>
         </Button>
       </Unauthenticated>
     </>

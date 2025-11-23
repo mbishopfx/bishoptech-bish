@@ -1,6 +1,58 @@
+import type { Metadata } from "next";
 import { ModelsGrid } from "@/components/landing/models-grid";
 import Navbar from "@/components/landing/navbar";
 import Footer from "@/components/landing/footer";
+import CTASection from "@/components/landing/cta-section";
+
+const defaultSiteUrl = "https://rift.mx";
+const deploymentDomain =
+  process.env.NEXT_PUBLIC_SITE_URL ||
+  process.env.VERCEL_PROJECT_PRODUCTION_URL ||
+  process.env.VERCEL_URL;
+const siteUrl = deploymentDomain
+  ? deploymentDomain.startsWith("http")
+    ? deploymentDomain
+    : `https://${deploymentDomain}`
+  : defaultSiteUrl;
+const pageUrl = new URL("/models", siteUrl).toString();
+
+export const metadata: Metadata = {
+  title: "Catálogo de Modelos de IA | RIFT",
+  description: "Explora todos los modelos de inteligencia artificial disponibles en RIFT, desde GPT-5.1 Thinking hasta Gemini 3 Pro y Mistral, en una sola plataforma.",
+  alternates: {
+    canonical: "/models",
+  },
+  keywords: [
+    "modelos de ia",
+    "catalogo ia",
+    "chatgpt",
+    "anthropic claude",
+    "google gemini",
+    "xai grok",
+    "deepseek",
+    "mistral",
+  ],
+  openGraph: {
+    title: "Catálogo de Modelos de IA | RIFT",
+    description: "Explora la biblioteca completa de modelos disponibles en RIFT",
+    url: pageUrl,
+    type: "website",
+    images: [
+      {
+        url: new URL("/opengraph-image.png", siteUrl).toString(),
+        width: 1200,
+        height: 630,
+        alt: "Catálogo de modelos de IA en RIFT",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Catálogo de Modelos de IA | RIFT",
+    description: "Explora la biblioteca completa de modelos disponibles en RIFT.",
+    images: [new URL("/twitter-image.png", siteUrl).toString()],
+  },
+};
 
 export default function ModelsPage() {
   return (
@@ -16,6 +68,9 @@ export default function ModelsPage() {
         </div>
         <ModelsGrid />
       </main>
+      <div className="container mx-auto px-4 max-w-5xl mb-12">
+        <CTASection />
+      </div>
       <Footer />
     </div>
   );

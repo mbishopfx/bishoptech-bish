@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "@/styles/globals.css";
 import { ConvexClientProvider } from "@/components/ConvexClientProvider";
@@ -14,20 +14,56 @@ const inter = Inter({
 const productionDomain = process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL;
 const baseUrl = productionDomain ? `https://${productionDomain}` : "http://localhost:3000";
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "white" },
+    { media: "(prefers-color-scheme: dark)", color: "black" },
+  ],
+};
+
 export const metadata: Metadata = {
   title: {
     template: "%s | Rift",
     default: "Rift",
   },
-  description: "Todas las IAs en una sola plataforma",
+  description: "Plataforma que unifica todos los modelos de IA en una sola app empresarial.",
   applicationName: "Rift",
-  metadataBase: new URL(baseUrl),
+  metadataBase: baseUrl,
   alternates: {
     canonical: "/",
   },
+  keywords: [
+    "rift",
+    "inteligencia artificial",
+    "ia empresarial",
+    "plataforma global ia",
+    "chatgpt",
+    "anthropic",
+    "google gemini",
+    "deepseek",
+    "mistral",
+    "ia para escuela",
+    "ia para negocios",
+    "ia educacional",
+
+  ],
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-snippet": -1,
+      "max-image-preview": "large",
+      "max-video-preview": -1,
+    },
+  },
   openGraph: {
     title: "Rift",
-    description: "Todas las IAs en una sola plataforma",
+    description: "Todas las IAs, una sola plataforma",
     url: baseUrl,
     siteName: "Rift",
     type: "website",
@@ -40,7 +76,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Rift",
-    description: "Todas las IAs en una sola plataforma",
+    description: "Todas las IAs, una sola plataforma",
     images: ["/twitter-image.png"],
   },
 };
@@ -54,7 +90,7 @@ export default async function RootLayout({
   const initialModel = cookieStore.get("selectedModel")?.value;
 
   return (
-    <html lang="en" className={`${inter.className}`} suppressHydrationWarning>
+    <html lang="es" className={`${inter.className}`} suppressHydrationWarning>
       <body className={`bg-background relative antialiased`}>
         <ConvexClientProvider>
           <ThemeProvider

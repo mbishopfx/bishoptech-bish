@@ -1,7 +1,7 @@
 export { default as HeroSection } from "./hero-section";
 export { default as IntegrationsSection } from "./integrations-section";
 export { default as KnowledgeCenterSection } from "./knowledge-center-section";
-export { default as ModelsShowcase } from "./models-showcase";
+export { ModelsMarquee } from "./models-marquee";
 export { default as ArchitectureSection } from "./architecture-section";
 export { default as Navbar } from "./navbar";
 export { default as WhatIsRIFTSection } from "./what-is-rift-section";

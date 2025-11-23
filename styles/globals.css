@@ -341,3 +341,11 @@
   animation: subtle-shine 5s ease-in-out infinite;
 }
 
+/* Mock Chat Demo Gradient */
+.mock-chat-bg {
+  background: linear-gradient(to left, color(display-p3 0.902 0.9451 0.9294), color(display-p3 0.898 0.9098 0.9608));
+}
+
+.dark .mock-chat-bg {
+  background: linear-gradient(to left, oklch(0.15 0.02 160), oklch(0.15 0.02 280));
+}

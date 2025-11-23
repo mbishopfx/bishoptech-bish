@@ -2,9 +2,9 @@ import Link from "next/link";
 
 export default function Footer() {
   return (
-    <footer className="bg-white dark:bg-popover-main border-t border-gray-200 dark:border-border mt-24">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+    <footer className="bg-white dark:bg-popover-main border-t border-gray-200 dark:border-border mt-12 md:mt-24">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
           {/* Brand Section */}
           <div className="md:col-span-1">
             <div className="flex items-center space-x-2 mb-4">
@@ -13,6 +13,12 @@ export default function Footer() {
             <p className="text-gray-600 dark:text-text-secondary text-sm leading-relaxed mb-6">
               La mejor manera para usar Inteligencia Artificial.
             </p>
+            <address className="text-gray-600 dark:text-text-secondary text-sm mb-6 not-italic">
+              Av. Lago Zurich 219,<br />
+              Torre Carso II, Piso 12,<br />
+              Col. Ampliacion Granada,<br />
+              Miguel Hidalgo, CDMX, MX. 11529
+            </address>
             {/* <div className="flex space-x-3">
               <Link
                 href="#"
@@ -54,12 +60,12 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="#models" className="text-sm text-gray-600 dark:text-text-secondary hover:text-gray-900 dark:hover:text-popover-text transition-colors">
+                <Link href="/models" className="text-sm text-gray-600 dark:text-text-secondary hover:text-gray-900 dark:hover:text-popover-text transition-colors">
                   Modelos disponibles
                 </Link>
               </li>
               <li>
-                <Link href="#pricing" className="text-sm text-gray-600 dark:text-text-secondary hover:text-gray-900 dark:hover:text-popover-text transition-colors">
+                <Link href="/#pricing" className="text-sm text-gray-600 dark:text-text-secondary hover:text-gray-900 dark:hover:text-popover-text transition-colors">
                   Precios
                 </Link>
               </li>
@@ -81,12 +87,22 @@ export default function Footer() {
             <h3 className="text-sm font-semibold text-gray-900 dark:text-popover-text mb-4">Empresa</h3>
             <ul className="space-y-3">
               <li>
-                <Link href="https://compound.com.mx" className="text-sm text-gray-600 dark:text-text-secondary hover:text-gray-900 dark:hover:text-popover-text transition-colors">
+                <Link
+                  href="https://compound.com.mx"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-sm text-gray-600 dark:text-text-secondary hover:text-gray-900 dark:hover:text-popover-text transition-colors"
+                >
                   Acerca de
                 </Link>
               </li>
               <li>
-                <Link href="" className="text-sm text-gray-600 dark:text-text-secondary hover:text-gray-900 dark:hover:text-popover-text transition-colors">
+                <Link
+                  href=""
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-sm text-gray-600 dark:text-text-secondary hover:text-gray-900 dark:hover:text-popover-text transition-colors"
+                >
                   Blog
                 </Link>
               </li>
@@ -108,17 +124,17 @@ export default function Footer() {
             <h3 className="text-sm font-semibold text-gray-900 dark:text-popover-text mb-4">Soporte</h3>
             <ul className="space-y-3">
               <li>
-                <Link href="" className="text-sm text-gray-600 dark:text-text-secondary hover:text-gray-900 dark:hover:text-popover-text transition-colors">
+                <Link href="mailto:help@rift.mx" className="text-sm text-gray-600 dark:text-text-secondary hover:text-gray-900 dark:hover:text-popover-text transition-colors">
                   Centro de ayuda
                 </Link>
               </li>
               <li>
-                <Link href="" className="text-sm text-gray-600 dark:text-text-secondary hover:text-gray-900 dark:hover:text-popover-text transition-colors">
+                <Link href="mailto:contact@rift.mx?subject=Documentacion" className="text-sm text-gray-600 dark:text-text-secondary hover:text-gray-900 dark:hover:text-popover-text transition-colors">
                   Documentación
                 </Link>
               </li>
               <li>
-                <Link href="" className="text-sm text-gray-600 dark:text-text-secondary hover:text-gray-900 dark:hover:text-popover-text transition-colors">
+                <Link href="mailto:support@rift.mx?subject=Estado%20del%20servicio" className="text-sm text-gray-600 dark:text-text-secondary hover:text-gray-900 dark:hover:text-popover-text transition-colors">
                   Estado del servicio
                 </Link>
               </li>
@@ -127,9 +143,9 @@ export default function Footer() {
         </div>
 
         {/* Bottom Section */}
-        <div className="mt-12 pt-8 border-t border-gray-200 dark:border-border">
+        <div className="mt-8 md:mt-12 pt-8 border-t border-gray-200 dark:border-border">
           <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-            <div className="flex space-x-6">
+            <div className="flex space-x-6 justify-center md:justify-start">
               <Link href="/privacy-policy" className="text-xs text-gray-500 dark:text-text-muted hover:text-gray-700 dark:hover:text-text-secondary transition-colors">
                 Política de privacidad
               </Link>
@@ -137,7 +153,7 @@ export default function Footer() {
                 Términos de servicio
               </Link>
             </div>
-            <div className="text-xs text-gray-500 dark:text-text-muted">
+            <div className="text-xs text-gray-500 dark:text-text-muted text-center md:text-left">
               © {new Date().getFullYear()} The Unreal Compound SA de CV. Todos los derechos reservados.
             </div>
           </div>

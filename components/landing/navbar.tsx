@@ -5,14 +5,26 @@ import Link from "next/link";
 
 export default function Navbar() {
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-gray-200 bg-white/80 backdrop-blur-md dark:bg-popover-main/80 dark:border-border">
+    <header className="fixed top-0 left-0 right-0 z-50 w-full border-b border-gray-200 bg-white/80 backdrop-blur-md dark:bg-popover-main/80 dark:border-border">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <div className="flex items-center gap-8">
-            <Link href="/" className="flex items-center">
+            <Link href="/" className="flex items-center" aria-label="Ir al inicio">
               <AppLogo className="h-8 w-auto" />
+              <span className="sr-only">RIFT</span>
             </Link>
+            <nav className="hidden md:flex items-center gap-12 text-md font-medium text-muted-foreground" aria-label="Navegación principal">
+              <Link href="/#about" className="hover:text-foreground transition-colors">
+                Acerca
+              </Link>
+              <Link href="/#pricing" className="hover:text-foreground transition-colors">
+                Precio
+              </Link>
+              <Link href="/models" className="hover:text-foreground transition-colors">
+                Modelos
+              </Link>
+            </nav>
           </div>
 
           <div className="flex items-center gap-3">
