@@ -12,6 +12,7 @@ import {
   FaqSection,
 } from "@/components/landing";
 import { landingPlans } from "@/components/landing/data/pricing";
+import { faqs } from "@/components/landing/data/faqs";
 
 const deploymentDomain =
   process.env.NEXT_PUBLIC_SITE_URL ||
@@ -108,40 +109,14 @@ const whatIsRiftStructuredData = {
 const faqStructuredData = {
   "@context": "https://schema.org",
   "@type": "FAQPage",
-  mainEntity: [
-    {
-      "@type": "Question",
-      name: "¿Qué es RIFT?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "RIFT es una plataforma unificada que te da acceso a los modelos de inteligencia artificial más avanzados del mundo (como GPT-4, Claude 3.5, Gemini 1.5, etc.) bajo una sola suscripción.",
-      },
+  mainEntity: faqs.map((faq) => ({
+    "@type": "Question",
+    name: faq.question,
+    acceptedAnswer: {
+      "@type": "Answer",
+      text: faq.answer,
     },
-    {
-      "@type": "Question",
-      name: "¿Qué modelos de IA están disponibles?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "Ofrecemos acceso a una amplia gama de modelos líderes en la industria, incluyendo la familia GPT de OpenAI, Claude de Anthropic, Gemini de Google, y modelos de código abierto como Llama y Mistral.",
-      },
-    },
-    {
-      "@type": "Question",
-      name: "¿Cómo funciona la suscripción?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "Con RIFT pagas una sola cuota mensual (desde $190 MXN) y tienes acceso a todos los modelos en una sola interfaz, ahorrando en múltiples suscripciones.",
-      },
-    },
-    {
-      "@type": "Question",
-      name: "¿Puedo cancelar en cualquier momento?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "Sí, puedes cancelar tu suscripción en cualquier momento desde tu panel de control. No hay contratos a largo plazo.",
-      },
-    },
-  ],
+  })),
 };
 
 export default function LandingPage() {
@@ -158,7 +133,7 @@ export default function LandingPage() {
 
       <main
         id="contenido-principal"
-        className="max-w-5xl mx-auto px-4 mt-28 sm:px-6 lg:px-8 space-y-24 md:space-y-32"
+        className="max-w-5xl mx-auto px-4 mt-28 sm:px-6 lg:px-8 space-y-20 md:space-y-32"
         role="main"
       >
         <HeroSection />

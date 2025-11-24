@@ -8,7 +8,9 @@ export default function HeroAuthButton() {
   return (
     <>
       <AuthLoading>
-        <div className="h-10 w-32 bg-gray-200 dark:bg-gray-700 rounded-md animate-pulse" />
+        <Button variant="accent" size="lg" className="font-semibold rounded-lg pointer-events-none" disabled>
+          <span className="invisible">Suscribirse</span>
+        </Button>
       </AuthLoading>
       
       <Authenticated>
@@ -18,7 +20,7 @@ export default function HeroAuthButton() {
       </Authenticated>
       
       <Unauthenticated>
-        <Button asChild variant="accent" size="lg" className="font-semibold">
+        <Button asChild variant="accent" size="lg" className="font-semibold rounded-lg">
           <Link href="/#pricing" className="font-semibold">Suscribirse</Link>
         </Button>
       </Unauthenticated>

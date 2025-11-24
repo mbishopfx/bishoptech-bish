@@ -9,7 +9,7 @@ export default function NavbarAuthButtons() {
   return (
     <div className="flex items-center space-x-4">
       <AuthLoading>
-        <div className="w-20 h-8 bg-gray-200 rounded-lg animate-pulse" />
+        <div className="hidden md:flex w-20 h-8 bg-gray-200 rounded-lg animate-pulse" />
       </AuthLoading>
       
       <Authenticated>
@@ -24,7 +24,7 @@ export default function NavbarAuthButtons() {
       </Authenticated>
       
       <Unauthenticated>
-        <div className="flex items-center space-x-4">
+        <div className="hidden md:flex items-center space-x-4">
           <Link
             href="/sign-in"
             className="text-gray-600 hover:text-accent font-medium text-sm transition-colors dark:text-white"

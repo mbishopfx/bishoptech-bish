@@ -11,9 +11,9 @@ export default function WhatIsRIFTSection() {
           </h2>
         </div>
         <p className="text-landing-text-secondary select-text text-gray-600 text-pretty m-0">
-          RIFT es nuestra solucion a los constantes cambios en el mundo de la inteligencia artificial, unificando en una sola plataforma
-          todos los modelos de IA, brindando la oportunidad a los usuarios de no unicamente usar un modelo, sino de tener acceso a decenas de
-          modelos, permitiendo al usuario crecer, tener mejores resultados y mejorar su experiencia.
+          RIFT es nuestra solucion a los <strong className="font-bold text-gray-900 dark:text-gray-100">constantes cambios en el mundo de la inteligencia artificial</strong>, <strong className="font-bold text-gray-900 dark:text-gray-100">unificando en una sola plataforma</strong>
+          <strong className="font-bold text-gray-900 dark:text-gray-100"> todos los modelos de IA</strong>, brindando la oportunidad a los usuarios de no unicamente usar un modelo, sino de tener acceso a <strong className="font-bold text-gray-900 dark:text-gray-100">decenas de
+          modelos</strong>, permitiendo al usuario <strong className="font-bold text-gray-900 dark:text-gray-100">crecer, tener mejores resultados y mejorar su experiencia</strong>.
         </p>
       </div>
     </section>

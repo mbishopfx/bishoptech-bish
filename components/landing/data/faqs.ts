@@ -2,32 +2,36 @@ export const faqs = [
   {
     question: "¿Qué es RIFT?",
     answer:
-      "RIFT es una plataforma unificada que te da acceso a los modelos de inteligencia artificial más avanzados del mundo (como GPT-4, Claude 3.5, Gemini 1.5, etc.) bajo una sola suscripción, eliminando la necesidad de pagar múltiples servicios por separado.",
+      "RIFT es una plataforma web que te da acceso a los modelos de inteligencia artificial más avanzados del mundo bajo una sola suscripción, eliminando la necesidad de gestionar y pagar múltiples servicios por separado.",
   },
   {
     question: "¿Qué modelos de IA están disponibles?",
     answer:
-      "Ofrecemos acceso a una amplia gama de modelos líderes en la industria, incluyendo la familia GPT de OpenAI, Claude de Anthropic, Gemini de Google, y modelos de código abierto como Llama y Mistral. Siempre agregamos los modelos más recientes tan pronto como están disponibles.",
+      "Ofrecemos acceso a una amplia gama de modelos líderes, incluyendo la familia GPT de OpenAI, Claude de Anthropic, Gemini de Google, xAI, DeepSeek y modelos de código abierto como Mistral. Agregamos constantemente los modelos más recientes tan pronto como son lanzados.",
   },
   {
-    question: "¿Cómo funciona la suscripción?",
+    question: "¿Cuál es la diferencia entre mensajes estándar y premium?",
     answer:
-      "En lugar de pagar suscripciones separadas para cada servicio (que pueden sumar más de $60 USD/mes), con RIFT pagas una sola cuota mensual accesible y tienes acceso a todos ellos en una sola interfaz optimizada.",
+      "Los modelos más avanzados y potentes consumen tu cuota de mensajes 'premium', mientras que modelos más ligeros y rápidos utilizan la cuota 'estándar'. Esto te permite usar el modelo más adecuado para cada tarea.",
   },
   {
-    question: "¿Hay un límite de mensajes?",
+    question: "¿Cómo funcionan los planes y límites?",
     answer:
-      "Sí, nuestros planes tienen límites generosos de mensajes 'estándar' y 'premium'. Los modelos más costosos consumen cuota 'premium'. El plan Plus incluye 1,000 mensajes estándar y 100 premium, diseñado para cubrir las necesidades de la mayoría de los usuarios.",
+      "El plan Plus ofrece 1,000 mensajes estándar y 100 premium mensualmente. El plan Pro aumenta esta capacidad a 2,700 estándar y 270 premium con soporte prioritario. Si necesitas límites personalizados o facturación corporativa, el plan Enterprise es para ti.",
+  },
+  {
+    question: "¿Ofrecen integraciones para empresas?",
+    answer:
+      "Sí, RIFT Enterprise se integra con tu infraestructura existente. Soportamos sincronización de directorios con Google Workspace, Microsoft 365 y Okta vía SCIM, además de Single Sign-On (SSO) y logs de auditoría avanzados para cumplir con tus requisitos de seguridad.",
   },
   {
     question: "¿Puedo cancelar en cualquier momento?",
     answer:
-      "Sí, puedes cancelar tu suscripción en cualquier momento desde tu panel de control. No hay contratos a largo plazo ni compromisos forzosos.",
+      "Absolutamente. Puedes cancelar tu suscripción en cualquier momento desde tu panel de control. No hay plazos forzosos ni penalizaciones para los planes Plus y Pro.",
   },
   {
-    question: "¿Cómo manejan mi privacidad?",
+    question: "¿Cómo manejan la privacidad de mis datos?",
     answer:
-      "Tu privacidad es nuestra prioridad. Tus datos están encriptados y, a diferencia de otros servicios gratuitos, no utilizamos tus conversaciones para entrenar a nuestros modelos.",
+      "Tu privacidad es fundamental. Todos los datos están encriptados en reposo. A diferencia de los servicios gratuitos, no utilizamos tus conversaciones ni datos privados para entrenar a nuestros modelos.",
   },
 ] as const;
-

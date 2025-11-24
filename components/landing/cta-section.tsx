@@ -22,7 +22,7 @@ export default function CTASection() {
           id="cta-summary"
           className="text-lg sm:text-xl md:text-2xl leading-6 sm:leading-7 md:leading-8 text-[color(display-p3_0.1725490196_0.1764705882_0.1882352941/0.6)] dark:text-zinc-400 max-w-3xl mx-auto mb-8 sm:mb-10 md:mb-12"
         >
-          Empieza a usar RIFT y descubre el poder de la IA
+          Empieza a usar RIFT gratis y descubre el poder de la IA
         </p>
 
         {/* Buttons */}
@@ -31,8 +31,8 @@ export default function CTASection() {
             asChild
             className="hover:bg-white hover:text-[color(display-p3_0.1725490196_0.1764705882_0.1882352941/1)] hover:shadow-[rgba(0,0,0,0.1)_0px_0px_0px_1px] relative flex w-full sm:w-auto cursor-pointer select-none items-center justify-center whitespace-nowrap bg-white text-base leading-6 tracking-normal duration-[0.17s] text-[color(display-p3_0.1725490196_0.1764705882_0.1882352941/1)] dark:bg-zinc-900 dark:text-white dark:hover:bg-zinc-800 shadow-[rgba(0,0,0,0.05)_0px_0px_0px_1px] rounded-[50px] h-14 px-8 border-none"
           >
-            <Link href="/#pricing" aria-label="Conocer los precios">
-              Ver Planes
+            <Link href="/sign-up" aria-label="Conocer los precios">
+              Registrarse
             </Link>
           </Button>
         </div>
