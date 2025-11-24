@@ -3,8 +3,9 @@
 import { Button } from "@/components/ai/ui/button";
 import { Check, ShieldCheck } from "lucide-react";
 import Link from "next/link";
-import { useConvexAuth } from "convex/react";
+import { useConvexAuth, useQuery } from "convex/react";
 import { useRouter } from "next/navigation";
+import { api } from "@/convex/_generated/api";
 import {
   StandarIcon,
   PremiumIcon,
@@ -50,6 +51,13 @@ function getFeatureIcon(feature: string) {
 export default function PricingSection() {
   const { isAuthenticated } = useConvexAuth();
   const router = useRouter();
+
+  const organizationPlan = useQuery(api.organizations.getCurrentOrganizationPlan);
+  const subscriptionStatus = organizationPlan?.subscriptionStatus;
+  const currentPlan = organizationPlan?.plan;
+  const isEnterprise = currentPlan === "enterprise";
+  const hasActiveSubscription =
+    subscriptionStatus === "active" || subscriptionStatus === "trialing";
 
   const handlePlanSelection = (planName: string) => {
     const searchParams = new URLSearchParams({
@@ -159,17 +167,33 @@ export default function PricingSection() {
                 <footer className="w-full max-w-[280px] mt-auto">
                   {plan.name !== "Enterprise" ? (
                     <Button
-                      onClick={() => handlePlanSelection(plan.name)}
-                      className="hover:bg-white hover:text-[color(display-p3_0.1725490196_0.1764705882_0.1882352941/1)] hover:shadow-[rgba(0,0,0,0.1)_0px_0px_0px_1px] relative flex w-full cursor-pointer select-none items-center justify-center whitespace-nowrap bg-white text-sm leading-4 tracking-normal duration-[0.17s] text-[color(display-p3_0.1725490196_0.1764705882_0.1882352941/1)] dark:bg-zinc-900 dark:text-white dark:hover:bg-zinc-800 shadow-[rgba(0,0,0,0.05)_0px_0px_0px_1px] rounded-[50px] h-10 border-none"
+                      disabled={isEnterprise}
+                      onClick={() =>
+                        hasActiveSubscription
+                          ? router.push("/settings/billing")
+                          : handlePlanSelection(plan.name)
+                      }
+                      className="hover:bg-white hover:text-[color(display-p3_0.1725490196_0.1764705882_0.1882352941/1)] hover:shadow-[rgba(0,0,0,0.1)_0px_0px_0px_1px] relative flex w-full cursor-pointer select-none items-center justify-center whitespace-nowrap bg-white text-sm leading-4 tracking-normal duration-[0.17s] text-[color(display-p3_0.1725490196_0.1764705882_0.1882352941/1)] dark:bg-zinc-900 dark:text-white dark:hover:bg-zinc-800 shadow-[rgba(0,0,0,0.05)_0px_0px_0px_1px] rounded-[50px] h-10 border-none disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {plan.buttonText}
+                      {isEnterprise
+                        ? "Plan Enterprise Activo"
+                        : hasActiveSubscription
+                          ? currentPlan === plan.name.toLowerCase()
+                            ? "Plan Actual"
+                            : "Gestionar Suscripción"
+                          : plan.buttonText}
                     </Button>
                   ) : (
                     <Button
-                      asChild
-                      className="hover:bg-white hover:text-[color(display-p3_0.1725490196_0.1764705882_0.1882352941/1)] hover:shadow-[rgba(0,0,0,0.1)_0px_0px_0px_1px] relative flex w-full cursor-pointer select-none items-center justify-center whitespace-nowrap bg-white text-sm leading-4 tracking-normal duration-[0.17s] text-[color(display-p3_0.1725490196_0.1764705882_0.1882352941/1)] dark:bg-zinc-900 dark:text-white dark:hover:bg-zinc-800 shadow-[rgba(0,0,0,0.05)_0px_0px_0px_1px] rounded-[50px] h-10 border-none"
+                      asChild={!isEnterprise}
+                      disabled={isEnterprise}
+                      className="hover:bg-white hover:text-[color(display-p3_0.1725490196_0.1764705882_0.1882352941/1)] hover:shadow-[rgba(0,0,0,0.1)_0px_0px_0px_1px] relative flex w-full cursor-pointer select-none items-center justify-center whitespace-nowrap bg-white text-sm leading-4 tracking-normal duration-[0.17s] text-[color(display-p3_0.1725490196_0.1764705882_0.1882352941/1)] dark:bg-zinc-900 dark:text-white dark:hover:bg-zinc-800 shadow-[rgba(0,0,0,0.05)_0px_0px_0px_1px] rounded-[50px] h-10 border-none disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <Link href={plan.href}>{plan.buttonText}</Link>
+                      {isEnterprise ? (
+                        "Plan Enterprise Activo"
+                      ) : (
+                        <Link href={plan.href}>{plan.buttonText}</Link>
+                      )}
                     </Button>
                   )}
                 </footer>
