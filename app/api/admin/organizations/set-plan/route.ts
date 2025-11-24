@@ -122,51 +122,10 @@ export async function POST(request: NextRequest) {
 
         // 4. Handle Entitlements (Features)
         if (subscriptionId && features) {
-            // Fetch all product features first to map lookup keys to feature IDs
-            // In a real app, you might cache this or fetch by specific ID if known
-            // Here we assume we need to find them by lookup key.
-            // Since Stripe Entitlements API is feature-centric, we need to ensure features exist or find them.
-            // However, the 'features' input is boolean flags.
-            // We need to add these features to the *Product* if they aren't already, OR
-            // if we are using the new Entitlements API, we might just need to make sure the subscription has access.
-            // BUT Stripe Entitlements are attached to Products. If the Enterprise Product has these features, 
-            // all subscribers get them. If we want per-subscriber features, we might need separate products or 
-            // use the Entitlements API to grant specific access if supported (Stripe Entitlements usually map Feature -> Product).
-            
-            // If the requirement is "attached entitlements manually to each enterprise plan", and since 
-            // "Enterprise" is likely a single Product in Stripe, attaching a feature to the Product gives it to EVERYONE.
-            
-            // To achieve per-customer entitlements on the same base product, you usually need to:
-            // a) Use different Products for different feature sets (e.g. Enterprise Tier 1, Tier 2)
-            // b) Or, if these are add-ons, they should be separate Price items in the subscription.
-            
-            // However, the prompt implies we want to use the Entitlements API.
-            // "Attach features to corresponding Stripe Products" -> This implies Product level.
-            
-            // If we want to toggle features PER ORGANIZATION, we should probably use separate Prices (add-ons) 
-            // for each feature if they are billable, or if they are just flags, we might need to use metadata 
-            // if Stripe Entitlements doesn't support per-subscription granularity on the same product yet (it's Product-Feature mapping).
-            
-            // WAIT: "Determine when you can grant or revoke product feature access to customers."
-            // "Stripe notifies you about when to provision... according to your customer’s subscription status"
-            
-            // If we attach a feature to a Product, ALL active subscribers to that Product get the feature.
-            // If we want mix-and-match, we technically need a Product/Price for "Enterprise Base" 
-            // and separate Products/Prices for "SSO Add-on", "Audit Logs Add-on", etc.
-            
-            // Let's assume for this implementation that we will handle this by creating/adding line items 
-            // for these features if they are modeled as separate prices/products, OR 
-            // if the user just wants to store it in Stripe Metadata for now as a fallback if true Entitlements 
-            // requires a complex Product catalog change.
-            
-            // BUT, the prompt says: "instead of having a fixed plan with all the entitlements already set, we need to attached this entitlements manually to each enterprice plan"
-            // This strongly suggests handling them as Add-ons (separate line items) in the subscription.
-            
-            // Let's try to find Prices for these features by lookup key. 
-            // Assumes you have created Prices for these features with lookup_keys matching:
-            // 'domain_verification', 'directory_sync', 'sso', 'audit_logs'
-            
-            const activeItems = existingSubscription?.items.data || [];
+            // Refetch the subscription to get the current state after any updates
+            // This ensures we have the latest subscription items for feature entitlement checks
+            const currentSubscription = await stripe.subscriptions.retrieve(subscriptionId);
+            const activeItems = currentSubscription.items.data;
             
             for (const [key, enabled] of Object.entries(features)) {
                 if (enabled) {
