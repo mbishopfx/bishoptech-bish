@@ -49,6 +49,7 @@ export const POST = async (req: NextRequest) => {
 
     // Map subscription level to Price ID from env
     const priceIds: Record<string, string | undefined> = {
+      free: process.env.FREE_PRICE_ID,
       plus: process.env.PLUS_PRICE_ID,
       pro: process.env.PRO_PRICE_ID,
     };
@@ -114,6 +115,26 @@ export const POST = async (req: NextRequest) => {
       console.error("Failed to sync Stripe customer ID to Convex:", error);
     }
 
+    // Handle FREE plan subscription immediately
+    if (subscriptionLevel === 'free') {
+        const subscription = await stripe.subscriptions.create({
+            customer: customerId,
+            items: [{ price: priceId }],
+            payment_behavior: 'default_incomplete',
+            payment_settings: { save_default_payment_method: 'on_subscription' },
+            expand: ['latest_invoice.payment_intent'],
+        });
+
+        // If subscription is active (free plan usually is immediately active), return success
+        // We don't need a checkout URL
+        return NextResponse.json({ 
+            success: true, 
+            organizationId: targetOrganizationId,
+            subscriptionId: subscription.id 
+        });
+    }
+
+    // For paid plans, create Checkout Session
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       billing_address_collection: 'auto',

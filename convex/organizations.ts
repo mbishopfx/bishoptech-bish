@@ -15,6 +15,10 @@ import { serverSecretArg, ensureServerSecret } from "./helpers/auth";
 
 // Plan quota configuration // Could remove and use stripe metadata to fetch plan details
 const PLAN_QUOTAS = {
+  free: {
+    standardQuotaLimit: 20,
+    premiumQuotaLimit: 1,
+  },
   plus: {
     standardQuotaLimit: 1000,
     premiumQuotaLimit: 100,
@@ -31,6 +35,7 @@ type PlanType = keyof typeof PLAN_QUOTAS;
 function getPlanFromLookupKey(lookupKey: string | null): PlanType | null {
   if (!lookupKey) return null;
 
+  if (lookupKey === "free") return "free";
   if (lookupKey === "plus") return "plus";
   if (lookupKey === "pro") return "pro";
 
@@ -63,7 +68,7 @@ export const updateOrganization = internalMutation({
       stripeCustomerId: v.optional(v.string()),
       billingCycleStart: v.optional(v.number()),
       billingCycleEnd: v.optional(v.number()),
-      plan: v.optional(v.union(v.literal("plus"), v.literal("pro"), v.literal("enterprise"))),
+      plan: v.optional(v.union(v.literal("free"), v.literal("plus"), v.literal("pro"), v.literal("enterprise"))),
       standardQuotaLimit: v.optional(v.number()),
       premiumQuotaLimit: v.optional(v.number()),
       seatQuantity: v.optional(v.number()),
@@ -248,7 +253,7 @@ export const syncStripeSubscriptionData = internalMutation({
       paymentMethodLast4?: string;
       billingCycleStart?: number;
       billingCycleEnd?: number;
-      plan?: "plus" | "pro" | "enterprise";
+      plan?: "free" | "plus" | "pro" | "enterprise";
       standardQuotaLimit?: number;
       premiumQuotaLimit?: number;
       seatQuantity?: number;

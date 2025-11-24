@@ -7,6 +7,10 @@ import {
   
   // Plan configurations for admin dashboard
   const ADMIN_PLAN_CONFIGS = {
+    free: {
+      standardQuotaLimit: 20,
+      premiumQuotaLimit: 1,
+    },
     plus: {
       standardQuotaLimit: 1000,
       premiumQuotaLimit: 100,
@@ -28,7 +32,7 @@ import {
         _creationTime: v.number(),
         workos_id: v.string(),
         name: v.string(),
-        plan: v.optional(v.union(v.literal("plus"), v.literal("pro"), v.literal("enterprise"))),
+        plan: v.optional(v.union(v.literal("free"), v.literal("plus"), v.literal("pro"), v.literal("enterprise"))),
         standardQuotaLimit: v.optional(v.number()),
         premiumQuotaLimit: v.optional(v.number()),
         billingCycleStart: v.optional(v.number()),
@@ -64,7 +68,7 @@ import {
   export const setOrganizationPlan = internalMutation({
     args: {
       organizationId: v.id("organizations"),
-      plan: v.union(v.literal("plus"), v.literal("pro")),
+      plan: v.union(v.literal("free"), v.literal("plus"), v.literal("pro")),
     },
     returns: v.null(),
     handler: async (ctx, args) => {
@@ -115,7 +119,7 @@ import {
         _creationTime: v.number(),
         workos_id: v.string(),
         name: v.string(),
-        plan: v.optional(v.union(v.literal("plus"), v.literal("pro"), v.literal("enterprise"))),
+        plan: v.optional(v.union(v.literal("free"), v.literal("plus"), v.literal("pro"), v.literal("enterprise"))),
         standardQuotaLimit: v.optional(v.number()),
         premiumQuotaLimit: v.optional(v.number()),
         billingCycleStart: v.optional(v.number()),

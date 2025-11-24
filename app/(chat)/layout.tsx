@@ -9,6 +9,7 @@ export default function ChatLayout({
 }) {
   return (
     <>
+      <NoOrgModal />
       <ChatShell sidebar={<ThreadSidebar />}>
         {children}
       </ChatShell>
