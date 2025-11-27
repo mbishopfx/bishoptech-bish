@@ -22,6 +22,21 @@ export default function UpdatesPage() {
   // Static data - in a real app, this could come from a CMS or API
   const updates: UpdateItem[] = [
     {
+      id: '1.1.1',
+      version: '1.1.1',
+      date: '2025-11-27',
+      title: 'Nuevos Modelos y Capacidades',
+      description: 'Nuevos modelos de IA, expansión de capacidades PDF y mejoras de rendimiento en la selección de modelos.',
+      features: [
+        'Nuevo modelo Intellect 3 de Prime Intellect disponible',
+        'Claude Opus 4.5 agregado como versión beta',
+        'Soporte para PDF expandido a más modelos',
+        'Optimizaciones en la lógica de selección de modelos para mejorar el rendimiento',
+        'Mejoras generales de estabilidad y rendimiento',
+      ],
+      isInstalled: true
+    },
+    {
       id: '1.1.0',
       version: '1.1.0',
       date: '2024-11-24',
