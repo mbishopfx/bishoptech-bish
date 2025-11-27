@@ -7,6 +7,7 @@ import { DEEPSEEK_MODELS } from "./providers/deepseek";
 import { MISTRAL_MODELS } from "./providers/mistral";
 import { MOONSHOT_MODELS } from "./providers/moonshot";
 import { ZAI_MODELS } from "./providers/zai";
+import { PRIME_INTELLECT_MODELS } from "./providers/prime-intellect";
 import { type BaseModelConfig, type ModelCapabilities } from "./config/base";
 
 // All models in one array
@@ -19,6 +20,7 @@ export const MODELS: BaseModelConfig[] = [
   ...MISTRAL_MODELS,
   ...MOONSHOT_MODELS,
   ...ZAI_MODELS,
+  ...PRIME_INTELLECT_MODELS,
 ];
 
 const PROVIDER_DISPLAY_NAMES: Record<string, string> = {
@@ -31,6 +33,7 @@ const PROVIDER_DISPLAY_NAMES: Record<string, string> = {
   mistral: "Mistral",
   moonshotai: "Moonshot",
   zai: "Z.AI",
+  "prime-intellect": "Prime Intellect",
 };
 
 const toTitleCase = (value: string) =>

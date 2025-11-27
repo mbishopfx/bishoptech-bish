@@ -10,6 +10,7 @@ import { DeepSeekIcon } from "@/components/ui/icons/deepseek-icon";
 import { LogosMistralAiIcon } from "@/components/ui/icons/mistral-icon";
 import { MoonshotIcon } from "@/components/ui/icons/moonshot-icon";
 import { ZaiIcon } from "@/components/ui/icons/zai-icon";
+import { PrimeIntellectIcon } from "@/components/ui/icons/prime-intellect-icon";
 import {
   WrenchIcon,
   BrainIcon,
@@ -31,6 +32,7 @@ export function ModelsGrid() {
     mistral: LogosMistralAiIcon,
     moonshotai: MoonshotIcon,
     zai: ZaiIcon,
+    "prime-intellect": PrimeIntellectIcon,
   } as const;
 
   // Capability icon mapping
@@ -60,6 +62,7 @@ export function ModelsGrid() {
     mistral: "Mistral",
     moonshotai: "Moonshot AI",
     zai: "Z.AI",
+    "prime-intellect": "Prime Intellect",
   } as const;
 
   // Filter models based on search query

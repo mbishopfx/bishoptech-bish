@@ -43,6 +43,7 @@ import { DeepSeekIcon } from "@/components/ui/icons/deepseek-icon";
 import { LogosMistralAiIcon } from "@/components/ui/icons/mistral-icon";
 import { MoonshotIcon } from "@/components/ui/icons/moonshot-icon";
 import { ZaiIcon } from "@/components/ui/icons/zai-icon";
+import { PrimeIntellectIcon } from "@/components/ui/icons/prime-intellect-icon";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ai/ui/tabs";
 
 // Provider icon mapping
@@ -56,6 +57,7 @@ const providerIcons = {
   mistral: LogosMistralAiIcon,
   moonshotai: MoonshotIcon,
   zai: ZaiIcon,
+  "prime-intellect": PrimeIntellectIcon,
 } as const;
 
 // Capability icon mapping
@@ -85,6 +87,7 @@ const providerNames = {
   mistral: "Mistral",
   moonshotai: "Moonshot",
   zai: "Z.AI",
+  "prime-intellect": "Prime Intellect",
 } as const;
 
 // Recommended options configuration
@@ -337,7 +340,7 @@ function ModelSelector({
 
                       return (
                         <SelectPrimitive.Group key={provider}>
-                          <SelectPrimitive.Label className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-popover-text border-b border-border/50">
+                          <SelectPrimitive.Label className="flex items-center gap-2 px-3 py-2 mb-2 text-xs font-semibold text-popover-text border-b border-border/50">
                             {ProviderIcon && (
                               <ProviderIcon className="size-4" />
                             )}
@@ -360,7 +363,7 @@ function ModelSelector({
 
                       return (
                         <SelectPrimitive.Group key={provider}>
-                          <SelectPrimitive.Label className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-popover-text border-b border-border/50">
+                          <SelectPrimitive.Label className="flex items-center gap-2 px-3 py-2 mb-2 text-xs font-semibold text-popover-text border-b border-border/50">
                             {ProviderIcon && (
                               <ProviderIcon className="size-4" />
                             )}

@@ -60,7 +60,6 @@ function ChatInterfaceInternal({
   const setIsSearchEnabled = useChatUIStore((s) => s.setIsSearchEnabled);
   const setQuotaError = useChatUIStore((s) => s.setQuotaError);
   const setShowNoSubscriptionDialog = useChatUIStore((s) => s.setShowNoSubscriptionDialog);
-  const setChatKey = useChatUIStore((s) => s.setChatKey);
   const handleSearchToggle = useChatUIStore((s) => s.handleSearchToggle);
   const setFileUploadError = useChatUIStore((s) => s.setFileUploadError);
   const responseStyle = useChatUIStore((s) => s.responseStyle);
@@ -127,14 +126,19 @@ function ChatInterfaceInternal({
 
   // Apply model change effects
   const prevModelRef = useRef(selectedModel);
+  // Ref to track current model for access in closures (like useChat transport)
+  const currentModelRef = useRef(selectedModel);
+  
   useEffect(() => {
+    // Keep ref updated
+    currentModelRef.current = selectedModel;
+
     if (prevModelRef.current !== selectedModel) {
       prevModelRef.current = selectedModel;
-      setChatKey((prev) => prev + 1);
       setQuotaError(null);
       setShowNoSubscriptionDialog(false);
     }
-  }, [selectedModel, setChatKey, setQuotaError, setShowNoSubscriptionDialog]);
+  }, [selectedModel, setQuotaError, setShowNoSubscriptionDialog]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -303,7 +307,8 @@ function ChatInterfaceInternal({
         api: "/api/chat",
         prepareSendMessagesRequest: ({ messages, trigger, messageId }) => {
           // Get current tools state at the time of sending
-          const currentDefaultTools = getDefaultTools(selectedModel);
+          const currentModel = currentModelRef.current;
+          const currentDefaultTools = getDefaultTools(currentModel);
           const currentSearchState =
             typeof window !== "undefined"
               ? localStorage.getItem("webSearchEnabled") === "true"
@@ -337,7 +342,7 @@ function ChatInterfaceInternal({
           return {
             body: {
               messages: requestMessages,
-              modelId: resolveModel(selectedModel),
+              modelId: resolveModel(currentModel),
               threadId: id,
               enabledTools: currentEnabledTools,
               responseStyle: currentResponseStyle,

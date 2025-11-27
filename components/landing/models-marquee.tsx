@@ -7,6 +7,7 @@ import { DeepSeekIcon } from "@/components/ui/icons/deepseek-icon";
 import { LogosMistralAiIcon } from "@/components/ui/icons/mistral-icon";
 import { MoonshotIcon } from "@/components/ui/icons/moonshot-icon";
 import { ZaiIcon } from "@/components/ui/icons/zai-icon";
+import { PrimeIntellectIcon } from "@/components/ui/icons/prime-intellect-icon";
 import { cn } from "@/lib/utils";
 
 const MarqueeCard = ({ model }: { model: typeof MODELS[0] }) => {
@@ -21,6 +22,7 @@ const MarqueeCard = ({ model }: { model: typeof MODELS[0] }) => {
     moonshot: MoonshotIcon,
     moonshotai: MoonshotIcon,
     zai: ZaiIcon,
+    "prime-intellect": PrimeIntellectIcon,
   } as const;
 
   const ProviderIcon = providerIcons[model.provider as keyof typeof providerIcons];
@@ -69,7 +71,9 @@ const MarqueeCard = ({ model }: { model: typeof MODELS[0] }) => {
                     ? 'Moonshot'
                     : model.provider === 'zai'
                       ? 'Z.AI'
-                      : model.provider.charAt(0).toUpperCase() + model.provider.slice(1)}
+                      : model.provider === 'prime-intellect'
+                        ? 'Prime Intellect'
+                        : model.provider.charAt(0).toUpperCase() + model.provider.slice(1)}
               </span>
             </div>
           </div>

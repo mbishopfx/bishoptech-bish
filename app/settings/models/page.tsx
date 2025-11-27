@@ -14,6 +14,7 @@ import { GoogleIcon } from "@/components/ui/icons/google-icon";
 import { XAiIcon } from "@/components/ui/icons/xai-icon";
 import { DeepSeekIcon } from "@/components/ui/icons/deepseek-icon";
 import { LogosMistralAiIcon } from "@/components/ui/icons/mistral-icon";
+import { PrimeIntellectIcon } from "@/components/ui/icons/prime-intellect-icon";
 import {
   SparklesIcon,
   WrenchIcon,
@@ -41,6 +42,7 @@ export default function ModelsPage() {
     xai: XAiIcon,
     deepseek: DeepSeekIcon,
     mistral: LogosMistralAiIcon,
+    "prime-intellect": PrimeIntellectIcon,
   } as const;
 
   // Capability icon mapping
@@ -68,6 +70,7 @@ export default function ModelsPage() {
     xai: "xAI",
     deepseek: "DeepSeek",
     mistral: "Mistral",
+    "prime-intellect": "Prime Intellect",
   } as const;
 
   // Filter models based on search query
