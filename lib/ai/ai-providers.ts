@@ -129,6 +129,7 @@ export const getProviderOptions = (modelId: string) => {
             type: "enabled" as const,
             budgetTokens: 3200,
           },
+          effort: "low" as const,
         }
       : baseOptions,
     google: isGoogleModel && supportsReasoning(modelId)

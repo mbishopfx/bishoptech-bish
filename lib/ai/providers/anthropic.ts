@@ -21,6 +21,7 @@ export interface AnthropicSettings {
   store?: boolean;
   user?: string;
   structuredOutputs?: boolean;
+  effort?: "low" | "medium" | "high";
   maxCompletionTokens?: number;
   logitBias?: Record<number, number>;
   logprobs?: boolean | number;
@@ -37,6 +38,7 @@ export const DEFAULT_ANTHROPIC_SETTINGS: AnthropicSettings = {
   parallelToolCalls: true,
   store: true,
   structuredOutputs: true,
+  effort: "low",
   maxRetries: 3,
 };
 
