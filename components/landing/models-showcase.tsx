@@ -10,6 +10,7 @@ import { GoogleIcon } from "@/components/ui/icons/google-icon";
 import { XAiIcon } from "@/components/ui/icons/xai-icon";
 import { DeepSeekIcon } from "@/components/ui/icons/deepseek-icon";
 import { LogosMistralAiIcon } from "@/components/ui/icons/mistral-icon";
+import { PrimeIntellectIcon } from "@/components/ui/icons/prime-intellect-icon";
 
 export function ModelsShowcase() {
   // Provider icon mapping
@@ -20,6 +21,7 @@ export function ModelsShowcase() {
     xai: XAiIcon,
     deepseek: DeepSeekIcon,
     mistral: LogosMistralAiIcon,
+    "prime-intellect": PrimeIntellectIcon,
   } as const;
 
   // Get one representative model from each major provider
@@ -50,7 +52,11 @@ export function ModelsShowcase() {
                   ) : null;
                 })()}
                 <span className="text-xs font-medium text-gray-500 dark:text-gray-400 capitalize">
-                  {model.provider === 'xai' ? 'xAI' : model.provider.charAt(0).toUpperCase() + model.provider.slice(1)}
+                  {model.provider === 'xai' 
+                    ? 'xAI' 
+                    : model.provider === 'prime-intellect'
+                      ? 'Prime Intellect'
+                      : model.provider.charAt(0).toUpperCase() + model.provider.slice(1)}
                 </span>
               </div>
               {model.isPremium && (

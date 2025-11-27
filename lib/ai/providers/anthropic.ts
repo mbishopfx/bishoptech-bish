@@ -43,6 +43,23 @@ export const DEFAULT_ANTHROPIC_SETTINGS: AnthropicSettings = {
 // Anthropic model configurations
 export const ANTHROPIC_MODELS: BaseModelConfig[] = [
   {
+    id: "anthropic/claude-opus-4.5",
+    name: "Claude Opus 4.5 (Beta)",
+    provider: "anthropic",
+    description: "El modelo mas inteligente hasta la fecha, capaz de resolver problemas complejos",
+    contextWindow: 200000,
+    isPremium: true,
+    capabilities: mergeCapabilities({
+      supportsTools: true,
+      supportsPDFInput: true,
+      supportsStreaming: true,
+      supportsReasoning: true,
+      supportsImageInput: true,
+      supportsObjectGeneration: true,
+      maxTokens: 16384,
+    }),
+  },
+  {
     id: "anthropic/claude-sonnet-4.5",
     name: "Claude Sonnet 4.5",
     provider: "anthropic",
@@ -51,6 +68,7 @@ export const ANTHROPIC_MODELS: BaseModelConfig[] = [
     isPremium: true,
     capabilities: mergeCapabilities({
       supportsTools: true,
+      supportsPDFInput: true,
       supportsStreaming: true,
       supportsReasoning: true,
       supportsImageInput: true,
@@ -69,6 +87,7 @@ export const ANTHROPIC_MODELS: BaseModelConfig[] = [
       supportsTools: true,
       supportsStreaming: true,
       supportsReasoning: true,
+      supportsPDFInput: true,
       supportsImageInput: true,
       supportsObjectGeneration: true,
       maxTokens: 16384,
@@ -84,6 +103,7 @@ export const ANTHROPIC_MODELS: BaseModelConfig[] = [
     capabilities: mergeCapabilities({
       supportsTools: true,
       supportsStreaming: true,
+      supportsPDFInput: true,
       supportsImageInput: true,
       supportsObjectGeneration: true,
       maxTokens: 16384,
@@ -115,6 +135,7 @@ export const ANTHROPIC_MODELS: BaseModelConfig[] = [
     capabilities: mergeCapabilities({
       supportsTools: true,
       supportsStreaming: true,
+      supportsPDFInput: true,
       supportsImageInput: true,
       supportsObjectGeneration: true,
       maxTokens: 16384,
