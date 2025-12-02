@@ -58,7 +58,7 @@ export default function ModelsPage() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <main className="container mx-auto px-4 max-w-5xl">
+      <main className="container mx-auto px-4 max-w-5xl pt-28">
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold mb-4 text-foreground">Modelos Disponibles</h1>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
