@@ -70,8 +70,6 @@ import {
   generateIdempotencyKey,
 } from "./services";
 
-export const maxDuration = 300;
-
 // ============================================================================
 // Request ID Generation
 // ============================================================================

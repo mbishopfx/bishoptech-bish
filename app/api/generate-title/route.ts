@@ -10,7 +10,7 @@ import { api } from "@/convex/_generated/api";
 // ============================================================================
 
 const TITLE_GENERATION_MODEL = "google/gemini-2.0-flash-lite";
-const ROUTE_TIMEOUT = Duration.seconds(10);
+const ROUTE_TIMEOUT = Duration.seconds(60);
 
 // Retry with exponential backoff + jitter, up to 2 retries
 const GENERATE_RETRY_SCHEDULE = Schedule.exponential("200 millis").pipe(

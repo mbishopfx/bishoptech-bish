@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useCallback } from "react";
 import { NoSubscriptionDialog } from "@/components/ui/no-subscription-dialog";
 import {
   AttachmentsIcon,
@@ -27,8 +27,14 @@ import type { FileAttachment } from "@/lib/file-utils";
 import React from "react";
 import { useChatStatus } from "@ai-sdk-tools/store";
 import { useChatUIStore } from "../ui-store";
-import { uploadFiles, isSupportedFileType } from "@/lib/file-utils";
+import {
+  describeUploadError,
+  uploadFilesEffect,
+  MAX_TOTAL_FILES,
+  MAX_FILE_SIZE_BYTES,
+} from "@/lib/file-utils";
 import { toast } from "sonner";
+import { Effect } from "effect";
 
 interface ChatInputAreaProps {
   disableInput: boolean;
@@ -66,6 +72,44 @@ export const ChatInputArea = React.memo(function ChatInputArea({
   const setShowNoSubscriptionDialog = useChatUIStore((s) => s.setShowNoSubscriptionDialog);
   const fileUploadError = useChatUIStore((s) => s.fileUploadError);
   const setFileUploadError = useChatUIStore((s) => s.setFileUploadError);
+  const runUpload = useCallback(
+    async (fileArray: File[]) => {
+      if (!fileArray || fileArray.length === 0) return;
+
+      setFileUploadError(null);
+
+      const state = useChatUIStore.getState();
+      const existingCount = state.uploadedAttachments.length + state.uploadingFiles.length;
+
+      setSelectedFiles((prev) => [...prev, ...fileArray]);
+      setUploadingFiles((prev) => [
+        ...prev,
+        ...fileArray.map((file) => ({ file, isUploading: true })),
+      ]);
+
+      const uploadResult = await Effect.runPromise(
+        Effect.either(
+          uploadFilesEffect(fileArray, {
+            alreadyAttached: existingCount,
+            maxTotalFiles: MAX_TOTAL_FILES,
+            maxSizeBytes: MAX_FILE_SIZE_BYTES,
+          }),
+        ),
+      );
+
+      if (uploadResult._tag === "Right") {
+        setUploadedAttachments((prev) => [...prev, ...uploadResult.right]);
+      } else {
+        const message = describeUploadError(uploadResult.left);
+        toast.error(message);
+        setFileUploadError(message);
+        setSelectedFiles((prev) => prev.filter((file) => !fileArray.includes(file)));
+      }
+
+      setUploadingFiles((prev) => prev.filter((uf) => !fileArray.includes(uf.file)));
+    },
+    [setFileUploadError, setSelectedFiles, setUploadingFiles, setUploadedAttachments],
+  );
   // Memoize files array transformation
   const files = useMemo(() => {
     if (isSendingMessage) return [];
@@ -189,59 +233,7 @@ export const ChatInputArea = React.memo(function ChatInputArea({
                   const files = e.target.files;
                   if (!files || files.length === 0) return;
                   const fileArray = Array.from(files);
-
-                  // Clear previous error
-                  setFileUploadError(null);
-
-                  const currentTotal = uploadedAttachments.length + uploadingFiles.length;
-                  const newTotal = currentTotal + fileArray.length;
-                  if (newTotal > 5) {
-                    const remaining = 5 - currentTotal;
-                    const errorMsg = remaining <= 0
-                      ? "Máximo de 5 archivos permitidos por mensaje"
-                      : `Solo puedes agregar ${remaining} más archivo${remaining === 1 ? '' : 's'}. Máximo de 5 archivos permitidos por mensaje.`;
-                    toast.error(errorMsg);
-                    setFileUploadError(errorMsg);
-                    return;
-                  }
-
-                  const unsupported = fileArray.filter((f) => !isSupportedFileType(f));
-                  if (unsupported.length > 0) {
-                    const errorMsg = `Tipos de archivo no soportados: ${unsupported.map((f) => f.name).join(", ")}. Solo se permiten imágenes (JPEG, PNG, GIF, WebP) y PDFs.`;
-                    toast.error(errorMsg);
-                    setFileUploadError(errorMsg);
-                    return;
-                  }
-
-                  const oversized = fileArray.filter((f) => f.size > 10 * 1024 * 1024);
-                  if (oversized.length > 0) {
-                    const errorMsg = `Archivos demasiado grandes: ${oversized.map((f) => f.name).join(", ")}. El tamaño máximo es 10MB por archivo.`;
-                    toast.error(errorMsg);
-                    setFileUploadError(errorMsg);
-                    return;
-                  }
-
-                  setSelectedFiles((prev) => [...prev, ...fileArray]);
-                  setUploadingFiles((prev) => [
-                    ...prev,
-                    ...fileArray.map((file) => ({ file, isUploading: true })),
-                  ]);
-
-                  (async () => {
-                    try {
-                      const dt = new DataTransfer();
-                      fileArray.forEach((f) => dt.items.add(f));
-                      const attachments = await uploadFiles(dt.files);
-                      setUploadedAttachments((prev) => [...prev, ...attachments]);
-                    } catch (err) {
-                      console.error("File upload error:", err);
-                      const errorMsg = "Error al subir archivos. Por favor, inténtalo de nuevo.";
-                      toast.error(errorMsg);
-                      setFileUploadError(errorMsg);
-                    } finally {
-                      setUploadingFiles((prev) => prev.filter((uf) => !fileArray.includes(uf.file)));
-                    }
-                  })();
+                  void runUpload(fileArray);
                 }}
                 disabled={disableInput || isUploading}
               />
@@ -254,8 +246,8 @@ export const ChatInputArea = React.memo(function ChatInputArea({
                 onClick={() => {
                   if (disableInput) return;
                   const currentTotalFiles = uploadedAttachments.length + uploadingFiles.length;
-                  if (currentTotalFiles >= 5) {
-                    const errorMsg = "Máximo de 5 archivos permitidos por mensaje";
+                  if (currentTotalFiles >= MAX_TOTAL_FILES) {
+                    const errorMsg = `Máximo de ${MAX_TOTAL_FILES} archivos permitidos por mensaje`;
                     toast.error(errorMsg);
                     setFileUploadError(errorMsg);
                     return;
@@ -265,10 +257,10 @@ export const ChatInputArea = React.memo(function ChatInputArea({
                   fileInputRef.current?.click();
                 }}
                 aria-label="Agregar archivos adjuntos"
-                disabled={disableInput || (uploadedAttachments.length + uploadingFiles.length) >= 5}
+                disabled={disableInput || (uploadedAttachments.length + uploadingFiles.length) >= MAX_TOTAL_FILES}
                 title={
-                  (uploadedAttachments.length + uploadingFiles.length) >= 5
-                    ? "Máximo de 5 archivos permitidos por mensaje"
+                  (uploadedAttachments.length + uploadingFiles.length) >= MAX_TOTAL_FILES
+                    ? `Máximo de ${MAX_TOTAL_FILES} archivos permitidos por mensaje`
                     : "Agregar archivos adjuntos"
                 }
                 className="text-secondary hover:bg-popover-main hover:text-popover-text dark:hover:bg-hover/60"

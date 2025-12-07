@@ -30,7 +30,13 @@ import { MessageRenderer } from "./components/message-renderer";
 import { ChatInputArea } from "./components/chat-input-area";
 import type { ChatInterfaceProps } from "./types";
 import { ChatStoreProvider, useChatStateInstance } from "@/lib/stores/hooks";
-import { uploadFiles, isSupportedFileType } from "@/lib/file-utils";
+import {
+  describeUploadError,
+  uploadFilesEffect,
+  MAX_TOTAL_FILES,
+  MAX_FILE_SIZE_BYTES,
+} from "@/lib/file-utils";
+import { Effect } from "effect";
 
 // Internal component that uses the store
 function ChatInterfaceInternal({
@@ -71,37 +77,10 @@ function ChatInterfaceInternal({
   const handleProcessFiles = useCallback(async (fileArray: File[]) => {
     if (!fileArray || fileArray.length === 0) return;
 
-    // Clear previous error
     setFileUploadError(null);
 
     const state = useChatUIStore.getState();
-    const currentTotal = state.uploadedAttachments.length + state.uploadingFiles.length;
-    const newTotal = currentTotal + fileArray.length;
-    if (newTotal > 5) {
-      const remaining = 5 - currentTotal;
-      const errorMsg = remaining <= 0
-        ? "Máximo de 5 archivos permitidos por mensaje"
-        : `Solo puedes agregar ${remaining} más archivo${remaining === 1 ? '' : 's'}. Máximo de 5 archivos permitidos por mensaje.`;
-      toast.error(errorMsg);
-      setFileUploadError(errorMsg);
-      return;
-    }
-
-    const unsupported = fileArray.filter((f) => !isSupportedFileType(f));
-    if (unsupported.length > 0) {
-      const errorMsg = `Tipos de archivo no soportados: ${unsupported.map((f) => f.name).join(", ")}. Solo se permiten imágenes (JPEG, PNG, GIF, WebP) y PDFs.`;
-      toast.error(errorMsg);
-      setFileUploadError(errorMsg);
-      return;
-    }
-
-    const oversized = fileArray.filter((f) => f.size > 10 * 1024 * 1024);
-    if (oversized.length > 0) {
-      const errorMsg = `Archivos demasiado grandes: ${oversized.map((f) => f.name).join(", ")}. El tamaño máximo es 10MB por archivo.`;
-      toast.error(errorMsg);
-      setFileUploadError(errorMsg);
-      return;
-    }
+    const existingCount = state.uploadedAttachments.length + state.uploadingFiles.length;
 
     setSelectedFiles((prev: File[]) => [...prev, ...fileArray]);
     setUploadingFiles((prev: any[]) => [
@@ -109,19 +88,26 @@ function ChatInterfaceInternal({
       ...fileArray.map((file) => ({ file, isUploading: true })),
     ]);
 
-    try {
-      const dt = new DataTransfer();
-      fileArray.forEach((f) => dt.items.add(f));
-      const attachments = await uploadFiles(dt.files);
-      setUploadedAttachments((prev: any[]) => [...prev, ...attachments]);
-    } catch (err) {
-      console.error("Error al subir archivos:", err);
-      const errorMsg = "Error al subir archivos. Por favor, inténtalo de nuevo.";
-      toast.error(errorMsg);
-      setFileUploadError(errorMsg);
-    } finally {
-      setUploadingFiles((prev: any[]) => prev.filter((uf) => !fileArray.includes(uf.file)));
+    const uploadResult = await Effect.runPromise(
+      Effect.either(
+        uploadFilesEffect(fileArray, {
+          alreadyAttached: existingCount,
+          maxTotalFiles: MAX_TOTAL_FILES,
+          maxSizeBytes: MAX_FILE_SIZE_BYTES,
+        }),
+      ),
+    );
+
+    if (uploadResult._tag === "Right") {
+      setUploadedAttachments((prev: any[]) => [...prev, ...uploadResult.right]);
+    } else {
+      const message = describeUploadError(uploadResult.left);
+      toast.error(message);
+      setFileUploadError(message);
+      setSelectedFiles((prev: File[]) => prev.filter((file) => !fileArray.includes(file)));
     }
+
+    setUploadingFiles((prev: any[]) => prev.filter((uf) => !fileArray.includes(uf.file)));
   }, [setSelectedFiles, setUploadingFiles, setUploadedAttachments, setFileUploadError]);
 
   // Apply model change effects
