@@ -135,12 +135,23 @@ export const classifyProviderError = (error: unknown): ProviderError => {
   }
   
   // Token/context length
-  if (
-    errorStr.includes("token") ||
-    errorStr.includes("context") && errorStr.includes("length") ||
-    errorStr.includes("maximum") && errorStr.includes("length") ||
-    errorStr.includes("too long")
-  ) {
+  const tokenLimitPatterns = [
+    "token limit",
+    "tokens exceeded",
+    "max tokens",
+    "maximum tokens",
+    "too many tokens",
+    "context length",
+    "maximum context length",
+    "max context length",
+    "context window",
+    "context limit",
+    "prompt too long",
+    "input too long",
+    "too long for context",
+  ];
+
+  if (tokenLimitPatterns.some((pattern) => errorStr.includes(pattern))) {
     return new ProviderError({
       message: "Message context is too long. Please start a new conversation or remove some messages.",
       errorType: "token_limit",

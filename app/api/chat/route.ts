@@ -347,7 +347,10 @@ interface StreamingState {
 // Main Handler Effect
 // ============================================================================
 
-const handleChatRequest = (req: Request, requestId: string) =>
+const handleChatRequest = (
+  req: Request,
+  requestId: string
+): Effect.Effect<Response, ChatRouteError, Scope.Scope> =>
   Effect.gen(function* () {
   const start = Date.now();
 
@@ -1101,6 +1104,8 @@ export async function POST(req: Request): Promise<Response> {
       DatabaseError: (e: DatabaseError) => Effect.succeed(errorToResponse(e, start, requestId, logContext)),
       ModelError: (e: ModelError) => Effect.succeed(errorToResponse(e, start, requestId, logContext)),
       ToolError: (e: ToolError) => Effect.succeed(errorToResponse(e, start, requestId, logContext)),
+      ProviderError: (e: ProviderError) => Effect.succeed(errorToResponse(e, start, requestId, logContext)),
+      StreamError: (e: StreamError) => Effect.succeed(errorToResponse(e, start, requestId, logContext)),
       TimeoutError: (e: TimeoutError) => Effect.succeed(errorToResponse(e, start, requestId, logContext)),
     }),
     Effect.catchAll((error: unknown) => {
