@@ -7,7 +7,7 @@ import { generateUUID } from "@/lib/utils";
 import { useModel } from "@/contexts/model-context";
 import { useInitialMessage } from "@/contexts/initial-message-context";
 import { useCallback, useEffect, useRef, useMemo, useState } from "react";
-import { useRegeneration, filterHiddenForRender } from "./hooks/use-regeneration";
+import { useRegeneration } from "./hooks/use-regeneration";
 import { ToolType, getDefaultTools } from "@/lib/ai/model-tools";
 import { resolveModel } from "@/lib/ai/ai-providers";
 import { useAuth } from "@workos-inc/authkit-nextjs/components";
@@ -65,7 +65,8 @@ function ChatInterfaceInternal({
   const pathname = usePathname();
   const { selectedModel, setSelectedModel } = useModel();
   const { consumeInitialMessage } = useInitialMessage();
-  const { isAuthenticated, isLoading: authLoading } = useConvexAuth();
+  const { isAuthenticated } = useConvexAuth();
+  const promptDisabled = disableInput;
   const { user } = useAuth();
   const prevIdRef = useRef(id);
   const autoStartTriggeredRef = useRef(false);
@@ -305,24 +306,40 @@ function ChatInterfaceInternal({
             ? [...currentDefaultTools, "web_search" as ToolType]
             : currentDefaultTools;
 
-          // Build request context: merge server-fetched base with current chat hook messages
+          // Build request context
           const baseBeforePrune = initialMessages && initialMessages.length > 0
             ? initialMessages
             : historicalMessages;
 
+          // For regeneration, we prune at the anchor.
+          // For normal messages, we rely on the pivot logic relative to the hook messages.
           const anchor = trigger === "regenerate-message" ? regenerateAnchorRef.current : null;
           const base = anchor ? pruneAt(baseBeforePrune, anchor.id, anchor.role) : baseBeforePrune;
+          
+          // If regenerating, also prune the hook messages at the anchor point
           const hookMessages = anchor ? pruneAt(messages, anchor.id, anchor.role) : messages;
 
-          const usedIds = new Set<string>();
-          const requestMessages = base.map((m) => {
-            usedIds.add(m.id);
-            const fromHook = hookMessages.find((s) => s.id === m.id);
-            return fromHook ?? m;
-          });
-          hookMessages.forEach((m) => {
-            if (!usedIds.has(m.id)) requestMessages.push(m);
-          });
+          // Apply Pivot Logic to merge base and hookMessages
+          let requestMessages: UIMessage[] = [];
+          const pivotIndexInLocal = hookMessages.findIndex((localMsg: UIMessage) =>
+            base.some((baseMsg: UIMessage) => baseMsg.id === localMsg.id)
+          );
+
+          if (pivotIndexInLocal !== -1) {
+            const pivotId = hookMessages[pivotIndexInLocal].id;
+            const pivotIndexInBase = base.findIndex((baseMsg: UIMessage) => baseMsg.id === pivotId);
+
+            if (pivotIndexInBase !== -1) {
+              requestMessages = [...base.slice(0, pivotIndexInBase), ...hookMessages];
+            } else {
+               // Fallback
+               const usedIds = new Set(hookMessages.map((m: UIMessage) => m.id));
+               requestMessages = [...base.filter((m: UIMessage) => !usedIds.has(m.id)), ...hookMessages];
+            }
+          } else {
+            const usedIds = new Set(hookMessages.map((m: UIMessage) => m.id));
+            requestMessages = [...base.filter((m: UIMessage) => !usedIds.has(m.id)), ...hookMessages];
+          }
 
           // Get current responseStyle from store
           const currentResponseStyle = useChatUIStore.getState().responseStyle;
@@ -351,9 +368,8 @@ function ChatInterfaceInternal({
     chatStateInstance.syncFromAISDK(messages, status === 'streaming' ? 'streaming' : 'ready');
   }, [messages, status, chatStateInstance]);
 
-  const {
+    const {
     regenerateAnchorRef,
-    hiddenIdsRef,
     pruneAt,
     handleRegenerateAssistant,
     handleRegenerateAfterUser,
@@ -402,22 +418,32 @@ function ChatInterfaceInternal({
       return [];
     }
 
-    const baseBeforePrune = initialMessages && initialMessages.length > 0 ? initialMessages : historicalMessages;
-    const anchor = regenerateAnchorRef.current;
-    const base = anchor ? pruneAt(baseBeforePrune, anchor.id, anchor.role) : baseBeforePrune;
+    const base = initialMessages && initialMessages.length > 0 ? initialMessages : historicalMessages;
 
-    // Keep base order, overlay streaming message if same id, append new streaming-only items at the end
-    const usedIds = new Set<string>();
-    const result: UIMessage[] = base.map((m) => {
-      const sm = messages.find((s: UIMessage) => s.id === m.id);
-      usedIds.add(m.id);
-      return sm ?? m;
-    });
-    messages.forEach((s: UIMessage) => {
-      if (!usedIds.has(s.id)) result.push(s);
-    });
-    return filterHiddenForRender(result, hiddenIdsRef);
-  }, [isThread, historicalMessages, messages, initialMessages, pruneAt]);
+    const pivotIndexInLocal = messages.findIndex((localMsg: UIMessage) =>
+      base.some((baseMsg: UIMessage) => baseMsg.id === localMsg.id)
+    );
+
+    if (pivotIndexInLocal !== -1) {
+      const pivotId = messages[pivotIndexInLocal].id;
+      const pivotIndexInBase = base.findIndex((baseMsg: UIMessage) => baseMsg.id === pivotId);
+
+      if (pivotIndexInBase !== -1) {
+        // Take history up to pivot, then append local messages (which includes the pivot and everything after)
+        const merged = [...base.slice(0, pivotIndexInBase), ...messages];
+        return merged;
+      }
+    }
+
+    // Fallback: If no overlapping pivot found, assume local messages are new/appended
+    // Filter duplicates just in case, but rely on base + local structure
+    const usedIds = new Set(messages.map((m: UIMessage) => m.id));
+    const merged = [
+      ...base.filter((m: any) => !usedIds.has(m.id)),
+      ...messages,
+    ];
+    return merged;
+  }, [isThread, historicalMessages, messages, initialMessages]);
 
   // Preserve last non-empty render while pagination is loading to prevent flicker on model change
   const lastNonEmptyRenderRef = useRef<UIMessage[]>([]);
@@ -449,7 +475,7 @@ function ChatInterfaceInternal({
       // Clear error states
       setQuotaError(null);
       setShowNoSubscriptionDialog(false);
-      
+
       // Update previous ID reference
       prevIdRef.current = id;
     }
@@ -571,15 +597,14 @@ function ChatInterfaceInternal({
 
       // Prevent sending when input is disabled, unauthenticated, or while auth is (re)loading
       if (
-        disableInput ||
-        authLoading ||
-        !isAuthenticated ||
+        promptDisabled ||
         isGenerating ||
         (!input.trim() &&
           uploadedAttachments.length === 0 &&
           uploadingFiles.length === 0)
-      )
+      ) {
         return;
+      }
 
       const messageContent = input.trim();
       const messageId = generateUUID();
@@ -588,12 +613,6 @@ function ChatInterfaceInternal({
       try {
         if (regenerateAnchorRef.current) {
           regenerateAnchorRef.current = null;
-        }
-        if (
-          hiddenIdsRef.current &&
-          typeof hiddenIdsRef.current.clear === "function"
-        ) {
-          hiddenIdsRef.current.clear();
         }
       } catch {}
 
@@ -691,9 +710,7 @@ function ChatInterfaceInternal({
       await Effect.runPromise(program);
     },
     [
-      disableInput,
-      authLoading,
-      isAuthenticated,
+      promptDisabled,
       status,
       id,
       onInitialMessage,
@@ -885,7 +902,7 @@ function ChatInterfaceInternal({
 
       {/* Prompt input overlayed at bottom of the main area */}
       <ChatInputArea
-        disableInput={disableInput || !isAuthenticated || authLoading}
+        disableInput={promptDisabled}
         selectedModel={selectedModel}
         onModelChange={setSelectedModel}
         onSubmit={handleSubmit}

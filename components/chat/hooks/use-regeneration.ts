@@ -58,10 +58,8 @@ export function useRegeneration({
   onError,
 }: UseRegenerationParams) {
   const regenerateAnchorRef = useRef<{ id: string; role: Role } | null>(null);
-  const hiddenIdsRef = useRef<Set<string>>(new Set());
   // Track current fiber for cancellation
   const currentFiberRef = useRef<Fiber.RuntimeFiber<void, RegenerationError> | null>(null);
-
   const pruneAt = useCallback(
     (list: UIMessage[], anchorId: string, role: Role) => {
       const idx = list.findIndex((m) => m.id === anchorId);
@@ -127,26 +125,37 @@ export function useRegeneration({
 
   const handleRegenerateAssistant = useCallback(
     (messageId: string, renderedMessages: UIMessage[]) => {
-      const target = renderedMessages.find((m) => m.id === messageId);
-      const role = (target?.role ?? "assistant") as Role;
-
-      // Hide the anchor and everything after it
+      // Find the message index
       const idx = renderedMessages.findIndex((m) => m.id === messageId);
-      if (idx !== -1) {
-        hiddenIdsRef.current = new Set(
-          renderedMessages.slice(idx).map((m) => m.id)
-        );
+      if (idx === -1) return;
+
+      // Find the preceding user message to trigger regeneration from
+      // We search backwards from the assistant message
+      let userMessageId = null;
+      for (let i = idx - 1; i >= 0; i--) {
+        if (renderedMessages[i].role === "user") {
+          userMessageId = renderedMessages[i].id;
+          break;
+        }
       }
 
-      // Force re-render
-      setMessages((curr) => [...curr]);
-      regenerateAnchorRef.current = { id: messageId, role };
+      if (!userMessageId) {
+        console.error("Could not find preceding user message for regeneration");
+        return;
+      }
+
+      // Use the user message ID for the anchor and pruning
+      const role = "user"; // We are effectively regenerating from the user's perspective
+
+      // Force re-render with pruning at the user message (keeping the user message)
+      setMessages((curr) => pruneAt(curr, userMessageId, role));
+      regenerateAnchorRef.current = { id: userMessageId, role };
 
       if (status === "streaming") stop();
 
-      runRegenerationWithCancellation(messageId);
+      runRegenerationWithCancellation(userMessageId);
     },
-    [status, stop, setMessages, runRegenerationWithCancellation]
+    [status, stop, setMessages, runRegenerationWithCancellation, pruneAt]
   );
 
   const handleRegenerateAfterUser = useCallback(
@@ -229,22 +238,12 @@ export function useRegeneration({
 
   return {
     regenerateAnchorRef,
-    hiddenIdsRef,
     pruneAt,
     handleRegenerateAssistant,
     handleRegenerateAfterUser,
     handleEditUserMessage,
     cancelCurrentRegeneration,
   } as const;
-}
-
-export function filterHiddenForRender(
-  messages: UIMessage[],
-  hiddenIdsRef: RefObject<Set<string>>,
-): UIMessage[] {
-  const hidden = hiddenIdsRef.current;
-  if (!hidden || hidden.size === 0) return messages;
-  return messages.filter((m) => !hidden.has(m.id));
 }
 
 
