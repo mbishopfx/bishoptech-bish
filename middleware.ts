@@ -19,6 +19,7 @@ export default authkitMiddleware({
     enabled: true,
     unauthenticatedPaths: [
       "/",
+      "/share/:path*",
       "/sign-in",
       "/sign-up",
       "/callback",

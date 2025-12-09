@@ -51,6 +51,7 @@
     "@workos-inc/widgets": "^1.5.1",
     "ai": "^5.0.106",
     "ai-sdk-tools": "^0.4.7",
+    "botid": "^1.5.10",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",

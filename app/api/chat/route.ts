@@ -1,4 +1,5 @@
 import { Effect, Schedule, Scope, Queue, Ref, Fiber, Runtime, Chunk, Duration } from "effect";
+import { checkBotId } from "botid/server";
 import {
   streamText,
   convertToModelMessages,
@@ -45,6 +46,7 @@ import {
   ToolError,
   TimeoutError,
   ProviderError,
+  BotDetectionError,
   type ChatRouteError,
 } from "./errors";
 
@@ -216,6 +218,13 @@ const errorToResponse = (
         "TIMEOUT"
       );
 
+    case "BotDetectionError":
+      return makeResponse(
+        { error: error.message, reason: error.reason },
+        403,
+        "BOT_DETECTED"
+      );
+
     case "ProviderError":
       const providerStatus =
         error.errorType === "rate_limit"
@@ -268,6 +277,33 @@ const errorToResponse = (
 // ============================================================================
 // Database Queue Implementation
 // ============================================================================
+
+/**
+ * Runs BotID verification and fails the effect when the request is classified as a bot.
+ */
+const verifyBotProtection = (logContext: LogContext) =>
+  Effect.tryPromise({
+    try: () => checkBotId(),
+    catch: (error) =>
+      new BotDetectionError({
+        message: "Bot verification failed",
+        reason: error instanceof Error ? error.message : "Unknown error",
+      }),
+  }).pipe(
+    Effect.flatMap((verification) => {
+      if (verification.isBot) {
+        const reason = "BotID classification";
+        logger.warn("Bot traffic blocked", logContext, { reason });
+        return Effect.fail(
+          new BotDetectionError({
+            message: "Bot detected. Access denied.",
+            reason,
+          })
+        );
+      }
+      return Effect.succeed(verification);
+    })
+  );
 
 interface DatabaseOperation {
   operation: Effect.Effect<void, DatabaseError>;
@@ -355,6 +391,9 @@ const handleChatRequest = (
 ): Effect.Effect<Response, ChatRouteError, Scope.Scope> =>
   Effect.gen(function* () {
   const start = Date.now();
+    const logContext: LogContext = { requestId };
+
+    yield* verifyBotProtection(logContext);
 
     // Early abort check
     if (req.signal?.aborted) {
@@ -383,12 +422,8 @@ const handleChatRequest = (
     // Validate regenerate request
     yield* validateRegenerateRequest(trigger, messageId);
 
-    // Create logging context
-    const logContext: LogContext = {
-      requestId,
-      threadId,
-      modelId,
-    };
+    logContext.threadId = threadId;
+    logContext.modelId = modelId;
 
     logger.debug("Request validated", logContext, { trigger, messageCount: messages.length });
 
@@ -1099,6 +1134,7 @@ export async function POST(req: Request): Promise<Response> {
       ValidationError: (e: ValidationError) => Effect.succeed(errorToResponse(e, start, requestId, logContext)),
       RegenerateError: (e: RegenerateError) => Effect.succeed(errorToResponse(e, start, requestId, logContext)),
       AuthenticationError: (e: AuthenticationError) => Effect.succeed(errorToResponse(e, start, requestId, logContext)),
+      BotDetectionError: (e: BotDetectionError) => Effect.succeed(errorToResponse(e, start, requestId, logContext)),
       NoOrganizationError: (e: NoOrganizationError) => Effect.succeed(errorToResponse(e, start, requestId, logContext)),
       NoSubscriptionError: (e: NoSubscriptionError) => Effect.succeed(errorToResponse(e, start, requestId, logContext)),
       QuotaExceededError: (e: QuotaExceededError) => Effect.succeed(errorToResponse(e, start, requestId, logContext)),

@@ -41,6 +41,15 @@ export class NoSubscriptionError extends Data.TaggedError(
 }> {}
 
 /**
+ * Error when bot detection flags the request.
+ * Maps to HTTP 403 Forbidden.
+ */
+export class BotDetectionError extends Data.TaggedError("BotDetectionError")<{
+  readonly message: string;
+  readonly reason?: string;
+}> {}
+
+/**
  * Error when user/org quota is exceeded.
  * Maps to HTTP 429 Too Many Requests.
  */
@@ -137,6 +146,7 @@ export type ChatRouteError =
   | AuthenticationError
   | NoOrganizationError
   | NoSubscriptionError
+  | BotDetectionError
   | QuotaExceededError
   | StreamError
   | DatabaseError

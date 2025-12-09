@@ -5,6 +5,7 @@ import { ConvexClientProvider } from "@/components/ConvexClientProvider";
 import { ThemeProvider } from "next-themes";
 import { Providers } from "./providers";
 import { cookies } from "next/headers";
+
 const inter = Inter({
   weight: ["400"],
   subsets: ["latin"],

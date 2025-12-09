@@ -4,7 +4,7 @@ import { useCallback, useMemo, useState, useEffect, createContext, useContext } 
 import { cn } from "@/lib/utils";
 import { ChevronLeftIcon, ChevronRightIcon, XIcon } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useIsMobile } from "@/lib/hooks/use-mobile";
 
 type SidebarControlContextValue = {
   closeSidebar: () => void;

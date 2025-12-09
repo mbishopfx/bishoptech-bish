@@ -2,16 +2,16 @@
 
 import { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Preloaded, usePaginatedQuery, usePreloadedQuery, useMutation, useConvexAuth, Authenticated, AuthLoading, Unauthenticated } from "convex/react";
+import { Preloaded, usePaginatedQuery, usePreloadedQuery, useMutation, useConvexAuth, Authenticated, AuthLoading, Unauthenticated, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ai/ui/button";
 import { Loader } from "@/components/ai/loader";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
+import { cn, copyToClipboard } from "@/lib/utils";
 import { useChatSidebarControls } from "@/components/ai/ChatShellClient";
 import { logThreadRemoved, logThreadRenamed } from "@/actions/audit";
 import { CheckIcon, AlertTriangleIcon } from "lucide-react";
-import { EditIcon, DeleteIcon, PinIcon } from "@/components/ui/icons/svg-icons";
+import { EditIcon, DeleteIcon, PinIcon, CopyIcon } from "@/components/ui/icons/svg-icons";
 import {
   Tooltip,
   TooltipTrigger,
@@ -24,6 +24,8 @@ import {
   ContextMenuTrigger,
   ContextMenuSeparator,
 } from "@/components/ai/ui/context-menu";
+import { useThreadShare } from "@/lib/hooks/useThreadShare";
+import { ShareSettingsDialog } from "@/components/share/ShareSettingsDialog";
 
 interface Thread {
   threadId: string;
@@ -33,6 +35,9 @@ interface Thread {
   lastMessageAt: number;
   generationStatus: "pending" | "generation" | "compleated" | "failed";
   updatedAt?: number;
+  shareId?: string;
+  shareStatus?: "active" | "revoked";
+  sharedAt?: number;
 }
 
 interface ThreadSidebarInteractiveProps {
@@ -95,8 +100,16 @@ export function ThreadSidebarInteractive({
   const [editingTitle, setEditingTitle] = useState("");
   const [loadingSource, setLoadingSource] = useState<null | "scroll">(null);
   const [hasHydrated, setHasHydrated] = useState(false);
+  const [shareDialogThread, setShareDialogThread] = useState<Thread | null>(null);
   const requestInFlightRef = useRef(false);
   const [optimisticTitles, setOptimisticTitles] = useState<Record<string, string>>({});
+  const {
+    resolveShareState,
+    handleToggleShare,
+    handleCopyShareLink,
+    updateShareSettings,
+    regenerateShareLink,
+  } = useThreadShare();
 
   useEffect(() => {
     setHasHydrated(true);
@@ -430,8 +443,10 @@ export function ThreadSidebarInteractive({
     [router, closeSidebar, isMobileViewport],
   );
 
+
   const renderThreadItem = (thread: Thread) => {
     const isEditing = editingThreadId === thread.threadId;
+    const shareState = resolveShareState(thread);
 
     return (
       <ContextMenu key={thread.threadId}>
@@ -528,6 +543,28 @@ export function ThreadSidebarInteractive({
             <EditIcon className="mr-2 h-3 w-3" />
             Renombrar
           </ContextMenuItem>
+          <ContextMenuItem
+            className="hover:bg-hover"
+            onClick={(event: React.MouseEvent) => {
+              event.stopPropagation();
+              setShareDialogThread(thread);
+            }}
+          >
+            <CopyIcon className="mr-2 h-3 w-3" />
+            {shareState.isShared ? "Opciones de compartido" : "Compartir enlace"}
+          </ContextMenuItem>
+          {shareState.isShared && shareState.shareId && (
+            <ContextMenuItem
+              className="hover:bg-hover"
+              onClick={(event: React.MouseEvent) => {
+                event.stopPropagation();
+                handleCopyShareLink(shareState.shareId!);
+              }}
+            >
+              <CopyIcon className="mr-2 h-3 w-3" />
+              Copiar enlace
+            </ContextMenuItem>
+          )}
           <ContextMenuItem
             className="hover:bg-hover"
             onClick={(event: React.MouseEvent) =>
@@ -657,6 +694,25 @@ export function ThreadSidebarInteractive({
       )}
 
       {/* Button removed: automatic infinite scroll handles pagination */}
+
+      <ShareSettingsDialog
+        thread={
+          shareDialogThread
+            ? {
+                threadId: shareDialogThread.threadId,
+                title: shareDialogThread.title,
+                shareId: shareDialogThread.shareId,
+                shareStatus: shareDialogThread.shareStatus,
+              }
+            : null
+        }
+        shareState={shareDialogThread ? resolveShareState(shareDialogThread) : null}
+        onClose={() => setShareDialogThread(null)}
+        handleToggleShare={handleToggleShare}
+        handleCopyShareLink={handleCopyShareLink}
+        updateShareSettings={updateShareSettings}
+        regenerateShareLink={regenerateShareLink}
+      />
     </div>
   );
 }

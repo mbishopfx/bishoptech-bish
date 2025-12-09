@@ -6,6 +6,7 @@ import { Theme } from "@radix-ui/themes";
 import { ReactNode } from "react";
 import { Provider as AIStoreProvider } from "@ai-sdk-tools/store";
 import { Analytics } from "@vercel/analytics/next"
+import { Toaster } from "@/components/ai/ui/sonner";
 interface ProvidersProps {
   children: ReactNode;
   initialModel?: string;
@@ -15,6 +16,7 @@ export function Providers({ children, initialModel }: ProvidersProps) {
   return (
     <Theme>
       <Analytics />
+      <Toaster />
       <ModelProvider initialModel={initialModel}>
         <AIStoreProvider initialMessages={[]}>
             <InitialMessageProvider>{children}</InitialMessageProvider>
