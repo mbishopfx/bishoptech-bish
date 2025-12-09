@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery, useConvexAuth, useMutation, Authenticated, Unauthenticated } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { UIMessage } from "@ai-sdk-tools/store";
@@ -147,7 +147,7 @@ export default function SharedChatViewer({
     window.print();
   };
 
-  const handleClone = async (options?: { triggeredByAuth?: boolean }) => {
+  const handleClone = useCallback(async (options?: { triggeredByAuth?: boolean }) => {
     if (!isAuthenticated) {
       const returnTo = `/share/${shareId}?clone=1`;
       const signInUrl =
@@ -176,7 +176,7 @@ export default function SharedChatViewer({
         setAutoClonePending(false);
       }
     }
-  };
+  }, [isAuthenticated, shareId, cloneThread, router]);
 
   useEffect(() => {
     if (!searchParams) return;
@@ -190,7 +190,7 @@ export default function SharedChatViewer({
     if (!autoClonePending || !isAuthenticated || isCloning) return;
     // Run clone automatically after returning from auth flow.
     handleClone({ triggeredByAuth: true });
-  }, [autoClonePending, isAuthenticated, isCloning]);
+  }, [autoClonePending, isAuthenticated, isCloning, handleClone]);
 
   const renderedMessages = useMemo(() => messages, [messages]);
 

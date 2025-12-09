@@ -1,10 +1,36 @@
 import { fetchQuery } from "convex/nextjs";
 import { api } from "@/convex/_generated/api";
+import type { UIMessage } from "@ai-sdk-tools/store";
 import { notFound } from "next/navigation";
+import { Id } from "@/convex/_generated/dataModel";
 import SharedChatViewer from "@/components/share/SharedChatViewer";
 import SharedThreadLoader from "@/components/share/SharedThreadLoader";
 
 const PAGE_SIZE = 30;
+
+type SharedAttachment = {
+  attachmentId: Id<"attachments">;
+  fileName: string;
+  mimeType: string;
+  attachmentUrl: string;
+  attachmentType: "image" | "pdf" | "file";
+};
+
+type SharedSource = {
+  sourceId: string;
+  url: string;
+  title?: string;
+};
+
+type SharedMessage = {
+  messageId: string;
+  role: "user" | "assistant";
+  content: string;
+  reasoning?: string;
+  created_at: number;
+  attachments: SharedAttachment[];
+  sources?: SharedSource[];
+};
 
 type SharedThreadOk = {
   status: "ok";
@@ -16,9 +42,14 @@ type SharedThreadOk = {
     model: string;
     responseStyle?: string;
     ownerName?: string;
+    settings: {
+      allowAttachments: boolean;
+      orgOnly: boolean;
+      shareName: boolean;
+    };
   };
   messages: {
-    page: any[];
+    page: SharedMessage[];
     isDone: boolean;
     continueCursor: string | null;
   };
@@ -30,31 +61,45 @@ type SharedThreadAccessDenied = {
 
 type SharedThreadResponse = SharedThreadOk | SharedThreadAccessDenied;
 
-const mapToUIMessage = (message: any) => {
+const mapToUIMessage = (message: SharedMessage): UIMessage => {
+  const parts: UIMessage["parts"] = [];
+
+  if (message.reasoning) {
+    parts.push({ type: "reasoning", text: message.reasoning });
+  }
+
+  if (message.content) {
+    parts.push({ type: "text", text: message.content });
+  }
+
+  for (const att of message.attachments) {
+    parts.push({
+      type: "file",
+      mediaType: att.mimeType,
+      url: att.attachmentUrl,
+      filename: att.fileName,
+      providerMetadata: {
+        rift: {
+          attachmentId: att.attachmentId,
+          attachmentType: att.attachmentType,
+        },
+      },
+    });
+  }
+
+  for (const source of message.sources ?? []) {
+    parts.push({
+      type: "source-url",
+      sourceId: source.sourceId,
+      url: source.url,
+      title: source.title,
+    });
+  }
+
   return {
     id: message.messageId,
     role: message.role,
-    parts: [
-      ...(message.reasoning ? [{ type: "reasoning", text: message.reasoning }] : []),
-      ...(message.content ? [{ type: "text", text: message.content }] : []),
-      ...(message.attachments
-        ? message.attachments.map((att: any) => ({
-            type: "file" as const,
-            mediaType: att.mimeType,
-            url: att.attachmentUrl,
-            attachmentId: att.attachmentId,
-            attachmentType: att.attachmentType,
-          }))
-        : []),
-      ...(message.sources
-        ? message.sources.map((source: any) => ({
-            type: "source-url" as const,
-            sourceId: source.sourceId,
-            url: source.url,
-            title: source.title,
-          }))
-        : []),
-    ],
+    parts,
   };
 };
 
@@ -65,13 +110,13 @@ export default async function SharedThreadPage({
 }) {
   const { shareId } = await params;
 
-  const shared = (await fetchQuery(
+  const shared: SharedThreadResponse | null = await fetchQuery(
     api.share.getSharedThread,
     {
       shareId,
       paginationOpts: { numItems: PAGE_SIZE, cursor: null },
     },
-  ).catch(() => null)) as SharedThreadResponse | null;
+  ).catch(() => null);
 
   if (!shared) {
     notFound();

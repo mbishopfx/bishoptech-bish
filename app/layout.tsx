@@ -33,7 +33,7 @@ export const metadata: Metadata = {
   },
   description: "Plataforma que unifica todos los modelos de IA en una sola app empresarial.",
   applicationName: "Rift",
-  metadataBase: baseUrl,
+  metadataBase: new URL(baseUrl),
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",

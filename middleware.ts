@@ -26,6 +26,8 @@ export default authkitMiddleware({
       "/terms-of-service",
       "/privacy-policy",
       "/models",
+      "/relay-7ls5/:path*",
+      "/relay-7ls5/static/:path*",
     ],
   },
 });

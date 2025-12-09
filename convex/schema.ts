@@ -165,8 +165,7 @@ export default defineSchema({
     .index("by_thread_and_userId", ["threadId", "userId"])
     .index("by_messageId_and_userId", ["messageId", "userId"])
     .index("by_user", ["userId"]) 
-    .index("by_thread_and_user_and_created_at", ["threadId", "userId", "created_at"])
-    .index("by_thread_user_role_created_at", ["threadId", "userId", "role", "created_at"]),
+    .index("by_thread_and_user_and_created_at", ["threadId", "userId", "created_at"]),
 
   attachments: defineTable({
     publicMessageIds: v.array(v.id("messages")),

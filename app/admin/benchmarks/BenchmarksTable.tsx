@@ -22,21 +22,25 @@ export function BenchmarksTable() {
   const [currency, setCurrency] = useState<Currency>('USD');
   const [exchangeRate, setExchangeRate] = useState<number>(18.5);
 
+  const normalizeCost = (value: unknown): number | null => {
+    if (typeof value === 'number') {
+      return Number.isFinite(value) ? value : null;
+    }
+    if (typeof value === 'string') {
+      const parsed = parseFloat(value);
+      return Number.isFinite(parsed) ? parsed : null;
+    }
+    return null;
+  };
+
   // Calculate raw cost without multipliers (for statistics)
   const calculateRawCost = (result: BenchmarkResult, scenario: Scenario) => {
     const scenarioData = result[scenario];
     if (!scenarioData || 'error' in scenarioData) {
       return 0;
     }
-    const costStr = scenarioData.totalCost;
-    if (!costStr || typeof costStr !== 'string') {
-      return 0;
-    }
-    const cost = parseFloat(costStr);
-    if (isNaN(cost)) {
-      return 0;
-    }
-    return cost;
+    const cost = normalizeCost(scenarioData.totalCost);
+    return cost ?? 0;
   };
 
   const calculateDisplayCost = (result: BenchmarkResult, scenario: Scenario) => {
@@ -44,14 +48,8 @@ export function BenchmarksTable() {
     if (!scenarioData || 'error' in scenarioData) {
       return 0;
     }
-    const costStr = scenarioData.totalCost;
-    if (!costStr || typeof costStr !== 'string') {
-      return 0;
-    }
-    const cost = parseFloat(costStr);
-    if (isNaN(cost)) {
-      return 0;
-    }
+    const cost = normalizeCost(scenarioData.totalCost);
+    if (cost === null) return 0;
     const multiplier = result.isPremium ? 100 : 1000;
     return cost * multiplier;
   };
@@ -207,14 +205,9 @@ export function BenchmarksTable() {
         
         scenarios.forEach(scenario => {
           const scenarioData = model[scenario];
-          if (scenarioData && !('error' in scenarioData) && scenarioData.totalCost) {
-            const costStr = scenarioData.totalCost;
-            if (costStr && typeof costStr === 'string') {
-              const baseCost = parseFloat(costStr);
-              if (!isNaN(baseCost)) {
-                costs.push(baseCost);
-              }
-            }
+          if (scenarioData && !('error' in scenarioData)) {
+            const baseCost = normalizeCost(scenarioData.totalCost);
+            if (baseCost !== null) costs.push(baseCost);
           }
         });
         
@@ -226,11 +219,8 @@ export function BenchmarksTable() {
       const scenarioData = model[customScenario];
       if (!scenarioData || 'error' in scenarioData) return 0;
       
-      const costStr = scenarioData.totalCost;
-      if (!costStr || typeof costStr !== 'string') return 0;
-      
-      const baseCost = parseFloat(costStr);
-      if (isNaN(baseCost)) return 0;
+      const baseCost = normalizeCost(scenarioData.totalCost);
+      if (baseCost === null) return 0;
       
       return baseCost * multiplier;
     };
@@ -259,8 +249,8 @@ export function BenchmarksTable() {
       const worseData = model.big;
       if (!worseData || 'error' in worseData || !worseData.totalCost) return;
 
-      const baseCost = parseFloat(worseData.totalCost);
-      if (isNaN(baseCost)) return;
+      const baseCost = normalizeCost(worseData.totalCost);
+      if (baseCost === null) return;
 
       if (model.isPremium) {
         // Premium model: check if it would be < 6 as non-premium
