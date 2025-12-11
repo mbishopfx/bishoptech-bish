@@ -458,6 +458,58 @@ export const backfillCompletedStatus = internalMutation({
 });
 
 /**
+ * One-time migration to drop the legacy `backfill` field from all tables.
+ * Run this before removing the field from the schema.
+ */
+export const removeBackfillField = internalMutation({
+  args: {
+    secret: v.string(),
+  },
+  returns: v.object({
+    threads: v.number(),
+    messages: v.number(),
+    attachments: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    ensureServerSecret(args.secret);
+
+    let threadsRemoved = 0;
+    let messagesRemoved = 0;
+    let attachmentsRemoved = 0;
+
+    for await (const thread of ctx.db.query("threads")) {
+      if (Object.prototype.hasOwnProperty.call(thread, "backfill")) {
+        const { _id, _creationTime, backfill, ...rest } = thread as any;
+        await ctx.db.replace(_id, rest);
+        threadsRemoved += 1;
+      }
+    }
+
+    for await (const message of ctx.db.query("messages")) {
+      if (Object.prototype.hasOwnProperty.call(message, "backfill")) {
+        const { _id, _creationTime, backfill, ...rest } = message as any;
+        await ctx.db.replace(_id, rest);
+        messagesRemoved += 1;
+      }
+    }
+
+    for await (const attachment of ctx.db.query("attachments")) {
+      if (Object.prototype.hasOwnProperty.call(attachment, "backfill")) {
+        const { _id, _creationTime, backfill, ...rest } = attachment as any;
+        await ctx.db.replace(_id, rest);
+        attachmentsRemoved += 1;
+      }
+    }
+
+    return {
+      threads: threadsRemoved,
+      messages: messagesRemoved,
+      attachments: attachmentsRemoved,
+    };
+  },
+});
+
+/**
  * Agent update thread title
  */
 export const autoUpdateThreadTitle = AuthMutation({
