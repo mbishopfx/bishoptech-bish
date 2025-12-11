@@ -2,7 +2,6 @@ import { create } from "zustand";
 import type { ChatState, ChatStateSetters } from "./types";
 import type { FileAttachment } from "@/lib/file-utils";
 import type { ResponseStyle } from "@/lib/ai/response-styles";
-import { toast } from "sonner";
 
 type ChatUIStore = ChatState & ChatStateSetters & {
   handleSearchToggle: () => void;

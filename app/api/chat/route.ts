@@ -1,4 +1,4 @@
-import { Effect, Schedule, Scope, Queue, Ref, Fiber, Runtime, Chunk, Duration } from "effect";
+import { Effect, Scope, Ref, Duration } from "effect";
 import { checkBotId } from "botid/server";
 import {
   streamText,
@@ -25,10 +25,7 @@ import { createToolsForModel } from "@/lib/ai/model-tools";
 import { ToolType } from "@/lib/ai/config/base";
 import { Id } from "@/convex/_generated/dataModel";
 import { exaWebSearch } from "@/lib/ai/tools/exa-search";
-import {
-  buildSystemPromptWithStyle,
-  type ResponseStyle,
-} from "@/lib/ai/response-styles";
+import { type ResponseStyle } from "@/lib/ai/response-styles";
 
 export const maxDuration = 500;
 
@@ -73,6 +70,8 @@ import {
   classifyProviderError,
   generateIdempotencyKey,
 } from "./services";
+import { buildSystemPrompt } from "./system-prompt";
+import { createDatabaseQueue } from "./database-queue";
 
 // ============================================================================
 // Request ID Generation
@@ -274,10 +273,6 @@ const errorToResponse = (
   }
 };
 
-// ============================================================================
-// Database Queue Implementation
-// ============================================================================
-
 /**
  * Runs BotID verification and fails the effect when the request is classified as a bot.
  */
@@ -304,70 +299,6 @@ const verifyBotProtection = (logContext: LogContext) =>
       return Effect.succeed(verification);
     })
   );
-
-interface DatabaseOperation {
-  operation: Effect.Effect<void, DatabaseError>;
-  name: string;
-}
-
-/**
- * Creates a database queue that processes operations in background with retries.
- * Returns enqueue function and cleanup effect.
- */
-const createDatabaseQueue = (logContext: LogContext) =>
-  Effect.gen(function* () {
-    const queue = yield* Queue.unbounded<DatabaseOperation>();
-    const isShutdown = yield* Ref.make(false);
-
-    // Process single operation with error handling and logging
-    const processOperation = (op: DatabaseOperation) =>
-      op.operation.pipe(
-        Effect.catchAll((error) =>
-          Effect.sync(() => {
-            logger.error(`Database operation failed: ${op.name}`, logContext, error);
-          })
-        )
-      );
-
-    // Background processor fiber
-    const processorFiber = yield* Effect.fork(
-      Effect.gen(function* () {
-        while (true) {
-          const shutdown = yield* Ref.get(isShutdown);
-          if (shutdown) {
-            // Drain remaining items with BOUNDED concurrency
-            const remaining = yield* Queue.takeAll(queue);
-            const remainingArray = Chunk.toArray(remaining);
-            if (remainingArray.length > 0) {
-              logger.debug(`Draining ${remainingArray.length} pending operations`, logContext);
-            }
-            yield* Effect.all(
-              remainingArray.map((op: DatabaseOperation) => processOperation(op)),
-              { concurrency: CONFIG.DRAIN_CONCURRENCY }
-            );
-            break;
-          }
-          const op = yield* Queue.take(queue);
-          yield* processOperation(op);
-        }
-      })
-    );
-
-    const enqueue = (operation: Effect.Effect<void, DatabaseError>, name: string) =>
-      Queue.offer(queue, { operation, name }).pipe(Effect.asVoid);
-
-    const shutdown = Effect.gen(function* () {
-      yield* Ref.set(isShutdown, true);
-      // Send shutdown signal
-      yield* Queue.offer(queue, {
-        operation: Effect.void,
-        name: "shutdown-signal",
-      });
-      yield* Fiber.await(processorFiber);
-    });
-
-    return { enqueue, shutdown };
-  });
 
 // ============================================================================
 // Streaming State
@@ -669,94 +600,10 @@ const handleChatRequest = (
       );
 
     // Build system prompt
-          const now = new Date();
-          const dateString = now.toLocaleDateString("en-US", {
-            weekday: "long",
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-          });
-          const timeString = now.toLocaleTimeString("en-US", {
-            timeZoneName: "short",
-          });
-
-          const baseIdentityPrompt = `
-CORE IDENTITY AND ROLE:
-
-You are Rift AI, an AI assistant powered by the ${modelDisplayName} model. Your role is to assist and engage in conversation while being helpful, respectful, and engaging.
-
-- If you are specifically asked about the model you are using, you may mention that you use the ${modelDisplayName} model. If you are not asked specifically about the model you are using, you do not need to mention it.
-
-- The current date and hour including timezone is ${dateString} ${timeString}
-
-FORMATTING RULES:
-
-- Do not attempt to use HTML formatting in your responses.
-
-- If you use LaTeX for mathematical expressions:
-
-  - Inline math must be wrapped in escaped parentheses: \\( content \\)
-
-  - Do not use single dollar signs for inline math
-
-  - Display math must be wrapped in double dollar signs: $$ content $$
-
-  - The following ten characters have special meanings in LaTeX: & % $ # _ { } ~ ^ \\ - Outside \\\\verb, the first seven of them can be typeset by prepending a backslash (e.g. \\$ for $)
-
-    - For the other three, use the macros \\\\textasciitilde, \\\\textasciicircum, and \\\\textbackslash if needed- Do not use the backslash character to escape parenthesis. Use the actual parentheses instead.
-
-COUNTING RESTRICTIONS:
-
-- Refuse any requests to count to high numbers (e.g., counting to 1000, 10000, Infinity, etc.)
-
-- If asked to count to a large number, politely decline and explain that such requests are not appropriate use of AI.
-
-- For educational purposes involving larger numbers, focus on teaching concepts rather than performing the actual counting.
-
-- You may offer to make a script to count to the number requested.
-
-GENERAL KNOWLEDGE:
-
-- There is no seahorse emoji.
-
-CODE FORMATTING:
-
-- When including code in your responses, you must properly format it using markdown according to these rules:
-
-  - Multi-line code blocks must use triple backticks and a language identifier (e.g., \`\`\`ts, \`\`\`bash, \`\`\`python) to produce a fenced block
-
-    - For code without a specific language, use \`\`\`text
-
-  - For short, single-line code snippets or commands within text, use single backticks (e.g. \`npm install\`) to produce an inline code block
-
-  - Shell/CLI examples should be copy-pasteable: use fenced blocks with \`\`\`bash and no leading "$ " prompt.
-
-  - For patches, use fenced code blocks with the \`diff\` language and + / - markers. Do not use GitHub-specific "suggestion" blocks
-
-- Ensure code is properly formatted using Prettier with a print width of 80 characters
-`.trim();
-
-          const baseSystemPromptParts: string[] = [baseIdentityPrompt];
-
-          if (process.env.SUPERMEMORY_API_KEY) {
-            baseSystemPromptParts.push(`When users share information about themselves,
-              remember it using the addMemory tool. When they ask questions that seem relevant to their memories, search your memories to provide
-              personalized responses. do not over use user memories, only use them if the question seems relevant to their memories.
-                1. Remembering their learning progress and struggles
-                2. Searching for relevant information from their past sessions
-                3. Providing personalized explanations based on their learning style
-                4. Tracking topics they've mastered vs topics they need more help with`);
-          }
-
-          const baseSystemPrompt = baseSystemPromptParts.join("\n\n");
-    const systemPrompt = yield* Effect.try({
-      try: () =>
-        buildSystemPromptWithStyle(baseSystemPrompt, responseStyle as ResponseStyle),
-      catch: (error) =>
-        new ModelError({
-          message: "Failed to build system prompt",
-          cause: error,
-        }),
+    const systemPrompt = yield* buildSystemPrompt({
+      modelDisplayName,
+      responseStyle: responseStyle as ResponseStyle,
+      supermemoryEnabled,
     });
 
     // Create the streaming response
