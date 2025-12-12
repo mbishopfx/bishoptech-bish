@@ -64,3 +64,5 @@ export const Action = React.memo(({
 
   return button;
 });
+
+Action.displayName = 'Action';

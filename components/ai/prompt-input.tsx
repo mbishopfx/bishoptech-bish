@@ -20,6 +20,7 @@ import {
   AttachmentsIcon,
 } from "@/components/ui/icons/svg-icons";
 import { AlertTriangle } from "lucide-react";
+import NextImage from "next/image";
 import type {
   ComponentProps,
   HTMLAttributes,
@@ -373,10 +374,13 @@ export const PromptInputFilePreview = ({
                 <LoadingIcon className="w-6 h-6 text-gray-500 dark:text-gray-400 animate-spin" />
               </div>
             ) : isImage && imageSrc ? (
-              <img
+              <NextImage
                 src={imageSrc}
                 alt={file.name}
                 className="w-full h-full object-cover"
+                width={64}
+                height={64}
+                unoptimized
               />
             ) : isPdf ? (
               <div className="w-full h-full flex items-center justify-center bg-red-50 dark:bg-red-950/20">

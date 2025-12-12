@@ -2,7 +2,7 @@
 
 import { useConvexAuth } from "convex/react";
 import { useAuth } from "@workos-inc/authkit-nextjs/components";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ai/ui/button";
 import { LogOut, Info } from "lucide-react";
 import authkitSignOut from "@/actions/signout";
@@ -41,16 +41,12 @@ function GradientBackground() {
 export function NoOrgModal() {
   const { isAuthenticated } = useConvexAuth();
   const auth = useAuth();
-  const [mounted, setMounted] = useState(false);
+  const [mounted] = useState(true);
   const [orgName, setOrgName] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const { switchToOrganization } = useAuth();
   const router = useRouter();
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   if (!mounted || !isAuthenticated || !auth.user) {
     return null;

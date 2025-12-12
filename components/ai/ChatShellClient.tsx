@@ -27,16 +27,8 @@ type ChatShellClientProps = {
 };
 
 export function ChatShellClient({ children, className, sidebar }: ChatShellClientProps) {
-  // Always start with true (sidebar open by default)
-  const [isOpen, setIsOpen] = useState<boolean>(true);
   const isMobile = useIsMobile();
-
-  // Close sidebar when switching to mobile
-  useEffect(() => {
-    if (isMobile) {
-      setIsOpen(false);
-    }
-  }, [isMobile]);
+  const [isOpen, setIsOpen] = useState<boolean>(() => !isMobile);
 
   // Keyboard shortcut: Cmd/Ctrl + B to toggle sidebar
   useEffect(() => {

@@ -59,7 +59,9 @@ export default async function SettingsLayout({
   ]);
   const canManageMembers = batch.WIDGETS_USERS_TABLE_MANAGE;
   const canManageDomainSso = batch.WIDGETS_DOMAIN_VERIFICATION_MANAGE;
-  const canViewAnalytics = batch.VIEW_ORG_ANALYTICS;
+  // Hide analytics in production environment
+  const isProduction = process.env.VERCEL_ENV === 'production' || process.env.NODE_ENV === 'production';
+  const canViewAnalytics = isProduction ? false : batch.VIEW_ORG_ANALYTICS;
   const canManageBilling = batch.MANAGE_BILLING;
   
   return (

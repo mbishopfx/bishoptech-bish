@@ -8,6 +8,20 @@ import { hasPermission } from "@/lib/permissions";
 import { fetchQuery } from "convex/nextjs";
 import { api } from "@/convex/_generated/api";
 
+const UpgradeBanner = () => (
+  <div className="p-6 bg-white dark:bg-popover-secondary rounded-lg border border-gray-200 dark:border-border shadow-sm">
+    <p className="text-sm text-gray-500 dark:text-text-muted mb-4">
+      Si estás interesado en esta funcionalidad, contacta al soporte de Rift.
+    </p>
+    <a
+      href="mailto:features@rift.mx"
+      className="inline-flex h-9 items-center rounded-md bg-accent px-3 text-sm font-medium text-white hover:bg-accent-strong transition-colors cursor-pointer"
+    >
+      Contactar Soporte
+    </a>
+  </div>
+);
+
 export default async function DomainSsoPage() {
   const { user, accessToken, organizationId } = await withAuth({
     ensureSignedIn: true,
@@ -66,20 +80,6 @@ export default async function DomainSsoPage() {
       return null;
     });
   }
-
-  const UpgradeBanner = () => (
-    <div className="p-6 bg-white dark:bg-popover-secondary rounded-lg border border-gray-200 dark:border-border shadow-sm">
-      <p className="text-sm text-gray-500 dark:text-text-muted mb-4">
-        Si estás interesado en esta funcionalidad, contacta al soporte de Rift.
-      </p>
-      <a
-        href="mailto:features@rift.mx"
-        className="inline-flex h-9 items-center rounded-md bg-accent px-3 text-sm font-medium text-white hover:bg-accent-strong transition-colors cursor-pointer"
-      >
-        Contactar Soporte
-      </a>
-    </div>
-  );
 
   return (
     <div className="py-6 px-4 md:py-12 md:px-12 flex flex-col max-w-4xl min-w-0 md:min-w-[520px] w-full min-h-full box-border">

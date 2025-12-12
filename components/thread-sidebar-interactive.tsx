@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Preloaded, usePaginatedQuery, usePreloadedQuery, useMutation, useConvexAuth, Authenticated, AuthLoading, Unauthenticated, useQuery } from "convex/react";
+import { Preloaded, usePaginatedQuery, useMutation, useConvexAuth, Authenticated, AuthLoading, Unauthenticated } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ai/ui/button";
 import { Loader } from "@/components/ai/loader";
@@ -36,7 +36,6 @@ interface Thread {
   generationStatus:
     | "pending"
     | "generation"
-    | "compleated" // legacy, remove after migration
     | "completed"
     | "failed";
   updatedAt?: number;
@@ -125,12 +124,7 @@ export function ThreadSidebarInteractive({
     [preloadedThreads],
   );
 
-  // Always call the hook when preloaded exists
-  const preloadedResults = preloadedThreads
-    ? usePreloadedQuery(preloadedThreads)
-    : null;
-
-  const preloadedIsDone = preloadedResults?.isDone ?? preloadedSnapshot.isDone;
+  const preloadedIsDone = preloadedSnapshot.isDone;
   const hasPreloadedMore = Boolean(preloadedThreads && !preloadedIsDone);
   // Avoid running live paginated query until auth is confirmed
   const shouldUsePaginated = hasHydrated && isAuthenticated && (!preloadedThreads || hasPreloadedMore);
@@ -156,7 +150,10 @@ export function ThreadSidebarInteractive({
     paginatedOptions,
   );
 
-  const paginatedResults = (paginated?.results ?? []) as Thread[];
+  const paginatedResults = useMemo(
+    () => (paginated?.results ?? []) as Thread[],
+    [paginated?.results],
+  );
   const paginatedStatus = shouldUsePaginated
     ? paginated?.status ?? "LoadingFirstPage"
     : "Exhausted";
@@ -193,8 +190,7 @@ export function ThreadSidebarInteractive({
   }, [searchQuery]);
 
   const combinedThreads = useMemo(() => {
-    // Freeze to SSR snapshot while auth is loading or unauthenticated
-    const pageFromPreload = (isAuthenticated ? preloadedResults?.page : undefined) ?? preloadedSnapshot.page;
+    const pageFromPreload = preloadedSnapshot.page;
     const allThreads = hasPreloadedMore
       ? [...pageFromPreload, ...paginatedResults]
       : paginatedResults.length > 0
@@ -207,7 +203,7 @@ export function ThreadSidebarInteractive({
     }
 
     return Array.from(threadsById.values()).sort(sortThreads);
-  }, [hasPreloadedMore, paginatedResults, preloadedResults?.page, preloadedSnapshot.page, isAuthenticated]);
+  }, [hasPreloadedMore, paginatedResults, preloadedSnapshot.page]);
 
   const filteredThreads = useMemo(() => {
     if (!searchQuery) {

@@ -68,7 +68,6 @@ export default defineSchema({
     generationStatus: v.union(
       v.literal("pending"),
       v.literal("generation"),
-      v.literal("compleated"), // legacy, remove after migration
       v.literal("completed"),
       v.literal("failed"),
     ),
@@ -91,8 +90,6 @@ export default defineSchema({
     pinned: v.boolean(),
     branchParentThreadId: v.optional(v.id("threads")),
     branchParentPublicMessageId: v.optional(v.string()),
-
-    backfill: v.optional(v.boolean()),
 
     // Sharing status (lightweight flags for quick UI reads)
     shareId: v.optional(v.string()),
@@ -159,8 +156,6 @@ export default defineSchema({
       }),
     ),
     providerMetadata: providerMetadataValidor,
-
-    backfill: v.optional(v.boolean()),
   })
     .index("by_treadId", ["threadId"])
     .index("by_thread_and_userId", ["threadId", "userId"])
@@ -178,8 +173,6 @@ export default defineSchema({
     mimeType: v.string(),
     fileSize: v.string(),
     fileKey: v.string(),
-
-    backfill: v.optional(v.boolean()),
     status: v.optional(v.union(v.literal("delated"), v.literal("uploaded"))),
   })
     .index("by_fileKey", ["fileKey"])

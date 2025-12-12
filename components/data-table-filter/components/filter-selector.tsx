@@ -45,9 +45,9 @@ interface FilterSelectorProps<TData> {
   locale?: Locale
 }
 
-export const FilterSelector = memo(__FilterSelector) as typeof __FilterSelector
+export const FilterSelector = memo(FilterSelectorInner) as typeof FilterSelectorInner
 
-function __FilterSelector<TData>({
+function FilterSelectorInner<TData>({
   filters,
   columns,
   actions,
@@ -126,7 +126,7 @@ function __FilterSelector<TData>({
           </CommandList>
         </Command>
       ),
-    [property, column, filter, filters, columns, actions, value],
+    [property, column, filter, filters, columns, actions, value, strategy, locale],
   )
 
   return (
@@ -228,10 +228,10 @@ interface QuickSearchFiltersProps<TData> {
 }
 
 export const QuickSearchFilters = memo(
-  __QuickSearchFilters,
-) as typeof __QuickSearchFilters
+  QuickSearchFiltersInner,
+) as typeof QuickSearchFiltersInner
 
-function __QuickSearchFilters<TData>({
+function QuickSearchFiltersInner<TData>({
   search,
   filters,
   columns,

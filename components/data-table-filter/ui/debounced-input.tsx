@@ -1,7 +1,7 @@
 'use client'
 
 import { Input } from '@/components/ai/ui/input'
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { debounce } from '../lib/debounce'
 
 export function DebouncedInput({
@@ -21,12 +21,12 @@ export function DebouncedInput({
     setValue(initialValue)
   }, [initialValue])
 
-  // Define the debounced function with useCallback
-  const debouncedOnChange = useCallback(
-    debounce((newValue: string | number) => {
-      onChange(newValue)
-    }, debounceMs), // Pass the wait time here
-    [debounceMs, onChange], // Dependencies
+  const debouncedOnChange = useMemo(
+    () =>
+      debounce((newValue: string | number) => {
+        onChange(newValue)
+      }, debounceMs),
+    [debounceMs, onChange],
   )
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {

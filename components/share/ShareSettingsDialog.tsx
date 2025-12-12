@@ -142,7 +142,6 @@ export function ShareSettingsDialog({
     setIsSharedLocal(nextIsShared);
     setOrgOnly((prev) => shareStatus?.orgOnly ?? prev);
     setShareName((prev) => shareStatus?.shareName ?? prev);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shareState, shareStatus, pendingToggle, pendingSettings]);
 
   useEffect(() => {

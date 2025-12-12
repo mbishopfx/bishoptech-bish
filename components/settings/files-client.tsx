@@ -2,6 +2,7 @@
 
 import { usePaginatedQuery, useMutation, Authenticated, Unauthenticated, AuthLoading, useConvexAuth } from "convex/react";
 import { useMemo, useState } from "react";
+import Image from "next/image";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { DataTable } from "@/components/ai/ui/data-table";
@@ -31,7 +32,6 @@ interface Attachment {
   mimeType: string;
   fileSize: string;
   fileKey: string;
-  backfill?: boolean;
   status?: "delated" | "uploaded";
   _creationTime: number;
 }
@@ -50,12 +50,15 @@ function getPreview(attachment: Attachment): React.ReactNode {
   if (attachment.attachmentType === "image") {
     return (
       <div className="relative">
-        <img
+        <Image
           src={attachment.attachmentUrl}
           alt={attachment.fileName}
           className={`${previewSize} object-cover bg-gray-100 dark:bg-gray-800`}
-          onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
-            const target = e.currentTarget as HTMLImageElement;
+          width={32}
+          height={32}
+          unoptimized
+          onError={(e) => {
+            const target = e.currentTarget as HTMLElement;
             target.style.display = 'none';
             (target.nextSibling as Element)?.classList.remove('hidden');
           }}

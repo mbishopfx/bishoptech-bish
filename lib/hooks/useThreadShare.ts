@@ -172,12 +172,26 @@ export function useThreadShare() {
   const buildRegenerateShareLinkProgram = useCallback(
     (args: { threadId: string }) =>
       Effect.gen(function* (_) {
-        yield* _(
+        const result = yield* _(
           Effect.tryPromise({
             try: () => regenerateShareLinkMutation(args),
             catch: (error) => new RegenerateShareLinkError({ cause: error }),
           }),
         );
+
+        yield* _(
+          Effect.sync(() => {
+            setShareOverrides((prev) => ({
+              ...prev,
+              [args.threadId]: {
+                shareId: result.shareId,
+                shareStatus: "active",
+              },
+            }));
+          }),
+        );
+
+        return result;
       }).pipe(
         Effect.tapError((error) =>
           Effect.sync(() => {
@@ -197,7 +211,8 @@ export function useThreadShare() {
 
   const handleRegenerateShareLink = useCallback(
     async (args: { threadId: string }) => {
-      await Effect.runPromise(buildRegenerateShareLinkProgram(args));
+      const result = await Effect.runPromise(buildRegenerateShareLinkProgram(args));
+      return result;
     },
     [buildRegenerateShareLinkProgram],
   );

@@ -23,7 +23,6 @@ export const threadInfoFields = {
   generationStatus: v.union(
     v.literal("pending"),
     v.literal("generation"),
-    v.literal("compleated"), // legacy, remove after migration
     v.literal("completed"),
     v.literal("failed"),
   ),
@@ -42,7 +41,6 @@ export const threadInfoFields = {
   pinned: v.boolean(),
   branchParentThreadId: v.optional(v.id("threads")),
   branchParentPublicMessageId: v.optional(v.string()),
-  backfill: v.optional(v.boolean()),
   shareId: v.optional(v.string()),
   shareStatus: v.optional(v.union(v.literal("active"), v.literal("revoked"))),
   sharedAt: v.optional(v.number()),
@@ -111,7 +109,6 @@ export const createThread = AuthOrgMutation({
       pinned: false, // Default pinned status
       branchParentThreadId: args.branchParentThreadId,
       branchParentPublicMessageId: args.branchParentPublicMessageId,
-      backfill: false,
     });
 
     return {
@@ -432,82 +429,7 @@ export const deleteThread = AuthMutation({
   },
 });
 
-/**
- * One-time migration to rename generationStatus from "compleated" to "completed".
- */
-export const backfillCompletedStatus = internalMutation({
-  args: {
-    secret: v.string(),
-  },
-  returns: v.object({ updated: v.number() }),
-  handler: async (ctx, args) => {
-    ensureServerSecret(args.secret);
 
-    let updated = 0;
-    const threads = ctx.db.query("threads");
-    for await (const thread of threads) {
-      const status = (thread as { generationStatus?: string }).generationStatus;
-      if (status === "compleated") {
-        await ctx.db.patch(thread._id, { generationStatus: "completed" });
-        updated += 1;
-      }
-    }
-
-    return { updated };
-  },
-});
-
-/**
- * One-time migration to drop the legacy `backfill` field from all tables.
- * Run this before removing the field from the schema.
- */
-export const removeBackfillField = internalMutation({
-  args: {
-    secret: v.string(),
-  },
-  returns: v.object({
-    threads: v.number(),
-    messages: v.number(),
-    attachments: v.number(),
-  }),
-  handler: async (ctx, args) => {
-    ensureServerSecret(args.secret);
-
-    let threadsRemoved = 0;
-    let messagesRemoved = 0;
-    let attachmentsRemoved = 0;
-
-    for await (const thread of ctx.db.query("threads")) {
-      if (Object.prototype.hasOwnProperty.call(thread, "backfill")) {
-        const { _id, _creationTime, backfill, ...rest } = thread as any;
-        await ctx.db.replace(_id, rest);
-        threadsRemoved += 1;
-      }
-    }
-
-    for await (const message of ctx.db.query("messages")) {
-      if (Object.prototype.hasOwnProperty.call(message, "backfill")) {
-        const { _id, _creationTime, backfill, ...rest } = message as any;
-        await ctx.db.replace(_id, rest);
-        messagesRemoved += 1;
-      }
-    }
-
-    for await (const attachment of ctx.db.query("attachments")) {
-      if (Object.prototype.hasOwnProperty.call(attachment, "backfill")) {
-        const { _id, _creationTime, backfill, ...rest } = attachment as any;
-        await ctx.db.replace(_id, rest);
-        attachmentsRemoved += 1;
-      }
-    }
-
-    return {
-      threads: threadsRemoved,
-      messages: messagesRemoved,
-      attachments: attachmentsRemoved,
-    };
-  },
-});
 
 /**
  * Agent update thread title
@@ -699,7 +621,6 @@ export const serverSendMessage = mutation({
       model: args.model,
       attachmentsIds: args.attachmentIds || [],
       modelParams: args.modelParams,
-      backfill: false,
     });
 
     if (args.attachmentIds && args.attachmentIds.length > 0) {
@@ -772,7 +693,6 @@ export const serverStartAssistantMessage = mutation({
       attachmentsIds: [],
       modelParams: undefined,
       providerMetadata: undefined,
-      backfill: false,
     });
     await ctx.db.patch(thread._id, {
       generationStatus: "generation" as const,
@@ -927,7 +847,6 @@ export const serverFinalizeAssistantMessage = mutation({
         attachmentsIds: [],
         modelParams: undefined,
         providerMetadata: undefined,
-        backfill: false,
       });
       targetThreadId = args.threadId;
     } else {
@@ -1090,7 +1009,6 @@ export const createAttachment = AuthMutation({
       fileSize: args.fileSize,
       fileKey: fileKey,
       status: "uploaded",
-      backfill: false,
     });
     
     return attachmentId;

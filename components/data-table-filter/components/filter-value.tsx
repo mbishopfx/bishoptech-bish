@@ -29,6 +29,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react'
 import type { DateRange } from 'react-day-picker'
@@ -476,25 +477,20 @@ export function FilterValueOptionController<TData>({
   actions,
   locale = 'en',
 }: FilterValueControllerProps<TData, 'option'>) {
-  // Compute initial options once per mount
-  const initialOptions = useMemo(() => {
+  const initialSelectedRef = useRef<string[]>(filter?.values ?? [])
+
+  const options = useMemo(() => {
     const counts = column.getFacetedUniqueValues()
+    const currentSelected = new Set(filter?.values ?? [])
+    const initialSelected = new Set(initialSelectedRef.current)
+
     return column.getOptions().map((o) => ({
       ...o,
-      selected: filter?.values.includes(o.value),
-      initialSelected: filter?.values.includes(o.value),
+      selected: currentSelected.has(o.value),
+      initialSelected: initialSelected.has(o.value),
       count: counts?.get(o.value) ?? 0,
     }))
-  }, [])
-
-  const [options, setOptions] = useState(initialOptions)
-
-  // Update selected state when filter values change
-  useEffect(() => {
-    setOptions((prev) =>
-      prev.map((o) => ({ ...o, selected: filter?.values.includes(o.value) })),
-    )
-  }, [filter?.values])
+  }, [column, filter?.values])
 
   const handleToggle = useCallback(
     (value: string, checked: boolean) => {
@@ -552,28 +548,23 @@ export function FilterValueMultiOptionController<TData>({
   actions,
   locale = 'en',
 }: FilterValueControllerProps<TData, 'multiOption'>) {
-  // Compute initial options once per mount
-  const initialOptions = useMemo(() => {
+  const initialSelectedRef = useRef<string[]>(filter?.values ?? [])
+
+  const options = useMemo(() => {
     const counts = column.getFacetedUniqueValues()
+    const currentSelected = new Set(filter?.values ?? [])
+    const initialSelected = new Set(initialSelectedRef.current)
+
     return column.getOptions().map((o) => {
-      const selected = filter?.values.includes(o.value)
+      const selected = currentSelected.has(o.value)
       return {
         ...o,
         selected,
-        initialSelected: selected,
+        initialSelected: initialSelected.has(o.value),
         count: counts?.get(o.value) ?? 0,
       }
     })
-  }, [])
-
-  const [options, setOptions] = useState(initialOptions)
-
-  // Update selected state when filter values change
-  useEffect(() => {
-    setOptions((prev) =>
-      prev.map((o) => ({ ...o, selected: filter?.values.includes(o.value) })),
-    )
-  }, [filter?.values])
+  }, [column, filter?.values])
 
   const handleToggle = useCallback(
     (value: string, checked: boolean) => {
@@ -782,7 +773,7 @@ export function FilterValueNumberController<TData>({
       actions.setFilterOperator(column.id, newOperator)
       actions.setFilterValue(column, newValues)
     },
-    [values, column, actions, minMax],
+    [values, column, actions, minMax, setFilterOperatorDebounced, setFilterValueDebounced],
   )
 
   return (

@@ -32,6 +32,7 @@ import {
 import { Loader } from "@/components/ai/loader";
 import type { UIMessage } from "@ai-sdk-tools/store";
 import React, { useCallback, useEffect, useState } from "react";
+import Image from "next/image";
 
 // Memoized action buttons component
 const MessageActions = React.memo(function MessageActions({
@@ -49,13 +50,15 @@ const MessageActions = React.memo(function MessageActions({
 }) {
   const [isCopied, setIsCopied] = useState(false);
 
+  const messageId = message.id;
+
   const handleRegenerateAssistant = useCallback(() => {
-    onRegenerateAssistantMessage(message.id);
-  }, [onRegenerateAssistantMessage, message.id]);
+    onRegenerateAssistantMessage(messageId);
+  }, [onRegenerateAssistantMessage, messageId]);
 
   const handleRegenerateAfterUser = useCallback(() => {
-    onRegenerateAfterUserMessage(message.id);
-  }, [onRegenerateAfterUserMessage, message.id]);
+    onRegenerateAfterUserMessage(messageId);
+  }, [onRegenerateAfterUserMessage, messageId]);
 
   const handleCopy = useCallback(async () => {
     const textContent = message.parts
@@ -68,7 +71,7 @@ const MessageActions = React.memo(function MessageActions({
     }
     setIsCopied(true);
     setTimeout(() => setIsCopied(false), 2000);
-  }, [message.id, message.role, message.parts]);
+  }, [message.parts, message.role]);
 
   if (message.role === "assistant") {
     return (

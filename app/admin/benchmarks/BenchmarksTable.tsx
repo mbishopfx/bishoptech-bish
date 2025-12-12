@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { ArrowUpIcon, ArrowDownIcon } from 'lucide-react';
 import { Switch } from "@/components/ai/ui/switch";
 import benchmarkResults from "@/scripts/benchmark_results.json";
@@ -10,6 +10,39 @@ type Scenario = 'small' | 'medium' | 'big';
 type SortField = 'provider' | 'model' | 'smallTokens' | 'smallDuration' | 'smallCost' | 'mediumTokens' | 'mediumDuration' | 'mediumCost' | 'worseTokens' | 'worseDuration' | 'worseCost' | 'premium';
 type SortDirection = 'asc' | 'desc';
 type Currency = 'USD' | 'MXN';
+
+type SortableHeaderOptions = {
+  field: SortField;
+  label: React.ReactNode;
+  className?: string;
+  align?: 'left' | 'right' | 'center';
+};
+
+const renderSortIcon = (active: boolean, direction: SortDirection) => {
+  if (!active) {
+    return <ArrowUpIcon className="w-3 h-3 opacity-30" />;
+  }
+  return direction === 'asc'
+    ? <ArrowUpIcon className="w-3 h-3" />
+    : <ArrowDownIcon className="w-3 h-3" />;
+};
+
+const renderSortableHeader = (
+  { field, label, className = '', align = 'right' }: SortableHeaderOptions,
+  currentField: SortField,
+  direction: SortDirection,
+  onSort: (field: SortField) => void,
+) => (
+  <th 
+    className={`px-4 py-3 font-medium cursor-pointer select-none hover:bg-muted/70 transition-colors ${className}`}
+    onClick={() => onSort(field)}
+  >
+    <div className={`flex items-center gap-1.5 ${align === 'right' ? 'justify-end' : align === 'center' ? 'justify-center' : 'justify-start'}`}>
+      {label}
+      {renderSortIcon(currentField === field, direction)}
+    </div>
+  </th>
+);
 
 export function BenchmarksTable() {
   const [sortField, setSortField] = useState<SortField>('provider');
@@ -22,7 +55,7 @@ export function BenchmarksTable() {
   const [currency, setCurrency] = useState<Currency>('USD');
   const [exchangeRate, setExchangeRate] = useState<number>(18.5);
 
-  const normalizeCost = (value: unknown): number | null => {
+  const normalizeCost = useCallback((value: unknown): number | null => {
     if (typeof value === 'number') {
       return Number.isFinite(value) ? value : null;
     }
@@ -31,19 +64,19 @@ export function BenchmarksTable() {
       return Number.isFinite(parsed) ? parsed : null;
     }
     return null;
-  };
+  }, []);
 
   // Calculate raw cost without multipliers (for statistics)
-  const calculateRawCost = (result: BenchmarkResult, scenario: Scenario) => {
+  const calculateRawCost = useCallback((result: BenchmarkResult, scenario: Scenario) => {
     const scenarioData = result[scenario];
     if (!scenarioData || 'error' in scenarioData) {
       return 0;
     }
     const cost = normalizeCost(scenarioData.totalCost);
     return cost ?? 0;
-  };
+  }, [normalizeCost]);
 
-  const calculateDisplayCost = (result: BenchmarkResult, scenario: Scenario) => {
+  const calculateDisplayCost = useCallback((result: BenchmarkResult, scenario: Scenario) => {
     const scenarioData = result[scenario];
     if (!scenarioData || 'error' in scenarioData) {
       return 0;
@@ -52,18 +85,18 @@ export function BenchmarksTable() {
     if (cost === null) return 0;
     const multiplier = result.isPremium ? 100 : 1000;
     return cost * multiplier;
-  };
+  }, [normalizeCost]);
 
   // Convert USD to MXN if needed
-  const convertCurrency = (usdAmount: number): number => {
+  const convertCurrency = useCallback((usdAmount: number): number => {
     if (currency === 'MXN') {
       return usdAmount * exchangeRate;
     }
     return usdAmount;
-  };
+  }, [currency, exchangeRate]);
 
   // Format price according to selected currency
-  const formatPrice = (usdAmount: number): string => {
+  const formatPrice = useCallback((usdAmount: number): string => {
     const amount = convertCurrency(usdAmount);
     const formatter = new Intl.NumberFormat(
       currency === 'MXN' ? 'es-MX' : 'en-US',
@@ -75,9 +108,9 @@ export function BenchmarksTable() {
       }
     );
     return formatter.format(amount);
-  };
+  }, [convertCurrency, currency]);
 
-  const getSortValue = (result: BenchmarkResult, field: SortField) => {
+  const getSortValue = useCallback((result: BenchmarkResult, field: SortField) => {
     switch (field) {
       case 'provider':
         return result.provider;
@@ -118,7 +151,7 @@ export function BenchmarksTable() {
       default:
         return '';
     }
-  };
+  }, [calculateDisplayCost]);
 
   const sortedResults = useMemo(() => {
     const sorted = [...benchmarkResults].sort((a, b) => {
@@ -135,7 +168,7 @@ export function BenchmarksTable() {
       return sortDirection === 'asc' ? comparison : -comparison;
     });
     return sorted;
-  }, [sortField, sortDirection]);
+  }, [getSortValue, sortDirection, sortField]);
 
   const statistics = useMemo(() => {
     const premiumModels = benchmarkResults.filter(r => r.isPremium);
@@ -174,57 +207,57 @@ export function BenchmarksTable() {
         worse: calculateAverage(nonPremiumModels, 'big'),
       },
     };
-  }, []);
+  }, [benchmarkResults, calculateRawCost]);
+
+  const calculateCustomCost = useCallback((modelId: string, isPremium: boolean, multiplier: number) => {
+    if (modelId === 'average') {
+      // Get the average cost for the selected scenario (raw costs without multipliers)
+      let avg: number;
+      if (customScenario === 'average') {
+        // Average across all three scenarios
+        const overall = isPremium ? statistics.premium.overall : statistics.nonPremium.overall;
+        // Statistics contain raw costs, so multiply directly by user's multiplier
+        return overall * multiplier;
+      } else {
+        avg = isPremium 
+          ? statistics.premium[customScenario === 'small' ? 'small' : customScenario === 'medium' ? 'medium' : 'worse']
+          : statistics.nonPremium[customScenario === 'small' ? 'small' : customScenario === 'medium' ? 'medium' : 'worse'];
+        // Statistics contain raw costs, so multiply directly by user's multiplier
+        return avg * multiplier;
+      }
+    }
+    
+    const model = benchmarkResults.find(r => r.model === modelId);
+    if (!model) return 0;
+    
+    if (customScenario === 'average') {
+      // Calculate average across all three scenarios for this specific model
+      const scenarios: Scenario[] = ['small', 'medium', 'big'];
+      const costs: number[] = [];
+      
+      scenarios.forEach(scenario => {
+        const scenarioData = model[scenario];
+        if (scenarioData && !('error' in scenarioData)) {
+          const baseCost = normalizeCost(scenarioData.totalCost);
+          if (baseCost !== null) costs.push(baseCost);
+        }
+      });
+      
+      if (costs.length === 0) return 0;
+      const avgBaseCost = costs.reduce((sum, cost) => sum + cost, 0) / costs.length;
+      return avgBaseCost * multiplier;
+    }
+    
+    const scenarioData = model[customScenario];
+    if (!scenarioData || 'error' in scenarioData) return 0;
+    
+    const baseCost = normalizeCost(scenarioData.totalCost);
+    if (baseCost === null) return 0;
+    
+    return baseCost * multiplier;
+  }, [benchmarkResults, customScenario, normalizeCost, statistics]);
 
   const customScenarioCost = useMemo(() => {
-    const calculateCustomCost = (modelId: string, isPremium: boolean, multiplier: number) => {
-      if (modelId === 'average') {
-        // Get the average cost for the selected scenario (raw costs without multipliers)
-        let avg: number;
-        if (customScenario === 'average') {
-          // Average across all three scenarios
-          const overall = isPremium ? statistics.premium.overall : statistics.nonPremium.overall;
-          // Statistics contain raw costs, so multiply directly by user's multiplier
-          return overall * multiplier;
-        } else {
-          avg = isPremium 
-            ? statistics.premium[customScenario === 'small' ? 'small' : customScenario === 'medium' ? 'medium' : 'worse']
-            : statistics.nonPremium[customScenario === 'small' ? 'small' : customScenario === 'medium' ? 'medium' : 'worse'];
-          // Statistics contain raw costs, so multiply directly by user's multiplier
-          return avg * multiplier;
-        }
-      }
-      
-      const model = benchmarkResults.find(r => r.model === modelId);
-      if (!model) return 0;
-      
-      if (customScenario === 'average') {
-        // Calculate average across all three scenarios for this specific model
-        const scenarios: Scenario[] = ['small', 'medium', 'big'];
-        const costs: number[] = [];
-        
-        scenarios.forEach(scenario => {
-          const scenarioData = model[scenario];
-          if (scenarioData && !('error' in scenarioData)) {
-            const baseCost = normalizeCost(scenarioData.totalCost);
-            if (baseCost !== null) costs.push(baseCost);
-          }
-        });
-        
-        if (costs.length === 0) return 0;
-        const avgBaseCost = costs.reduce((sum, cost) => sum + cost, 0) / costs.length;
-        return avgBaseCost * multiplier;
-      }
-      
-      const scenarioData = model[customScenario];
-      if (!scenarioData || 'error' in scenarioData) return 0;
-      
-      const baseCost = normalizeCost(scenarioData.totalCost);
-      if (baseCost === null) return 0;
-      
-      return baseCost * multiplier;
-    };
-
     const premiumCost = calculateCustomCost(premiumModel, true, premiumMultiplier);
     const nonPremiumCost = calculateCustomCost(nonPremiumModel, false, nonPremiumMultiplier);
     
@@ -233,7 +266,7 @@ export function BenchmarksTable() {
       nonPremium: nonPremiumCost,
       total: premiumCost + nonPremiumCost,
     };
-  }, [premiumModel, nonPremiumModel, premiumMultiplier, nonPremiumMultiplier, customScenario, statistics]);
+  }, [premiumModel, nonPremiumModel, premiumMultiplier, nonPremiumMultiplier, calculateCustomCost]);
 
   const misclassifiedModels = useMemo(() => {
     const misclassified: Array<{
@@ -285,37 +318,16 @@ export function BenchmarksTable() {
     });
 
     return misclassified;
-  }, [currency, exchangeRate]);
+  }, [benchmarkResults, formatPrice, normalizeCost]);
 
-  const handleSort = (field: SortField) => {
+  const handleSort = useCallback((field: SortField) => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
       setSortField(field);
       setSortDirection('asc');
     }
-  };
-
-  const SortIcon = ({ field }: { field: SortField }) => {
-    if (sortField !== field) {
-      return <ArrowUpIcon className="w-3 h-3 opacity-30" />;
-    }
-    return sortDirection === 'asc' 
-      ? <ArrowUpIcon className="w-3 h-3" />
-      : <ArrowDownIcon className="w-3 h-3" />;
-  };
-
-  const SortableHeader = ({ field, children, className = '', align = 'right' }: { field: SortField; children: React.ReactNode; className?: string; align?: 'left' | 'right' | 'center' }) => (
-    <th 
-      className={`px-4 py-3 font-medium cursor-pointer select-none hover:bg-muted/70 transition-colors ${className}`}
-      onClick={() => handleSort(field)}
-    >
-      <div className={`flex items-center gap-1.5 ${align === 'right' ? 'justify-end' : align === 'center' ? 'justify-center' : 'justify-start'}`}>
-        {children}
-        <SortIcon field={field} />
-      </div>
-    </th>
-  );
+  }, [sortDirection, sortField]);
 
   const renderScenarioCell = (result: BenchmarkResult, scenario: Scenario, type: 'tokens' | 'duration' | 'cost') => {
     const scenarioData = result[scenario];
@@ -590,12 +602,18 @@ export function BenchmarksTable() {
         <table className="w-full text-sm text-left min-w-[1400px]">
           <thead className="text-xs uppercase bg-muted/50 text-muted-foreground border-b border-border">
             <tr>
-              <SortableHeader field="provider" className="text-left sticky left-0 bg-muted/50 z-10 border-r border-border" align="left">
-                <span>Provider</span>
-              </SortableHeader>
-              <SortableHeader field="model" className="text-left sticky left-32 bg-muted/50 z-10 border-r border-border" align="left">
-                <span>Model</span>
-              </SortableHeader>
+              {renderSortableHeader(
+                { field: 'provider', label: <span>Provider</span>, className: "text-left sticky left-0 bg-muted/50 z-10 border-r border-border", align: 'left' },
+                sortField,
+                sortDirection,
+                handleSort
+              )}
+              {renderSortableHeader(
+                { field: 'model', label: <span>Model</span>, className: "text-left sticky left-32 bg-muted/50 z-10 border-r border-border", align: 'left' },
+                sortField,
+                sortDirection,
+                handleSort
+              )}
               
               {/* Light Scenario */}
               <th colSpan={3} className="px-4 py-3 text-center font-semibold border-l border-r border-border">
@@ -612,46 +630,76 @@ export function BenchmarksTable() {
                 Worse
               </th>
               
-              <SortableHeader field="premium" align="center">
-                <span>Premium</span>
-              </SortableHeader>
+              {renderSortableHeader(
+                { field: 'premium', label: <span>Premium</span>, align: 'center' },
+                sortField,
+                sortDirection,
+                handleSort
+              )}
             </tr>
             <tr>
               <th className="px-4 py-3"></th>
               <th className="px-4 py-3"></th>
               
               {/* Light columns */}
-              <SortableHeader field="smallTokens">
-                <span>Tokens</span>
-              </SortableHeader>
-              <SortableHeader field="smallDuration">
-                <span>Duration</span>
-              </SortableHeader>
-              <SortableHeader field="smallCost">
-                <span>Cost</span>
-              </SortableHeader>
+              {renderSortableHeader(
+                { field: 'smallTokens', label: <span>Tokens</span> },
+                sortField,
+                sortDirection,
+                handleSort
+              )}
+              {renderSortableHeader(
+                { field: 'smallDuration', label: <span>Duration</span> },
+                sortField,
+                sortDirection,
+                handleSort
+              )}
+              {renderSortableHeader(
+                { field: 'smallCost', label: <span>Cost</span> },
+                sortField,
+                sortDirection,
+                handleSort
+              )}
               
               {/* Standard columns */}
-              <SortableHeader field="mediumTokens">
-                <span>Tokens</span>
-              </SortableHeader>
-              <SortableHeader field="mediumDuration">
-                <span>Duration</span>
-              </SortableHeader>
-              <SortableHeader field="mediumCost">
-                <span>Cost</span>
-              </SortableHeader>
+              {renderSortableHeader(
+                { field: 'mediumTokens', label: <span>Tokens</span> },
+                sortField,
+                sortDirection,
+                handleSort
+              )}
+              {renderSortableHeader(
+                { field: 'mediumDuration', label: <span>Duration</span> },
+                sortField,
+                sortDirection,
+                handleSort
+              )}
+              {renderSortableHeader(
+                { field: 'mediumCost', label: <span>Cost</span> },
+                sortField,
+                sortDirection,
+                handleSort
+              )}
               
               {/* Worse columns */}
-              <SortableHeader field="worseTokens">
-                <span>Tokens</span>
-              </SortableHeader>
-              <SortableHeader field="worseDuration">
-                <span>Duration</span>
-              </SortableHeader>
-              <SortableHeader field="worseCost">
-                <span>Cost</span>
-              </SortableHeader>
+              {renderSortableHeader(
+                { field: 'worseTokens', label: <span>Tokens</span> },
+                sortField,
+                sortDirection,
+                handleSort
+              )}
+              {renderSortableHeader(
+                { field: 'worseDuration', label: <span>Duration</span> },
+                sortField,
+                sortDirection,
+                handleSort
+              )}
+              {renderSortableHeader(
+                { field: 'worseCost', label: <span>Cost</span> },
+                sortField,
+                sortDirection,
+                handleSort
+              )}
               
               <th className="px-4 py-3"></th>
             </tr>

@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 // Base configuration types for AI providers
 export interface ModelCapabilities {
   supportsTools: boolean;

@@ -515,6 +515,7 @@ function ChatInterfaceInternal({
     threadInfo,
     id,
     updateThreadResponseStyle,
+    triggerError,
   ]);
 
   // Cleanup effect when thread ID changes
@@ -639,6 +640,7 @@ function ChatInterfaceInternal({
       setUploadingFiles,
       setIsUploading,
       triggerError,
+      regenerateAnchorRef,
     ]
   );
 

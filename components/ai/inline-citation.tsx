@@ -19,8 +19,8 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useState,
+  useSyncExternalStore,
 } from 'react';
 
 export type InlineCitationProps = ComponentProps<'span'>;
@@ -155,21 +155,28 @@ export const InlineCitationCarouselIndex = ({
   ...props
 }: InlineCitationCarouselIndexProps) => {
   const api = useCarouselApi();
-  const [current, setCurrent] = useState(0);
-  const [count, setCount] = useState(0);
+  const subscribe = useCallback(
+    (callback: () => void) => {
+      if (!api) return () => {};
+      api.on('select', callback);
+      api.on('reInit', callback);
+      return () => {
+        api.off('select', callback);
+        api.off('reInit', callback);
+      };
+    },
+    [api],
+  );
 
-  useEffect(() => {
-    if (!api) {
-      return;
-    }
-
-    setCount(api.scrollSnapList().length);
-    setCurrent(api.selectedScrollSnap() + 1);
-
-    api.on('select', () => {
-      setCurrent(api.selectedScrollSnap() + 1);
-    });
+  const getSnapshot = useCallback(() => {
+    if (!api) return { current: 0, count: 0 };
+    return {
+      current: api.selectedScrollSnap() + 1,
+      count: api.scrollSnapList().length,
+    };
   }, [api]);
+
+  const { current, count } = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 
   return (
     <div

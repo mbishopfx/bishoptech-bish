@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import { openai } from "@ai-sdk/openai";
 import {
   BaseModelConfig,

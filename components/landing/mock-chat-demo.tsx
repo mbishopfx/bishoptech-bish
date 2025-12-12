@@ -97,7 +97,7 @@ export function MockChatDemo() {
       isMounted = false;
       clearTimeout(timeout);
     };
-  }, [exampleIndex]);
+  }, [exampleIndex, currentExample.user, currentExample.ai]);
 
   return (
     <div className="relative w-full max-w-[1082px] mx-auto p-4 md:p-12">

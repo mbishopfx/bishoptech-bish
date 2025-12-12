@@ -19,7 +19,7 @@ export default function KnowledgeCenterSection() {
           compleja y difícil de dominar. Sin embargo, nosotros creemos que todos
           los usuarios se pueden beneficiar de conocer como
           funciona y sus conceptos generales, De esta forma, los usuarios pueden
-          generar "Prompts", conocer las limitaciones y aprender como sacar mayor
+          generar &quot;Prompts&quot;, conocer las limitaciones y aprender como sacar mayor
           provecho a la IA;
         </p>
         <p className="text-[rgb(92,92,92)] mb-6">

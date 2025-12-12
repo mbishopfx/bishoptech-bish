@@ -9,6 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ai/ui/dialog";
 import { Button } from "@/components/ai/ui/button";
+import Link from "next/link";
 import { createStripePortalSession } from "@/actions/createStripePortalSession";
 import { useConvexAuth, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -233,7 +234,7 @@ export function NoSubscriptionDialog({
                     variant="outline"
                     className="w-full justify-center rounded-2xl border-zinc-200 bg-white/80 text-zinc-900 hover:bg-white dark:border-zinc-800 dark:bg-transparent dark:text-white dark:hover:bg-zinc-900/60 sm:w-auto"
                   >
-                    <a href={`/subscribe?plan=free&cancel_existing_subscription=true&idempotency_key=${idempotencyKey}`}>Cambiar a plan gratuito</a>
+                    <Link href={`/subscribe?plan=free&cancel_existing_subscription=true&idempotency_key=${idempotencyKey}`}>Cambiar a plan gratuito</Link>
                   </Button>
                   {isCanceled ? (
                     <Button
@@ -241,7 +242,7 @@ export function NoSubscriptionDialog({
                       variant="outline"
                       className="w-full justify-center rounded-2xl border-zinc-200 bg-white/80 text-zinc-900 hover:bg-white dark:border-zinc-800 dark:bg-transparent dark:text-white dark:hover:bg-zinc-900/60 sm:w-auto"
                     >
-                      <a href="/#pricing">Ver planes</a>
+                      <Link href="/#pricing">Ver planes</Link>
                     </Button>
                   ) : (
                     <Button
@@ -266,7 +267,7 @@ export function NoSubscriptionDialog({
                   variant="outline"
                   className="w-full justify-center rounded-2xl border-zinc-200 bg-white/80 text-zinc-900 hover:bg-white dark:border-zinc-800 dark:bg-transparent dark:text-white dark:hover:bg-zinc-900/60 sm:w-auto"
                 >
-                  <a href="/#pricing">Ver planes</a>
+                  <Link href="/#pricing">Ver planes</Link>
                 </Button>
               )}
             </div>

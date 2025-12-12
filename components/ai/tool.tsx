@@ -28,6 +28,7 @@ export const Tool = React.memo(({ className, ...props }: ToolProps) => (
     {...props}
   />
 ));
+Tool.displayName = 'Tool';
 
 export type ToolHeaderProps = {
   type: ToolUIPart['type'];
@@ -79,6 +80,7 @@ export const ToolHeader = React.memo(({
     <ChevronDownIcon className="size-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
   </CollapsibleTrigger>
 ));
+ToolHeader.displayName = 'ToolHeader';
 
 export type ToolContentProps = ComponentProps<typeof CollapsibleContent>;
 
@@ -91,6 +93,7 @@ export const ToolContent = React.memo(({ className, ...props }: ToolContentProps
     {...props}
   />
 ));
+ToolContent.displayName = 'ToolContent';
 
 export type ToolInputProps = ComponentProps<'div'> & {
   input: ToolUIPart['input'];
@@ -106,6 +109,7 @@ export const ToolInput = React.memo(({ className, input, ...props }: ToolInputPr
     </div>
   </div>
 ));
+ToolInput.displayName = 'ToolInput';
 
 export type ToolOutputProps = ComponentProps<'div'> & {
   output: ReactNode;
@@ -141,3 +145,4 @@ export const ToolOutput = React.memo(({
     </div>
   );
 });
+ToolOutput.displayName = 'ToolOutput';

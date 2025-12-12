@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useTheme } from 'next-themes';
 import {
   SettingsSection,
@@ -11,11 +11,7 @@ type Theme = 'light' | 'dark' | 'system';
 
 export default function AppearancePage() {
   const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const [mounted] = useState(true);
 
   const handleThemeChange = (newTheme: Theme) => {
     setTheme(newTheme);

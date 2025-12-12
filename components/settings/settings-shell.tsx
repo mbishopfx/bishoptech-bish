@@ -13,26 +13,27 @@ interface SettingsShellProps {
 }
 
 export function SettingsShell({ children, sidebar }: SettingsShellProps) {
-  const [isOpen, setIsOpen] = useState(true);
   const isMobile = useIsMobile();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const [isOpen, setIsOpen] = useState(() => {
+    if (isMobile) {
+      return searchParams.get("sidebar") === "true";
+    }
+    return true;
+  });
 
   // Close sidebar on navigation on mobile
   useEffect(() => {
-    if (isMobile) {
-      setIsOpen(false);
-    }
+    if (!isMobile) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setIsOpen(false);
   }, [pathname, isMobile]);
 
-  // Initial state for mobile
+  // Initialize/open based on device and query
   useEffect(() => {
-    if (isMobile) {
-      const shouldOpenSidebar = searchParams.get("sidebar") === "true";
-      setIsOpen(shouldOpenSidebar);
-    } else {
-      setIsOpen(true);
-    }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setIsOpen(isMobile ? searchParams.get("sidebar") === "true" : true);
   }, [isMobile, searchParams]);
 
   const toggle = useCallback(() => setIsOpen((v) => !v), []);

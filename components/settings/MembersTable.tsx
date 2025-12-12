@@ -1,4 +1,5 @@
 import React from 'react';
+import Image from "next/image";
 import { StatusBadge } from './StatusBadge';
 import { MoreVerticalIcon } from 'lucide-react';
 import {
@@ -80,10 +81,13 @@ export function MembersTable({ members, onEditMember, onRemoveMember }: MembersT
                 <div className="flex items-center">
                   <div className="flex-shrink-0 h-10 w-10">
                     {member.avatar ? (
-                      <img
-                        className="h-10 w-10 rounded-full"
+                      <Image
+                        className="h-10 w-10 rounded-full object-cover"
                         src={member.avatar}
                         alt={member.name}
+                        width={40}
+                        height={40}
+                        unoptimized
                       />
                     ) : (
                       <div className="h-10 w-10 rounded-full bg-gradient-to-t from-blue-500 to-blue-400 flex items-center justify-center">

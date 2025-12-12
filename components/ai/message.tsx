@@ -23,6 +23,7 @@ export const Message = React.memo(({ className, from, ...props }: MessageProps) 
     {...props}
   />
 ));
+Message.displayName = 'Message';
 
 export type MessageContentProps = HTMLAttributes<HTMLDivElement> & {
   from?: UIMessage['role'];
@@ -48,6 +49,7 @@ export const MessageContent = React.memo(({
     {children}
   </div>
 ));
+MessageContent.displayName = 'MessageContent';
 
 export type MessageAvatarProps = ComponentProps<typeof Avatar> & {
   src: string;

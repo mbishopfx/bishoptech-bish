@@ -220,10 +220,20 @@ export const getUserFullQuotaInfo = AuthOrgQuery({
   },
 });
 
-export const getUserAttachmentsPaginated = AuthQuery({
+export const getUserAttachmentsPaginated = query({
   args: { paginationOpts: paginationOptsValidator },
   handler: async (ctx, args) => {
-    const userId = ctx.identity.subject;
+    const identity = await getAuthUserIdentity(ctx);
+
+    if (!identity) {
+      return {
+        page: [],
+        isDone: true,
+        continueCursor: "",
+      };
+    }
+
+    const userId = identity.subject;
     return await ctx.db
       .query("attachments")
       .withIndex("by_userId", (q) => q.eq("userId", userId))

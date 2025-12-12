@@ -717,7 +717,6 @@ export const cloneSharedThread = AuthMutation({
               userId: userId,
               model: sourceThread.model,
               pinned: false,
-              backfill: false,
             }),
           catch: (error) =>
             new DatabaseError({

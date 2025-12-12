@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ai/ui/select";
 import { Input } from "@/components/ai/ui/input";
@@ -117,17 +117,11 @@ export default function RegionalInsightsPage() {
   const [selectedSubject, setSelectedSubject] = useState<string>("Todos");
   const [selectedGrade, setSelectedGrade] = useState<string>("Todos");
   const [search, setSearch] = useState<string>("");
-  const [generatedData, setGeneratedData] = useState<AiMessageMeta[]>([]);
-  const threadParam = searchParams?.get("thread") || "";
-  const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
-  const [selectedChat, setSelectedChat] = useState<AiMessageMeta | null>(null);
-
-  // Generate data on client-side only to avoid hydration mismatch
-  useEffect(() => {
+  const generatedData = useMemo(() => {
     const city = regionParam || "Mexico City";
     const state = CITY_TO_STATE[city] || "CDMX";
     
-    const data: AiMessageMeta[] = Array.from({ length: randomInt(15, 25) }, (_, i) => {
+    return Array.from({ length: randomInt(15, 25) }, (_, i) => {
       const subject = SUBJECT_LIST[randomInt(0, SUBJECT_LIST.length - 1)];
       const grade = pickWeightedGrade();
       const messages = randomInt(3, 47);
@@ -145,9 +139,10 @@ export default function RegionalInsightsPage() {
         lastMessageAt,
       };
     });
-    
-    setGeneratedData(data);
   }, [regionParam]);
+  const threadParam = searchParams?.get("thread") || "";
+  const isDrawerOpen = !!threadParam;
+  const [selectedChat, setSelectedChat] = useState<AiMessageMeta | null>(null);
 
   const filteredData = useMemo(() => {
     return generatedData.filter((item) => {
@@ -160,11 +155,6 @@ export default function RegionalInsightsPage() {
       return matchesSubject && matchesGrade && matchesSearch;
     });
   }, [generatedData, selectedSubject, selectedGrade, search]);
-
-  // Handle drawer open/close based on threadParam
-  useEffect(() => {
-    setIsDrawerOpen(!!threadParam);
-  }, [threadParam]);
 
   const handleRowClick = (row: AiMessageMeta) => {
     setSelectedChat(row);

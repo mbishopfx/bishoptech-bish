@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, createContext, useContext } from 'react';
+import { createContext, useContext, useMemo } from 'react';
 import type { UIMessage } from 'ai';
 import { ZustandChatState } from './zustand-chat-adapter';
 import { createChatStore } from './chat-store';
@@ -16,17 +16,17 @@ export function ChatStoreProvider({
   children: React.ReactNode;
   initialMessages: Array<UIMessage>;
 }) {
-  const storeRef = useRef<ChatStoreApi | null>(null);
-  const chatStateRef = useRef<ZustandChatState<UIMessage> | null>(null);
-  if (storeRef.current === null) {
-    storeRef.current = createChatStore<UIMessage>(initialMessages);
-  }
-  if (chatStateRef.current === null) {
-    chatStateRef.current = new ZustandChatState<UIMessage>(storeRef.current);
-  }
+  const store = useMemo(
+    () => createChatStore<UIMessage>(initialMessages),
+    [initialMessages],
+  );
+  const chatState = useMemo(
+    () => new ZustandChatState<UIMessage>(store),
+    [store],
+  );
   return (
-    <ChatStoreContext.Provider value={storeRef.current}>
-      <ChatStateContext.Provider value={chatStateRef.current ?? undefined}>
+    <ChatStoreContext.Provider value={store}>
+      <ChatStateContext.Provider value={chatState}>
         {children}
       </ChatStateContext.Provider>
     </ChatStoreContext.Provider>

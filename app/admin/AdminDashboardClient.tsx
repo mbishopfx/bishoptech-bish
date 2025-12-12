@@ -525,7 +525,7 @@ export default function AdminDashboardClient() {
           <DialogHeader>
             <DialogTitle>Cancel Subscription for {selectedOrg?.name}</DialogTitle>
             <DialogDescription>
-              Choose how to cancel this organization's subscription.
+              Choose how to cancel this organization&apos;s subscription.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4 space-y-4">

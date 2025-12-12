@@ -237,7 +237,7 @@ export default async function PrivacyPolicyPage() {
                       <div>
                         <h4 className="font-medium text-sm text-gray-900 dark:text-white mb-1">Amazon Web Services.</h4>
                         <p className="text-gray-700 dark:text-gray-300 text-sm leading-6">
-                          Utilizamos Amazon Web Services ("AWS") para ayudarnos con el alojamiento web.
+                          Utilizamos Amazon Web Services (&quot;AWS&quot;) para ayudarnos con el alojamiento web.
                           <br />
                           Puede consultar el aviso de privacidad de AWS aquí: <a href="https://aws.amazon.com/privacy/" className="text-blue-600 dark:text-blue-400 hover:underline">https://aws.amazon.com/privacy/</a>
                         </p>
