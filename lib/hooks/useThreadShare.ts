@@ -154,9 +154,9 @@ export function useThreadShare() {
     await Effect.runPromise(program);
   }, []);
 
-  const handleUpdateShareSettings = useCallback(
-    async (args: { threadId: string; orgOnly: boolean; shareName: boolean }) => {
-      const program = Effect.tryPromise({
+  const buildUpdateShareSettingsProgram = useCallback(
+    (args: { threadId: string; orgOnly: boolean; shareName: boolean }) =>
+      Effect.tryPromise({
         try: () => updateShareSettingsMutation(args),
         catch: (error) => new ShareSettingsError({ cause: error }),
       }).pipe(
@@ -165,29 +165,41 @@ export function useThreadShare() {
             console.error("update share settings failed", error);
           }),
         ),
-      );
-
-      await Effect.runPromise(program);
-    },
+      ),
     [updateShareSettingsMutation],
   );
 
-  const handleRegenerateShareLink = useCallback(
-    async (args: { threadId: string }) => {
-      const program = Effect.tryPromise({
-        try: () => regenerateShareLinkMutation(args),
-        catch: (error) => new RegenerateShareLinkError({ cause: error }),
+  const buildRegenerateShareLinkProgram = useCallback(
+    (args: { threadId: string }) =>
+      Effect.gen(function* (_) {
+        yield* _(
+          Effect.tryPromise({
+            try: () => regenerateShareLinkMutation(args),
+            catch: (error) => new RegenerateShareLinkError({ cause: error }),
+          }),
+        );
       }).pipe(
         Effect.tapError((error) =>
           Effect.sync(() => {
             console.error("regenerate share link failed", error);
           }),
         ),
-      );
-
-      return await Effect.runPromise(program);
-    },
+      ),
     [regenerateShareLinkMutation],
+  );
+
+  const handleUpdateShareSettings = useCallback(
+    async (args: { threadId: string; orgOnly: boolean; shareName: boolean }) => {
+      await Effect.runPromise(buildUpdateShareSettingsProgram(args));
+    },
+    [buildUpdateShareSettingsProgram],
+  );
+
+  const handleRegenerateShareLink = useCallback(
+    async (args: { threadId: string }) => {
+      await Effect.runPromise(buildRegenerateShareLinkProgram(args));
+    },
+    [buildRegenerateShareLinkProgram],
   );
 
   return {
