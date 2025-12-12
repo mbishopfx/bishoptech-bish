@@ -29,12 +29,6 @@ import { MessageRenderer } from "./components/message-renderer";
 import { ChatInputArea } from "./components/chat-input-area";
 import type { ChatInterfaceProps } from "./types";
 import { ChatStoreProvider, useChatStateInstance } from "@/lib/stores/hooks";
-import {
-  uploadFilesEffect,
-  describeUploadError,
-  MAX_TOTAL_FILES,
-  MAX_FILE_SIZE_BYTES,
-} from "@/lib/file-utils";
 import { Effect } from "effect";
 
 // Effect services and error types
@@ -46,12 +40,11 @@ import {
   isNoSubscriptionError,
   isAbortError,
   shouldShowErrorToast,
+  submitMessageEffect,
+  setResponseStyleEffect,
 } from "./services";
-import {
-  type ChatError,
-  getErrorMessage,
-  MessageSubmitError,
-} from "./errors";
+import { uploadWithStateEffect } from "./services/upload-service";
+import { getErrorMessage } from "./errors";
 
 // Internal component that uses the store
 function ChatInterfaceInternal({
@@ -82,7 +75,6 @@ function ChatInterfaceInternal({
   const setIsSearchEnabled = useChatUIStore((s) => s.setIsSearchEnabled);
   const setQuotaError = useChatUIStore((s) => s.setQuotaError);
   const setShowNoSubscriptionDialog = useChatUIStore((s) => s.setShowNoSubscriptionDialog);
-  const handleSearchToggle = useChatUIStore((s) => s.handleSearchToggle);
   const triggerError = useChatUIStore((s) => s.triggerError);
   const setChatError = useChatUIStore((s) => s.setChatError);
   const responseStyle = useChatUIStore((s) => s.responseStyle);
@@ -95,50 +87,18 @@ function ChatInterfaceInternal({
     async (fileArray: File[]) => {
       if (!fileArray || fileArray.length === 0) return;
 
-      setChatError(null);
-
-      const state = useChatUIStore.getState();
-      const existingCount =
-        state.uploadedAttachments.length + state.uploadingFiles.length;
-
-      // Optimistically show files as uploading
-      setSelectedFiles((prev: File[]) => [...prev, ...fileArray]);
-      setUploadingFiles((prev: any[]) => [
-        ...prev,
-        ...fileArray.map((file) => ({ file, isUploading: true })),
-      ]);
-
-      const result = await Effect.runPromise(
-        Effect.either(
-          uploadFilesEffect(fileArray, {
-            alreadyAttached: existingCount,
-            maxTotalFiles: MAX_TOTAL_FILES,
-            maxSizeBytes: MAX_FILE_SIZE_BYTES,
-          })
-        )
-      );
-
-      if (result._tag === "Right") {
-        setUploadedAttachments((prev: any[]) => [...prev, ...result.right]);
-      } else {
-        triggerError(describeUploadError(result.left));
-        setSelectedFiles((prev: File[]) =>
-          prev.filter((file) => !fileArray.includes(file))
-        );
-      }
-
-      // Clean up uploading state
-      setUploadingFiles((prev: any[]) =>
-        prev.filter((uf) => !fileArray.includes(uf.file))
+      await Effect.runPromise(
+        uploadWithStateEffect(fileArray, {
+          getState: useChatUIStore.getState,
+          setSelectedFiles,
+          setUploadingFiles,
+          setUploadedAttachments,
+          setChatError,
+          triggerError,
+        }),
       );
     },
-    [
-      setSelectedFiles,
-      setUploadingFiles,
-      setUploadedAttachments,
-      setChatError,
-      triggerError,
-    ]
+    [setSelectedFiles, setUploadingFiles, setUploadedAttachments, setChatError, triggerError]
   );
 
   // Apply model change effects
@@ -530,37 +490,24 @@ function ChatInterfaceInternal({
   // Update responseStyle in database when user changes it
   const prevResponseStyleRef = useRef<ResponseStyle | null>(null);
   useEffect(() => {
-    // Skip initial load and only update when user explicitly changes the style
-    if (prevResponseStyleRef.current === null) {
-      prevResponseStyleRef.current = responseStyle;
-      return;
-    }
+    if (!isThread || !isAuthenticated || !threadInfo) return;
 
-    if (
-      isThread &&
-      isAuthenticated &&
-      threadInfo &&
-      prevResponseStyleRef.current !== responseStyle &&
-      threadInfo.responseStyle !== responseStyle
-    ) {
-      // Only update if thread exists and style changed from what's in DB
-      prevResponseStyleRef.current = responseStyle;
+    const program = setResponseStyleEffect({
+      threadId: id,
+      responseStyle,
+      threadResponseStyle: threadInfo.responseStyle as ResponseStyle | undefined,
+      prevSynced: prevResponseStyleRef.current,
+      markSynced: (value) => {
+        prevResponseStyleRef.current = value;
+      },
+      updateFn: (params) => updateThreadResponseStyle(params),
+      onError: (message) => triggerError(message),
+    });
 
-      const program = updateResponseStyleEffect({
-        updateFn: (params) => updateThreadResponseStyle(params),
-        threadId: id,
-        responseStyle,
-      }).pipe(
-        Effect.tapError((error) =>
-          Effect.sync(() => {
-            console.error("Failed to update thread response style:", error);
-          })
-        ),
-        Effect.catchAll(() => Effect.void)
-      );
-
-      Effect.runPromise(program);
-    }
+    Effect.runPromise(program).catch((err) => {
+      console.error("Failed to update response style", err);
+      triggerError("Failed to update response style. Please try again.");
+    });
   }, [
     responseStyle,
     isThread,
@@ -620,16 +567,11 @@ function ChatInterfaceInternal({
       setQuotaError(null);
       setInput("");
 
-      // Set sending state and clear attachments immediately
+      // Set sending state but keep attachments until we know the send succeeded
       setIsSendingMessage(true);
 
-      // Capture attachments before clearing state
-      const currentAttachments = uploadedAttachments;
-
-      // Clear attachments immediately
-      setUploadedAttachments([]);
-      setSelectedFiles([]);
-      setUploadingFiles([]);
+      // Snapshot attachments for this send attempt
+      const currentAttachments = [...uploadedAttachments];
 
       // Build message parts using captured attachments
       const parts: any[] = [];
@@ -648,66 +590,39 @@ function ChatInterfaceInternal({
         });
       });
 
-      const program = Effect.gen(function* () {
-        if (id === "welcome" && onInitialMessage) {
-          // Handle initial message on welcome page
-          const optimisticMessage: UIMessage = {
-            id: messageId,
-            role: "user",
-            parts,
-          };
+      const program = submitMessageEffect({
+        id,
+        messageId,
+        parts,
+        onInitialMessage,
+        sendMessage,
+        setMessages,
+        triggerError,
+        setInput,
+        setIsSendingMessage,
+      });
 
-          // Show optimistic message immediately
-          setMessages([optimisticMessage]);
+      const result = await Effect.runPromise(Effect.either(program));
 
-          // Call the onInitialMessage callback to create thread and navigate
-          yield* Effect.tryPromise({
-            try: () => onInitialMessage(optimisticMessage),
-            catch: (error) =>
-              new MessageSubmitError({
-                message: "Failed to create thread",
-                messageId,
-                cause: error,
-              }),
-          });
-        } else if (id !== "welcome") {
-          // Use AI SDK sendMessage for streaming response
-          // The API route will handle user message persistence
-          yield* Effect.tryPromise({
-            try: () =>
-              sendMessage({
-                id: messageId,
-                role: "user",
-                parts,
-              }),
-            catch: (error) =>
-              new MessageSubmitError({
-                message: "Failed to send message",
-                messageId,
-                cause: error,
-              }),
-          });
-        }
-      }).pipe(
-        Effect.tap(() =>
-          Effect.sync(() => {
-            setIsSendingMessage(false);
-          })
-        ),
-        Effect.catchAll((error: ChatError) =>
-          Effect.sync(() => {
-            console.error("Failed to send message:", error);
-            triggerError(getErrorMessage(error));
-            setInput(messageContent);
-            // Clear optimistic messages on error
+      if (result._tag === "Right" && result.right) {
+        // Only clear attachments after a successful send
+        setUploadedAttachments([]);
+        setSelectedFiles([]);
+        setUploadingFiles([]);
+        setIsUploading(false);
+        return;
+      }
+
+      if (result._tag === "Left") {
+        const error = result.left as any;
+        if (error?._tag !== "AbortError") {
+          triggerError(getErrorMessage(error));
+          setInput(messageContent);
+          if (id === "welcome") {
             setMessages([]);
-            // Reset sending state on error
-            setIsSendingMessage(false);
-          })
-        )
-      );
-
-      await Effect.runPromise(program);
+          }
+        }
+      }
     },
     [
       promptDisabled,
@@ -722,6 +637,7 @@ function ChatInterfaceInternal({
       setUploadedAttachments,
       setSelectedFiles,
       setUploadingFiles,
+      setIsUploading,
       triggerError,
     ]
   );

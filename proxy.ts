@@ -19,12 +19,15 @@ export default authkitMiddleware({
     enabled: true,
     unauthenticatedPaths: [
       "/",
+      "/share/:path*",
       "/sign-in",
       "/sign-up",
       "/callback",
       "/terms-of-service",
       "/privacy-policy",
       "/models",
+      "/relay-7ls5/:path*",
+      "/relay-7ls5/static/:path*",
     ],
   },
 });

@@ -41,6 +41,15 @@ export class NoSubscriptionError extends Data.TaggedError(
 }> {}
 
 /**
+ * Error when bot detection flags the request.
+ * Maps to HTTP 403 Forbidden.
+ */
+export class BotDetectionError extends Data.TaggedError("BotDetectionError")<{
+  readonly message: string;
+  readonly reason?: string;
+}> {}
+
+/**
  * Error when user/org quota is exceeded.
  * Maps to HTTP 429 Too Many Requests.
  */
@@ -53,15 +62,6 @@ export class QuotaExceededError extends Data.TaggedError("QuotaExceededError")<{
     readonly currentUsage: number;
     readonly limit: number;
   };
-}> {}
-
-/**
- * Error during AI streaming/generation.
- * Maps to HTTP 500 Internal Server Error.
- */
-export class StreamError extends Data.TaggedError("StreamError")<{
-  readonly message: string;
-  readonly cause?: unknown;
 }> {}
 
 /**
@@ -137,8 +137,8 @@ export type ChatRouteError =
   | AuthenticationError
   | NoOrganizationError
   | NoSubscriptionError
+  | BotDetectionError
   | QuotaExceededError
-  | StreamError
   | DatabaseError
   | AbortError
   | RegenerateError

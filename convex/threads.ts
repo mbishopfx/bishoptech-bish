@@ -12,6 +12,48 @@ import {
 import { ensureServerSecret } from "./helpers/auth";
 import { AuthMutation, AuthOrgMutation, AuthQuery } from "./helpers/authenticated";
 
+export const threadInfoFields = {
+  _id: v.id("threads"),
+  _creationTime: v.number(),
+  threadId: v.string(),
+  title: v.string(),
+  createdAt: v.number(),
+  updatedAt: v.number(),
+  lastMessageAt: v.number(),
+  generationStatus: v.union(
+    v.literal("pending"),
+    v.literal("generation"),
+    v.literal("compleated"), // legacy, remove after migration
+    v.literal("completed"),
+    v.literal("failed"),
+  ),
+  visibility: v.union(v.literal("visible"), v.literal("archived")),
+  userSetTitle: v.optional(v.boolean()),
+  userId: v.string(),
+  model: v.string(),
+  responseStyle: v.optional(
+    v.union(
+      v.literal("regular"),
+      v.literal("learning"),
+      v.literal("technical"),
+      v.literal("concise"),
+    ),
+  ),
+  pinned: v.boolean(),
+  branchParentThreadId: v.optional(v.id("threads")),
+  branchParentPublicMessageId: v.optional(v.string()),
+  backfill: v.optional(v.boolean()),
+  shareId: v.optional(v.string()),
+  shareStatus: v.optional(v.union(v.literal("active"), v.literal("revoked"))),
+  sharedAt: v.optional(v.number()),
+  allowAttachments: v.optional(v.boolean()),
+  orgOnly: v.optional(v.boolean()),
+  shareName: v.optional(v.boolean()),
+  ownerOrgId: v.optional(v.string()),
+} as const;
+
+export const threadInfoValidator = v.object(threadInfoFields);
+
 /**
  * Create a new thread with an initial message.
  * This mutation is secure and only allows authenticated users to create threads.
@@ -150,40 +192,7 @@ export const getThreadInfo = AuthQuery({
   args: {
     threadId: v.string(),
   },
-  returns: v.union(
-    v.object({
-      _id: v.id("threads"),
-      _creationTime: v.number(),
-      threadId: v.string(),
-      title: v.string(),
-      createdAt: v.number(),
-      updatedAt: v.number(),
-      lastMessageAt: v.number(),
-      generationStatus: v.union(
-        v.literal("pending"),
-        v.literal("generation"),
-        v.literal("compleated"),
-        v.literal("failed"),
-      ),
-      visibility: v.union(v.literal("visible"), v.literal("archived")),
-      userSetTitle: v.optional(v.boolean()),
-      userId: v.string(),
-      model: v.string(),
-      responseStyle: v.optional(
-        v.union(
-          v.literal("regular"),
-          v.literal("learning"),
-          v.literal("technical"),
-          v.literal("concise"),
-        ),
-      ),
-      pinned: v.boolean(),
-      branchParentThreadId: v.optional(v.id("threads")),
-      branchParentPublicMessageId: v.optional(v.string()),
-      backfill: v.optional(v.boolean()),
-    }),
-    v.null(),
-  ),
+  returns: v.union(threadInfoValidator, v.null()),
   handler: async (ctx, args) => {
     const userId = ctx.identity.subject;
 
@@ -424,6 +433,83 @@ export const deleteThread = AuthMutation({
 });
 
 /**
+ * One-time migration to rename generationStatus from "compleated" to "completed".
+ */
+export const backfillCompletedStatus = internalMutation({
+  args: {
+    secret: v.string(),
+  },
+  returns: v.object({ updated: v.number() }),
+  handler: async (ctx, args) => {
+    ensureServerSecret(args.secret);
+
+    let updated = 0;
+    const threads = ctx.db.query("threads");
+    for await (const thread of threads) {
+      const status = (thread as { generationStatus?: string }).generationStatus;
+      if (status === "compleated") {
+        await ctx.db.patch(thread._id, { generationStatus: "completed" });
+        updated += 1;
+      }
+    }
+
+    return { updated };
+  },
+});
+
+/**
+ * One-time migration to drop the legacy `backfill` field from all tables.
+ * Run this before removing the field from the schema.
+ */
+export const removeBackfillField = internalMutation({
+  args: {
+    secret: v.string(),
+  },
+  returns: v.object({
+    threads: v.number(),
+    messages: v.number(),
+    attachments: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    ensureServerSecret(args.secret);
+
+    let threadsRemoved = 0;
+    let messagesRemoved = 0;
+    let attachmentsRemoved = 0;
+
+    for await (const thread of ctx.db.query("threads")) {
+      if (Object.prototype.hasOwnProperty.call(thread, "backfill")) {
+        const { _id, _creationTime, backfill, ...rest } = thread as any;
+        await ctx.db.replace(_id, rest);
+        threadsRemoved += 1;
+      }
+    }
+
+    for await (const message of ctx.db.query("messages")) {
+      if (Object.prototype.hasOwnProperty.call(message, "backfill")) {
+        const { _id, _creationTime, backfill, ...rest } = message as any;
+        await ctx.db.replace(_id, rest);
+        messagesRemoved += 1;
+      }
+    }
+
+    for await (const attachment of ctx.db.query("attachments")) {
+      if (Object.prototype.hasOwnProperty.call(attachment, "backfill")) {
+        const { _id, _creationTime, backfill, ...rest } = attachment as any;
+        await ctx.db.replace(_id, rest);
+        attachmentsRemoved += 1;
+      }
+    }
+
+    return {
+      threads: threadsRemoved,
+      messages: messagesRemoved,
+      attachments: attachmentsRemoved,
+    };
+  },
+});
+
+/**
  * Agent update thread title
  */
 export const autoUpdateThreadTitle = AuthMutation({
@@ -467,40 +553,7 @@ export const serverGetThreadInfo = query({
     userId: v.string(),
     threadId: v.string(),
   },
-  returns: v.union(
-    v.object({
-      _id: v.id("threads"),
-      _creationTime: v.number(),
-      threadId: v.string(),
-      title: v.string(),
-      createdAt: v.number(),
-      updatedAt: v.number(),
-      lastMessageAt: v.number(),
-      generationStatus: v.union(
-        v.literal("pending"),
-        v.literal("generation"),
-        v.literal("compleated"),
-        v.literal("failed"),
-      ),
-      visibility: v.union(v.literal("visible"), v.literal("archived")),
-      userSetTitle: v.optional(v.boolean()),
-      userId: v.string(),
-      model: v.string(),
-      responseStyle: v.optional(
-        v.union(
-          v.literal("regular"),
-          v.literal("learning"),
-          v.literal("technical"),
-          v.literal("concise"),
-        ),
-      ),
-      pinned: v.boolean(),
-      branchParentThreadId: v.optional(v.id("threads")),
-      branchParentPublicMessageId: v.optional(v.string()),
-      backfill: v.optional(v.boolean()),
-    }),
-    v.null(),
-  ),
+  returns: v.union(threadInfoValidator, v.null()),
   handler: async (ctx, args) => {
     ensureServerSecret(args.secret);
     const thread = await ctx.db
@@ -810,6 +863,7 @@ export const serverFinalizeAssistantMessage = mutation({
   args: {
     secret: v.string(),
     userId: v.string(),
+    threadId: v.string(),
     messageId: v.string(),
     ok: v.boolean(),
     finalContent: v.optional(v.string()),
@@ -830,34 +884,83 @@ export const serverFinalizeAssistantMessage = mutation({
         q.eq("messageId", args.messageId).eq("userId", args.userId),
       )
       .unique();
+    const now = Date.now();
+
+    // Fallback: create message if startAssistantMessage never succeeded
+    let targetThreadId = args.threadId;
+    let thread =
+      message?.threadId &&
+      (await ctx.db
+        .query("threads")
+        .withIndex("by_threadId", (q) => q.eq("threadId", message.threadId))
+        .unique());
+
     if (!message) {
-      throw new Error("Message not found or access denied");
+      thread =
+        thread ??
+        (await ctx.db
+          .query("threads")
+          .withIndex("by_user_and_threadId", (q) =>
+            q.eq("userId", args.userId).eq("threadId", args.threadId),
+          )
+          .unique());
+      if (!thread) {
+        throw new Error("Thread not found or access denied");
+      }
+
+      await ctx.db.insert("messages", {
+        messageId: args.messageId,
+        threadId: args.threadId,
+        userId: args.userId,
+        reasoning:
+          args.finalReasoning && args.finalReasoning.length > 0
+            ? args.finalReasoning
+            : undefined,
+        content: args.finalContent ?? "",
+        status: args.ok ? ("done" as const) : ("error" as const),
+        updated_at: now,
+        branches: undefined,
+        role: "assistant" as const,
+        created_at: now,
+        serverError: args.ok ? undefined : args.error,
+        model: thread.model,
+        attachmentsIds: [],
+        modelParams: undefined,
+        providerMetadata: undefined,
+        backfill: false,
+      });
+      targetThreadId = args.threadId;
+    } else {
+      const updateData: {
+        status: "done" | "error";
+        serverError?: { type: string; message: string };
+        updated_at: number;
+        content?: string;
+        reasoning?: string;
+      } = {
+        status: args.ok ? ("done" as const) : ("error" as const),
+        serverError: args.ok ? undefined : args.error,
+        updated_at: now,
+      };
+      if (args.finalContent !== undefined && args.finalContent.length > 0) {
+        updateData.content = args.finalContent;
+      }
+      if (args.finalReasoning !== undefined && args.finalReasoning.length > 0) {
+        updateData.reasoning = args.finalReasoning;
+      }
+      await ctx.db.patch(message._id, updateData);
+      targetThreadId = message.threadId;
     }
-    const updateData: {
-      status: "done" | "error";
-      serverError?: { type: string; message: string };
-      updated_at: number;
-      content?: string;
-      reasoning?: string;
-    } = {
-      status: args.ok ? ("done" as const) : ("error" as const),
-      serverError: args.ok ? undefined : args.error,
-      updated_at: Date.now(),
-    };
-    if (args.finalContent !== undefined && args.finalContent.length > 0) {
-      updateData.content = args.finalContent;
-    }
-    if (args.finalReasoning !== undefined && args.finalReasoning.length > 0) {
-      updateData.reasoning = args.finalReasoning;
-    }
-    await ctx.db.patch(message._id, updateData);
-    const thread = await ctx.db
-      .query("threads")
-      .withIndex("by_threadId", (q) => q.eq("threadId", message.threadId))
-      .unique();
-    if (thread) {
-      await ctx.db.patch(thread._id, {
-        generationStatus: args.ok ? ("compleated" as const) : ("failed" as const),
+
+    const threadForStatus =
+      thread ??
+      (await ctx.db
+        .query("threads")
+        .withIndex("by_threadId", (q) => q.eq("threadId", targetThreadId))
+        .unique());
+    if (threadForStatus) {
+      await ctx.db.patch(threadForStatus._id, {
+        generationStatus: args.ok ? ("completed" as const) : ("failed" as const),
         updatedAt: Date.now(),
         lastMessageAt: Date.now(),
       });

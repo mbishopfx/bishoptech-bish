@@ -16,6 +16,7 @@ import type * as helpers_getUser from "../helpers/getUser.js";
 import type * as helpers_quota from "../helpers/quota.js";
 import type * as http from "../http.js";
 import type * as organizations from "../organizations.js";
+import type * as share from "../share.js";
 import type * as storageActions from "../storageActions.js";
 import type * as stripe from "../stripe.js";
 import type * as threads from "../threads.js";
@@ -37,6 +38,7 @@ declare const fullApi: ApiFromModules<{
   "helpers/quota": typeof helpers_quota;
   http: typeof http;
   organizations: typeof organizations;
+  share: typeof share;
   storageActions: typeof storageActions;
   stripe: typeof stripe;
   threads: typeof threads;

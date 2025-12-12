@@ -5,6 +5,7 @@ import { ConvexClientProvider } from "@/components/ConvexClientProvider";
 import { ThemeProvider } from "next-themes";
 import { Providers } from "./providers";
 import { cookies } from "next/headers";
+
 const inter = Inter({
   weight: ["400"],
   subsets: ["latin"],
@@ -32,7 +33,7 @@ export const metadata: Metadata = {
   },
   description: "Plataforma que unifica todos los modelos de IA en una sola app empresarial.",
   applicationName: "Rift",
-  metadataBase: baseUrl,
+  metadataBase: new URL(baseUrl),
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",

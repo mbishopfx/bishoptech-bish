@@ -26,13 +26,9 @@ import { ResponseStyleSelector } from "@/components/ai/response-style-selector";
 import React from "react";
 import { useChatStatus } from "@ai-sdk-tools/store";
 import { useChatUIStore } from "../ui-store";
-import {
-  uploadFilesEffect,
-  describeUploadError,
-  MAX_TOTAL_FILES,
-  MAX_FILE_SIZE_BYTES,
-} from "@/lib/file-utils";
 import { Effect } from "effect";
+import { uploadWithStateEffect } from "../services/upload-service";
+import { MAX_TOTAL_FILES } from "@/lib/file-utils";
 
 interface ChatInputAreaProps {
   disableInput: boolean;
@@ -74,41 +70,15 @@ export const ChatInputArea = React.memo(function ChatInputArea({
     async (fileArray: File[]) => {
       if (!fileArray || fileArray.length === 0) return;
 
-      setChatError(null);
-
-      const state = useChatUIStore.getState();
-      const existingCount =
-        state.uploadedAttachments.length + state.uploadingFiles.length;
-
-      // Optimistically show files as uploading
-      setSelectedFiles((prev) => [...prev, ...fileArray]);
-      setUploadingFiles((prev) => [
-        ...prev,
-        ...fileArray.map((file) => ({ file, isUploading: true })),
-      ]);
-
-      const result = await Effect.runPromise(
-        Effect.either(
-          uploadFilesEffect(fileArray, {
-            alreadyAttached: existingCount,
-            maxTotalFiles: MAX_TOTAL_FILES,
-            maxSizeBytes: MAX_FILE_SIZE_BYTES,
-          })
-        )
-      );
-
-      if (result._tag === "Right") {
-        setUploadedAttachments((prev) => [...prev, ...result.right]);
-      } else {
-        triggerError(describeUploadError(result.left));
-        setSelectedFiles((prev) =>
-          prev.filter((file) => !fileArray.includes(file))
-        );
-      }
-
-      // Clean up uploading state
-      setUploadingFiles((prev) =>
-        prev.filter((uf) => !fileArray.includes(uf.file))
+      await Effect.runPromise(
+        uploadWithStateEffect(fileArray, {
+          getState: useChatUIStore.getState,
+          setSelectedFiles,
+          setUploadingFiles,
+          setUploadedAttachments,
+          setChatError,
+          triggerError,
+        })
       );
     },
     [

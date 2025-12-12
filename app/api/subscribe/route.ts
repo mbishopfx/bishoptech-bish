@@ -3,8 +3,25 @@ import { workos } from '@/app/api/workos';
 import { NextRequest, NextResponse } from 'next/server';
 import type Stripe from 'stripe';
 import { getPermissions, checkPermission, PERMISSIONS } from '@/lib/permissions';
+import { checkBotId } from 'botid/server';
 
 export const POST = async (req: NextRequest) => {
+  try {
+    const verification = await checkBotId();
+    if (verification.isBot) {
+      return NextResponse.json(
+        { error: 'Bot detected. Access denied.' },
+        { status: 403 }
+      );
+    }
+  } catch (error) {
+    console.error('Bot verification failed', error);
+    return NextResponse.json(
+      { error: 'Bot verification failed' },
+      { status: 403 }
+    );
+  }
+
   const productionDomain = process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL;
   const baseUrl = productionDomain ? `https://${productionDomain}` : "http://localhost:3000";
 

@@ -68,7 +68,8 @@ export default defineSchema({
     generationStatus: v.union(
       v.literal("pending"),
       v.literal("generation"),
-      v.literal("compleated"),
+      v.literal("compleated"), // legacy, remove after migration
+      v.literal("completed"),
       v.literal("failed"),
     ),
 
@@ -92,12 +93,24 @@ export default defineSchema({
     branchParentPublicMessageId: v.optional(v.string()),
 
     backfill: v.optional(v.boolean()),
+
+    // Sharing status (lightweight flags for quick UI reads)
+    shareId: v.optional(v.string()),
+    shareStatus: v.optional(
+      v.union(v.literal("active"), v.literal("revoked")),
+    ),
+    sharedAt: v.optional(v.number()),
+    allowAttachments: v.optional(v.boolean()),
+    orgOnly: v.optional(v.boolean()),
+    shareName: v.optional(v.boolean()),
+    ownerOrgId: v.optional(v.string()),
   })
     .index("by_user", ["userId"])
     .index("by_threadId", ["threadId"])
     .index("by_user_and_threadId", ["userId", "threadId"])
     .index("by_user_and_updatedAt", ["userId", "updatedAt"])
     .index("by_user_and_pinned", ["userId", "pinned"])
+    .index("by_shareId", ["shareId"])
     .searchIndex("search_title", {
       searchField: "title",
       filterFields: ["userId"],
@@ -172,6 +185,23 @@ export default defineSchema({
     .index("by_fileKey", ["fileKey"])
     .index("by_userId", ["userId"])
     .index("by_userId_and_fileKey", ["userId", "fileKey"]),
+
+  sharedThreads: defineTable({
+    shareId: v.string(),
+    threadId: v.string(),
+    userId: v.string(),
+    ownerOrgId: v.optional(v.string()),
+    status: v.union(v.literal("active"), v.literal("revoked")),
+    createdAt: v.number(),
+    revokedAt: v.optional(v.number()),
+    lastAccessedAt: v.optional(v.number()),
+    messageCount: v.optional(v.number()),
+    allowAttachments: v.optional(v.boolean()),
+    orgOnly: v.optional(v.boolean()),
+    shareName: v.optional(v.boolean()),
+  })
+    .index("by_shareId", ["shareId"])
+    .index("by_user_and_threadId", ["userId", "threadId"]),
 
   userConfiguration: defineTable({
     userId: v.string(),
