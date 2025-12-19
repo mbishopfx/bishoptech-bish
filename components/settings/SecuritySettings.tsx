@@ -134,7 +134,7 @@ export function SecuritySettings({
                 <p className="text-gray-500 dark:text-text-muted text-sm leading-5 mt-1">
                   {hasPassword
                     ? "Cambia tu contraseña para mantener tu cuenta segura"
-                    : "Establece una contraseña para acceder a tu cuenta"}
+                    : "Establece o cambia tu contraseña para acceder a tu cuenta"}
                 </p>
               </div>
 

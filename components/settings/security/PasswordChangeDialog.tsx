@@ -11,6 +11,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ai/ui/dialog";
+import { Eye, EyeOff } from "lucide-react";
 import { changeCurrentUserPassword } from "@/actions/settings/security/changeCurrentUserPassword";
 import { setCurrentUserPassword } from "@/actions/settings/security/setCurrentUserPassword";
 import { sendSecurityEmailVerification } from "@/actions/settings/security/sendSecurityEmailVerification";
@@ -33,6 +34,9 @@ export function PasswordChangeDialog({ hasPassword, isPending: parentIsPending }
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSuccess, setPasswordSuccess] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const onChangePassword = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -65,6 +69,9 @@ export function PasswordChangeDialog({ hasPassword, isPending: parentIsPending }
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
+      setShowCurrentPassword(false);
+      setShowNewPassword(false);
+      setShowConfirmPassword(false);
       setPasswordSuccess(true);
       setTimeout(() => {
         setPasswordSuccess(false);
@@ -169,6 +176,9 @@ export function PasswordChangeDialog({ hasPassword, isPending: parentIsPending }
             setCurrentPassword("");
             setNewPassword("");
             setConfirmPassword("");
+            setShowCurrentPassword(false);
+            setShowNewPassword(false);
+            setShowConfirmPassword(false);
           }
         }}
       >
@@ -206,6 +216,9 @@ export function PasswordChangeDialog({ hasPassword, isPending: parentIsPending }
                     setCurrentPassword("");
                     setNewPassword("");
                     setConfirmPassword("");
+                    setShowCurrentPassword(false);
+                    setShowNewPassword(false);
+                    setShowConfirmPassword(false);
                     setPasswordError(null);
                   }}
                   className="cursor-pointer rounded-lg font-medium min-w-[100px]"
@@ -292,34 +305,79 @@ export function PasswordChangeDialog({ hasPassword, isPending: parentIsPending }
                 <form onSubmit={onChangePassword} className="space-y-4">
                   {hasPassword && (
                     <SettingRow label="Contraseña actual">
-                      <SettingsInput
-                        type="password"
-                        value={currentPassword}
-                        onChange={(e) => setCurrentPassword(e.target.value)}
-                        autoComplete="current-password"
-                        width="w-full"
-                      />
+                      <div className="relative w-full">
+                        <SettingsInput
+                          type={showCurrentPassword ? "text" : "password"}
+                          value={currentPassword}
+                          onChange={(e) => setCurrentPassword(e.target.value)}
+                          autoComplete="current-password"
+                          width="w-full"
+                          className="pr-10"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-text-muted dark:hover:text-white transition-colors"
+                          aria-label={showCurrentPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                        >
+                          {showCurrentPassword ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </button>
+                      </div>
                     </SettingRow>
                   )}
 
                   <SettingRow label="Nueva contraseña">
-                    <SettingsInput
-                      type="password"
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      autoComplete="new-password"
-                      width="w-full"
-                    />
+                    <div className="relative w-full">
+                      <SettingsInput
+                        type={showNewPassword ? "text" : "password"}
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        autoComplete="new-password"
+                        width="w-full"
+                        className="pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-text-muted dark:hover:text-white transition-colors"
+                        aria-label={showNewPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                      >
+                        {showNewPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
                   </SettingRow>
 
                   <SettingRow label="Confirmar nueva contraseña">
-                    <SettingsInput
-                      type="password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      autoComplete="new-password"
-                      width="w-full"
-                    />
+                    <div className="relative w-full">
+                      <SettingsInput
+                        type={showConfirmPassword ? "text" : "password"}
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        autoComplete="new-password"
+                        width="w-full"
+                        className="pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-text-muted dark:hover:text-white transition-colors"
+                        aria-label={showConfirmPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                      >
+                        {showConfirmPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
                   </SettingRow>
 
                 {passwordError && (
