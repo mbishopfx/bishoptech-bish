@@ -18,7 +18,7 @@ export default async function UsagePage() {
   return (
     <div className="py-6 px-4 md:py-12 md:px-12 flex flex-col max-w-4xl min-w-0 md:min-w-[520px] w-full min-h-full box-border bg-background dark:bg-popover-main">
       <SettingsSection
-        title="Uso y Limites"
+        title="Uso y Límites"
         description="Monitorea el uso actual de tu cuota de mensajes Standard y Premium."
       >
         <QuotaClient preloadedQuotaInfo={preloadedQuotaInfo} />

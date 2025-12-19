@@ -1,10 +1,25 @@
 import { SettingsSection, SettingsDivider } from "@/components/settings";
 import { withAuth } from "@workos-inc/authkit-nextjs";
-import { ProfileWidget } from "@/components/settings/widgets/ProfileWidget";
 import { AdvancedDebugWidget } from "@/components/settings/widgets/AdvancedDebugWidget";
+import { workos } from "@/app/api/workos";
+import { ProfileForm, type ProfileFormUser } from "@/components/settings/ProfileForm";
 
 export default async function ProfilePage() {
   const { user, accessToken } = await withAuth({ ensureSignedIn: true });
+
+  let workosUser: ProfileFormUser | null = null;
+  try {
+    const u = await workos.userManagement.getUser(user.id);
+    workosUser = {
+      id: u.id,
+      email: u.email,
+      firstName: (u as any).firstName ?? null,
+      lastName: (u as any).lastName ?? null,
+      profilePictureUrl: (u as any).profilePictureUrl ?? null,
+    };
+  } catch (e) {
+    console.error("Failed to load WorkOS user for profile page:", e);
+  }
 
   // Process debug information
   let claimsForDebug: unknown = null;
@@ -25,12 +40,24 @@ export default async function ProfilePage() {
 
   return (
     <div className="py-6 px-4 md:py-12 md:px-12 flex flex-col max-w-4xl min-w-0 md:min-w-[520px] w-full min-h-full box-border">
-      {/* WorkOS User Profile Widget */}
       <SettingsSection
         title="Gestión de Perfil"
         description="Gestiona tu información personal y preferencias."
       >
-        <ProfileWidget accessToken={accessToken || null} />
+        {workosUser ? (
+          <ProfileForm initialUser={workosUser} />
+        ) : (
+          <div className="p-6 bg-white dark:bg-popover-secondary rounded-lg border border-gray-200 dark:border-border shadow-sm">
+            <div className="text-center space-y-2">
+              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                No se pudo cargar el perfil
+              </p>
+              <p className="text-sm text-gray-500 dark:text-text-muted">
+                Por favor, intenta recargar la página.
+              </p>
+            </div>
+          </div>
+        )}
       </SettingsSection>
 
       <SettingsDivider />

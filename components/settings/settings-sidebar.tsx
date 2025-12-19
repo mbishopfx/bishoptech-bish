@@ -181,7 +181,7 @@ const settingsSections: SettingsSection[] = [
         icon: Shield,
       },
       {
-        title: "Uso y Limites",
+        title: "Uso y Límites",
         href: "/settings/usage",
         icon: BarChart3,
       },
