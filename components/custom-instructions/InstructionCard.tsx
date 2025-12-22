@@ -75,7 +75,7 @@ export function InstructionCard({
             </h4>
             {instruction.isSharedWithOrg ? (
               <Badge variant="secondary" className="px-1.5 py-0 h-4 text-[9px] font-bold uppercase rounded-sm">
-                <Users className="h-2.5 w-2.5 mr-1" />1
+                <Users className="h-2.5 w-2.5" />
               </Badge>
             ) : !isOwner && (
               <Badge variant="outline" className="px-1.5 py-0 h-4 text-[9px] font-bold uppercase rounded-sm">

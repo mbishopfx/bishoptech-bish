@@ -157,8 +157,10 @@ export const list = AuthQuery({
           .withIndex("by_workos_id", (q) => q.eq("workos_id", inst.ownerId))
           .unique();
         
+        const { usageCount, ...instWithoutUsage } = inst;
+        
         return {
-          ...inst,
+          ...instWithoutUsage,
           ownerName: owner 
             ? `${owner.firstName ?? ""} ${owner.lastName ?? ""}`.trim() || owner.email 
             : "Usuario",
@@ -204,8 +206,10 @@ export const get = AuthQuery({
       .withIndex("by_workos_id", (q) => q.eq("workos_id", instruction.ownerId))
       .unique();
 
+    const { usageCount, ...instructionWithoutUsage } = instruction;
+
     return {
-      ...instruction,
+      ...instructionWithoutUsage,
       ownerName: owner 
         ? `${owner.firstName ?? ""} ${owner.lastName ?? ""}`.trim() || owner.email 
         : "Usuario",
