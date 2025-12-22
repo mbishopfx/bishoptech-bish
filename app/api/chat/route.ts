@@ -364,13 +364,14 @@ const handleChatRequest = (
     });
 
     // Fetch custom instruction if provided
-    let customInstructionsContent: string | undefined;
-    if (customInstructionId) {
-      const instruction = yield* getCustomInstruction(customInstructionId);
-      if (instruction) {
-        customInstructionsContent = instruction.instructions;
-      }
-    }
+    // let customInstructionsContent: string | undefined;
+    // if (customInstructionId) {
+    //   const instruction = yield* getCustomInstruction(customInstructionId);
+    //   if (instruction) {
+    //     customInstructionsContent = instruction.instructions;
+    //   }
+    // }
+    const customInstructionsContent: string | undefined = undefined;
 
     const lastUser = messages.filter((m) => m.role === "user").pop();
     const userText = lastUser?.parts?.find((part) => part.type === "text")?.text;
@@ -623,7 +624,7 @@ const handleChatRequest = (
     // Build system prompt
     const systemPrompt = yield* buildSystemPrompt({
       modelDisplayName,
-      customInstructions: customInstructionsContent,
+      // customInstructions: customInstructionsContent,
       supermemoryEnabled,
     });
 
