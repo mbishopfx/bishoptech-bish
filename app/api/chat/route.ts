@@ -11,6 +11,8 @@ import {
   createUIMessageStream,
   createUIMessageStreamResponse,
 } from "ai";
+import { fetchMutation } from "convex/nextjs";
+import { api } from "@/convex/_generated/api";
 import { withTracing } from "@posthog/ai";
 import { PostHog } from "posthog-node";
 import { withSupermemory, supermemoryTools } from "@supermemory/tools/ai-sdk";
@@ -25,7 +27,6 @@ import { createToolsForModel } from "@/lib/ai/model-tools";
 import { ToolType } from "@/lib/ai/config/base";
 import { Id } from "@/convex/_generated/dataModel";
 import { exaWebSearch } from "@/lib/ai/tools/exa-search";
-import { type ResponseStyle } from "@/lib/ai/response-styles";
 
 export const maxDuration = 500;
 
@@ -70,6 +71,7 @@ import {
   generateIdempotencyKey,
   checkAborted,
   fromAbortSignal,
+  getCustomInstruction,
 } from "./services";
 import { buildSystemPrompt } from "./system-prompt";
 import { createDatabaseQueue } from "./database-queue";
@@ -340,7 +342,7 @@ const handleChatRequest = (
       modelId,
       threadId,
       enabledTools = [],
-      responseStyle = "regular",
+      customInstructionId,
       trigger,
       messageId,
     } = validated;
@@ -360,6 +362,15 @@ const handleChatRequest = (
     logger.debug("Authentication complete", logContext, { 
       timeMs: Date.now() - start 
     });
+
+    // Fetch custom instruction if provided
+    let customInstructionsContent: string | undefined;
+    if (customInstructionId) {
+      const instruction = yield* getCustomInstruction(customInstructionId);
+      if (instruction) {
+        customInstructionsContent = instruction.instructions;
+      }
+    }
 
     const lastUser = messages.filter((m) => m.role === "user").pop();
     const userText = lastUser?.parts?.find((part) => part.type === "text")?.text;
@@ -612,7 +623,7 @@ const handleChatRequest = (
     // Build system prompt
     const systemPrompt = yield* buildSystemPrompt({
       modelDisplayName,
-      responseStyle: responseStyle as ResponseStyle,
+      customInstructions: customInstructionsContent,
       supermemoryEnabled,
     });
 
@@ -872,6 +883,17 @@ const handleChatRequest = (
                   );
                 } catch (err) {
                   logger.error("Failed to increment tool quota", logContext, err);
+                }
+              }
+
+              if (customInstructionId) {
+                try {
+                  await fetchMutation(api.customInstructions.serverIncrementUsage, {
+                    id: customInstructionId as Id<"customInstructions">,
+                    secret: process.env.CONVEX_SECRET_TOKEN!,
+                  });
+                } catch (err) {
+                  logger.warn("Failed to increment custom instruction usage", logContext, err);
                 }
               }
 

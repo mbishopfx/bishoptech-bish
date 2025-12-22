@@ -1,7 +1,6 @@
 import { create } from "zustand";
 import type { ChatState, ChatStateSetters } from "./types";
 import type { FileAttachment } from "@/lib/file-utils";
-import type { ResponseStyle } from "@/lib/ai/response-styles";
 
 type ChatUIStore = ChatState & ChatStateSetters & {
   handleSearchToggle: () => void;
@@ -16,7 +15,7 @@ export const useChatUIStore = create<ChatUIStore>((set, get) => ({
   uploadingFiles: [],
   isSendingMessage: false,
   isSearchEnabled: false,
-  responseStyle: "regular" as ResponseStyle,
+  customInstructionId: undefined,
   quotaError: null,
   showNoSubscriptionDialog: false,
   chatKey: 0,
@@ -52,11 +51,11 @@ export const useChatUIStore = create<ChatUIStore>((set, get) => ({
         ? (state) => ({ isSearchEnabled: value(state.isSearchEnabled) })
         : { isSearchEnabled: value },
     ),
-  setResponseStyle: (value) =>
+  setCustomInstructionId: (value) =>
     set(
       typeof value === "function"
-        ? (state) => ({ responseStyle: value(state.responseStyle) })
-        : { responseStyle: value },
+        ? (state) => ({ customInstructionId: value(state.customInstructionId) })
+        : { customInstructionId: value },
     ),
   setQuotaError: (value) =>
     set(typeof value === "function" ? (state) => ({ quotaError: value(state.quotaError) }) : { quotaError: value }),

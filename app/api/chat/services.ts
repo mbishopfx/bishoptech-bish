@@ -6,7 +6,7 @@ import { Id } from "@/convex/_generated/dataModel";
 import { UIMessage } from "ai";
 import { isCapable, isPremium } from "@/lib/ai/ai-providers";
 import { ToolType } from "@/lib/ai/config/base";
-import { ResponseStyle } from "@/lib/ai/response-styles";
+
 import {
   ValidationError,
   AuthenticationError,
@@ -198,7 +198,7 @@ export interface RequestBody {
   modelId: string;
   threadId: string;
   enabledTools?: ToolType[];
-  responseStyle?: ResponseStyle;
+  customInstructionId?: string;
   trigger?: "submit-message" | "regenerate-message";
   messageId?: string;
 }
@@ -262,12 +262,35 @@ export const isRetryableDatabaseError = (error: DatabaseError): boolean => {
   return true;
 };
 
+// ============================================================================
+// Custom Instructions Service
+// ============================================================================
+
+/**
+ * Fetches a custom instruction by ID.
+ */
+export const getCustomInstruction = (
+  instructionId: string
+): Effect.Effect<{ instructions: string } | null, DatabaseError> =>
+  Effect.tryPromise({
+    try: () =>
+      fetchQuery(api.customInstructions.serverGet, {
+        id: instructionId as Id<"customInstructions">,
+        secret: process.env.CONVEX_SECRET_TOKEN!,
+      }),
+    catch: (error) =>
+      new DatabaseError({
+        message: "Failed to get custom instruction",
+        operation: "getCustomInstruction",
+        cause: error,
+      }),
+  });
 
 // ============================================================================
 // Validation Service
 // ============================================================================
 
-/**
+  /**
  * Validates the incoming request body and returns a typed RequestBody.
  */
 export const validateRequestBody = (

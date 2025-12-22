@@ -13,7 +13,6 @@ import { resolveModel } from "@/lib/ai/ai-providers";
 import { useAuth } from "@workos-inc/authkit-nextjs/components";
 import { useConvexAuth, usePaginatedQuery, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import type { ResponseStyle } from "@/lib/ai/response-styles";
 import { Loader } from "@/components/ai/loader";
 import { AttachmentsIcon } from "@/components/ui/icons/svg-icons";
 import {
@@ -33,7 +32,6 @@ import { Effect } from "effect";
 
 // Effect services and error types
 import {
-  updateResponseStyleEffect,
   updateMessageContentEffect,
   parseServerError,
   isQuotaError,
@@ -41,7 +39,6 @@ import {
   isAbortError,
   shouldShowErrorToast,
   submitMessageEffect,
-  setResponseStyleEffect,
 } from "./services";
 import { uploadWithStateEffect } from "./services/upload-service";
 import { getErrorMessage } from "./errors";
@@ -77,8 +74,8 @@ function ChatInterfaceInternal({
   const setShowNoSubscriptionDialog = useChatUIStore((s) => s.setShowNoSubscriptionDialog);
   const triggerError = useChatUIStore((s) => s.triggerError);
   const setChatError = useChatUIStore((s) => s.setChatError);
-  const responseStyle = useChatUIStore((s) => s.responseStyle);
-  const setResponseStyle = useChatUIStore((s) => s.setResponseStyle);
+  const customInstructionId = useChatUIStore((s) => s.customInstructionId);
+  const setCustomInstructionId = useChatUIStore((s) => s.setCustomInstructionId);
   const [isDragActive, setIsDragActive] = useState(false);
   const dragCounterRef = useRef(0);
 
@@ -301,8 +298,8 @@ function ChatInterfaceInternal({
             requestMessages = [...base.filter((m: UIMessage) => !usedIds.has(m.id)), ...hookMessages];
           }
 
-          // Get current responseStyle from store
-          const currentResponseStyle = useChatUIStore.getState().responseStyle;
+          // Get current customInstructionId from store
+          const currentCustomInstructionId = useChatUIStore.getState().customInstructionId;
 
           return {
             body: {
@@ -310,7 +307,7 @@ function ChatInterfaceInternal({
               modelId: resolveModel(currentModel),
               threadId: id,
               enabledTools: currentEnabledTools,
-              responseStyle: currentResponseStyle,
+              customInstructionId: currentCustomInstructionId,
               trigger,
               messageId,
             },
@@ -362,9 +359,8 @@ function ChatInterfaceInternal({
   });
 
   const updateUserMessageContent = useMutation(api.threads.updateUserMessageContent);
-  const updateThreadResponseStyle = useMutation(api.threads.updateThreadResponseStyle);
   
-  // Load thread info to get responseStyle
+  // Load thread info
   const threadInfo = useQuery(
     api.threads.getThreadInfo,
     isThread && isAuthenticated ? { threadId: id } : "skip"
@@ -477,57 +473,16 @@ function ChatInterfaceInternal({
     }
   }, [id, isThread, isAuthenticated, consumeInitialMessage, sendMessageRef]);
 
-  // Load responseStyle from thread info when thread loads or changes
-  useEffect(() => {
-    if (threadInfo?.responseStyle) {
-      setResponseStyle(threadInfo.responseStyle as ResponseStyle);
-    } else if (isThread && threadInfo && !threadInfo.responseStyle) {
-      // Thread exists but has no responseStyle, default to "regular"
-      setResponseStyle("regular");
-    }
-  }, [threadInfo, isThread, setResponseStyle]);
-
-  // Update responseStyle in database when user changes it
-  const prevResponseStyleRef = useRef<ResponseStyle | null>(null);
-  useEffect(() => {
-    if (!isThread || !isAuthenticated || !threadInfo) return;
-
-    const program = setResponseStyleEffect({
-      threadId: id,
-      responseStyle,
-      threadResponseStyle: threadInfo.responseStyle as ResponseStyle | undefined,
-      prevSynced: prevResponseStyleRef.current,
-      markSynced: (value) => {
-        prevResponseStyleRef.current = value;
-      },
-      updateFn: (params) => updateThreadResponseStyle(params),
-      onError: (message) => triggerError(message),
-    });
-
-    Effect.runPromise(program).catch((err) => {
-      console.error("Failed to update response style", err);
-      triggerError("Failed to update response style. Please try again.");
-    });
-  }, [
-    responseStyle,
-    isThread,
-    isAuthenticated,
-    threadInfo,
-    id,
-    updateThreadResponseStyle,
-    triggerError,
-  ]);
-
   // Cleanup effect when thread ID changes
   useEffect(() => {
     if (prevIdRef.current !== id) {
       autoStartTriggeredRef.current = false;
       setMessages([]);
       // Reset to default when switching threads
-      setResponseStyle("regular");
+      setCustomInstructionId(undefined);
       prevIdRef.current = id;
     }
-  }, [id, setMessages, setResponseStyle]);
+  }, [id, setMessages, setCustomInstructionId]);
 
 
   const handleSubmit = useCallback(

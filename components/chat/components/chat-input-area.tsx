@@ -22,7 +22,7 @@ import {
 } from "@/components/ai/prompt-input";
 import { ChatErrorAlert } from "./chat-error-alert";
 import { ModelSelector } from "@/components/ai/model-selector";
-import { ResponseStyleSelector } from "@/components/ai/response-style-selector";
+import { InstructionSelector } from "@/components/custom-instructions/InstructionSelector";
 import React from "react";
 import { useChatStatus } from "@ai-sdk-tools/store";
 import { useChatUIStore } from "../ui-store";
@@ -60,8 +60,8 @@ export const ChatInputArea = React.memo(function ChatInputArea({
   const setUploadedAttachments = useChatUIStore((s) => s.setUploadedAttachments);
   const setUploadingFiles = useChatUIStore((s) => s.setUploadingFiles);
   const handleSearchToggle = useChatUIStore((s) => s.handleSearchToggle);
-  const responseStyle = useChatUIStore((s) => s.responseStyle);
-  const setResponseStyle = useChatUIStore((s) => s.setResponseStyle);
+  const customInstructionId = useChatUIStore((s) => s.customInstructionId);
+  const setCustomInstructionId = useChatUIStore((s) => s.setCustomInstructionId);
   const setQuotaError = useChatUIStore((s) => s.setQuotaError);
   const setShowNoSubscriptionDialog = useChatUIStore((s) => s.setShowNoSubscriptionDialog);
   const triggerError = useChatUIStore((s) => s.triggerError);
@@ -213,9 +213,9 @@ export const ChatInputArea = React.memo(function ChatInputArea({
                 }}
                 disabled={disableInput || isUploading}
               />
-              <ResponseStyleSelector
-                value={responseStyle}
-                onValueChange={setResponseStyle}
+              <InstructionSelector
+                selectedId={customInstructionId}
+                onSelect={setCustomInstructionId}
                 disabled={disableInput}
               />
               <PromptInputButton

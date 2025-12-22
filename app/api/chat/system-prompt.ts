@@ -1,11 +1,10 @@
 import { Effect } from "effect";
 
 import { ModelError } from "./errors";
-import { buildSystemPromptWithStyle, type ResponseStyle } from "@/lib/ai/response-styles";
 
 type BuildSystemPromptArgs = {
   modelDisplayName: string;
-  responseStyle: ResponseStyle;
+  customInstructions?: string;
   supermemoryEnabled?: boolean;
   now?: Date;
 };
@@ -104,7 +103,7 @@ CODE FORMATTING:
 
 export const buildSystemPromptText = ({
   modelDisplayName,
-  responseStyle,
+  customInstructions,
   supermemoryEnabled = Boolean(process.env.SUPERMEMORY_API_KEY),
   now = new Date(),
 }: BuildSystemPromptArgs): string => {
@@ -113,11 +112,12 @@ export const buildSystemPromptText = ({
     supermemoryEnabled,
     now,
   });
-  const styledPrompt = buildSystemPromptWithStyle(baseSystemPrompt, responseStyle);
-  if (!styledPrompt) {
-    throw new Error("System prompt build returned empty");
+  
+  if (customInstructions) {
+    return `${baseSystemPrompt}\n\n${customInstructions}`;
   }
-  return styledPrompt;
+  
+  return baseSystemPrompt;
 };
 
 export const buildSystemPrompt = (args: BuildSystemPromptArgs) =>

@@ -220,6 +220,11 @@ const settingsSections: SettingsSection[] = [
         href: "/settings/appearance",
         icon: Palette,
       },
+      {
+        title: "Instrucciones",
+        href: "/settings/custom-instructions",
+        icon: MessageSquare,
+      },
       // {
       //   title: "Atajos",
       //   href: "/settings/shortcuts",
