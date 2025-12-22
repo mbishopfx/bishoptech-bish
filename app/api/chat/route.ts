@@ -508,9 +508,10 @@ const handleChatRequest = (
         }),
     });
     const toolSet = tools as unknown as ToolSet;
+    const hasTools = Object.keys(tools).length > 0;
 
     const providerOptions = yield* Effect.try({
-      try: () => getProviderOptions(modelId),
+      try: () => getProviderOptions(modelId, hasTools),
       catch: (error) =>
         new ModelError({
           message: "Failed to get provider options",
