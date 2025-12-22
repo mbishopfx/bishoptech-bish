@@ -18,9 +18,8 @@ export const create = AuthMutation({
     const orgId = extractOrganizationIdFromJWT(ctx.identity);
     
     // Validation
-    if (args.title.length > 50) throw new Error("Title too long (max 50)");
-    if (args.description.length > 160) throw new Error("Description too long (max 160)");
-    if (args.instructions.length > 25000) throw new Error("Instructions too long (max 25000)");
+    if (args.title.length > 60) throw new Error("Title too long (max 60)");
+    if (args.description.length > 180) throw new Error("Description too long (max 180)");
 
     const id = await ctx.db.insert("customInstructions", {
       ...args,
@@ -57,9 +56,8 @@ export const update = AuthMutation({
     }
 
     // Validation
-    if (args.title && args.title.length > 50) throw new Error("Title too long (max 50)");
-    if (args.description && args.description.length > 160) throw new Error("Description too long (max 160)");
-    if (args.instructions && args.instructions.length > 25000) throw new Error("Instructions too long (max 25000)");
+    if (args.title && args.title.length > 60) throw new Error("Title too long (max 60)");
+    if (args.description && args.description.length > 180) throw new Error("Description too long (max 180)");
 
     const { id, ...updates } = args;
     
