@@ -133,13 +133,18 @@ export const list = AuthQuery({
       .withIndex("by_owner", (q) => q.eq("ownerId", userId))
       .collect();
 
-    // Get instructions shared with the org
+    // Get instructions shared with the org (excluding user's own)
     let orgInstructions: Doc<"customInstructions">[] = [];
     if (orgId) {
       orgInstructions = await ctx.db
         .query("customInstructions")
         .withIndex("by_org", (q) => q.eq("orgId", orgId))
-        .filter((q) => q.eq(q.field("isSharedWithOrg"), true))
+        .filter((q) => 
+          q.and(
+            q.eq(q.field("isSharedWithOrg"), true),
+            q.neq(q.field("ownerId"), userId)
+          )
+        )
         .collect();
     }
 
@@ -172,23 +177,28 @@ export const list = AuthQuery({
     addToResult(sharedInstructions);
     
     // Fetch owner information for all
-    const results = await Promise.all(
-      combined.map(async (inst) => {
-        const owner = await ctx.db
+    const ownerIds = [...new Set(combined.map(inst => inst.ownerId))];
+    const owners = await Promise.all(
+      ownerIds.map(id => 
+        ctx.db
           .query("users")
-          .withIndex("by_workos_id", (q) => q.eq("workos_id", inst.ownerId))
-          .unique();
-        
-        const { usageCount, ...instWithoutUsage } = inst;
-        
-        return {
-          ...instWithoutUsage,
-          ownerName: owner 
-            ? `${owner.firstName ?? ""} ${owner.lastName ?? ""}`.trim() || owner.email 
-            : "Usuario",
-        };
-      })
+          .withIndex("by_workos_id", (q) => q.eq("workos_id", id))
+          .unique()
+      )
     );
+    const ownerMap = new Map(owners.filter(Boolean).map(o => [o!.workos_id, o]));
+    
+    const results = combined.map((inst) => {
+      const owner = ownerMap.get(inst.ownerId);
+      const { usageCount, ...instWithoutUsage } = inst;
+      
+      return {
+        ...instWithoutUsage,
+        ownerName: owner 
+          ? `${owner.firstName ?? ""} ${owner.lastName ?? ""}`.trim() || owner.email 
+          : "Usuario",
+      };
+    });
     
     return results.sort((a, b) => b.updatedAt - a.updatedAt);
   },
