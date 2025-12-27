@@ -48,6 +48,7 @@ export const threadInfoFields = {
   orgOnly: v.optional(v.boolean()),
   shareName: v.optional(v.boolean()),
   ownerOrgId: v.optional(v.string()),
+  customInstructionId: v.optional(v.id("customInstructions")),
 } as const;
 
 export const threadInfoValidator = v.object(threadInfoFields);
@@ -82,6 +83,7 @@ export const createThread = AuthOrgMutation({
     userSetTitle: v.optional(v.boolean()),
     branchParentThreadId: v.optional(v.id("threads")),
     branchParentPublicMessageId: v.optional(v.string()),
+    customInstructionId: v.optional(v.id("customInstructions")),
   },
   returns: v.object({
     threadId: v.string(),
@@ -109,6 +111,7 @@ export const createThread = AuthOrgMutation({
       pinned: false, // Default pinned status
       branchParentThreadId: args.branchParentThreadId,
       branchParentPublicMessageId: args.branchParentPublicMessageId,
+      customInstructionId: args.customInstructionId,
     });
 
     return {
@@ -206,17 +209,12 @@ export const getThreadInfo = AuthQuery({
 });
 
 /**
- * Update the response style for a thread.
+ * Update the custom instruction for a thread.
  */
-export const updateThreadResponseStyle = AuthMutation({
+export const updateThreadCustomInstruction = AuthMutation({
   args: {
     threadId: v.string(),
-    responseStyle: v.union(
-      v.literal("regular"),
-      v.literal("learning"),
-      v.literal("technical"),
-      v.literal("concise"),
-    ),
+    customInstructionId: v.optional(v.id("customInstructions")),
   },
   returns: v.union(v.object({ success: v.literal(true) }), v.null()),
   handler: async (ctx, args) => {
@@ -234,9 +232,9 @@ export const updateThreadResponseStyle = AuthMutation({
       return null;
     }
 
-    // Update the response style
+    // Update the custom instruction
     await ctx.db.patch(thread._id, {
-      responseStyle: args.responseStyle,
+      customInstructionId: args.customInstructionId,
       updatedAt: Date.now(),
     });
 
@@ -267,6 +265,7 @@ export const getThreadMessagesPaginatedSafe = query({
         page: [],
         isDone: true,
         continueCursor: "",
+        customInstructionId: undefined,
       };
     }
 
@@ -286,6 +285,7 @@ export const getThreadMessagesPaginatedSafe = query({
         page: [],
         isDone: true,
         continueCursor: "",
+        customInstructionId: undefined,
       };
     }
 
@@ -320,6 +320,7 @@ export const getThreadMessagesPaginatedSafe = query({
     return {
       ...messages,
       page: messagesWithAttachments,
+      customInstructionId: thread.customInstructionId,
     };
   },
 });

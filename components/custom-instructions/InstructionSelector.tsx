@@ -29,12 +29,16 @@ interface InstructionSelectorProps {
   selectedId?: string;
   onSelect: (id: string | undefined) => void;
   disabled?: boolean;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 export function InstructionSelector({
   selectedId,
   onSelect,
   disabled,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
 }: InstructionSelectorProps) {
   const { user } = useAuth();
   const { isAuthenticated } = useConvexAuth();
@@ -42,7 +46,10 @@ export function InstructionSelector({
     api.customInstructions.list,
     isAuthenticated ? {} : "skip"
   );
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const setOpen = controlledOnOpenChange || setInternalOpen;
 
   const isLoading = instructions === undefined;
   const loadedInstructions = instructions ?? [];
@@ -67,7 +74,7 @@ export function InstructionSelector({
       <PromptInputButton
         disabled={disabled || isLoading}
         variant="ghost"
-        className={cn("text-secondary hover:bg-popover-main hover:text-popover-text dark:hover:bg-hover/60 transition-none")}
+        className="transition-none"
         title={
           selectedInstruction
             ? `Instrucción: ${selectedInstruction.title}`
@@ -112,7 +119,6 @@ export function InstructionSelector({
                 onSelect(undefined);
                 setOpen(false);
               }}
-              className="cursor-pointer"
             >
               <div className="flex items-center gap-2 flex-1">
                 <Slash className="h-4 w-4 text-muted-foreground" />
@@ -122,11 +128,9 @@ export function InstructionSelector({
             </CommandItem>
           </CommandGroup>
 
-          {hasAnyListSections && <CommandSeparator />}
-
           {showMy && (
             <>
-              <CommandGroup heading="Mis instrucciones">
+              <CommandGroup heading="Mis Instrucciones">
                 {myInstructions.map((inst) => {
                   const Icon =
                     ((LucideIcons as any)[inst.icon] as LucideIcon) ??
@@ -138,7 +142,6 @@ export function InstructionSelector({
                         onSelect(inst._id);
                         setOpen(false);
                       }}
-                      className="cursor-pointer"
                     >
                       <div className="flex items-center gap-2 flex-1">
                         <Icon
@@ -164,7 +167,7 @@ export function InstructionSelector({
 
           {showShared && (
             <>
-              <CommandGroup heading="Compartidas conmigo">
+              <CommandGroup heading="Compartidas Conmigo">
                 {sharedWithMe.map((inst) => {
                   const Icon =
                     ((LucideIcons as any)[inst.icon] as LucideIcon) ??
@@ -176,7 +179,6 @@ export function InstructionSelector({
                         onSelect(inst._id);
                         setOpen(false);
                       }}
-                      className="cursor-pointer"
                     >
                       <div className="flex items-center gap-2 flex-1">
                         <Icon
@@ -204,7 +206,7 @@ export function InstructionSelector({
           )}
 
           {showOrg && (
-            <CommandGroup heading="Organización">
+            <CommandGroup heading="De mi Organización">
               {orgInstructions.map((inst) => {
                 const Icon =
                   ((LucideIcons as any)[inst.icon] as LucideIcon) ??
@@ -242,8 +244,7 @@ export function InstructionSelector({
           )}
         </CommandList>
 
-        <CommandSeparator />
-        <div className="p-2 border-t bg-muted/20">
+        <div className="p-2 border-t border-[oklch(0.35_0_0)] bg-[oklch(0.15_0_0/0.2)]">
           {!hasInstructions && (
             <Link
               href="/settings/custom-instructions"
@@ -256,7 +257,7 @@ export function InstructionSelector({
           )}
           <Link
             href="/settings/custom-instructions"
-            className="flex items-center gap-2 px-2 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-none rounded-sm"
+            className="flex items-center gap-2 px-2 py-1.5 text-xs text-muted-foreground hover:text-popover-text transition-none rounded-sm"
             onClick={() => setOpen(false)}
           >
             <Settings2 className="h-3.5 w-3.5" />

@@ -67,7 +67,7 @@ const MessageActions = React.memo(function MessageActions({
       .join("\n");
     await copyToClipboard(textContent);
     if (message.role === "assistant") {
-      toast.success("Copied to clipboard");
+      toast.success("Copiado al portapapeles");
     }
     setIsCopied(true);
     setTimeout(() => setIsCopied(false), 2000);

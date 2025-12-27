@@ -101,6 +101,7 @@ export default defineSchema({
     orgOnly: v.optional(v.boolean()),
     shareName: v.optional(v.boolean()),
     ownerOrgId: v.optional(v.string()),
+    customInstructionId: v.optional(v.id("customInstructions")),
   })
     .index("by_user", ["userId"])
     .index("by_threadId", ["threadId"])

@@ -8,6 +8,7 @@ export interface ChatInterfaceProps {
   hasMoreMessages?: boolean;
   disableInput?: boolean;
   onInitialMessage?: (message: UIMessage) => Promise<void>;
+  customInstructionId?: string;
 }
 
 export interface QuotaError {

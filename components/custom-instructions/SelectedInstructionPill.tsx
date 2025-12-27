@@ -11,9 +11,11 @@ import { cn } from "@/lib/utils";
 export function SelectedInstructionPill({
   instructionId,
   className,
+  onClick,
 }: {
   instructionId: string | undefined;
   className?: string;
+  onClick?: () => void;
 }) {
   const instruction = useQuery(
     api.customInstructions.get,
@@ -32,12 +34,21 @@ export function SelectedInstructionPill({
   return (
     <div
       className={cn(
-        // Match ModelSelector trigger styling
         "text-secondary hover:bg-popover-main hover:text-popover-text data-[placeholder]:text-muted-foreground flex w-fit items-center justify-between gap-2 rounded-md bg-transparent px-3 py-2 text-sm whitespace-nowrap outline-none disabled:cursor-not-allowed disabled:opacity-50 h-9 dark:hover:bg-hover/60",
         "max-w-[220px]",
+        onClick && "cursor-pointer",
         className,
       )}
       title={`Instrucción: ${instruction.title}`}
+      onClick={onClick}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={onClick ? (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick();
+        }
+      } : undefined}
     >
       <Icon
         className="size-4 shrink-0"

@@ -50,6 +50,7 @@ function ChatInterfaceInternal({
   hasMoreMessages = false,
   disableInput = false,
   onInitialMessage,
+  customInstructionId: initialCustomInstructionId,
 }: ChatInterfaceProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -359,12 +360,6 @@ function ChatInterfaceInternal({
   });
 
   const updateUserMessageContent = useMutation(api.threads.updateUserMessageContent);
-  
-  // Load thread info
-  const threadInfo = useQuery(
-    api.threads.getThreadInfo,
-    isThread && isAuthenticated ? { threadId: id } : "skip"
-  );
 
   // Merge historical messages with AI SDK streaming messages (overlay stream onto base by id)
   const renderedMessages: UIMessage[] = useMemo(() => {
@@ -473,16 +468,24 @@ function ChatInterfaceInternal({
     }
   }, [id, isThread, isAuthenticated, consumeInitialMessage, sendMessageRef]);
 
+  // Set custom instruction from prop
+  useEffect(() => {
+    if (isThread) {
+      setCustomInstructionId(initialCustomInstructionId);
+    } else {
+      // Reset only for welcome page
+      setCustomInstructionId(undefined);
+    }
+  }, [isThread, initialCustomInstructionId, setCustomInstructionId]);
+
   // Cleanup effect when thread ID changes
   useEffect(() => {
     if (prevIdRef.current !== id) {
       autoStartTriggeredRef.current = false;
       setMessages([]);
-      // Reset to default when switching threads
-      setCustomInstructionId(undefined);
       prevIdRef.current = id;
     }
-  }, [id, setMessages, setCustomInstructionId]);
+  }, [id, setMessages]);
 
 
   const handleSubmit = useCallback(
@@ -780,6 +783,7 @@ function ChatInterfaceInternal({
         onModelChange={setSelectedModel}
         onSubmit={handleSubmit}
         onStop={handleStop}
+        threadId={isThread ? id : undefined}
       />
 
       {isDragActive && (

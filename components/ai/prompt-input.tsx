@@ -148,7 +148,7 @@ export const PromptInputButton = ({
     <Button
       className={cn(
         "shrink-0 gap-1.5",
-        variant === "ghost" && "text-black",
+        variant === "ghost" && "text-secondary hover:bg-popover-main hover:text-popover-text dark:hover:bg-hover/60",
         newSize === "default" && "px-3",
         className,
       )}
@@ -329,7 +329,7 @@ export const PromptInputError = ({
           type="button"
           onClick={onDismiss}
           className="shrink-0 text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200 transition-colors"
-          title="Dismiss error"
+          title="Descartar error"
         >
           <XIcon className="size-4" />
         </button>
@@ -397,7 +397,7 @@ export const PromptInputFilePreview = ({
                 type="button"
                 onClick={() => onRemoveFile(index)}
                 className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center"
-                title={`Remove ${file.name}`}
+                title={`Eliminar ${file.name}`}
               >
                 <XIcon className="w-6 h-6 text-white" />
               </button>
