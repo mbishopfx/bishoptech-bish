@@ -17,6 +17,7 @@ export type SecurityErrorCode =
   | "NOT_FOUND"
   | "CONFIG_ERROR"
   | "WORKOS_ERROR"
+  | "RATE_LIMIT_ERROR"
   | "INTERNAL_ERROR";
 
 export type SecurityActionFailure = {
@@ -71,13 +72,19 @@ export class WorkosApiError extends Data.TaggedError("WorkosApiError")<{
   readonly requestId?: string;
 }> {}
 
+export class RateLimitError extends Data.TaggedError("RateLimitError")<{
+  readonly message: string;
+  readonly retryAfter?: number;
+}> {}
+
 export type SecurityActionError =
   | SecurityAuthError
   | SecurityStepUpRequiredError
   | SecurityValidationError
   | SecurityNotFoundError
   | SecurityConfigError
-  | WorkosApiError;
+  | WorkosApiError
+  | RateLimitError;
 
 // ============================================================================
 // Helpers
@@ -146,6 +153,8 @@ const toPublicMessage = (
     case "SecurityNotFoundError":
     case "SecurityConfigError":
       return error.message;
+    case "RateLimitError":
+      return error.message;
     case "WorkosApiError": {
       if (opts.hideDetails) return opts.fallbackMessage ?? "Ocurrió un error. Intenta de nuevo.";
 
@@ -184,6 +193,8 @@ const errorCodeOf = (error: SecurityActionError): SecurityErrorCode => {
       return "CONFIG_ERROR";
     case "WorkosApiError":
       return "WORKOS_ERROR";
+    case "RateLimitError":
+      return "RATE_LIMIT_ERROR";
   }
 };
 

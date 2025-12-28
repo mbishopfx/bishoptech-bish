@@ -5,9 +5,11 @@ import { Effect, Option } from "effect";
 import {
   callWorkosApiEffect,
   getAuthenticatedUserEffect,
+  RateLimitError,
   SecurityActionError,
   workos,
 } from "@/actions/settings/security/security-effect";
+import { checkRateLimit, getRateLimitErrorMessage } from "@/lib/rate-limit";
 
 type UpdateCurrentUserProfileArgs = {
   firstName: string | null;
@@ -37,6 +39,9 @@ const errorToMessage = (
   switch (error._tag) {
     case "SecurityAuthError":
       return "Necesitas iniciar sesión para continuar.";
+
+    case "RateLimitError":
+      return error.message;
 
     case "WorkosApiError": {
       const status = error.status;
@@ -89,6 +94,14 @@ const runProfileAction = async <T extends UpdateCurrentUserProfileResult>(args: 
       SecurityAuthError: (error) =>
         Effect.sync(() => {
           console.error(`[profile] ${args.actionName} failed: authentication error`);
+          return {
+            success: false as const,
+            error: errorToMessage(error, fallback),
+          } as T;
+        }),
+      RateLimitError: (error) =>
+        Effect.sync(() => {
+          console.error(`[profile] ${args.actionName} failed: rate limit exceeded`);
           return {
             success: false as const,
             error: errorToMessage(error, fallback),
@@ -170,6 +183,24 @@ export async function updateCurrentUserProfile(
     fallbackMessage: "Error al actualizar el perfil",
     program: Effect.gen(function* () {
       const { user } = yield* getAuthenticatedUserEffect();
+
+      // Check rate limit before proceeding
+      const rateLimitResult = yield* checkRateLimit(user.id);
+
+      if (!rateLimitResult.allowed) {
+        const errorMessage = getRateLimitErrorMessage(rateLimitResult, {
+          rateLimitExceeded: "No se pudo actualizar el perfil. Has alcanzado el límite de actualizaciones permitidas. Por favor espera [retryafter] antes de intentar de nuevo.",
+          kvError: "No se pudo actualizar el perfil debido a un problema técnico en nuestro sistema. Por favor intenta de nuevo en unos momentos. Si el problema persiste, contacta con soporte.",
+          kvNotConfigured: "No se pudo actualizar el perfil. El servicio está temporalmente no disponible. Por favor intenta de nuevo más tarde o contacta con soporte si el problema persiste.",
+        });
+
+        return yield* Effect.fail(
+          new RateLimitError({
+            message: errorMessage!,
+            retryAfter: rateLimitResult.retryAfter,
+          })
+        );
+      }
 
       const updated = yield* callWorkosApiEffect(
         "userManagement.updateUser",

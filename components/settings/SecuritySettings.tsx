@@ -148,7 +148,7 @@ export function SecuritySettings({
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <div className="text-base font-medium text-foreground">
-                    Multi-factor authentication (TOTP)
+                    Autenticación de dos factores
                   </div>
                   <div className="text-sm text-muted-foreground mt-1">
                     Protege tu cuenta con una app de autenticación

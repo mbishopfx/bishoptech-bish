@@ -5,6 +5,7 @@ import { fetchMutation } from "convex/nextjs";
 import { api } from "@/convex/_generated/api";
 import { S3Client } from "bun";
 import { logAttachmentUploaded } from "@/actions/audit";
+import { checkRateLimit, getRateLimitErrorMessage } from "@/lib/rate-limit";
 export const maxDuration = 30;
 
 // ============================================================================
@@ -25,6 +26,12 @@ const CONFIG = {
     "image/webp",
     "application/pdf",
   ] as const,
+  /** Rate limit configuration for file uploads */
+  RATE_LIMIT: {
+    LIMIT: 100,
+    WINDOW_SECONDS: 3600,
+    KEY_PREFIX: "rate_limit:file_upload:",
+  },
 } as const;
 
 // ============================================================================
@@ -54,12 +61,18 @@ class TimeoutError extends Data.TaggedError("TimeoutError")<{
   readonly message: string;
 }> {}
 
+class RateLimitError extends Data.TaggedError("RateLimitError")<{
+  readonly message: string;
+  readonly retryAfter?: number;
+}> {}
+
 type UploadError =
   | AuthenticationError
   | ValidationError
   | StorageError
   | DatabaseError
-  | TimeoutError;
+  | TimeoutError
+  | RateLimitError;
 
 // ============================================================================
 // R2 Client
@@ -139,11 +152,11 @@ interface AuthContext {
 const getAuthContext = (): Effect.Effect<AuthContext, AuthenticationError> =>
   Effect.tryPromise({
     try: () => withAuth(),
-    catch: () => new AuthenticationError({ message: "Authentication failed" }),
+    catch: () => new AuthenticationError({ message: "No se pudo verificar tu identidad. Por favor inicia sesión e intenta de nuevo." }),
   }).pipe(
     Effect.flatMap((auth) => {
       if (!auth.accessToken || !auth.user?.id) {
-        return Effect.fail(new AuthenticationError({ message: "Unauthorized" }));
+        return Effect.fail(new AuthenticationError({ message: "No estás autorizado para realizar esta acción. Por favor inicia sesión e intenta de nuevo." }));
       }
       return Effect.succeed({
         userId: auth.user.id,
@@ -157,12 +170,12 @@ const parseFormData = (
 ): Effect.Effect<File, ValidationError> =>
   Effect.tryPromise({
     try: () => req.formData(),
-    catch: () => new ValidationError({ message: "Failed to parse form data" }),
+    catch: () => new ValidationError({ message: "No se pudo procesar la solicitud. Por favor intenta de nuevo. Si el problema persiste, contacta con soporte.", field: "formData" }),
   }).pipe(
     Effect.flatMap((formData) => {
       const file = formData.get("file") as File | null;
       if (!file) {
-        return Effect.fail(new ValidationError({ message: "No file provided", field: "file" }));
+        return Effect.fail(new ValidationError({ message: "No se encontró ningún archivo en la solicitud. Por favor selecciona un archivo e intenta de nuevo.", field: "file" }));
       }
       return Effect.succeed(file);
     })
@@ -173,7 +186,7 @@ const validateFile = (file: File): Effect.Effect<File, ValidationError> =>
     if (file.size > CONFIG.MAX_FILE_SIZE) {
       return yield* Effect.fail(
         new ValidationError({
-          message: `File too large. Maximum size is ${CONFIG.MAX_FILE_SIZE / 1024 / 1024}MB.`,
+          message: `No se pudo subir el archivo. El archivo es demasiado grande (máximo ${CONFIG.MAX_FILE_SIZE / 1024 / 1024}MB). Por favor selecciona un archivo más pequeño e intenta de nuevo.`,
           field: "file",
         })
       );
@@ -182,7 +195,7 @@ const validateFile = (file: File): Effect.Effect<File, ValidationError> =>
     if (!CONFIG.ALLOWED_TYPES.includes(file.type as typeof CONFIG.ALLOWED_TYPES[number])) {
       return yield* Effect.fail(
         new ValidationError({
-          message: "File type not supported. Only images and PDFs are allowed.",
+          message: "No se pudo subir el archivo. El tipo de archivo no está soportado. Solo se permiten imágenes (JPEG, PNG, GIF, WebP) y PDFs. Por favor selecciona un archivo compatible e intenta de nuevo.",
           field: "file",
         })
       );
@@ -212,7 +225,7 @@ const uploadToR2 = (
           type: file.type,
         }),
       catch: (error) =>
-        new StorageError({ message: "Failed to upload to R2", cause: error }),
+        new StorageError({ message: "No se pudo guardar el archivo. Por favor intenta de nuevo. Si el problema persiste, contacta con soporte.", cause: error }),
     }).pipe(
       Effect.retry(storageRetrySchedule),
       Effect.tapError((error) =>
@@ -243,7 +256,7 @@ const createAttachmentRecord = (
         { token: accessToken }
       ),
     catch: (error) =>
-      new DatabaseError({ message: "Failed to create attachment record", cause: error }),
+      new DatabaseError({ message: "No se pudo registrar el archivo en nuestra base de datos. El archivo se subió correctamente, pero no se pudo completar el proceso. Por favor intenta de nuevo. Si el problema persiste, contacta con soporte.", cause: error }),
   }).pipe(
     Effect.retry(databaseRetrySchedule),
     Effect.tapError((error) =>
@@ -306,6 +319,12 @@ const errorToResponse = (
         { status: 400, headers }
       );
 
+    case "RateLimitError":
+      return NextResponse.json(
+        { success: false, error: error.message, requestId },
+        { status: 429, headers }
+      );
+
     case "TimeoutError":
       return NextResponse.json(
         { success: false, error: error.message, requestId },
@@ -316,7 +335,7 @@ const errorToResponse = (
     case "DatabaseError":
     default:
       return NextResponse.json(
-        { success: false, error: "Upload failed. Please try again.", requestId },
+        { success: false, error: "No se pudo subir el archivo debido a un problema técnico. Por favor intenta de nuevo. Si el problema persiste, contacta con soporte.", requestId },
         { status: 500, headers }
       );
   }
@@ -335,6 +354,28 @@ const handleUpload = (req: NextRequest, requestId: string) =>
     logContext.userId = auth.userId;
 
     logger.debug("Authentication complete", logContext);
+
+    // Check rate limit for file uploads
+    const rateLimitResult = yield* checkRateLimit(auth.userId, {
+      limit: CONFIG.RATE_LIMIT.LIMIT,
+      windowSeconds: CONFIG.RATE_LIMIT.WINDOW_SECONDS,
+      keyPrefix: CONFIG.RATE_LIMIT.KEY_PREFIX,
+    });
+
+    if (!rateLimitResult.allowed) {
+      const errorMessage = getRateLimitErrorMessage(rateLimitResult, {
+        rateLimitExceeded: "No se pudo subir el archivo. Has alcanzado el límite de archivos subidos permitidos. Por favor espera [retryafter] antes de intentar de nuevo.",
+        kvError: "No se pudo subir el archivo debido a un problema técnico en nuestro sistema. Por favor intenta de nuevo en unos minutos. Si el problema persiste, contacta con soporte.",
+        kvNotConfigured: "No se pudo subir el archivo. El servicio está temporalmente no disponible. Por favor intenta de nuevo más tarde o contacta con soporte si el problema persiste.",
+      });
+
+      return yield* Effect.fail(
+        new RateLimitError({
+          message: errorMessage!,
+          retryAfter: rateLimitResult.retryAfter,
+        })
+      );
+    }
 
     // Parse and validate file
     const file = yield* parseFormData(req);
@@ -391,7 +432,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<UploadRespons
     Effect.catchTag("TimeoutException", () =>
       Effect.fail(
         new TimeoutError({
-          message: "Upload timed out. Please try again with a smaller file.",
+          message: "No se pudo subir el archivo. La operación tardó demasiado tiempo. Por favor intenta con un archivo más pequeño o verifica tu conexión a internet.",
         })
       )
     ),
@@ -400,6 +441,8 @@ export async function POST(req: NextRequest): Promise<NextResponse<UploadRespons
       AuthenticationError: (e: AuthenticationError) =>
         Effect.succeed(errorToResponse(e, requestId)),
       ValidationError: (e: ValidationError) =>
+        Effect.succeed(errorToResponse(e, requestId)),
+      RateLimitError: (e: RateLimitError) =>
         Effect.succeed(errorToResponse(e, requestId)),
       StorageError: (e: StorageError) => {
         logger.error("Storage error", logContext, e);

@@ -187,35 +187,28 @@ const uploadSingle = (
       }),
     );
 
-    if (!response.ok) {
-      const bodyText = yield* _(
-        Effect.tryPromise({
-          try: () => response.text(),
-          catch: () => "",
-        }),
-      );
-      return yield* _(
-        Effect.fail<UploadRuntimeError>({
-          _tag: "HttpError",
-          fileName: file.name,
-          status: response.status,
-          statusText: response.statusText,
-          bodyText,
-        }),
-      );
-    }
-
     const parsed = yield* _(
       Effect.tryPromise({
         try: () =>
           response.json() as Promise<{ success?: boolean; url?: string; attachmentId?: string; error?: string }>,
-        catch: (cause) => ({
-          _tag: "InvalidResponse" as const,
-          fileName: file.name,
-          message: `Invalid JSON response: ${toMessage(cause)}`,
-        }),
+        catch: () => {
+          // If JSON parsing fails, try to get text
+          return { success: false, error: "" };
+        },
       }),
     );
+
+    if (!response.ok) {
+      const errorMessage = parsed?.error || response.statusText || `HTTP ${response.status}`;
+      const httpError: UploadRuntimeError = {
+        _tag: "HttpError",
+        fileName: file.name,
+        status: response.status,
+        statusText: response.statusText,
+        bodyText: errorMessage,
+      };
+      return yield* _(Effect.fail(httpError));
+    }
 
     if (!parsed?.success) {
       return yield* _(
@@ -239,42 +232,58 @@ const uploadSingle = (
     );
   });
 
-  const timeoutGuard: Effect.Effect<FileAttachment, UploadRuntimeError, never> = Effect.race(
-    doUpload,
-    Effect.sleep(perFileTimeout).pipe(
-      Effect.flatMap(() =>
-        Effect.fail<UploadRuntimeError>({
-          _tag: "Timeout",
-          fileName: file.name,
-          duration: typeof perFileTimeout === "string" ? perFileTimeout : "timeout",
-        }),
-      ),
-    ),
-  ).pipe(
-    Effect.mapError(
-      (err): UploadRuntimeError =>
-        typeof err === "object" && err !== null && "_tag" in err
-          ? (err as UploadRuntimeError)
-          : { _tag: "Unknown", fileName: file.name, reason: toMessage(err) },
-    ),
-  );
-
   const retryable = (error: UploadRuntimeError): boolean => {
     if (error._tag === "NetworkError" || error._tag === "Timeout") return true;
-    if (error._tag === "HttpError") return error.status >= 500 || error.status === 429;
+    if (error._tag === "HttpError") return error.status >= 500;
     return false;
   };
 
-  const retryWithBackoff = (remaining: number): Effect.Effect<FileAttachment, UploadRuntimeError, never> =>
-    timeoutGuard.pipe(
-      Effect.catchAll((error) =>
-        remaining > 0 && retryable(error)
-          ? Effect.flatMap(Effect.sleep("200 millis"), () => retryWithBackoff(remaining - 1))
-          : Effect.fail(error),
-      ),
-    );
+  return doUpload.pipe(
+    Effect.catchAll((error) => {
+      const runtimeError = error as UploadRuntimeError;
+      
+      // 429 errors fail immediately - bypass timeout/retry
+      if (runtimeError._tag === "HttpError" && runtimeError.status === 429) {
+        return Effect.fail(runtimeError);
+      }
 
-  return retryWithBackoff(3);
+      // Timeout guard for other errors
+      const timeoutGuard: Effect.Effect<FileAttachment, UploadRuntimeError, never> = Effect.race(
+        Effect.fail(runtimeError),
+        Effect.sleep(perFileTimeout).pipe(
+          Effect.flatMap(() =>
+            Effect.fail<UploadRuntimeError>({
+              _tag: "Timeout",
+              fileName: file.name,
+              duration: typeof perFileTimeout === "string" ? perFileTimeout : "timeout",
+            }),
+          ),
+        ),
+      ).pipe(
+        Effect.mapError(
+          (err): UploadRuntimeError =>
+            typeof err === "object" && err !== null && "_tag" in err
+              ? (err as UploadRuntimeError)
+              : { _tag: "Unknown", fileName: file.name, reason: toMessage(err) },
+        ),
+      );
+
+      // Retry logic
+      const retryWithBackoff = (
+        remaining: number,
+      ): Effect.Effect<FileAttachment, UploadRuntimeError, never> =>
+        timeoutGuard.pipe(
+          Effect.catchAll((error: UploadRuntimeError) => {
+            if (!retryable(error)) return Effect.fail(error);
+            return remaining > 0
+              ? Effect.flatMap(Effect.sleep("200 millis"), () => retryWithBackoff(remaining - 1))
+              : Effect.fail(error);
+          }),
+        );
+
+      return retryWithBackoff(3);
+    }),
+  );
 };
 
 // ============================================================================
@@ -320,27 +329,43 @@ export function isSupportedFileType(file: File): boolean {
 
 export const describeUploadError = (error: UploadError): string => {
   switch (error._tag) {
+    // Client-side validation errors
     case "NoFiles":
-      return "No se seleccionaron archivos para subir.";
+      return "No se seleccionaron archivos. Por favor selecciona al menos un archivo e intenta de nuevo.";
+    
     case "TooManyFiles":
-      return `Máximo ${error.limit} archivos por mensaje. Ya tienes ${error.alreadyAttached} y agregaste ${error.requested}.`;
+      return `No se pudo subir el archivo. Has intentado subir ${error.requested} archivos, pero ya tienes ${error.alreadyAttached} adjuntos. El límite es de ${error.limit} archivos por mensaje. Por favor elimina algunos archivos o crea un nuevo mensaje.`;
+    
     case "UnsupportedTypes":
-      return `Tipos de archivo no soportados: ${error.files.map((f) => f.name).join(", ")}. Solo imágenes (JPEG, PNG, GIF, WebP) y PDFs.`;
+      return `No se pudo subir ${error.files.map((f) => f.name).join(", ")}. El tipo de archivo no está permitido. Solo se permiten imágenes (JPEG, PNG, GIF, WebP) y PDFs. Por favor selecciona archivos compatibles e intenta de nuevo.`;
+    
     case "FileTooLarge":
-      return `Archivos demasiado grandes: ${error.files
-        .map((f) => f.name)
-        .join(", ")}. Máximo ${(error.files[0]?.limit ?? MAX_FILE_SIZE_BYTES) / (1024 * 1024)}MB por archivo.`;
+      return `No se pudo subir ${error.files.map((f) => f.name).join(", ")}. El archivo es demasiado grande. El tamaño máximo permitido es de ${(error.files[0]?.limit ?? MAX_FILE_SIZE_BYTES) / (1024 * 1024)}MB. Por favor selecciona un archivo más pequeño e intenta de nuevo.`;
+    
+    // Network/runtime errors
     case "NetworkError":
-      return `Error de red al subir ${error.fileName}: ${error.reason}`;
-    case "HttpError":
-      return `Error ${error.status} al subir ${error.fileName}${error.statusText ? ` (${error.statusText})` : ""}.`;
-    case "InvalidResponse":
-      return `Respuesta inválida al subir ${error.fileName}: ${error.message}`;
-    case "ServerFailure":
-      return `El servidor rechazó ${error.fileName}: ${error.error ?? "Error desconocido"}.`;
+      return `No se pudo subir ${error.fileName} debido a un problema de conexión. Por favor verifica tu conexión a internet e intenta de nuevo. Si el problema persiste, contacta con soporte.`;
+    
     case "Timeout":
-      return `Tiempo de espera agotado al subir ${error.fileName} (${error.duration}).`;
+      return `No se pudo subir ${error.fileName}. La operación tardó demasiado tiempo (${error.duration}). Por favor intenta con un archivo más pequeño o verifica tu conexión a internet. Si el problema persiste, contacta con soporte.`;
+    
+    case "InvalidResponse":
+      return `No se pudo subir ${error.fileName} debido a un problema técnico. El servidor respondió con un formato inesperado. Por favor intenta de nuevo. Si el problema persiste, contacta con soporte.`;
+    
     case "Unknown":
-      return `Error desconocido al subir ${error.fileName}: ${error.reason}`;
+      return `No se pudo subir ${error.fileName} debido a un error inesperado: ${error.reason}. Por favor intenta de nuevo. Si el problema persiste, contacta con soporte.`;
+    
+    // Server errors - always use server-provided message when available
+    case "HttpError":
+      if (error.bodyText && error.bodyText.length > 20) {
+        return error.bodyText;
+      }
+      return `No se pudo subir ${error.fileName}. Error ${error.status}${error.statusText ? ` (${error.statusText})` : ""}. Por favor intenta de nuevo. Si el problema persiste, contacta con soporte.`;
+    
+    case "ServerFailure":
+      if (error.error && error.error.length > 20) {
+        return error.error;
+      }
+      return `No se pudo subir ${error.fileName} debido a un problema técnico. Por favor intenta de nuevo. Si el problema persiste, contacta con soporte.`;
   }
 };
