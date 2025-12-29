@@ -6,6 +6,7 @@ import {
   usePaginatedQuery,
   useMutation,
   useConvexAuth,
+  useQuery,
   Authenticated,
   AuthLoading,
   Unauthenticated,
@@ -34,7 +35,13 @@ import {
 import { useThreadShare } from "@/lib/hooks/useThreadShare";
 import { ShareSettingsDialog } from "@/components/share/ShareSettingsDialog";
 import { prefetchCachedThreadMessages } from "@/lib/local-first/thread-messages-cache";
-import { startThreadLoadMarks, markThreadLoad } from "@/lib/local-first/thread-load-marks";
+import {
+  getLastUserKey,
+  loadSidebarThreads,
+  saveSidebarThreads,
+  setLastUserKey,
+  type SidebarThread,
+} from "@/lib/local-first/sidebar-cache";
 
 interface Thread {
   threadId: string;
@@ -94,6 +101,9 @@ export function ThreadSidebarInteractive({
   const requestInFlightRef = useRef(false);
   const [optimisticTitles, setOptimisticTitles] = useState<Record<string, string>>({});
   const prefetchedThreadIdsRef = useRef<Set<string>>(new Set());
+  const [cachedThreads, setCachedThreads] = useState<Thread[] | null>(null);
+  const [cacheLoaded, setCacheLoaded] = useState(false);
+  const [userKey, setUserKey] = useState<string | null>(() => getLastUserKey());
   const {
     resolveShareState,
     handleToggleShare,
@@ -101,6 +111,18 @@ export function ThreadSidebarInteractive({
     handleUpdateShareSettings,
     handleRegenerateShareLink,
   } = useThreadShare();
+
+  const currentUser = useQuery(api.users.getCurrentUser, isAuthenticated ? {} : "skip");
+  useEffect(() => {
+    if (currentUser?.workos_id) {
+      if (userKey && userKey !== currentUser.workos_id) {
+        setCachedThreads(null);
+        setCacheLoaded(false);
+      }
+      setUserKey(currentUser.workos_id);
+      setLastUserKey(currentUser.workos_id);
+    }
+  }, [currentUser?.workos_id, userKey]);
 
   useEffect(() => {
     setHasHydrated(true);
@@ -127,6 +149,34 @@ export function ThreadSidebarInteractive({
     () => (paginated?.results ?? []) as Thread[],
     [paginated?.results],
   );
+
+  useEffect(() => {
+    if (!hasHydrated || authLoading) return;
+    if (!userKey) return;
+    let cancelled = false;
+    setCacheLoaded(false);
+    void (async () => {
+      const cached = await loadSidebarThreads(userKey);
+      if (cancelled) return;
+      setCachedThreads((cached ?? null) as Thread[] | null);
+      setCacheLoaded(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [userKey, hasHydrated, authLoading]);
+
+  useEffect(() => {
+    if (!userKey) return;
+    if (!paginatedResults || paginatedResults.length === 0) return;
+    void saveSidebarThreads(userKey, paginatedResults as unknown as SidebarThread[], 15);
+  }, [userKey, paginatedResults]);
+
+  const baseThreads: Thread[] = useMemo(() => {
+    if (paginatedResults.length > 0) return paginatedResults;
+    if (cacheLoaded && cachedThreads && cachedThreads.length > 0) return cachedThreads;
+    return [];
+  }, [paginatedResults, cacheLoaded, cachedThreads]);
   const paginatedStatus = shouldUsePaginated
     ? paginated?.status ?? "LoadingFirstPage"
     : "Exhausted";
@@ -163,8 +213,8 @@ export function ThreadSidebarInteractive({
   }, [searchQuery]);
 
   const combinedThreads = useMemo(() => {
-    return [...paginatedResults].sort(sortThreads);
-  }, [paginatedResults]);
+    return [...baseThreads].sort(sortThreads);
+  }, [baseThreads]);
 
   const filteredThreads = useMemo(() => {
     if (!searchQuery) {
@@ -397,17 +447,10 @@ export function ThreadSidebarInteractive({
 
   const handleThreadNavigation = useCallback(
     (threadId: string) => {
-      // Start debug timer for conversation load performance
-      const startTime = startThreadLoadMarks(threadId);
-      const startTimeKey = `thread-load-start-${threadId}`;
-      sessionStorage.setItem(startTimeKey, startTime.toString());
-      console.log("[LoadTimer] Started timer for thread:", threadId, "at", startTime);
-      
       // Prefetch cached messages in parallel with route navigation (warms in-memory cache).
       prefetchCachedThreadMessages(threadId);
 
       router.push(`/chat/${threadId}`);
-      markThreadLoad(threadId, "pushCalled");
       if (isMobileViewport) {
         closeSidebar();
       }
@@ -415,6 +458,8 @@ export function ThreadSidebarInteractive({
     [router, closeSidebar, isMobileViewport],
   );
 
+  // Idle prefetch: warm Next.js route (RSC) + local-first cache for the most visible threads.
+  // This targets the breakdown's slow segment: click -> routeSeen.
   useEffect(() => {
     if (!hasHydrated || authLoading) return;
 
@@ -470,6 +515,8 @@ export function ThreadSidebarInteractive({
           <div
             onClick={isEditing ? handleContainerClick : () => handleThreadNavigation(thread.threadId)}
             onPointerEnter={() => {
+              // Warm both the route and local-first cache on hover (mouse/pen).
+              // Helps reduce click -> routeSeen.
               if (!prefetchedThreadIdsRef.current.has(thread.threadId)) {
                 prefetchedThreadIdsRef.current.add(thread.threadId);
               }
@@ -477,6 +524,7 @@ export function ThreadSidebarInteractive({
               prefetchCachedThreadMessages(thread.threadId);
             }}
             onPointerDown={() => {
+              // Touch/mobile doesn't hover; start warming as early as possible.
               if (!prefetchedThreadIdsRef.current.has(thread.threadId)) {
                 prefetchedThreadIdsRef.current.add(thread.threadId);
               }
@@ -634,11 +682,24 @@ export function ThreadSidebarInteractive({
     return null;
   };
 
+  const renderCachedOnlyList = () => {
+    if (!cacheLoaded || !cachedThreads || cachedThreads.length === 0) return null;
+    return (
+      <div
+        ref={scrollContainerRef}
+        className="sidebar-scroll-container h-full w-full overflow-y-auto"
+      >
+        {GROUP_ORDER.map((groupName) => renderThreadGroup(groupName, groupedThreads[groupName]))}
+        <div ref={sentinelRef} className="h-[1px] w-full" />
+      </div>
+    );
+  };
+
   return (
     <div className="flex h-full flex-col">
       <div className="flex-1 min-h-0">
         <AuthLoading>
-          {null}
+          {renderCachedOnlyList()}
         </AuthLoading>
         <Authenticated>
           {renderEmptyState() || (

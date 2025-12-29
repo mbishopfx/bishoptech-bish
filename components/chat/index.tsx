@@ -34,11 +34,6 @@ import {
   saveCachedThreadMessages,
   getMemoryCachedThreadMessages,
 } from "@/lib/local-first/thread-messages-cache";
-import {
-  markThreadLoad,
-  consumeThreadLoadBreakdown,
-  peekThreadLoadMarks,
-} from "@/lib/local-first/thread-load-marks";
 
 // Effect services and error types
 import {
@@ -89,11 +84,6 @@ function ChatInterfaceInternal({
   const setCustomInstructionId = useChatUIStore((s) => s.setCustomInstructionId);
   const [isDragActive, setIsDragActive] = useState(false);
   const dragCounterRef = useRef(0);
-  
-  // Debug timing: track conversation load performance
-  const [loadTime, setLoadTime] = useState<number | null>(null);
-  const [isCalculatingLoadTime, setIsCalculatingLoadTime] = useState(false);
-  const loadTimeMeasuredRef = useRef(false);
 
   // Centralized file processing for drag-and-drop uploads
   const handleProcessFiles = useCallback(
@@ -168,37 +158,10 @@ function ChatInterfaceInternal({
     return getMemoryCachedThreadMessages(id) !== null;
   });
 
-  // Ensure we only log breakdown once per thread navigation.
-  const breakdownLoggedForThreadRef = useRef<string | null>(null);
-  const scheduleBreakdownLog = useCallback((threadId: string) => {
-    if (breakdownLoggedForThreadRef.current === threadId) return;
-    breakdownLoggedForThreadRef.current = threadId;
-
-    // Two RAFs ensures we measure after paint.
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        markThreadLoad(threadId, "firstPaint");
-        const breakdown = consumeThreadLoadBreakdown(threadId);
-        // eslint-disable-next-line no-console
-        console.log(
-          "[LoadTimer] Breakdown",
-          breakdown ?? {
-            threadId,
-            error: "no_marks",
-            marks: peekThreadLoadMarks(threadId),
-          },
-        );
-      });
-    });
-  }, []);
-
   // When switching threads, synchronously swap to memory-cached messages if available.
   // This prevents a "blank" render and avoids waiting for IndexedDB on common navigations.
   useLayoutEffect(() => {
     if (!isThread) return;
-    // Route param seen by the conversation component
-    markThreadLoad(id, "routeSeen");
-
     const record = getMemoryCachedThreadMessages(id);
     if (record?.messages && record.messages.length > 0) {
       setCachedMessages(record.messages);
@@ -233,30 +196,6 @@ function ChatInterfaceInternal({
       try {
         const record = await loadCachedThreadMessages(id);
         if (cancelled) return;
-        
-        // Stop timer immediately if we have cached messages (before React render)
-        if (record?.messages && record.messages.length > 0) {
-          const startTimeKey = `thread-load-start-${id}`;
-          const startTimeStr = sessionStorage.getItem(startTimeKey);
-          
-          if (startTimeStr && !loadTimeMeasuredRef.current) {
-            const startTime = parseFloat(startTimeStr);
-            const endTime = performance.now();
-            const duration = endTime - startTime;
-            
-            console.log('[LoadTimer] ✅ Cached conversation loaded (immediate):', {
-              threadId: id,
-              duration: `${duration.toFixed(1)}ms`,
-              fromCache: true,
-            });
-            
-            setLoadTime(duration);
-            setIsCalculatingLoadTime(false);
-            loadTimeMeasuredRef.current = true;
-            sessionStorage.removeItem(startTimeKey);
-          }
-        }
-        
         setCachedMessages(record?.messages ?? null);
       } catch {
         // Best-effort cache; ignore failures (private browsing / IDB blocked, etc.)
@@ -271,37 +210,6 @@ function ChatInterfaceInternal({
       cancelled = true;
     };
   }, [id, isThread]);
-
-  // Debug timing: if we already have cached messages in memory on first render,
-  // stop the timer in a layout effect (runs before paint).
-  useLayoutEffect(() => {
-    if (!isThread) return;
-    if (!cachedMessages || cachedMessages.length === 0) return;
-    if (loadTimeMeasuredRef.current) return;
-
-    const startTimeKey = `thread-load-start-${id}`;
-    const startTimeStr = sessionStorage.getItem(startTimeKey);
-    if (!startTimeStr) return;
-
-    markThreadLoad(id, "cacheReady");
-    const startTime = parseFloat(startTimeStr);
-    const endTime = performance.now();
-    const duration = endTime - startTime;
-
-    console.log("[LoadTimer] ✅ Cached conversation loaded (memory, before paint):", {
-      threadId: id,
-      duration: `${duration.toFixed(1)}ms`,
-      fromCache: true,
-    });
-
-    setLoadTime(duration);
-    setIsCalculatingLoadTime(false);
-    loadTimeMeasuredRef.current = true;
-    sessionStorage.removeItem(startTimeKey);
-
-    // Always log breakdown from this path (can't be skipped).
-    scheduleBreakdownLog(id);
-  }, [id, isThread, cachedMessages]);
 
   const canHydrateFromCache =
     isThread &&
@@ -621,58 +529,6 @@ function ChatInterfaceInternal({
     return renderedMessages;
   }, [renderedMessages, isThread, paginationStatus]);
 
-  // Debug timing: stop timer when conversation is loaded (fallback for server-loaded messages)
-  // Note: Cached messages stop the timer immediately in the cache loading effect above
-  useEffect(() => {
-    if (!isThread || loadTimeMeasuredRef.current) return;
-    
-    const startTimeKey = `thread-load-start-${id}`;
-    const startTimeStr = sessionStorage.getItem(startTimeKey);
-    
-    if (!startTimeStr) {
-      // No timer started for this thread
-      setIsCalculatingLoadTime(false);
-      return;
-    }
-    
-    // Mark that we're calculating load time (for server-loaded messages)
-    setIsCalculatingLoadTime(true);
-    
-    // For server-loaded messages: wait for messages to display
-    const hasMessages = displayMessages && displayMessages.length > 0;
-    const isLoading = paginationStatus === "LoadingFirstPage" || paginationStatus === "LoadingMore";
-    const hasCachedMessages = cachedMessages && cachedMessages.length > 0;
-    
-    // Only measure server-loaded messages (cached ones are handled in cache effect)
-    // Loaded if: we have messages AND not loading AND no cached messages (meaning it's from server)
-    const isLoaded = hasMessages && !isLoading && !hasCachedMessages;
-    
-    if (isLoaded) {
-      const startTime = parseFloat(startTimeStr);
-      const endTime = performance.now();
-      const duration = endTime - startTime;
-      
-      console.log('[LoadTimer] ✅ Server conversation loaded:', {
-        threadId: id,
-        duration: `${duration.toFixed(1)}ms`,
-        fromCache: false,
-      });
-      
-      setLoadTime(duration);
-      setIsCalculatingLoadTime(false);
-      loadTimeMeasuredRef.current = true;
-      sessionStorage.removeItem(startTimeKey);
-    }
-  }, [id, isThread, displayMessages, paginationStatus, cachedMessages]);
-
-  // Reset load time measurement when thread changes
-  useEffect(() => {
-    if (prevIdRef.current !== id) {
-      setLoadTime(null);
-      setIsCalculatingLoadTime(false);
-      loadTimeMeasuredRef.current = false;
-    }
-  }, [id]);
 
   // Persist conversation locally for instant/offline loading.
   // We avoid saving while actively streaming to keep writes low and store stable history.
@@ -1071,33 +927,6 @@ function ChatInterfaceInternal({
             <h3 className="text-lg font-semibold mb-1">Arrastra y suelta archivos</h3>
             <p className="text-sm text-muted-foreground mb-2">Archivos de imagen y PDF hasta 10MB cada uno</p>
             <p className="text-xs text-muted-foreground">Máximo 5 archivos por mensaje</p>
-          </div>
-        </div>
-      )}
-
-      {/* Debug: Conversation load timing */}
-      {(loadTime !== null || isCalculatingLoadTime) && (
-        <div className="fixed top-4 right-4 z-[9999] pointer-events-none">
-          <div className="bg-black/90 backdrop-blur-sm text-white text-sm font-mono px-4 py-3 rounded-lg shadow-2xl border-2 border-white/30">
-            <div className="font-bold mb-1.5 text-white">⚡ Load Time</div>
-            {loadTime !== null ? (
-              <>
-                <div className="text-lg font-bold">
-                  {loadTime < 100 ? (
-                    <span className="text-green-400">⚡ {loadTime.toFixed(1)}ms</span>
-                  ) : loadTime < 500 ? (
-                    <span className="text-yellow-400">✓ {loadTime.toFixed(1)}ms</span>
-                  ) : (
-                    <span className="text-red-400">⚠ {loadTime.toFixed(1)}ms</span>
-                  )}
-                </div>
-                <div className="text-xs text-gray-300 mt-1.5 pt-1.5 border-t border-white/20">
-                  {cachedMessages && cachedMessages.length > 0 ? "📦 from cache" : "🌐 from server"}
-                </div>
-              </>
-            ) : (
-              <div className="text-yellow-400 text-sm">Calculating...</div>
-            )}
           </div>
         </div>
       )}

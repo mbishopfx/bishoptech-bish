@@ -19,7 +19,6 @@ export function ChatRouteClient() {
     );
   }
 
-  // /chat/[id] -> thread conversation
   return <ChatMessagesClient threadId={threadId} />;
 }
 
