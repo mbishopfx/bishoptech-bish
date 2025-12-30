@@ -206,6 +206,11 @@ const settingsSections: SettingsSection[] = [
       //   icon: MessageSquare,
       // },
       {
+        title: "Instrucciones",
+        href: "/settings/custom-instructions",
+        icon: MessageSquare,
+      },
+      {
         title: "Modelos",
         href: "/settings/models",
         icon: Bot,

@@ -2,7 +2,14 @@
 
 import { Effect } from "effect";
 
-import { runSecurityAction, getAuthenticatedUserEffect, callWorkosApiEffect, workos } from "./security-effect";
+import { checkRateLimit, getRateLimitErrorMessage } from "@/lib/rate-limit";
+import {
+  runSecurityAction,
+  getAuthenticatedUserEffect,
+  callWorkosApiEffect,
+  RateLimitError,
+  workos,
+} from "./security-effect";
 
 export type StartTotpEnrollmentResult =
   | {
@@ -22,6 +29,26 @@ export async function startTotpEnrollment(): Promise<StartTotpEnrollmentResult> 
     hideWorkosDetails: true,
     program: Effect.gen(function* () {
       const { user } = yield* getAuthenticatedUserEffect();
+
+      // Rate limit MFA enrollment attempts (shared pool with email verification)
+      const rateLimitResult = yield* checkRateLimit(user.id, {
+        limit: 6, // 6 attempts per window (shared with email verification)
+        windowSeconds: 600, // 10 minute window
+        keyPrefix: "rate_limit:security_verification:",
+      });
+
+      if (!rateLimitResult.allowed) {
+        const errorMessage = getRateLimitErrorMessage(rateLimitResult, {
+          rateLimitExceeded: "Has realizado demasiados intentos de configuración de seguridad. Por favor espera [retryafter] antes de intentar de nuevo.",
+        });
+
+        return yield* Effect.fail(
+          new RateLimitError({
+            message: errorMessage!,
+            retryAfter: rateLimitResult.retryAfter,
+          })
+        );
+      }
 
       const { authenticationFactor, authenticationChallenge } = yield* callWorkosApiEffect(
         "userManagement.enrollAuthFactor",

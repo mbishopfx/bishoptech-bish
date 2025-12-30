@@ -10,6 +10,7 @@ import { UIMessage } from "@ai-sdk-tools/store";
 import { ReactNode } from "react";
 import { logThreadCreated } from "@/actions/audit";
 import { toast } from "sonner";
+import { useChatUIStore } from "@/components/chat/ui-store";
 
 interface HomeMessageHandlerProps {
   action: (
@@ -23,6 +24,7 @@ export function HomeMessageHandler({ action }: HomeMessageHandlerProps) {
   const { setInitialMessage } = useInitialMessage();
   const createThread = useMutation(api.threads.createThread);
   const { isAuthenticated } = useConvexAuth();
+  const customInstructionId = useChatUIStore((s) => s.customInstructionId);
 
   // Retry helper with exponential backoff for transient auth failures
   const retryWithBackoff = async <T,>(
@@ -69,6 +71,7 @@ export function HomeMessageHandler({ action }: HomeMessageHandlerProps) {
         createThread({
           threadId: newThreadId,
           model: selectedModel,
+          customInstructionId: customInstructionId,
         })
       );
 

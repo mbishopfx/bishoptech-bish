@@ -17,6 +17,7 @@ export type SecurityErrorCode =
   | "NOT_FOUND"
   | "CONFIG_ERROR"
   | "WORKOS_ERROR"
+  | "RATE_LIMIT_ERROR"
   | "INTERNAL_ERROR";
 
 export type SecurityActionFailure = {
@@ -71,13 +72,19 @@ export class WorkosApiError extends Data.TaggedError("WorkosApiError")<{
   readonly requestId?: string;
 }> {}
 
+export class RateLimitError extends Data.TaggedError("RateLimitError")<{
+  readonly message: string;
+  readonly retryAfter?: number;
+}> {}
+
 export type SecurityActionError =
   | SecurityAuthError
   | SecurityStepUpRequiredError
   | SecurityValidationError
   | SecurityNotFoundError
   | SecurityConfigError
-  | WorkosApiError;
+  | WorkosApiError
+  | RateLimitError;
 
 // ============================================================================
 // Helpers
@@ -146,11 +153,18 @@ const toPublicMessage = (
     case "SecurityNotFoundError":
     case "SecurityConfigError":
       return error.message;
+    case "RateLimitError":
+      return error.message;
     case "WorkosApiError": {
-      if (opts.hideDetails) return opts.fallbackMessage ?? "Ocurrió un error. Intenta de nuevo.";
+      const status = error.status;
+      
+      const isPasswordStrengthError = status === 400 && error.code === "password_strength_error";
+      
+      if (opts.hideDetails && !isPasswordStrengthError) {
+        return opts.fallbackMessage ?? "Ocurrió un error. Intenta de nuevo.";
+      }
 
       // Common HTTP status mappings.
-      const status = error.status;
       if (status === 401 || status === 403) {
         return "No autorizado.";
       }
@@ -164,7 +178,8 @@ const toPublicMessage = (
         return "Servicio temporalmente no disponible. Intenta de nuevo.";
       }
 
-      // Default: keep a short message, but never expose raw error objects.
+      // For password validation errors, show the actual error message
+      // For other errors, show message if not hiding details
       return error.message || opts.fallbackMessage || "Ocurrió un error. Intenta de nuevo.";
     }
   }
@@ -184,6 +199,8 @@ const errorCodeOf = (error: SecurityActionError): SecurityErrorCode => {
       return "CONFIG_ERROR";
     case "WorkosApiError":
       return "WORKOS_ERROR";
+    case "RateLimitError":
+      return "RATE_LIMIT_ERROR";
   }
 };
 

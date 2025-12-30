@@ -6,7 +6,8 @@ import { Id } from "@/convex/_generated/dataModel";
 import { UIMessage } from "ai";
 import { isCapable, isPremium } from "@/lib/ai/ai-providers";
 import { ToolType } from "@/lib/ai/config/base";
-import { ResponseStyle } from "@/lib/ai/response-styles";
+import * as Sentry from "@sentry/nextjs";
+
 import {
   ValidationError,
   AuthenticationError,
@@ -17,6 +18,7 @@ import {
   RegenerateError,
   AbortError,
   ProviderError,
+  type ChatRouteError,
 } from "./errors";
 
 // ============================================================================
@@ -82,6 +84,181 @@ export const logger = {
       }
     }
   },
+};
+
+// ============================================================================
+// Sentry Error Capture
+// ============================================================================
+
+/**
+ * Captures a chat route error to Sentry with proper context and tags.
+ * This helper reduces boilerplate and ensures consistent error reporting.
+ * 
+ * Error handling strategy:
+ * - Skip expected/non-actionable errors (AbortError, QuotaExceededError, etc.)
+ * - Use warning level for timeouts and expected provider errors (rate limits, content policy)
+ * - Capture exceptions for infrastructure/actionable errors (DatabaseError, ModelError, etc.)
+ * - Capture validation and regeneration errors to track patterns
+ */
+export const captureChatError = (error: ChatRouteError, logContext: LogContext): void => {
+  try {
+    // Skip expected/non-actionable errors that don't need Sentry tracking
+    const skipCapture = [
+      "AbortError",           // Client cancelled request
+      "QuotaExceededError",   // Expected business logic
+      "NoSubscriptionError",  // Expected business logic
+    ].includes(error._tag);
+
+    if (skipCapture) {
+      return;
+    }
+
+    // Set user context if available
+    if (logContext.userId) {
+      Sentry.setUser({
+        id: logContext.userId,
+      });
+    }
+
+    // Set tags for filtering in Sentry dashboard
+    const tags: Record<string, string> = {
+      error_type: error._tag,
+      request_id: logContext.requestId,
+    };
+
+    if (logContext.threadId) {
+      tags.thread_id = logContext.threadId;
+    }
+
+    if (logContext.modelId) {
+      tags.model_id = logContext.modelId;
+    }
+
+    // Add error-specific tags
+    switch (error._tag) {
+      case "ModelError":
+        if (error.modelId) {
+          tags.model_id = error.modelId;
+        }
+        break;
+      case "ProviderError":
+        if (error.provider) {
+          tags.provider = error.provider;
+        }
+        tags.error_type_detail = error.errorType;
+        break;
+      case "DatabaseError":
+        tags.operation = error.operation;
+        break;
+      case "TimeoutError":
+        tags.timeout_ms = String(error.timeoutMs);
+        break;
+      case "ValidationError":
+        if (error.field) {
+          tags.validation_field = error.field;
+        }
+        break;
+    }
+
+    Sentry.setTags(tags);
+
+    // Set additional context
+    const extra: Record<string, unknown> = {
+      ...logContext,
+    };
+
+    // Add error-specific extra data
+    switch (error._tag) {
+      case "ProviderError":
+        extra.error_type = error.errorType;
+        extra.retryable = error.retryable;
+        break;
+      case "DatabaseError":
+        extra.operation = error.operation;
+        break;
+      case "TimeoutError":
+        extra.timeout_ms = error.timeoutMs;
+        break;
+      case "ValidationError":
+        if (error.field) {
+          extra.validation_field = error.field;
+        }
+        break;
+    }
+
+    Sentry.setContext("chat_request", extra);
+
+    // Determine capture strategy based on error type
+    switch (error._tag) {
+      case "TimeoutError":
+        // Timeout errors are warnings - they might indicate issues but are often expected
+        Sentry.captureMessage(`Request timeout: ${error.message}`, {
+          level: "warning",
+        });
+        return;
+
+      case "ProviderError":
+        // Only capture provider errors that indicate infrastructure issues
+        // Skip rate_limit and content_policy as they're expected
+        if (error.errorType === "rate_limit" || error.errorType === "content_policy") {
+          // These are expected, but log as warning for monitoring
+          Sentry.captureMessage(`Provider ${error.errorType}: ${error.message}`, {
+            level: "warning",
+          });
+          return;
+        }
+        // Capture server_error, token_limit, and unknown as exceptions
+        // Create error object from cause if available
+        const providerError = error.cause instanceof Error
+          ? error.cause
+          : new Error(error.message);
+        if (!(error.cause instanceof Error)) {
+          providerError.name = "ProviderError";
+        }
+        Sentry.captureException(providerError);
+        return;
+
+      case "DatabaseError":
+      case "ModelError":
+      case "ToolError":
+        // Infrastructure errors - always capture as exceptions
+        const infrastructureError = error.cause instanceof Error
+          ? error.cause
+          : new Error(error.message);
+        if (!(error.cause instanceof Error)) {
+          infrastructureError.name = error._tag;
+        }
+        Sentry.captureException(infrastructureError);
+        return;
+
+      case "AuthenticationError":
+      case "NoOrganizationError":
+        // Security/authorization issues - capture as exceptions
+        const authError = new Error(error.message);
+        authError.name = error._tag;
+        Sentry.captureException(authError);
+        return;
+
+      case "ValidationError":
+      case "RegenerateError":
+        // Validation errors - capture as warnings to track patterns
+        const validationError = new Error(error.message);
+        validationError.name = error._tag;
+        Sentry.captureException(validationError, {
+          level: "warning",
+        });
+        return;
+
+      default:
+        // For any other error types, capture as exception
+        const defaultError = new Error(error.message);
+        defaultError.name = error._tag;
+        Sentry.captureException(defaultError);
+    }
+  } catch (sentryError) {
+    // If Sentry itself fails, log to console but don't throw
+    console.error("Failed to capture error to Sentry", sentryError);
+  }
 };
 
 // ============================================================================
@@ -198,7 +375,7 @@ export interface RequestBody {
   modelId: string;
   threadId: string;
   enabledTools?: ToolType[];
-  responseStyle?: ResponseStyle;
+  customInstructionId?: string;
   trigger?: "submit-message" | "regenerate-message";
   messageId?: string;
 }
@@ -262,12 +439,50 @@ export const isRetryableDatabaseError = (error: DatabaseError): boolean => {
   return true;
 };
 
+// ============================================================================
+// Custom Instructions Service
+// ============================================================================
+
+/**
+ * Validates thread ownership and custom instruction access in a single batched call.
+ * Returns both thread info and custom instruction content if valid.
+ */
+export const validateThreadAndInstruction = (
+  userId: string,
+  orgId: string | undefined,
+  threadId: string,
+  customInstructionId: string | undefined
+): Effect.Effect<
+  {
+    thread: { customInstructionId?: Id<"customInstructions"> } | null;
+    customInstruction: { instructions: string } | null;
+  },
+  DatabaseError
+> =>
+  Effect.tryPromise({
+    try: () =>
+      fetchQuery(api.threads.serverValidateThreadAndInstruction, {
+        secret: process.env.CONVEX_SECRET_TOKEN!,
+        userId,
+        orgId,
+        threadId,
+        customInstructionId: customInstructionId
+          ? (customInstructionId as Id<"customInstructions">)
+          : undefined,
+      }),
+    catch: (error) =>
+      new DatabaseError({
+        message: "Failed to validate thread and instruction",
+        operation: "validateThreadAndInstruction",
+        cause: error,
+      }),
+  });
 
 // ============================================================================
 // Validation Service
 // ============================================================================
 
-/**
+  /**
  * Validates the incoming request body and returns a typed RequestBody.
  */
 export const validateRequestBody = (

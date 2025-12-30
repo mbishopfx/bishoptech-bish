@@ -79,6 +79,12 @@ export function NoOrgModal() {
         return;
     }
 
+    if (orgName.length > 50) {
+        setError("El nombre de la organización no puede exceder los 50 caracteres.");
+        setLoading(false);
+        return;
+    }
+
     try {
         const res = await fetch("/api/subscribe", {
             method: "POST",
@@ -129,12 +135,13 @@ export function NoOrgModal() {
           <div className="space-y-4">
              <div className="space-y-2">
                 <label className="block text-sm font-medium text-zinc-900 dark:text-white">
-                Nombre de tu organización
+                    Nombre de tu organización {orgName.length >= 50 && <span className="text-[10px] text-zinc-500 font-normal">({orgName.length}/50)</span>}
                 </label>
                 <input
                 placeholder="Ej. ACME Corp"
                 value={orgName}
-                onChange={(e) => setOrgName(e.target.value)}
+                onChange={(e) => setOrgName(e.target.value.slice(0, 50))}
+                maxLength={50}
                 className="w-full rounded-lg h-11 px-5 border border-zinc-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-900/50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                 />
             </div>

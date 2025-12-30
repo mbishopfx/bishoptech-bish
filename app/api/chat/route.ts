@@ -11,8 +11,11 @@ import {
   createUIMessageStream,
   createUIMessageStreamResponse,
 } from "ai";
+import { fetchMutation } from "convex/nextjs";
+import { api } from "@/convex/_generated/api";
 import { withTracing } from "@posthog/ai";
 import { PostHog } from "posthog-node";
+import * as Sentry from "@sentry/nextjs";
 // import { withSupermemory, supermemoryTools } from "@supermemory/tools/ai-sdk";
 import {
   getLanguageModel,
@@ -25,7 +28,6 @@ import { createToolsForModel } from "@/lib/ai/model-tools";
 import { ToolType } from "@/lib/ai/config/base";
 import { Id } from "@/convex/_generated/dataModel";
 import { exaWebSearch } from "@/lib/ai/tools/exa-search";
-import { type ResponseStyle } from "@/lib/ai/response-styles";
 
 export const maxDuration = 500;
 
@@ -70,6 +72,8 @@ import {
   generateIdempotencyKey,
   checkAborted,
   fromAbortSignal,
+  validateThreadAndInstruction,
+  captureChatError,
 } from "./services";
 import { buildSystemPrompt } from "./system-prompt";
 import { createDatabaseQueue } from "./database-queue";
@@ -134,6 +138,8 @@ const errorToResponse = (
   requestId: string,
   logContext: LogContext
 ): Response => {
+  captureChatError(error, logContext);
+
   const baseHeaders = {
     "Content-Type": "application/json",
     "X-Response-Time": `${Date.now() - start}ms`,
@@ -340,7 +346,7 @@ const handleChatRequest = (
       modelId,
       threadId,
       enabledTools = [],
-      responseStyle = "regular",
+      customInstructionId,
       trigger,
       messageId,
     } = validated;
@@ -360,6 +366,24 @@ const handleChatRequest = (
     logger.debug("Authentication complete", logContext, { 
       timeMs: Date.now() - start 
     });
+
+    // Validate thread ownership and custom instruction access
+    const { thread, customInstruction } = yield* validateThreadAndInstruction(
+      auth.userId,
+      auth.orgId,
+      threadId,
+      customInstructionId
+    );
+
+    if (!thread) {
+      return yield* new ValidationError({
+        message: "Thread not found or access denied",
+        field: "threadId",
+      });
+    }
+
+    const customInstructionsContent = customInstruction?.instructions;
+    const validatedCustomInstructionId = customInstruction ? customInstructionId : undefined;
 
     const lastUser = messages.filter((m) => m.role === "user").pop();
     const userText = lastUser?.parts?.find((part) => part.type === "text")?.text;
@@ -497,9 +521,10 @@ const handleChatRequest = (
         }),
     });
     const toolSet = tools as unknown as ToolSet;
+    const hasTools = Object.keys(tools).length > 0;
 
     const providerOptions = yield* Effect.try({
-      try: () => getProviderOptions(modelId),
+      try: () => getProviderOptions(modelId, hasTools),
       catch: (error) =>
         new ModelError({
           message: "Failed to get provider options",
@@ -613,9 +638,8 @@ const handleChatRequest = (
     // Build system prompt
     const systemPrompt = yield* buildSystemPrompt({
       modelDisplayName,
-      responseStyle: responseStyle as ResponseStyle,
+      customInstructions: customInstructionsContent,
       // supermemoryEnabled,
-      supermemoryEnabled: false,
     });
 
     // Create the streaming response
@@ -877,6 +901,17 @@ const handleChatRequest = (
                 }
               }
 
+              if (validatedCustomInstructionId) {
+                try {
+                  await fetchMutation(api.customInstructions.serverIncrementUsage, {
+                    id: validatedCustomInstructionId as Id<"customInstructions">,
+                    secret: process.env.CONVEX_SECRET_TOKEN!,
+                  });
+                } catch (err) {
+                  logger.warn("Failed to increment custom instruction usage", logContext, err);
+                }
+              }
+
               await Effect.runPromise(shutdownQueue("finish"));
             },
             onError: async (error) => {
@@ -910,6 +945,8 @@ const handleChatRequest = (
 
               // Classify the provider error for better debugging
               const classifiedError = classifyProviderError(errorObj);
+              
+              captureChatError(classifiedError, logContext);
               
               logger.error("Stream error from AI provider", logContext, {
                 errorType: classifiedError.errorType,
@@ -958,6 +995,20 @@ const handleChatRequest = (
           
           const errorMessage = error instanceof Error ? error.message : "Unknown error";
           logger.error("Stream execution error", logContext, error);
+          
+          // Capture execution error to Sentry
+          try {
+            const errorObj = error instanceof Error ? error : new Error(String(error));
+            Sentry.captureException(errorObj, {
+              tags: {
+                error_type: "stream_execution_error",
+                request_id: requestId,
+              },
+              extra: logContext,
+            });
+          } catch (sentryError) {
+            console.error("Failed to capture stream execution error to Sentry", sentryError);
+          }
           
           await Effect.runPromise(
             finalize({
@@ -1042,6 +1093,21 @@ export async function POST(req: Request): Promise<Response> {
     }),
     Effect.catchAll((error: unknown) => {
       logger.error("Unhandled error in chat route", logContext, error);
+      
+      // Capture unknown errors to Sentry
+      try {
+        const errorObj = error instanceof Error ? error : new Error(String(error));
+        Sentry.captureException(errorObj, {
+          tags: {
+            error_type: "unhandled",
+            request_id: requestId,
+          },
+          extra: logContext,
+        });
+      } catch (sentryError) {
+        console.error("Failed to capture unhandled error to Sentry", sentryError);
+      }
+      
       const errorResponse = new Response(JSON.stringify({ error: "Internal server error", requestId }), {
       status: 500,
       headers: {

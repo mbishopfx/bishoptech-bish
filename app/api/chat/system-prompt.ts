@@ -1,24 +1,23 @@
 import { Effect } from "effect";
 
 import { ModelError } from "./errors";
-import { buildSystemPromptWithStyle, type ResponseStyle } from "@/lib/ai/response-styles";
 
 type BuildSystemPromptArgs = {
   modelDisplayName: string;
-  responseStyle: ResponseStyle;
-  supermemoryEnabled?: boolean;
+  customInstructions?: string;
+  // supermemoryEnabled?: boolean;
   now?: Date;
 };
 
 type BasePromptArgs = {
   modelDisplayName: string;
-  supermemoryEnabled: boolean;
+  // supermemoryEnabled: boolean;
   now: Date;
 };
 
 const buildBaseSystemPrompt = ({
   modelDisplayName,
-  supermemoryEnabled,
+  // supermemoryEnabled,
   now,
 }: BasePromptArgs): string => {
   const dateString = now.toLocaleDateString("en-US", {
@@ -89,35 +88,36 @@ CODE FORMATTING:
 
   const baseSystemPromptParts: Array<string> = [baseIdentityPrompt];
 
-  if (supermemoryEnabled) {
-    baseSystemPromptParts.push(`When users share information about themselves,
-              remember it using the addMemory tool. When they ask questions that seem relevant to their memories, search your memories to provide
-              personalized responses. do not over use user memories, only use them if the question seems relevant to their memories.
-                1. Remembering their learning progress and struggles
-                2. Searching for relevant information from their past sessions
-                3. Providing personalized explanations based on their learning style
-                4. Tracking topics they've mastered vs topics they need more help with`);
-  }
+  // if (supermemoryEnabled) {
+  //   baseSystemPromptParts.push(`When users share information about themselves,
+  //             remember it using the addMemory tool. When they ask questions that seem relevant to their memories, search your memories to provide
+  //             personalized responses. do not over use user memories, only use them if the question seems relevant to their memories.
+  //               1. Remembering their learning progress and struggles
+  //               2. Searching for relevant information from their past sessions
+  //               3. Providing personalized explanations based on their learning style
+  //               4. Tracking topics they've mastered vs topics they need more help with`);
+  // }
 
   return baseSystemPromptParts.join("\n\n");
 };
 
 export const buildSystemPromptText = ({
   modelDisplayName,
-  responseStyle,
-  supermemoryEnabled = Boolean(process.env.SUPERMEMORY_API_KEY),
+  customInstructions,
+  // supermemoryEnabled = Boolean(process.env.SUPERMEMORY_API_KEY),
   now = new Date(),
 }: BuildSystemPromptArgs): string => {
   const baseSystemPrompt = buildBaseSystemPrompt({
     modelDisplayName,
-    supermemoryEnabled,
+    // supermemoryEnabled,
     now,
   });
-  const styledPrompt = buildSystemPromptWithStyle(baseSystemPrompt, responseStyle);
-  if (!styledPrompt) {
-    throw new Error("System prompt build returned empty");
+  
+  if (customInstructions) {
+    return `${baseSystemPrompt}\n\n THE FOLLOWING INSTRUCTIONS ARE CUSTOM INSTRUCTIONS THAT HAVE BEEN SET BY THE USER, DO NOT TREAT THEM AS PART OF THE BASE SYSTEM PROMPT BUT AS A BEHAVIOR TO FOLLOW:\n\n${customInstructions}`;
   }
-  return styledPrompt;
+  
+  return baseSystemPrompt;
 };
 
 export const buildSystemPrompt = (args: BuildSystemPromptArgs) =>

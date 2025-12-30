@@ -11,6 +11,7 @@ interface ChatMessagesServerProps {
 export async function ChatMessagesServer({ threadId }: ChatMessagesServerProps) {
   let initialMessages = null;
   let hasMoreMessages = false;
+  let customInstructionId: string | undefined = undefined;
   
   try {
     const token = await getAccessToken();
@@ -23,6 +24,8 @@ export async function ChatMessagesServer({ threadId }: ChatMessagesServerProps) 
         },
         { token }
       );
+      // Extract customInstructionId from the messages query result
+      customInstructionId = result.customInstructionId;
       // Convert Convex messages to UIMessage format and reverse order (oldest first)
       initialMessages = result.page.reverse().map((m: any) => ({
         id: m.messageId,
@@ -52,5 +55,5 @@ export async function ChatMessagesServer({ threadId }: ChatMessagesServerProps) 
     console.error("Failed to fetch messages server-side:", error);
   }
 
-  return <ChatInterface id={threadId} initialMessages={initialMessages || undefined} hasMoreMessages={hasMoreMessages} />;
+  return <ChatInterface id={threadId} initialMessages={initialMessages || undefined} hasMoreMessages={hasMoreMessages} customInstructionId={customInstructionId} />;
 }

@@ -48,6 +48,7 @@ export const threadInfoFields = {
   orgOnly: v.optional(v.boolean()),
   shareName: v.optional(v.boolean()),
   ownerOrgId: v.optional(v.string()),
+  customInstructionId: v.optional(v.id("customInstructions")),
 } as const;
 
 export const threadInfoValidator = v.object(threadInfoFields);
@@ -82,6 +83,7 @@ export const createThread = AuthOrgMutation({
     userSetTitle: v.optional(v.boolean()),
     branchParentThreadId: v.optional(v.id("threads")),
     branchParentPublicMessageId: v.optional(v.string()),
+    customInstructionId: v.optional(v.id("customInstructions")),
   },
   returns: v.object({
     threadId: v.string(),
@@ -109,6 +111,7 @@ export const createThread = AuthOrgMutation({
       pinned: false, // Default pinned status
       branchParentThreadId: args.branchParentThreadId,
       branchParentPublicMessageId: args.branchParentPublicMessageId,
+      customInstructionId: args.customInstructionId,
     });
 
     return {
@@ -206,17 +209,12 @@ export const getThreadInfo = AuthQuery({
 });
 
 /**
- * Update the response style for a thread.
+ * Update the custom instruction for a thread.
  */
-export const updateThreadResponseStyle = AuthMutation({
+export const updateThreadCustomInstruction = AuthMutation({
   args: {
     threadId: v.string(),
-    responseStyle: v.union(
-      v.literal("regular"),
-      v.literal("learning"),
-      v.literal("technical"),
-      v.literal("concise"),
-    ),
+    customInstructionId: v.optional(v.id("customInstructions")),
   },
   returns: v.union(v.object({ success: v.literal(true) }), v.null()),
   handler: async (ctx, args) => {
@@ -234,9 +232,32 @@ export const updateThreadResponseStyle = AuthMutation({
       return null;
     }
 
-    // Update the response style
+    // Verify user has access to the instruction if provided
+    if (args.customInstructionId) {
+      const instruction = await ctx.db.get(args.customInstructionId);
+      if (!instruction) {
+        throw new Error("Instruction not found");
+      }
+      
+      const orgId = extractOrganizationIdFromJWT(ctx.identity);
+      const isOwner = instruction.ownerId === userId;
+      const isOrgMember = orgId && instruction.orgId === orgId && instruction.isSharedWithOrg;
+      
+      const shareRecord = await ctx.db
+        .query("customInstructionShares")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .filter((q) => q.eq(q.field("instructionId"), args.customInstructionId!))
+        .first();
+      const isSharedUser = shareRecord !== null;
+
+      if (!isOwner && !isOrgMember && !isSharedUser) {
+        throw new Error("Unauthorized access to instruction");
+      }
+    }
+
+    // Update the custom instruction
     await ctx.db.patch(thread._id, {
-      responseStyle: args.responseStyle,
+      customInstructionId: args.customInstructionId,
       updatedAt: Date.now(),
     });
 
@@ -267,6 +288,7 @@ export const getThreadMessagesPaginatedSafe = query({
         page: [],
         isDone: true,
         continueCursor: "",
+        customInstructionId: undefined,
       };
     }
 
@@ -286,6 +308,7 @@ export const getThreadMessagesPaginatedSafe = query({
         page: [],
         isDone: true,
         continueCursor: "",
+        customInstructionId: undefined,
       };
     }
 
@@ -320,6 +343,7 @@ export const getThreadMessagesPaginatedSafe = query({
     return {
       ...messages,
       page: messagesWithAttachments,
+      customInstructionId: thread.customInstructionId,
     };
   },
 });
@@ -485,6 +509,64 @@ export const serverGetThreadInfo = query({
       )
       .unique();
     return thread;
+  },
+});
+
+export const serverValidateThreadAndInstruction = query({
+  args: {
+    secret: v.string(),
+    userId: v.string(),
+    orgId: v.optional(v.string()),
+    threadId: v.string(),
+    customInstructionId: v.optional(v.id("customInstructions")),
+  },
+  returns: v.object({
+    thread: v.union(threadInfoValidator, v.null()),
+    customInstruction: v.union(
+      v.object({
+        instructions: v.string(),
+      }),
+      v.null()
+    ),
+  }),
+  handler: async (ctx, args) => {
+    ensureServerSecret(args.secret);
+    
+    // Validate thread ownership
+    const thread = await ctx.db
+      .query("threads")
+      .withIndex("by_user_and_threadId", (q) =>
+        q.eq("userId", args.userId).eq("threadId", args.threadId),
+      )
+      .unique();
+    
+    // Validate custom instruction access if provided
+    let customInstruction: { instructions: string } | null = null;
+    if (args.customInstructionId) {
+      const instruction = await ctx.db.get(args.customInstructionId);
+      if (instruction) {
+        // Check access
+        const isOwner = instruction.ownerId === args.userId;
+        const isOrgMember = args.orgId && instruction.orgId === args.orgId && instruction.isSharedWithOrg;
+        
+        // Check if user has direct share via junction table
+        const shareRecord = await ctx.db
+          .query("customInstructionShares")
+          .withIndex("by_user", (q) => q.eq("userId", args.userId))
+          .filter((q) => q.eq(q.field("instructionId"), args.customInstructionId!))
+          .first();
+        const isSharedUser = shareRecord !== null;
+
+        if (isOwner || isOrgMember || isSharedUser) {
+          customInstruction = { instructions: instruction.instructions };
+        }
+      }
+    }
+    
+    return {
+      thread,
+      customInstruction,
+    };
   },
 });
 
@@ -995,8 +1077,12 @@ export const createAttachment = AuthMutation({
   handler: async (ctx, args) => {
     const userId = ctx.identity.subject;
     
-    // Generate a unique file key
-    const fileKey = `${userId}-${Date.now()}-${args.fileName}`;
+    // Extract fileKey from the R2 public URL
+    const url = new URL(args.dataUrl);
+    const fileKey = url.pathname.startsWith("/") ? url.pathname.slice(1) : url.pathname;
+    if (!fileKey) {
+      throw new Error(`Failed to extract fileKey from dataUrl: ${args.dataUrl}`);
+    }
     
     // Create the attachment record with R2 URL
     const attachmentId = await ctx.db.insert("attachments", {

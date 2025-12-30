@@ -101,6 +101,7 @@ export default defineSchema({
     orgOnly: v.optional(v.boolean()),
     shareName: v.optional(v.boolean()),
     ownerOrgId: v.optional(v.string()),
+    customInstructionId: v.optional(v.id("customInstructions")),
   })
     .index("by_user", ["userId"])
     .index("by_threadId", ["threadId"])
@@ -218,4 +219,27 @@ export default defineSchema({
   })
     .index("by_user", ["userId"]) 
     .index("by_org_and_reportedAt", ["orgId", "reportedAt"]),
+
+  customInstructions: defineTable({
+    title: v.string(),
+    description: v.string(),
+    icon: v.string(),
+    iconColor: v.optional(v.string()),
+    instructions: v.string(),
+    ownerId: v.string(),
+    orgId: v.optional(v.string()),
+    isSharedWithOrg: v.boolean(),
+    usageCount: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_owner", ["ownerId"])
+    .index("by_org", ["orgId"])
+    .index("by_usage", ["usageCount"]),
+  customInstructionShares: defineTable({
+    instructionId: v.id("customInstructions"),
+    userId: v.string(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_instruction", ["instructionId"]),
 });

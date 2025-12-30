@@ -1,5 +1,5 @@
 ---
-alwaysApply: true
+alwaysApply: false
 ---
 # Effect-TS Best Practices for Next.js Apps
 

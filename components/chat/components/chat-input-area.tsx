@@ -22,13 +22,17 @@ import {
 } from "@/components/ai/prompt-input";
 import { ChatErrorAlert } from "./chat-error-alert";
 import { ModelSelector } from "@/components/ai/model-selector";
-import { ResponseStyleSelector } from "@/components/ai/response-style-selector";
+import { InstructionSelector } from "@/components/custom-instructions/InstructionSelector";
+import { SelectedInstructionPill } from "@/components/custom-instructions/SelectedInstructionPill";
 import React from "react";
 import { useChatStatus } from "@ai-sdk-tools/store";
 import { useChatUIStore } from "../ui-store";
 import { Effect } from "effect";
 import { uploadWithStateEffect } from "../services/upload-service";
 import { MAX_TOTAL_FILES } from "@/lib/file-utils";
+import { useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
 
 interface ChatInputAreaProps {
   disableInput: boolean;
@@ -36,6 +40,7 @@ interface ChatInputAreaProps {
   onModelChange: (model: string) => void;
   onSubmit: (e?: React.FormEvent) => void;
   onStop: () => void;
+  threadId?: string;
 }
 
 export const ChatInputArea = React.memo(function ChatInputArea({
@@ -44,6 +49,7 @@ export const ChatInputArea = React.memo(function ChatInputArea({
   onModelChange,
   onSubmit,
   onStop,
+  threadId,
 }: ChatInputAreaProps) {
   const status = useChatStatus();
   const input = useChatUIStore((s) => s.input);
@@ -60,12 +66,42 @@ export const ChatInputArea = React.memo(function ChatInputArea({
   const setUploadedAttachments = useChatUIStore((s) => s.setUploadedAttachments);
   const setUploadingFiles = useChatUIStore((s) => s.setUploadingFiles);
   const handleSearchToggle = useChatUIStore((s) => s.handleSearchToggle);
-  const responseStyle = useChatUIStore((s) => s.responseStyle);
-  const setResponseStyle = useChatUIStore((s) => s.setResponseStyle);
+  const customInstructionId = useChatUIStore((s) => s.customInstructionId);
+  const setCustomInstructionId = useChatUIStore((s) => s.setCustomInstructionId);
   const setQuotaError = useChatUIStore((s) => s.setQuotaError);
+  const updateThreadCustomInstruction = useMutation(api.threads.updateThreadCustomInstruction);
   const setShowNoSubscriptionDialog = useChatUIStore((s) => s.setShowNoSubscriptionDialog);
   const triggerError = useChatUIStore((s) => s.triggerError);
   const setChatError = useChatUIStore((s) => s.setChatError);
+  const [instructionSelectorOpen, setInstructionSelectorOpen] = React.useState(false);
+  const handleInstructionChange = useCallback(
+    async (instructionId: string | undefined) => {
+      const previousInstructionId = useChatUIStore.getState().customInstructionId;
+
+      // Update the store immediately for UI responsiveness
+      setCustomInstructionId(instructionId);
+      
+      // If we're in a thread context, persist the change to the database
+      if (threadId) {
+        try {
+          await updateThreadCustomInstruction({
+            threadId,
+            customInstructionId: instructionId
+              ? (instructionId as Id<"customInstructions">)
+              : undefined,
+          });
+        } catch (error) {
+          console.error("Failed to update thread custom instruction:", error);
+          // Revert the store change on error
+          if (useChatUIStore.getState().customInstructionId === instructionId) {
+            setCustomInstructionId(previousInstructionId);
+          }
+        }
+      }
+    },
+    [threadId, setCustomInstructionId, updateThreadCustomInstruction]
+  );
+
   const runUpload = useCallback(
     async (fileArray: File[]) => {
       if (!fileArray || fileArray.length === 0) return;
@@ -144,7 +180,7 @@ export const ChatInputArea = React.memo(function ChatInputArea({
               <button
                 onClick={() => setQuotaError(null)}
                 className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200"
-                aria-label="Close"
+                aria-label="Cerrar"
               >
                 <svg
                   className="w-4 h-4"
@@ -213,10 +249,12 @@ export const ChatInputArea = React.memo(function ChatInputArea({
                 }}
                 disabled={disableInput || isUploading}
               />
-              <ResponseStyleSelector
-                value={responseStyle}
-                onValueChange={setResponseStyle}
+              <InstructionSelector
+                selectedId={customInstructionId}
+                onSelect={handleInstructionChange}
                 disabled={disableInput}
+                open={instructionSelectorOpen}
+                onOpenChange={setInstructionSelectorOpen}
               />
               <PromptInputButton
                 onClick={() => {
@@ -238,7 +276,6 @@ export const ChatInputArea = React.memo(function ChatInputArea({
                     ? `Máximo de ${MAX_TOTAL_FILES} archivos permitidos por mensaje`
                     : "Agregar archivos adjuntos"
                 }
-                className="text-secondary hover:bg-popover-main hover:text-popover-text dark:hover:bg-hover/60"
               >
                 <AttachmentsIcon className="size-4" />
               </PromptInputButton>
@@ -247,13 +284,13 @@ export const ChatInputArea = React.memo(function ChatInputArea({
                   <TooltipTrigger asChild>
                     <PromptInputButton
                       onClick={handleSearchToggle}
-                      aria-label="Toggle web search"
+                      aria-label="Activar búsqueda web"
                       disabled={disableInput}
                       variant={isSearchEnabled ? "default" : "ghost"}
                       className={
                         isSearchEnabled
                           ? "bg-blue-600 hover:bg-blue-700 border-blue-600 text-white"
-                          : "text-secondary hover:bg-popover-main hover:text-popover-text dark:hover:bg-hover/60"
+                          : undefined
                       }
                     >
                       <GlobeIcon className="size-4" />
@@ -270,13 +307,20 @@ export const ChatInputArea = React.memo(function ChatInputArea({
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-              <ModelSelector
-                value={selectedModel}
-                onValueChange={onModelChange}
-              />
+              <div className="flex items-center gap-1">
+                <ModelSelector value={selectedModel} onValueChange={onModelChange} />
+                <SelectedInstructionPill 
+                  instructionId={customInstructionId}
+                  onClick={() => {
+                    if (!disableInput) {
+                      setInstructionSelectorOpen(true);
+                    }
+                  }}
+                />
+              </div>
             </PromptInputTools>
             <PromptInputSubmit
-              disabled={disableInput}
+              disabled={disableInput || uploadingFiles.length > 0}
               status={status}
               onStop={onStop}
             />
@@ -293,6 +337,7 @@ export const ChatInputArea = React.memo(function ChatInputArea({
     prevProps.selectedModel === nextProps.selectedModel &&
     prevProps.onSubmit === nextProps.onSubmit &&
     prevProps.onStop === nextProps.onStop &&
-    prevProps.onModelChange === nextProps.onModelChange
+    prevProps.onModelChange === nextProps.onModelChange &&
+    prevProps.threadId === nextProps.threadId
   );
 });

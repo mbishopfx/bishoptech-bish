@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState, useTransition } from "react";
+import React, { useCallback, useMemo, useRef, useState, useTransition } from "react";
 import Image from "next/image";
 
 import { updateCurrentUserProfile } from "@/actions/updateCurrentUserProfile";
@@ -24,8 +24,8 @@ export function ProfileForm({ initialUser }: { initialUser: ProfileFormUser }) {
   const [lastName, setLastName] = useState(initialUser.lastName ?? "");
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const lastSubmitTimeRef = useRef<number>(0);
 
   const displayName = useMemo(() => {
     const name = `${firstName} ${lastName}`.trim();
@@ -36,11 +36,22 @@ export function ProfileForm({ initialUser }: { initialUser: ProfileFormUser }) {
 
   const isDirty = (firstName ?? "") !== (savedFirstName ?? "") || (lastName ?? "") !== (savedLastName ?? "");
 
-  const onSave = (e: React.FormEvent) => {
+  const onSave = useCallback((e: React.FormEvent) => {
     e.preventDefault();
+    
+    const now = Date.now();
+    const timeSinceLastSubmit = now - lastSubmitTimeRef.current;
+    const THROTTLE_MS = 2000;
+    
+    if (timeSinceLastSubmit < THROTTLE_MS && lastSubmitTimeRef.current > 0) {
+      // Too soon, ignore this submission
+      return;
+    }
+    
+    lastSubmitTimeRef.current = now;
+    
     startTransition(async () => {
       setError(null);
-      setSuccess(false);
 
       const trimmedFirstName = firstName.trim();
       const trimmedLastName = lastName.trim();
@@ -61,14 +72,11 @@ export function ProfileForm({ initialUser }: { initialUser: ProfileFormUser }) {
       setLastName(newLastName);
       setSavedFirstName(newFirstName);
       setSavedLastName(newLastName);
-
-      setSuccess(true);
-      setTimeout(() => setSuccess(false), 3000);
       
       // Exit edit mode after successful save
       setIsEditing(false);
     });
-  };
+  }, [firstName, lastName]);
 
   const handleCancel = () => {
     // Reset to saved values
@@ -166,16 +174,12 @@ export function ProfileForm({ initialUser }: { initialUser: ProfileFormUser }) {
           </div>
         )}
 
-        {success && (
-          <div className="rounded-md bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-3">
-            <p className="text-sm text-green-800 dark:text-green-200">
-              Perfil actualizado correctamente
-            </p>
-          </div>
-        )}
-
         <div className="flex justify-start items-start gap-2 pt-0">
-          <Button type="submit" disabled={!isDirty || isPending} variant="accent">
+          <Button 
+            type="submit" 
+            disabled={!isDirty || isPending || (Date.now() - lastSubmitTimeRef.current < 2000 && lastSubmitTimeRef.current > 0)} 
+            variant="accent"
+          >
             {isPending ? "Guardando..." : "Guardar cambios"}
           </Button>
           <Button

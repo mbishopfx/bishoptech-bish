@@ -394,7 +394,7 @@ export function MembersList({ initialData, organizationId, currentUserId, seatQu
               <DialogTrigger asChild>
                 <Button 
                   disabled={isLimitReached || plan !== "enterprise"}
-                  className="cursor-pointer gap-2 rounded-md border border-border/60 bg-white/90 shadow-sm shadow-black/5 dark:bg-popover-secondary/75 dark:shadow-black/30 hover:bg-black/[0.04] dark:hover:bg-hover/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="cursor-pointer gap-2 rounded-md border border-border/60 bg-white/90 shadow-sm shadow-black/5 dark:bg-popover-secondary/75 dark:shadow-black/30 hover:bg-black/[0.04] dark:hover:bg-hover/30 hover:text-foreground dark:hover:text-popover-text disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <span className="hidden sm:inline">Invitar Miembros</span>
                   <span className="sm:hidden">Invitar</span>

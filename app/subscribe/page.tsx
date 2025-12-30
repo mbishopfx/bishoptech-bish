@@ -112,6 +112,7 @@ function SubscribePageContent() {
   const [orgName, setOrgName] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [redirectUrl, setRedirectUrl] = useState<string | null>(null);
 
   const selectedPlan = landingPlans.find(
     (p) => p.name.toLowerCase() === planParam?.toLowerCase()
@@ -144,6 +145,11 @@ function SubscribePageContent() {
 
             if (!error && url) {
                 router.push(url);
+            } else if (error && url) {
+                // Display error message to user instead of silently redirecting
+                setError(error);
+                setRedirectUrl(url);
+                setLoading(false);
             } else {
                 setError(error || "Error desconocido al iniciar suscripción");
                 setLoading(false);
@@ -172,9 +178,21 @@ function SubscribePageContent() {
       return (
         <div className="flex items-center justify-center min-h-screen">
             <div className="flex flex-col items-center space-y-4">
-                <LoadingIcon className="size-8 animate-spin" />
-                <p className="text-sm text-muted-foreground">Redirigiendo a Stripe...</p>
-                {error && <p className="text-red-500 text-sm">{error}</p>}
+                {!error && <LoadingIcon className="size-8 animate-spin" />}
+                {!error && <p className="text-sm text-muted-foreground">Redirigiendo a Stripe...</p>}
+                {error && (
+                    <>
+                        <p className="text-red-500 text-sm text-center max-w-md">{error}</p>
+                        {redirectUrl && (
+                            <Button
+                                onClick={() => router.push(redirectUrl)}
+                                className="mt-4"
+                            >
+                                Volver al chat
+                            </Button>
+                        )}
+                    </>
+                )}
             </div>
         </div>
       );

@@ -103,10 +103,10 @@ export function getLanguageModel(modelId: string) {
 }
 
 // Default provider options for reasoning models
-export const getProviderOptions = (modelId: string) => {
+export const getProviderOptions = (modelId: string, hasTools: boolean = false) => {
   const baseOptions = {
     store: true,
-    parallelToolCalls: true,
+    ...(hasTools ? { parallelToolCalls: true } : {}),
     structuredOutputs: true,
   };
 
