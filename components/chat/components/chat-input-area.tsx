@@ -83,6 +83,8 @@ export const ChatInputArea = React.memo(function ChatInputArea({
   const [instructionSelectorOpen, setInstructionSelectorOpen] = React.useState(false);
   const handleInstructionChange = useCallback(
     async (instructionId: string | undefined) => {
+      const previousInstructionId = useChatUIStore.getState().customInstructionId;
+
       // Update the store immediately for UI responsiveness
       setCustomInstructionId(instructionId);
       
@@ -98,11 +100,13 @@ export const ChatInputArea = React.memo(function ChatInputArea({
         } catch (error) {
           console.error("Failed to update thread custom instruction:", error);
           // Revert the store change on error
-          setCustomInstructionId(customInstructionId);
+          if (useChatUIStore.getState().customInstructionId === instructionId) {
+            setCustomInstructionId(previousInstructionId);
+          }
         }
       }
     },
-    [threadId, setCustomInstructionId, updateThreadCustomInstruction, customInstructionId]
+    [threadId, setCustomInstructionId, updateThreadCustomInstruction]
   );
 
   const runUpload = useCallback(

@@ -148,35 +148,10 @@ export const list = AuthQuery({
         .collect();
     }
 
-    // Get instructions directly shared with the user
-    const shareRecords = await ctx.db
-      .query("customInstructionShares")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect();
-    const sharedInstructionIds = shareRecords.map(s => s.instructionId);
-    const sharedWithMeDirectly = await Promise.all(
-      sharedInstructionIds.map(id => ctx.db.get(id))
-    );
-    const sharedInstructions = sharedWithMeDirectly.filter(
-      (inst): inst is Doc<"customInstructions"> => 
-        inst !== null && inst.ownerId !== userId
-    );
-
-    // Merge and deduplicate
-    const combined = [...myInstructions];
+    // Combine user's own instructions with org-shared instructions
+    const combined = [...myInstructions, ...orgInstructions];
     
-    const addToResult = (list: Doc<"customInstructions">[]) => {
-      for (const inst of list) {
-        if (!combined.some((i) => i._id === inst._id)) {
-          combined.push(inst);
-        }
-      }
-    };
-
-    addToResult(orgInstructions);
-    addToResult(sharedInstructions);
-    
-    // Fetch owner information for all
+    // Fetch owner information for unique owners only (scales to millions of users)
     const ownerIds = [...new Set(combined.map(inst => inst.ownerId))];
     const owners = await Promise.all(
       ownerIds.map(id => 
@@ -186,7 +161,11 @@ export const list = AuthQuery({
           .unique()
       )
     );
-    const ownerMap = new Map(owners.filter(Boolean).map(o => [o!.workos_id, o]));
+    const ownerMap = new Map(
+      owners
+        .filter((o): o is NonNullable<typeof o> => o !== null)
+        .map(o => [o.workos_id, o])
+    );
     
     const results = combined.map((inst) => {
       const owner = ownerMap.get(inst.ownerId);
@@ -238,16 +217,8 @@ export const get = AuthQuery({
     // Check access
     const isOwner = instruction.ownerId === userId;
     const isOrgMember = orgId && instruction.orgId === orgId && instruction.isSharedWithOrg;
-    
-    // Check if user has direct share via junction table
-    const shareRecord = await ctx.db
-      .query("customInstructionShares")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .filter((q) => q.eq(q.field("instructionId"), args.id))
-      .first();
-    const isSharedUser = shareRecord !== null;
 
-    if (!isOwner && !isOrgMember && !isSharedUser) {
+    if (!isOwner && !isOrgMember) {
       return null;
     }
 
