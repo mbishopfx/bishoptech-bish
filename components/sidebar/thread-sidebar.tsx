@@ -1,5 +1,5 @@
-import { ThreadSidebarServer } from "./thread-sidebar-server";
+import { ThreadSidebarLayout } from "./thread-sidebar-layout";
 
 export default function ThreadSidebar() {
-  return <ThreadSidebarServer />;
+  return <ThreadSidebarLayout />;
 }

@@ -6,19 +6,18 @@ import { usePathname, useRouter } from "next/navigation";
 import { generateUUID } from "@/lib/utils";
 import { useModel } from "@/contexts/model-context";
 import { useInitialMessage } from "@/contexts/initial-message-context";
-import { useCallback, useEffect, useRef, useMemo, useState } from "react";
+import { useCallback, useEffect, useRef, useMemo, useState, useLayoutEffect } from "react";
 import { useRegeneration } from "./hooks/use-regeneration";
 import { ToolType, getDefaultTools } from "@/lib/ai/model-tools";
 import { resolveModel } from "@/lib/ai/ai-providers";
 import { useAuth } from "@workos-inc/authkit-nextjs/components";
-import { useConvexAuth, usePaginatedQuery, useMutation, useQuery } from "convex/react";
+import { useConvex, useConvexAuth, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Loader } from "@/components/ai/loader";
 import { AttachmentsIcon } from "@/components/ui/icons/svg-icons";
 import {
   Conversation,
   ConversationContent,
-  ConversationScrollButton,
 } from "@/components/ai/conversation";
 import { Message, MessageContent } from "@/components/ai/message";
 
@@ -29,8 +28,9 @@ import { ChatInputArea } from "./components/chat-input-area";
 import type { ChatInterfaceProps } from "./types";
 import { ChatStoreProvider, useChatStateInstance } from "@/lib/stores/hooks";
 import { Effect } from "effect";
+import { saveCachedThreadMessages } from "@/lib/local-first/thread-messages-cache";
+import { useStickToBottom } from "@/lib/hooks/use-stick-to-bottom";
 
-// Effect services and error types
 import {
   updateMessageContentEffect,
   parseServerError,
@@ -42,18 +42,36 @@ import {
 } from "./services";
 import { uploadWithStateEffect } from "./services/upload-service";
 import { getErrorMessage } from "./errors";
+import { transformConvexMessages } from "./utils/transformConvexMessages";
 
-// Internal component that uses the store
+const HISTORY_PAGE_SIZE = 20;
+const HISTORY_ROOT_MARGIN = "200px 0px 0px 0px";
+const AUTOFILL_VIEWPORT_THRESHOLD_PX = 32;
+const AUTOFILL_MAX_PAGES_PER_THREAD = 10;
+
 function ChatInterfaceInternal({
   id,
   initialMessages,
-  hasMoreMessages = false,
+  serverMessages,
+  initialHistoryCursor,
+  initialHistoryIsDone,
   disableInput = false,
   onInitialMessage,
   customInstructionId: initialCustomInstructionId,
 }: ChatInterfaceProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const convex = useConvex();
+
+  const {
+    scrollRef,
+    contentRef,
+    isAtBottom,
+    scrollToBottom,
+    markInitialScrollDone,
+    reset: resetStickToBottom,
+  } = useStickToBottom();
+
   const { selectedModel, setSelectedModel } = useModel();
   const { consumeInitialMessage } = useInitialMessage();
   const { isAuthenticated } = useConvexAuth();
@@ -61,8 +79,8 @@ function ChatInterfaceInternal({
   const { user } = useAuth();
   const prevIdRef = useRef(id);
   const autoStartTriggeredRef = useRef(false);
+  const hadActiveSessionRef = useRef(false);
 
-  // Avoid subscribing to fast-changing slices to prevent keystroke re-renders
   const chatKey = useChatUIStore((s) => s.chatKey);
   const setInput = useChatUIStore((s) => s.setInput);
   const setSelectedFiles = useChatUIStore((s) => s.setSelectedFiles);
@@ -80,7 +98,6 @@ function ChatInterfaceInternal({
   const [isDragActive, setIsDragActive] = useState(false);
   const dragCounterRef = useRef(0);
 
-  // Centralized file processing for drag-and-drop uploads
   const handleProcessFiles = useCallback(
     async (fileArray: File[]) => {
       if (!fileArray || fileArray.length === 0) return;
@@ -99,15 +116,14 @@ function ChatInterfaceInternal({
     [setSelectedFiles, setUploadingFiles, setUploadedAttachments, setChatError, triggerError]
   );
 
-  // Apply model change effects
   const prevModelRef = useRef(selectedModel);
-  // Ref to track current model for access in closures (like useChat transport)
   const currentModelRef = useRef(selectedModel);
   
+  // Ref to track latest server messages for use in closures (avoids stale closure issue)
+  const historicalMessagesRef = useRef<UIMessage[]>([]);
+  
   useEffect(() => {
-    // Keep ref updated
     currentModelRef.current = selectedModel;
-
     if (prevModelRef.current !== selectedModel) {
       prevModelRef.current = selectedModel;
       setQuotaError(null);
@@ -124,65 +140,249 @@ function ChatInterfaceInternal({
   }, [selectedModel, setIsSearchEnabled]);
 
   const isThread = id !== "welcome";
+  const activeThreadIdRef = useRef(id);
+  useEffect(() => {
+    activeThreadIdRef.current = id;
+  }, [id]);
 
-  // State to enable client-side pagination when user clicks "Load More"
-  const [enableClientPagination, setEnableClientPagination] = useState(false);
+  // Server messages come from CachedChatWrapper's one-off fetch (no subscription needed)
+  const historicalMessagesFromServer = serverMessages ?? [];
 
-  // Paginated query for historical messages
-  // Skip the query if we have initialMessages from server-side rendering, unless pagination is enabled
-  const { 
-    results: paginatedMessages, 
-    status: paginationStatus, 
-    loadMore 
-  } = usePaginatedQuery(
-    api.threads.getThreadMessagesPaginatedSafe,
-    // If initialMessages is undefined OR an empty array, fetch from client.
-    isThread && (
-      !initialMessages || (Array.isArray(initialMessages) && initialMessages.length === 0) || enableClientPagination
-    )
-      ? { threadId: id }
-      : "skip",
-    { initialNumItems: 5 }
+  const topSentinelRef = useRef<HTMLDivElement | null>(null);
+  const requestInFlightRef = useRef(false);
+  const autoFillAttemptsRef = useRef(0);
+
+  const [olderEphemeralMessages, setOlderEphemeralMessages] = useState<UIMessage[]>([]);
+  const [historyCursor, setHistoryCursor] = useState<string | null>(
+    initialHistoryCursor ?? null,
+  );
+  const [historyIsDone, setHistoryIsDone] = useState<boolean>(
+    initialHistoryIsDone ?? true,
+  );
+  const [isLoadingOlder, setIsLoadingOlder] = useState(false);
+  const pendingPrependScrollRef = useRef<null | { scrollTop: number; scrollHeight: number }>(
+    null,
   );
 
-  // Transform paginated messages to UIMessage format
-  const historicalMessages: UIMessage[] = useMemo(() => {
-    if (!paginatedMessages || !isThread) return [];
-    
-    // Reverse order since query returns desc (newest first), we want oldest first for display
-    return paginatedMessages.reverse().map((m: any) => ({
-      id: m.messageId,
-      role: m.role,
-      parts: [
-        ...(m.reasoning ? [{ type: "reasoning", text: m.reasoning }] : []),
-        ...(m.content ? [{ type: "text", text: m.content }] : []),
-        ...(m.attachments ? m.attachments.map((att: any) => ({
-          type: "file" as const,
-          mediaType: att.mimeType,
-          url: att.attachmentUrl,
-          attachmentId: att.attachmentId,
-          attachmentType: att.attachmentType,
-        })) : []),
-        ...(m.sources ? m.sources.map((source: any) => ({
-          type: "source-url" as const,
-          sourceId: source.sourceId,
-          url: source.url,
-          title: source.title,
-        })) : []),
-      ],
-    }));
-  }, [paginatedMessages, isThread]);
+  /**
+   * If Convex only returns the most recent N messages (e.g. 5),
+   * the local hook store may still contain older cached messages.
+   *
+   * Those older messages must NOT be treated as "new" relative to the server base,
+   * otherwise they get appended after the server messages and scramble the history.
+   *
+   * We only consider hook messages AFTER the last server/base message as new.
+   */
+  const sliceHookMessagesAfterBaseTail = useCallback(
+    (base: UIMessage[], hookMessages: UIMessage[]) => {
+      if (!base || base.length === 0) return hookMessages;
+      if (!hookMessages || hookMessages.length === 0) return [];
 
-  // Access chat state instance early so we can seed useChat with last throttled messages
+      const lastBaseId = base[base.length - 1]?.id;
+      if (!lastBaseId) return hookMessages;
+
+      // Find the last occurrence of the base tail in the hook list
+      let lastIdx = -1;
+      for (let i = hookMessages.length - 1; i >= 0; i--) {
+        if (hookMessages[i]?.id === lastBaseId) {
+          lastIdx = i;
+          break;
+        }
+      }
+      if (lastIdx === -1) return hookMessages;
+      return hookMessages.slice(lastIdx + 1);
+    },
+    [],
+  );
+
+  // Prefer cache until server has loaded
+  const historicalMessages: UIMessage[] = useMemo(() => {
+    if (!isThread) return [];
+    if (historicalMessagesFromServer.length > 0) {
+      return historicalMessagesFromServer;
+    }
+    return initialMessages ?? [];
+  }, [isThread, historicalMessagesFromServer, initialMessages]);
+
+  // Combine ephemeral older pages (never cached) + base persisted history for UI + AI context.
+  const baseHistory: UIMessage[] = useMemo(() => {
+    if (!isThread) return [];
+    if (!olderEphemeralMessages || olderEphemeralMessages.length === 0) {
+      return historicalMessages;
+    }
+    return [...olderEphemeralMessages, ...historicalMessages];
+  }, [isThread, olderEphemeralMessages, historicalMessages]);
+
+  // Keep ref in sync for use in closures (prepareSendMessagesRequest)
+  useEffect(() => {
+    historicalMessagesRef.current = baseHistory;
+  }, [baseHistory]);
+
+  // Reset per-thread ephemeral pagination state; also keep cursor/isDone in sync with late-arriving server props.
+  useEffect(() => {
+    autoFillAttemptsRef.current = 0;
+    setOlderEphemeralMessages([]);
+    setHistoryCursor(initialHistoryCursor ?? null);
+    setHistoryIsDone(initialHistoryIsDone ?? true);
+  }, [id]);
+
+  useEffect(() => {
+    if (!isThread) return;
+    if (olderEphemeralMessages.length > 0) return;
+    setHistoryCursor(initialHistoryCursor ?? null);
+    setHistoryIsDone(initialHistoryIsDone ?? true);
+  }, [isThread, initialHistoryCursor, initialHistoryIsDone, olderEphemeralMessages.length]);
+
+  const loadOlderPage = useCallback(
+    async ({ preserveScroll }: { preserveScroll: boolean }) => {
+      if (!isThread) return;
+      if (historyIsDone) return;
+      if (requestInFlightRef.current) return;
+
+      const cursor = historyCursor && historyCursor.length > 0 ? historyCursor : null;
+      if (!cursor) {
+        setHistoryIsDone(true);
+        return;
+      }
+
+      const requestThreadId = id;
+      requestInFlightRef.current = true;
+      setIsLoadingOlder(true);
+
+      try {
+        if (preserveScroll) {
+          const el = scrollRef.current;
+          if (el) {
+            pendingPrependScrollRef.current = {
+              scrollTop: el.scrollTop,
+              scrollHeight: el.scrollHeight,
+            };
+          }
+        } else {
+          pendingPrependScrollRef.current = null;
+        }
+
+        const result = await convex.query(api.threads.getThreadMessagesPaginatedSafe, {
+          threadId: id,
+          paginationOpts: { numItems: HISTORY_PAGE_SIZE, cursor },
+        });
+
+        // Ignore late results if user navigated to a different thread mid-request.
+        if (activeThreadIdRef.current !== requestThreadId) {
+          pendingPrependScrollRef.current = null;
+          return;
+        }
+
+        const nextCursor =
+          typeof result.continueCursor === "string" && result.continueCursor.length > 0
+            ? result.continueCursor
+            : null;
+        const done = !!result.isDone || nextCursor === null;
+        setHistoryCursor(nextCursor);
+        setHistoryIsDone(done);
+
+        const page = result.page ?? [];
+        if (!page || page.length === 0) {
+          pendingPrependScrollRef.current = null;
+          return;
+        }
+
+        const transformed = transformConvexMessages(page);
+
+        // Dedupe against existing ephemeral + current persisted base history.
+        const baseIds = new Set(historicalMessages.map((m) => m.id));
+
+        setOlderEphemeralMessages((prev) => {
+          const seen = new Set<string>([...baseIds, ...prev.map((m) => m.id)]);
+          const newUnique = transformed.filter((m) => !seen.has(m.id));
+          if (newUnique.length === 0) {
+            pendingPrependScrollRef.current = null;
+            return prev;
+          }
+          return [...newUnique, ...prev];
+        });
+      } catch (error) {
+        console.error("Failed to load older messages:", error);
+      } finally {
+        requestInFlightRef.current = false;
+        setIsLoadingOlder(false);
+      }
+    },
+    [convex, historyCursor, historyIsDone, historicalMessages, id, isThread, scrollRef],
+  );
+
+  useEffect(() => {
+    const container = scrollRef.current;
+    const sentinel = topSentinelRef.current;
+    if (!container || !sentinel) return;
+    if (!isThread) return;
+    if (historyIsDone) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          void loadOlderPage({ preserveScroll: !isAtBottom });
+        }
+      },
+      {
+        root: container,
+        rootMargin: HISTORY_ROOT_MARGIN,
+        threshold: 0,
+      },
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [historyIsDone, isAtBottom, isThread, loadOlderPage, scrollRef]);
+
+  // Auto-fill: if content doesn't overflow, keep loading older pages (bounded) so users can scroll.
+  useEffect(() => {
+    const container = scrollRef.current;
+    if (!container) return;
+    if (!isThread) return;
+    if (historyIsDone) return;
+    if (requestInFlightRef.current || isLoadingOlder) return;
+    if (autoFillAttemptsRef.current >= AUTOFILL_MAX_PAGES_PER_THREAD) return;
+
+    if (container.scrollHeight <= container.clientHeight + AUTOFILL_VIEWPORT_THRESHOLD_PX) {
+      autoFillAttemptsRef.current += 1;
+      void loadOlderPage({ preserveScroll: false });
+    }
+  }, [
+    baseHistory.length,
+    historyIsDone,
+    isLoadingOlder,
+    isThread,
+    loadOlderPage,
+    scrollRef,
+  ]);
+
+  useLayoutEffect(() => {
+    const pending = pendingPrependScrollRef.current;
+    if (!pending) return;
+
+    const el = scrollRef.current;
+    if (!el) {
+      pendingPrependScrollRef.current = null;
+      return;
+    }
+
+    const nextScrollHeight = el.scrollHeight;
+    const delta = nextScrollHeight - pending.scrollHeight;
+    if (delta !== 0) {
+      el.scrollTop = pending.scrollTop + delta;
+    }
+
+    pendingPrependScrollRef.current = null;
+  }, [olderEphemeralMessages.length, scrollRef]);
+
   const chatStateInstance = useChatStateInstance();
 
-  // Force useChat to re-initialize when model changes, but seed with last known messages
   const chatHelpers =
     useChat({
       id: `${id}-${chatKey}`,
       generateId: generateUUID,
-      // Seed chat hook with last throttled messages from Zustand if available,
-      // otherwise fall back to SSR initial messages when present.
       ...((() => {
         try {
           const state = chatStateInstance.getState();
@@ -204,8 +404,6 @@ function ChatInterfaceInternal({
       },
       onError(error: Error) {
         console.error("Chat error:", error);
-
-        // Parse server error
         const handleError = Effect.gen(function* () {
           const parsedError = yield* parseServerError(error);
 
@@ -234,18 +432,14 @@ function ChatInterfaceInternal({
             return;
           }
 
-          // Clear quota error and dialog for other errors
           setQuotaError(null);
           setShowNoSubscriptionDialog(false);
-
-          // Show error toast if appropriate
           if (shouldShowErrorToast(parsedError)) {
             triggerError(getErrorMessage(parsedError));
           }
         });
 
         Effect.runPromise(handleError).catch((e) => {
-          // Fallback error handling
           console.error("Error parsing failed:", e);
           triggerError("An error occurred. Please try again.");
         });
@@ -253,7 +447,6 @@ function ChatInterfaceInternal({
       transport: new DefaultChatTransport({
         api: "/api/chat",
         prepareSendMessagesRequest: ({ messages, trigger, messageId }) => {
-          // Get current tools state at the time of sending
           const currentModel = currentModelRef.current;
           const currentDefaultTools = getDefaultTools(currentModel);
           const currentSearchState =
@@ -264,42 +457,30 @@ function ChatInterfaceInternal({
             ? [...currentDefaultTools, "web_search" as ToolType]
             : currentDefaultTools;
 
-          // Build request context
-          const baseBeforePrune = initialMessages && initialMessages.length > 0
-            ? initialMessages
-            : historicalMessages;
+          // Use ref to get latest server data (avoids stale closure issue)
+          const serverData = historicalMessagesRef.current;
 
-          // For regeneration, we prune at the anchor.
-          // For normal messages, we rely on the pivot logic relative to the hook messages.
-          const anchor = trigger === "regenerate-message" ? regenerateAnchorRef.current : null;
-          const base = anchor ? pruneAt(baseBeforePrune, anchor.id, anchor.role) : baseBeforePrune;
-          
-          // If regenerating, also prune the hook messages at the anchor point
-          const hookMessages = anchor ? pruneAt(messages, anchor.id, anchor.role) : messages;
+          const regenAnchor = regenerateAnchorRef.current;
+          const base = regenAnchor
+            ? pruneAt(serverData, regenAnchor.id, regenAnchor.role)
+            : serverData;
+          const hookMessages =
+            trigger === "regenerate-message" && regenAnchor
+              ? pruneAt(messages as UIMessage[], regenAnchor.id, regenAnchor.role)
+              : (messages as UIMessage[]);
 
-          // Apply Pivot Logic to merge base and hookMessages
-          let requestMessages: UIMessage[] = [];
-          const pivotIndexInLocal = hookMessages.findIndex((localMsg: UIMessage) =>
-            base.some((baseMsg: UIMessage) => baseMsg.id === localMsg.id)
+          // Prefer hook versions for overlapping ids (edits/pruning), append only truly-new hook messages.
+          const hookById = new Map<string, UIMessage>(
+            hookMessages.map((m) => [m.id, m] as const),
           );
+          const baseWithHookEdits: UIMessage[] = base.map(
+            (m) => hookById.get(m.id) ?? m,
+          );
+          const baseIds = new Set(baseWithHookEdits.map((m) => m.id));
+          const hookAfterBase = sliceHookMessagesAfterBaseTail(baseWithHookEdits, hookMessages);
+          const newMessagesFromHook = hookAfterBase.filter((m) => !baseIds.has(m.id));
+          const requestMessages = [...baseWithHookEdits, ...newMessagesFromHook];
 
-          if (pivotIndexInLocal !== -1) {
-            const pivotId = hookMessages[pivotIndexInLocal].id;
-            const pivotIndexInBase = base.findIndex((baseMsg: UIMessage) => baseMsg.id === pivotId);
-
-            if (pivotIndexInBase !== -1) {
-              requestMessages = [...base.slice(0, pivotIndexInBase), ...hookMessages];
-            } else {
-               // Fallback
-               const usedIds = new Set(hookMessages.map((m: UIMessage) => m.id));
-               requestMessages = [...base.filter((m: UIMessage) => !usedIds.has(m.id)), ...hookMessages];
-            }
-          } else {
-            const usedIds = new Set(hookMessages.map((m: UIMessage) => m.id));
-            requestMessages = [...base.filter((m: UIMessage) => !usedIds.has(m.id)), ...hookMessages];
-          }
-
-          // Get current customInstructionId from store
           const currentCustomInstructionId = useChatUIStore.getState().customInstructionId;
 
           return {
@@ -321,7 +502,6 @@ function ChatInterfaceInternal({
   const regenerateRef = useRef<null | ((opts?: { messageId?: string }) => Promise<void>)>(null);
   regenerateRef.current = (chatHelpers as any).regenerate ?? null;
 
-  // Sync AI SDK messages to Zustand store for optimized rendering
   useEffect(() => {
     chatStateInstance.syncFromAISDK(messages, status === 'streaming' ? 'streaming' : 'ready');
   }, [messages, status, chatStateInstance]);
@@ -361,7 +541,13 @@ function ChatInterfaceInternal({
 
   const updateUserMessageContent = useMutation(api.threads.updateUserMessageContent);
 
-  // Merge historical messages with AI SDK streaming messages (overlay stream onto base by id)
+  // Track if user has had active interaction (streaming/sending) in this session
+  // This helps distinguish between stale cached messages vs live session messages
+  const isActivelyGenerating = status === "streaming" || status === "submitted";
+  if (isActivelyGenerating) {
+    hadActiveSessionRef.current = true;
+  }
+
   const renderedMessages: UIMessage[] = useMemo(() => {
     if (!isThread) {
       if (messages.length > 0) return messages;
@@ -369,34 +555,71 @@ function ChatInterfaceInternal({
       return [];
     }
 
-    const base = initialMessages && initialMessages.length > 0 ? initialMessages : historicalMessages;
+    const regenAnchor = regenerateAnchorRef.current;
+    const effectiveBaseHistory =
+      regenAnchor && baseHistory.length > 0
+        ? pruneAt(baseHistory, regenAnchor.id, regenAnchor.role)
+        : baseHistory;
 
-    const pivotIndexInLocal = messages.findIndex((localMsg: UIMessage) =>
-      base.some((baseMsg: UIMessage) => baseMsg.id === localMsg.id)
-    );
-
-    if (pivotIndexInLocal !== -1) {
-      const pivotId = messages[pivotIndexInLocal].id;
-      const pivotIndexInBase = base.findIndex((baseMsg: UIMessage) => baseMsg.id === pivotId);
-
-      if (pivotIndexInBase !== -1) {
-        // Take history up to pivot, then append local messages (which includes the pivot and everything after)
-        const merged = [...base.slice(0, pivotIndexInBase), ...messages];
-        return merged;
+    // During active generation, use server for history + hook for new/streaming messages
+    if (isActivelyGenerating && messages.length > 0) {
+      if (effectiveBaseHistory.length > 0) {
+        // Prefer hook versions for overlapping ids (e.g. edited messages), append only truly-new hook messages.
+        const hookMessages = messages as UIMessage[];
+        const hookById = new Map<string, UIMessage>(
+          hookMessages.map((m) => [m.id, m] as const),
+        );
+        const baseWithHookEdits: UIMessage[] = effectiveBaseHistory.map(
+          (m) => hookById.get(m.id) ?? m,
+        );
+        const baseIds = new Set(baseWithHookEdits.map((m) => m.id));
+        const hookAfterBase = sliceHookMessagesAfterBaseTail(
+          baseWithHookEdits,
+          hookMessages
+        );
+        const newMessagesFromHook = hookAfterBase.filter((m) => !baseIds.has(m.id));
+        return [...baseWithHookEdits, ...newMessagesFromHook];
       }
+      return messages;
     }
 
-    // Fallback: If no overlapping pivot found, assume local messages are new/appended
-    // Filter duplicates just in case, but rely on base + local structure
-    const usedIds = new Set(messages.map((m: UIMessage) => m.id));
-    const merged = [
-      ...base.filter((m: any) => !usedIds.has(m.id)),
-      ...messages,
-    ];
-    return merged;
-  }, [isThread, historicalMessages, messages, initialMessages]);
+    // After active session (user sent message/received stream), merge server + new hook messages
+    if (hadActiveSessionRef.current && messages.length > 0) {
+      if (effectiveBaseHistory.length > 0) {
+        // Prefer hook versions for overlapping ids (e.g. edits), append only truly-new hook messages.
+        const hookMessages = messages as UIMessage[];
+        const hookById = new Map<string, UIMessage>(
+          hookMessages.map((m) => [m.id, m] as const),
+        );
+        const baseWithHookEdits: UIMessage[] = effectiveBaseHistory.map(
+          (m) => hookById.get(m.id) ?? m,
+        );
+        const baseIds = new Set(baseWithHookEdits.map((m) => m.id));
+        const hookAfterBase = sliceHookMessagesAfterBaseTail(
+          baseWithHookEdits,
+          hookMessages
+        );
+        const newMessagesFromHook = hookAfterBase.filter((m) => !baseIds.has(m.id));
+        return [...baseWithHookEdits, ...newMessagesFromHook];
+      }
+      // No server data but we have hook messages - use them (preserves AI response)
+      return messages;
+    }
 
-  // Preserve last non-empty render while pagination is loading to prevent flicker on model change
+    // Fresh navigation (no active session) - use base history (includes ephemeral older when present).
+    if (effectiveBaseHistory.length > 0) return effectiveBaseHistory;
+    return historicalMessages;
+  }, [
+    isThread,
+    baseHistory,
+    historicalMessages,
+    messages,
+    initialMessages,
+    isActivelyGenerating,
+    sliceHookMessagesAfterBaseTail,
+    pruneAt,
+  ]);
+
   const lastNonEmptyRenderRef = useRef<UIMessage[]>([]);
   useEffect(() => {
     if (renderedMessages.length > 0) {
@@ -405,34 +628,119 @@ function ChatInterfaceInternal({
   }, [renderedMessages]);
 
   const displayMessages: UIMessage[] = useMemo(() => {
-    const loadingHistory = paginationStatus === "LoadingFirstPage" || paginationStatus === "LoadingMore";
-    if (renderedMessages.length === 0 && isThread && loadingHistory) {
+    // Use last non-empty render if current is empty (prevents flicker during transitions)
+    if (renderedMessages.length === 0 && isThread && lastNonEmptyRenderRef.current.length > 0) {
       return lastNonEmptyRenderRef.current;
     }
     return renderedMessages;
-  }, [renderedMessages, isThread, paginationStatus]);
+  }, [renderedMessages, isThread]);
 
-  // Cleanup effect when thread ID changes - reset all UI state
+  const olderEphemeralIdSet = useMemo(() => {
+    return new Set(olderEphemeralMessages.map((m) => m.id));
+  }, [olderEphemeralMessages]);
+
+  // Track expected AI responses for layout shift prevention
+  const expectedResponseCount = useMemo(() => {
+    if (!isThread || status === "streaming" || status === "submitted") {
+      return 0; // Don't wait during streaming
+    }
+    return displayMessages.filter(
+      (m) => m.role === "assistant" && m.parts.some((p) => p.type === "text")
+    ).length;
+  }, [displayMessages, isThread, status]);
+
+  const [readyResponseCount, setReadyResponseCount] = useState(0);
+  const readyResponseIdsRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    setReadyResponseCount(0);
+    readyResponseIdsRef.current.clear();
+  }, [id]);
+
+  const handleResponseReady = useCallback((messageId: string) => {
+    if (!readyResponseIdsRef.current.has(messageId)) {
+      readyResponseIdsRef.current.add(messageId);
+      setReadyResponseCount((prev) => prev + 1);
+    }
+  }, []);
+
+  const allResponsesReady = useMemo(() => {
+    if (status === "streaming" || status === "submitted") return true;
+    if (expectedResponseCount === 0) return true;
+    return readyResponseCount >= expectedResponseCount;
+  }, [status, expectedResponseCount, readyResponseCount]);
+
+  const [forceShow, setForceShow] = useState(false);
+  useEffect(() => {
+    if (allResponsesReady || !isThread || displayMessages.length === 0) {
+      setForceShow(false);
+      return;
+    }
+
+    const timeout = setTimeout(() => {
+      setForceShow(true);
+    }, 300);
+
+    return () => clearTimeout(timeout);
+  }, [allResponsesReady, isThread, displayMessages.length, id]);
+
+  useEffect(() => {
+    setForceShow(false);
+  }, [id]);
+
+  const shouldShowMessages = allResponsesReady || forceShow || status === "streaming" || status === "submitted";
+
+  // Initial scroll to bottom (instant, then switch to smooth after 150ms)
+  const hasInitialScrolledRef = useRef(false);
+  const initialScrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  useLayoutEffect(() => {
+    if (shouldShowMessages && displayMessages.length > 0 && !hasInitialScrolledRef.current) {
+      scrollToBottom("instant");
+      hasInitialScrolledRef.current = true;
+      if (initialScrollTimeoutRef.current) clearTimeout(initialScrollTimeoutRef.current);
+      initialScrollTimeoutRef.current = setTimeout(() => markInitialScrollDone(), 150);
+    }
+  }, [shouldShowMessages, displayMessages.length, scrollToBottom, markInitialScrollDone]);
+
+  useEffect(() => {
+    hasInitialScrolledRef.current = false;
+    if (initialScrollTimeoutRef.current) {
+      clearTimeout(initialScrollTimeoutRef.current);
+      initialScrollTimeoutRef.current = null;
+    }
+    resetStickToBottom();
+  }, [id, resetStickToBottom]);
+
+  // Persist to cache (debounced, skip while streaming)
+  useEffect(() => {
+    if (!isThread) return;
+    if (!displayMessages || displayMessages.length === 0) return;
+    if (status === "streaming") return;
+
+    const handle = setTimeout(() => {
+      // Do not persist older pages loaded via infinite scroll (ephemeral by design).
+      const persistable = displayMessages.filter((m) => !olderEphemeralIdSet.has(m.id));
+      if (persistable.length === 0) return;
+      void saveCachedThreadMessages(id, persistable);
+    }, 750);
+
+    return () => clearTimeout(handle);
+  }, [id, isThread, displayMessages, status, olderEphemeralIdSet]);
+
   useEffect(() => {
     if (prevIdRef.current !== id) {
-      // Clear all input and file state
       setInput("");
       setSelectedFiles([]);
       setUploadedAttachments([]);
       setUploadingFiles([]);
       setIsUploading(false);
       setIsSendingMessage(false);
-      
-      // Clear error states
       setQuotaError(null);
       setShowNoSubscriptionDialog(false);
-
-      // Update previous ID reference
       prevIdRef.current = id;
     }
   }, [id, setInput, setSelectedFiles, setUploadedAttachments, setUploadingFiles, setIsUploading, setIsSendingMessage, setQuotaError, setShowNoSubscriptionDialog]);
 
-  // Bind handlers from the hook to current renderedMessages
   const onRegenerateAssistant = useCallback(
     (messageId: string) => {
       handleRegenerateAssistant(messageId, renderedMessages);
@@ -447,7 +755,6 @@ function ChatInterfaceInternal({
     [handleRegenerateAfterUser, renderedMessages],
   );
 
-  // Store sendMessage in ref to prevent useEffect from re-running
   const sendMessageRef = useRef<((message: UIMessage) => Promise<void>) | null>(null);
   sendMessageRef.current = sendMessage;
 
@@ -457,7 +764,6 @@ function ChatInterfaceInternal({
     [renderedMessages],
   );
 
-  // Auto-start with initial message from context (preserve existing behavior)
   useEffect(() => {
     if (isThread && isAuthenticated && !autoStartTriggeredRef.current) {
       const initialMessage = consumeInitialMessage(id);
@@ -468,7 +774,6 @@ function ChatInterfaceInternal({
     }
   }, [id, isThread, isAuthenticated, consumeInitialMessage, sendMessageRef]);
 
-  // Set custom instruction from prop
   useEffect(() => {
     if (isThread) {
       setCustomInstructionId(initialCustomInstructionId);
@@ -478,10 +783,10 @@ function ChatInterfaceInternal({
     }
   }, [isThread, initialCustomInstructionId, setCustomInstructionId]);
 
-  // Cleanup effect when thread ID changes
   useEffect(() => {
     if (prevIdRef.current !== id) {
       autoStartTriggeredRef.current = false;
+      hadActiveSessionRef.current = false;
       setMessages([]);
       prevIdRef.current = id;
     }
@@ -515,31 +820,21 @@ function ChatInterfaceInternal({
       const messageContent = input.trim();
       const messageId = generateUUID();
 
-      // Reset regeneration pruning state for normal submissions so new messages are included
-      try {
-        if (regenerateAnchorRef.current) {
-          regenerateAnchorRef.current = null;
-        }
-      } catch {}
+      // Do NOT clear regenerateAnchorRef here.
+      // The base history can remain stale for a while (local-first, no live subscription),
+      // and clearing the anchor allows "ghost" assistant messages (pruned locally) to reappear.
 
-      // Clear any existing quota error when user tries to send a new message
       setQuotaError(null);
       setInput("");
-
-      // Set sending state but keep attachments until we know the send succeeded
       setIsSendingMessage(true);
 
-      // Snapshot attachments for this send attempt
       const currentAttachments = [...uploadedAttachments];
-
-      // Build message parts using captured attachments
       const parts: any[] = [];
 
       if (messageContent) {
         parts.push({ type: "text", text: messageContent });
       }
 
-      // Use captured uploaded attachments
       currentAttachments.forEach((attachment) => {
         parts.push({
           type: "file",
@@ -603,10 +898,7 @@ function ChatInterfaceInternal({
   );
 
   const handleStop = useCallback(() => {
-    // Abort the request
     stop();
-    
-    // Manually force status to 'ready' since AI SDK doesn't properly update on abort
     chatStateInstance.getState().setStatus('ready');
     setIsSendingMessage(false);
   }, [stop, chatStateInstance, setIsSendingMessage]);
@@ -615,29 +907,10 @@ function ChatInterfaceInternal({
     setInput(prompt);
   }, [setInput]);
 
-  // Handle loading more messages with scroll position preservation
-  const handleLoadMore = useCallback(() => {
-    // If we're using server data and haven't enabled client pagination yet, enable it first
-    if (initialMessages && !enableClientPagination) {
-      setEnableClientPagination(true);
-      return;
-    }
-    
-    if (paginationStatus === "CanLoadMore") {
-      const scrollContainer = document.querySelector('[role="log"]');
-      const oldScrollHeight = scrollContainer?.scrollHeight || 0;
-      
-      loadMore(5);
-      
-      // Preserve scroll position after loading
-      setTimeout(() => {
-        if (scrollContainer) {
-          const newScrollHeight = scrollContainer.scrollHeight;
-          scrollContainer.scrollTop += (newScrollHeight - oldScrollHeight);
-        }
-      }, 100);
-    }
-  }, [paginationStatus, loadMore, initialMessages, enableClientPagination]);
+
+  const handleScrollToBottom = useCallback(() => {
+    scrollToBottom("smooth");
+  }, [scrollToBottom]);
 
   return (
     <div
@@ -679,28 +952,29 @@ function ChatInterfaceInternal({
       }}
     >
       <div className="flex-1 min-h-0">
-        <Conversation>
-          <ConversationContent className="mx-auto w-full max-w-full md:max-w-3xl p-4 pb-[140px] md:pb-35">
-            {/* Load More button for threads */}
-            {isThread && (paginationStatus === "CanLoadMore" || (initialMessages && hasMoreMessages && !enableClientPagination)) && (
-              <div className="flex justify-center mb-4">
-                <button
-                  onClick={handleLoadMore}
-                  className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground border border-border rounded-md hover:bg-accent transition-colors"
-                >
-                  Load older messages
-                </button>
-              </div>
-            )}
+        <Conversation ref={scrollRef as React.RefObject<HTMLDivElement>}>
+          <ConversationContent ref={contentRef as React.RefObject<HTMLDivElement>} className="mx-auto w-full max-w-full md:max-w-3xl p-4 pb-[140px] md:pb-35">
             
-            {/* Greeting message for welcome page when no messages */}
             {!isThread && renderedMessages.length === 0 && (
               <WelcomeScreen 
                 user={user} 
                 onSuggestionClick={handleSuggestionClick}
               />
             )}
-            {displayMessages.map((message, index) => {
+            {isThread && (
+              <div className="-mt-2 pb-2">
+                <div ref={topSentinelRef} className="h-[1px] w-full" />
+                {isLoadingOlder && (
+                  <div className="flex items-center justify-center py-2">
+                    <span className="text-xs text-muted-foreground">Cargando mensajes anteriores…</span>
+                  </div>
+                )}
+              </div>
+            )}
+            <div
+              className={shouldShowMessages ? "" : "opacity-0"}
+            >
+              {displayMessages.map((message, index) => {
               const isLast = index === displayMessages.length - 1;
               const isStreaming = isLast && (status === "streaming");
               return (
@@ -711,6 +985,7 @@ function ChatInterfaceInternal({
                   disableRegenerate={status === "streaming"}
                   onRegenerateAssistantMessage={onRegenerateAssistant}
                   onRegenerateAfterUserMessage={onRegenerateAfterUser}
+                  onResponseReady={handleResponseReady}
                   onEditUserMessage={async (
                     messageId: string,
                     newContent: string
@@ -761,6 +1036,7 @@ function ChatInterfaceInternal({
                 />
               );
             })}
+            </div>
             {(status === "submitted" || status === "streaming") &&
               !hasAssistantMessage && (
                 <Message from={"assistant"}>
@@ -772,11 +1048,9 @@ function ChatInterfaceInternal({
                 </Message>
               )}
           </ConversationContent>
-          <ConversationScrollButton />
         </Conversation>
       </div>
 
-      {/* Prompt input overlayed at bottom of the main area */}
       <ChatInputArea
         disableInput={promptDisabled}
         selectedModel={selectedModel}
@@ -784,6 +1058,9 @@ function ChatInterfaceInternal({
         onSubmit={handleSubmit}
         onStop={handleStop}
         threadId={isThread ? id : undefined}
+        isAtBottom={isAtBottom}
+        onScrollToBottom={handleScrollToBottom}
+        showScrollToBottom={!isAtBottom && displayMessages.length > 0}
       />
 
       {isDragActive && (
@@ -802,7 +1079,6 @@ function ChatInterfaceInternal({
   );
 }
 
-// Wrapper component that provides the store
 export default function ChatInterface(props: ChatInterfaceProps) {
   return (
     <ChatStoreProvider initialMessages={props.initialMessages || []}>

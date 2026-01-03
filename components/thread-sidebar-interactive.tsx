@@ -2,7 +2,15 @@
 
 import { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Preloaded, usePaginatedQuery, useMutation, useConvexAuth, Authenticated, AuthLoading, Unauthenticated } from "convex/react";
+import {
+  usePaginatedQuery,
+  useMutation,
+  useConvexAuth,
+  useQuery,
+  Authenticated,
+  AuthLoading,
+  Unauthenticated,
+} from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ai/ui/button";
 import { Loader } from "@/components/ai/loader";
@@ -26,6 +34,14 @@ import {
 } from "@/components/ai/ui/context-menu";
 import { useThreadShare } from "@/lib/hooks/useThreadShare";
 import { ShareSettingsDialog } from "@/components/share/ShareSettingsDialog";
+import { prefetchCachedThreadMessages } from "@/lib/local-first/thread-messages-cache";
+import {
+  getLastUserKey,
+  loadSidebarThreads,
+  saveSidebarThreads,
+  setLastUserKey,
+  type SidebarThread,
+} from "@/lib/local-first/sidebar-cache";
 
 interface Thread {
   threadId: string;
@@ -44,10 +60,6 @@ interface Thread {
   sharedAt?: number;
 }
 
-interface ThreadSidebarInteractiveProps {
-  preloadedThreads?: Preloaded<typeof api.threads.getUserThreadsPaginatedSafe>;
-}
-
 const PAGE_SIZE = 20;
 const GROUP_ORDER = [
   "Fijados",
@@ -60,24 +72,6 @@ const GROUP_ORDER = [
 const MAX_TITLE_LENGTH = 35;
 const BLUR_DELAY = 150;
 
-const parsePreloadedSnapshot = (
-  preloadedThreads?: Preloaded<typeof api.threads.getUserThreadsPaginatedSafe>,
-) => {
-  const snapshot = (preloadedThreads as {
-    _valueJSON?: {
-      page?: Thread[];
-      continueCursor?: string;
-      isDone?: boolean;
-    };
-  })?._valueJSON;
-
-  return {
-    page: snapshot?.page ?? [],
-    continueCursor: snapshot?.continueCursor ?? null,
-    isDone: snapshot?.isDone ?? true,
-  };
-};
-
 const sortThreads = (a: Thread, b: Thread) => {
   if (a.pinned && !b.pinned) return -1;
   if (!a.pinned && b.pinned) return 1;
@@ -89,8 +83,7 @@ const sortThreads = (a: Thread, b: Thread) => {
 };
 
 export function ThreadSidebarInteractive({
-  preloadedThreads,
-}: ThreadSidebarInteractiveProps) {
+}: {}) {
   const { isAuthenticated, isLoading: authLoading } = useConvexAuth();
   const router = useRouter();
   const pathname = usePathname();
@@ -107,6 +100,10 @@ export function ThreadSidebarInteractive({
   const [shareDialogThread, setShareDialogThread] = useState<Thread | null>(null);
   const requestInFlightRef = useRef(false);
   const [optimisticTitles, setOptimisticTitles] = useState<Record<string, string>>({});
+  const prefetchedThreadIdsRef = useRef<Set<string>>(new Set());
+  const [cachedThreads, setCachedThreads] = useState<Thread[] | null>(null);
+  const [cacheLoaded, setCacheLoaded] = useState(false);
+  const [userKey, setUserKey] = useState<string | null>(() => getLastUserKey());
   const {
     resolveShareState,
     handleToggleShare,
@@ -115,45 +112,71 @@ export function ThreadSidebarInteractive({
     handleRegenerateShareLink,
   } = useThreadShare();
 
+  const currentUser = useQuery(api.users.getCurrentUser, isAuthenticated ? {} : "skip");
+  useEffect(() => {
+    if (currentUser?.workos_id) {
+      if (userKey && userKey !== currentUser.workos_id) {
+        setCachedThreads(null);
+        setCacheLoaded(false);
+      }
+      setUserKey(currentUser.workos_id);
+      setLastUserKey(currentUser.workos_id);
+    }
+  }, [currentUser?.workos_id, userKey]);
+
   useEffect(() => {
     setHasHydrated(true);
   }, []);
 
-  const preloadedSnapshot = useMemo(
-    () => parsePreloadedSnapshot(preloadedThreads),
-    [preloadedThreads],
-  );
-
-  const preloadedIsDone = preloadedSnapshot.isDone;
-  const hasPreloadedMore = Boolean(preloadedThreads && !preloadedIsDone);
-  // Avoid running live paginated query until auth is confirmed
-  const shouldUsePaginated = hasHydrated && isAuthenticated && (!preloadedThreads || hasPreloadedMore);
-
+  const shouldUsePaginated = hasHydrated && !authLoading;
   const paginatedArgs = useMemo(
     () => ({
       paginationOpts: {
         numItems: PAGE_SIZE,
-        cursor: hasPreloadedMore ? preloadedSnapshot.continueCursor : null,
+        cursor: null,
       },
     }),
-    [hasPreloadedMore, preloadedSnapshot.continueCursor],
-  );
-
-  const paginatedOptions = useMemo(
-    () => ({ initialNumItems: hasPreloadedMore ? 0 : PAGE_SIZE }),
-    [hasPreloadedMore],
+    [],
   );
 
   const paginated = usePaginatedQuery(
     api.threads.getUserThreadsPaginatedSafe,
     shouldUsePaginated ? paginatedArgs : "skip",
-    paginatedOptions,
+    { initialNumItems: PAGE_SIZE },
   );
 
   const paginatedResults = useMemo(
     () => (paginated?.results ?? []) as Thread[],
     [paginated?.results],
   );
+
+  useEffect(() => {
+    if (!hasHydrated || authLoading) return;
+    if (!userKey) return;
+    let cancelled = false;
+    setCacheLoaded(false);
+    void (async () => {
+      const cached = await loadSidebarThreads(userKey);
+      if (cancelled) return;
+      setCachedThreads((cached ?? null) as Thread[] | null);
+      setCacheLoaded(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [userKey, hasHydrated, authLoading]);
+
+  useEffect(() => {
+    if (!userKey) return;
+    if (!paginatedResults || paginatedResults.length === 0) return;
+    void saveSidebarThreads(userKey, paginatedResults as unknown as SidebarThread[], 15);
+  }, [userKey, paginatedResults]);
+
+  const baseThreads: Thread[] = useMemo(() => {
+    if (paginatedResults.length > 0) return paginatedResults;
+    if (cacheLoaded && cachedThreads && cachedThreads.length > 0) return cachedThreads;
+    return [];
+  }, [paginatedResults, cacheLoaded, cachedThreads]);
   const paginatedStatus = shouldUsePaginated
     ? paginated?.status ?? "LoadingFirstPage"
     : "Exhausted";
@@ -190,20 +213,8 @@ export function ThreadSidebarInteractive({
   }, [searchQuery]);
 
   const combinedThreads = useMemo(() => {
-    const pageFromPreload = preloadedSnapshot.page;
-    const allThreads = hasPreloadedMore
-      ? [...pageFromPreload, ...paginatedResults]
-      : paginatedResults.length > 0
-        ? paginatedResults
-        : pageFromPreload;
-
-    const threadsById = new Map<string, Thread>();
-    for (const thread of allThreads) {
-      threadsById.set(thread.threadId, thread);
-    }
-
-    return Array.from(threadsById.values()).sort(sortThreads);
-  }, [hasPreloadedMore, paginatedResults, preloadedSnapshot.page]);
+    return [...baseThreads].sort(sortThreads);
+  }, [baseThreads]);
 
   const filteredThreads = useMemo(() => {
     if (!searchQuery) {
@@ -314,7 +325,7 @@ export function ThreadSidebarInteractive({
     event.stopPropagation();
 
     if (pathname === `/chat/${threadId}`) {
-      router.replace("/");
+      router.replace("/chat");
     }
 
     try {
@@ -322,10 +333,10 @@ export function ThreadSidebarInteractive({
       const thread = combinedThreads.find((t) => t.threadId === threadId);
       await deleteThread({ threadId });
       await logThreadRemoved(String(threadId), thread?.title);
-      toast.success("Hilo eliminado");
+      toast.success("Conversación eliminada");
     } catch (error) {
       console.error("Failed to delete thread:", error);
-      toast.error("Error al eliminar el hilo");
+      toast.error("Error al eliminar la conversación");
     }
   };
 
@@ -374,7 +385,7 @@ export function ThreadSidebarInteractive({
         delete newTitles[threadId];
         return newTitles;
       });
-      toast.success("Hilo renombrado");
+      toast.success("Conversación renombrada");
     } catch (error) {
       console.error("Failed to rename thread:", error);
       // Revert optimistic and return to editing with original
@@ -385,7 +396,7 @@ export function ThreadSidebarInteractive({
       });
       setEditingThreadId(threadId);
       setEditingTitle(originalThread.title);
-      toast.error("Error al renombrar el hilo");
+      toast.error("Error al renombrar la conversación");
     }
   };
 
@@ -398,10 +409,10 @@ export function ThreadSidebarInteractive({
     event.stopPropagation();
     try {
       await togglePinThread({ threadId });
-      toast.success("Estado de fijado actualizado");
+      toast.success("Conversación fijada/desfijada");
     } catch (error) {
       console.error("Failed to toggle pin:", error);
-      toast.error("Error al actualizar el estado de fijado");
+      toast.error("Error al fijar/desfijar la conversación");
     }
   };
 
@@ -436,6 +447,9 @@ export function ThreadSidebarInteractive({
 
   const handleThreadNavigation = useCallback(
     (threadId: string) => {
+      // Prefetch cached messages in parallel with route navigation (warms in-memory cache).
+      prefetchCachedThreadMessages(threadId);
+
       router.push(`/chat/${threadId}`);
       if (isMobileViewport) {
         closeSidebar();
@@ -443,6 +457,52 @@ export function ThreadSidebarInteractive({
     },
     [router, closeSidebar, isMobileViewport],
   );
+
+  // Idle prefetch: warm Next.js route (RSC) + local-first cache for the most visible threads.
+  // This targets the breakdown's slow segment: click -> routeSeen.
+  useEffect(() => {
+    if (!hasHydrated || authLoading) return;
+
+    const ids: string[] = [];
+    for (const groupName of GROUP_ORDER) {
+      const group = groupedThreads[groupName];
+      if (!group) continue;
+      for (const t of group) {
+        if (t.threadId && pathname !== `/chat/${t.threadId}`) {
+          ids.push(t.threadId);
+        }
+      }
+    }
+
+    const toPrefetch = ids.slice(0, 12);
+    if (toPrefetch.length === 0) return;
+
+    const run = () => {
+      for (const threadId of toPrefetch) {
+        if (prefetchedThreadIdsRef.current.has(threadId)) continue;
+        prefetchedThreadIdsRef.current.add(threadId);
+        router.prefetch(`/chat/${threadId}`);
+        prefetchCachedThreadMessages(threadId);
+      }
+    };
+
+    const ric = (window as any).requestIdleCallback as
+      | ((cb: () => void, opts?: { timeout?: number }) => number)
+      | undefined;
+    const cic = (window as any).cancelIdleCallback as
+      | ((id: number) => void)
+      | undefined;
+
+    if (typeof ric === "function") {
+      const id = ric(run, { timeout: 1500 });
+      return () => {
+        if (typeof cic === "function") cic(id);
+      };
+    }
+
+    const timeout = window.setTimeout(run, 0);
+    return () => window.clearTimeout(timeout);
+  }, [groupedThreads, hasHydrated, authLoading, router, pathname]);
 
 
   const renderThreadItem = (thread: Thread) => {
@@ -454,6 +514,22 @@ export function ThreadSidebarInteractive({
         <ContextMenuTrigger>
           <div
             onClick={isEditing ? handleContainerClick : () => handleThreadNavigation(thread.threadId)}
+            onPointerEnter={() => {
+              // Warm both the route and local-first cache on hover (mouse/pen).
+              if (!prefetchedThreadIdsRef.current.has(thread.threadId)) {
+                prefetchedThreadIdsRef.current.add(thread.threadId);
+                router.prefetch(`/chat/${thread.threadId}`);
+                prefetchCachedThreadMessages(thread.threadId);
+              }
+            }}
+            onPointerDown={() => {
+              // Touch/mobile doesn't hover; start warming as early as possible.
+              if (!prefetchedThreadIdsRef.current.has(thread.threadId)) {
+                prefetchedThreadIdsRef.current.add(thread.threadId);
+                router.prefetch(`/chat/${thread.threadId}`);
+                prefetchCachedThreadMessages(thread.threadId);
+              }
+            }}
             className={cn(
               "group relative mb-1 flex cursor-pointer items-center gap-2 overflow-hidden rounded-lg p-2.5 transition-colors",
               "hover:bg-hover hover:text-accent-foreground",
@@ -600,49 +676,49 @@ export function ThreadSidebarInteractive({
   };
 
   const renderEmptyState = () => {
-    // During auth loading, show nothing changing to avoid flicker from empty safe query
-    if (authLoading) {
-      return null;
-    }
-    if (filteredThreads.length === 0 && searchQuery) {
+    // Keep sidebar body blank until we have client auth + data to avoid layout shifts.
+    if (authLoading || !hasHydrated) return null;
+    
+    // If there are threads to show, don't render empty state
+    if (filteredThreads.length > 0) return null;
+    
+    if (searchQuery) {
       return (
-        <div className="p-4 text-center text-muted-foreground">
-          <p className="text-sm">
-            No se encontraron chats que coincidan con &quot;{searchQuery}&quot;
-          </p>
-          <p className="text-xs">Intenta ajustar tus términos de búsqueda</p>
+        <div className="flex h-full items-center justify-center px-5">
+          <div className="text-center">
+            <p className="text-sm text-muted-foreground">
+              No se encontraron chats que coincidan con "{searchQuery}"
+            </p>
+          </div>
         </div>
       );
     }
+    
+    // No threads and no search query
+    return (
+      <div className="flex h-full items-center justify-center px-5">
+      </div>
+    );
+  };
 
-    if (filteredThreads.length === 0) {
-      return (
-        <div className="p-4 text-center text-muted-foreground">
-          <p className="text-sm">Aún no hay chats</p>
-          <p className="text-xs">Inicia una nueva conversación</p>
-        </div>
-      );
-    }
-
-    return null;
+  const renderCachedOnlyList = () => {
+    if (!cacheLoaded || !cachedThreads || cachedThreads.length === 0) return null;
+    return (
+      <div
+        ref={scrollContainerRef}
+        className="sidebar-scroll-container h-full w-full overflow-y-auto"
+      >
+        {GROUP_ORDER.map((groupName) => renderThreadGroup(groupName, groupedThreads[groupName]))}
+        <div ref={sentinelRef} className="h-[1px] w-full" />
+      </div>
+    );
   };
 
   return (
     <div className="flex h-full flex-col">
       <div className="flex-1 min-h-0">
         <AuthLoading>
-          {/* Keep layout stable while auth loads; render snapshot groups when present */}
-          {preloadedSnapshot.page.length > 0 ? (
-            <div
-              ref={scrollContainerRef}
-              className="sidebar-scroll-container h-full w-full overflow-y-auto"
-            >
-              {GROUP_ORDER.map((groupName) =>
-                renderThreadGroup(groupName, groupedThreads[groupName]),
-              )}
-              <div ref={sentinelRef} className="h-[1px] w-full" />
-            </div>
-          ) : null}
+          {renderCachedOnlyList()}
         </AuthLoading>
         <Authenticated>
           {renderEmptyState() || (
@@ -658,29 +734,9 @@ export function ThreadSidebarInteractive({
           )}
         </Authenticated>
         <Unauthenticated>
-          {/* If unauthenticated, show snapshot if any; otherwise show empty-state copy */}
-          {preloadedSnapshot.page.length > 0 ? (
-            <div
-              ref={scrollContainerRef}
-              className="sidebar-scroll-container h-full w-full overflow-y-auto"
-            >
-              {GROUP_ORDER.map((groupName) =>
-                renderThreadGroup(groupName, groupedThreads[groupName]),
-              )}
-              <div ref={sentinelRef} className="h-[1px] w-full" />
-            </div>
-          ) : (
-            renderEmptyState()
-          )}
+          {null}
         </Unauthenticated>
       </div>
-
-      {isScrollLoading && (
-        <div className="border-t border-border p-2 text-center text-muted-foreground">
-          <Loader size={14} className="mx-auto" />
-          <p className="mt-1 text-xs">Cargando más chats...</p>
-        </div>
-      )}
 
       {/* Button removed: automatic infinite scroll handles pagination */}
 

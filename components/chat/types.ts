@@ -5,6 +5,9 @@ import type { FileAttachment } from "@/lib/file-utils";
 export interface ChatInterfaceProps {
   id: string;
   initialMessages?: UIMessage[];
+  serverMessages?: UIMessage[];
+  initialHistoryCursor?: string | null;
+  initialHistoryIsDone?: boolean;
   hasMoreMessages?: boolean;
   disableInput?: boolean;
   onInitialMessage?: (message: UIMessage) => Promise<void>;

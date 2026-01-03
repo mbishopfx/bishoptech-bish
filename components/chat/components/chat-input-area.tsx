@@ -4,6 +4,7 @@ import {
   AttachmentsIcon,
   GlobeIcon,
 } from "@/components/ui/icons/svg-icons";
+import { ChevronDown } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -41,6 +42,9 @@ interface ChatInputAreaProps {
   onSubmit: (e?: React.FormEvent) => void;
   onStop: () => void;
   threadId?: string;
+  isAtBottom?: boolean;
+  onScrollToBottom?: () => void;
+  showScrollToBottom?: boolean;
 }
 
 export const ChatInputArea = React.memo(function ChatInputArea({
@@ -50,6 +54,9 @@ export const ChatInputArea = React.memo(function ChatInputArea({
   onSubmit,
   onStop,
   threadId,
+  isAtBottom,
+  onScrollToBottom,
+  showScrollToBottom,
 }: ChatInputAreaProps) {
   const status = useChatStatus();
   const input = useChatUIStore((s) => s.input);
@@ -148,7 +155,18 @@ export const ChatInputArea = React.memo(function ChatInputArea({
 
   return (
     <div className="absolute bottom-0 left-0 right-0 md:pb-0">
-      <div className="mx-auto w-full max-w-full md:max-w-3xl px-0 md:px-2 pb-0 md:pb-0">
+      <div className="mx-auto w-full max-w-full md:max-w-3xl px-0 md:px-2 pb-0 md:pb-0 relative">
+        {showScrollToBottom && (
+          <div className="absolute -top-12 left-0 right-0 flex justify-center pointer-events-none z-20">
+            <button
+              onClick={onScrollToBottom}
+              className="pointer-events-auto flex items-center justify-center size-9 bg-background dark:bg-[oklch(0.2046_0_0)] border border-border rounded-full cursor-pointer"
+              aria-label="Scroll to bottom"
+            >
+              <ChevronDown className="size-5" />
+            </button>
+          </div>
+        )}
         {/* No Subscription Dialog */}
         <NoSubscriptionDialog
           isOpen={showNoSubscriptionDialog}
@@ -338,6 +356,9 @@ export const ChatInputArea = React.memo(function ChatInputArea({
     prevProps.onSubmit === nextProps.onSubmit &&
     prevProps.onStop === nextProps.onStop &&
     prevProps.onModelChange === nextProps.onModelChange &&
-    prevProps.threadId === nextProps.threadId
+    prevProps.threadId === nextProps.threadId &&
+    prevProps.isAtBottom === nextProps.isAtBottom &&
+    prevProps.showScrollToBottom === nextProps.showScrollToBottom &&
+    prevProps.onScrollToBottom === nextProps.onScrollToBottom
   );
 });

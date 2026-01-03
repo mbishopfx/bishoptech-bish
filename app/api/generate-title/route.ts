@@ -177,8 +177,13 @@ const generateTitle = (trimmedMessage: string) =>
     try: () =>
       generateText({
         model: TITLE_GENERATION_MODEL,
-        prompt: `Summarize user message in few words. Be as concise without losing the context, respond in the same language as the user message, Do not respond to the user message, Do not use markdown or html.
-User message: ${trimmedMessage}`,
+        prompt: `You are an expert title generator. You are given a message and you need to generate a short title based on it.
+        - you will generate a short 3-4 words title based on the first message a user begins a conversation with
+        - the title should creative and unique
+        - do not write anything other than the title
+        - do not use quotes or colons
+        - do not use any other text other than the title
+        User message: ${trimmedMessage}`,
         temperature: 0.5,
         maxOutputTokens: 50,
       }),
