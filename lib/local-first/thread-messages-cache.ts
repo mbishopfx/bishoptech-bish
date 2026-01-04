@@ -75,6 +75,6 @@ export async function reconcileCacheWithServer(
   threadId: string,
   serverMessages: UIMessage[],
 ): Promise<void> {
-  if (!serverMessages) return;
+  if (!Array.isArray(serverMessages)) return;
   await saveCachedThreadMessages(threadId, serverMessages);
 }

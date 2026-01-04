@@ -1,15 +1,25 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useState, useEffect } from "react";
 import ChatInterface from "@/components/chat";
 import { HomeMessageHandler } from "@/components/home-message-handler";
 import { ChatMessagesClient } from "@/components/chat-messages-client";
+import { useSelectedThreadUrlSync } from "@/lib/hooks/useSelectedThreadUrlSync";
+import { useSelectedThreadStore } from "@/lib/stores/selected-thread-store";
 
 export function ChatRouteClient() {
-  const params = useParams<{ id?: string }>();
-  const threadId = typeof params?.id === "string" ? params.id : undefined;
+  const { isHydrated } = useSelectedThreadUrlSync();
+  const selectedThreadId = useSelectedThreadStore((s) => s.selectedThreadId);
+  const [mounted, setMounted] = useState(false);
 
-  if (!threadId) {
+  useEffect(() => setMounted(true), []);
+
+  // Avoid flicker: don't render the welcome state until client has mounted + url sync is active.
+  if (!mounted || !isHydrated) {
+    return null;
+  }
+
+  if (!selectedThreadId) {
     return (
       <HomeMessageHandler
         action={(handleInitialMessage) => (
@@ -19,7 +29,7 @@ export function ChatRouteClient() {
     );
   }
 
-  return <ChatMessagesClient threadId={threadId} />;
+  return <ChatMessagesClient threadId={selectedThreadId} />;
 }
 
 

@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState, useEffect, useRef, useCallback } from "react";
-import { usePathname, useRouter } from "next/navigation";
 import {
   usePaginatedQuery,
   useMutation,
@@ -35,6 +34,8 @@ import {
 import { useThreadShare } from "@/lib/hooks/useThreadShare";
 import { ShareSettingsDialog } from "@/components/share/ShareSettingsDialog";
 import { prefetchCachedThreadMessages } from "@/lib/local-first/thread-messages-cache";
+import { useThreadOpenPerfStore } from "@/lib/stores/thread-open-perf-store";
+import { useSelectedThreadStore } from "@/lib/stores/selected-thread-store";
 import {
   getLastUserKey,
   loadSidebarThreads,
@@ -85,9 +86,12 @@ const sortThreads = (a: Thread, b: Thread) => {
 export function ThreadSidebarInteractive({
 }: {}) {
   const { isAuthenticated, isLoading: authLoading } = useConvexAuth();
-  const router = useRouter();
-  const pathname = usePathname();
   const { closeSidebar, isMobile: isMobileViewport } = useChatSidebarControls();
+  const startThreadOpenFromSidebar = useThreadOpenPerfStore((s) => s.startFromSidebar);
+  const markPushCalled = useThreadOpenPerfStore((s) => s.markPushCalled);
+  const noteCachePrefetch = useThreadOpenPerfStore((s) => s.noteCachePrefetch);
+  const selectedThreadId = useSelectedThreadStore((s) => s.selectedThreadId);
+  const setSelectedThreadId = useSelectedThreadStore((s) => s.setSelectedThreadId);
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -324,8 +328,8 @@ export function ThreadSidebarInteractive({
   const handleDeleteThread = async (threadId: string, event: React.MouseEvent) => {
     event.stopPropagation();
 
-    if (pathname === `/chat/${threadId}`) {
-      router.replace("/chat");
+    if (selectedThreadId === threadId) {
+      setSelectedThreadId(null);
     }
 
     try {
@@ -447,15 +451,20 @@ export function ThreadSidebarInteractive({
 
   const handleThreadNavigation = useCallback(
     (threadId: string) => {
+      // Perf metric: sidebar press -> first text rendered in conversation.
+      startThreadOpenFromSidebar(threadId);
+      markPushCalled(threadId);
+
       // Prefetch cached messages in parallel with route navigation (warms in-memory cache).
       prefetchCachedThreadMessages(threadId);
 
-      router.push(`/chat/${threadId}`);
+      // SPA thread switching: keep chat mounted and update URL via History API.
+      setSelectedThreadId(threadId);
       if (isMobileViewport) {
         closeSidebar();
       }
     },
-    [router, closeSidebar, isMobileViewport],
+    [closeSidebar, isMobileViewport, startThreadOpenFromSidebar, markPushCalled, setSelectedThreadId],
   );
 
   // Idle prefetch: warm Next.js route (RSC) + local-first cache for the most visible threads.
@@ -468,7 +477,7 @@ export function ThreadSidebarInteractive({
       const group = groupedThreads[groupName];
       if (!group) continue;
       for (const t of group) {
-        if (t.threadId && pathname !== `/chat/${t.threadId}`) {
+        if (t.threadId && selectedThreadId !== t.threadId) {
           ids.push(t.threadId);
         }
       }
@@ -481,7 +490,7 @@ export function ThreadSidebarInteractive({
       for (const threadId of toPrefetch) {
         if (prefetchedThreadIdsRef.current.has(threadId)) continue;
         prefetchedThreadIdsRef.current.add(threadId);
-        router.prefetch(`/chat/${threadId}`);
+        noteCachePrefetch(threadId);
         prefetchCachedThreadMessages(threadId);
       }
     };
@@ -502,7 +511,7 @@ export function ThreadSidebarInteractive({
 
     const timeout = window.setTimeout(run, 0);
     return () => window.clearTimeout(timeout);
-  }, [groupedThreads, hasHydrated, authLoading, router, pathname]);
+  }, [groupedThreads, hasHydrated, authLoading, noteCachePrefetch, selectedThreadId]);
 
 
   const renderThreadItem = (thread: Thread) => {
@@ -518,7 +527,7 @@ export function ThreadSidebarInteractive({
               // Warm both the route and local-first cache on hover (mouse/pen).
               if (!prefetchedThreadIdsRef.current.has(thread.threadId)) {
                 prefetchedThreadIdsRef.current.add(thread.threadId);
-                router.prefetch(`/chat/${thread.threadId}`);
+                noteCachePrefetch(thread.threadId);
                 prefetchCachedThreadMessages(thread.threadId);
               }
             }}
@@ -526,14 +535,14 @@ export function ThreadSidebarInteractive({
               // Touch/mobile doesn't hover; start warming as early as possible.
               if (!prefetchedThreadIdsRef.current.has(thread.threadId)) {
                 prefetchedThreadIdsRef.current.add(thread.threadId);
-                router.prefetch(`/chat/${thread.threadId}`);
+                noteCachePrefetch(thread.threadId);
                 prefetchCachedThreadMessages(thread.threadId);
               }
             }}
             className={cn(
               "group relative mb-1 flex cursor-pointer items-center gap-2 overflow-hidden rounded-lg p-2.5 transition-colors",
               "hover:bg-hover hover:text-accent-foreground",
-              pathname === `/chat/${thread.threadId}` &&
+              selectedThreadId === thread.threadId &&
                 "bg-hover text-accent-foreground",
               isEditing && "bg-hover text-accent-foreground",
             )}

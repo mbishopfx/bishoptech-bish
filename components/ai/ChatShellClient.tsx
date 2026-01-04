@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { ChevronLeftIcon, ChevronRightIcon, XIcon } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { useIsMobile } from "@/lib/hooks/use-mobile";
+import { ThreadOpenPerfOverlay } from "@/components/perf/ThreadOpenPerfOverlay";
 
 type SidebarControlContextValue = {
   closeSidebar: () => void;
@@ -133,6 +134,7 @@ export function ChatShellClient({ children, className, sidebar }: ChatShellClien
               {children}
             </div>
           </div>
+          <ThreadOpenPerfOverlay />
         </main>
       </div>
     </div>

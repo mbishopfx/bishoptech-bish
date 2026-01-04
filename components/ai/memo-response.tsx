@@ -111,8 +111,8 @@ export const MemoResponse = memo(
   },
   (prevProps, nextProps) =>
     prevProps.messageId === nextProps.messageId &&
-    prevProps.partIdx === nextProps.partIdx
+    prevProps.partIdx === nextProps.partIdx &&
+    prevProps.text === nextProps.text
 );
 
 MemoResponse.displayName = 'MemoResponse';
-
