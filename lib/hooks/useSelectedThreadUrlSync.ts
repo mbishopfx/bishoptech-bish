@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { useSelectedThreadStore } from "@/lib/stores/selected-thread-store";
 
 declare global {
@@ -56,7 +56,6 @@ export function useSelectedThreadUrlSync() {
 
   const skipNextUrlWriteRef = useRef(false);
   const hasInitializedRef = useRef(false);
-  const [isHydrated, setIsHydrated] = useState(false);
 
   // Initialize store from current URL + keep in sync on back/forward.
   useEffect(() => {
@@ -79,9 +78,6 @@ export function useSelectedThreadUrlSync() {
 
     const onPopState = () => syncFromLocation();
     const onNavEvent = () => syncFromLocation();
-
-    // Mark hydrated once effects are running (prevents `welcome` component flash).
-    setIsHydrated(true);
 
     window.addEventListener("popstate", onPopState);
     window.addEventListener(RIFT_NAV_EVENT, onNavEvent);
@@ -106,8 +102,6 @@ export function useSelectedThreadUrlSync() {
 
     window.history.pushState({ threadId: selectedThreadId }, "", nextPath);
   }, [selectedThreadId]);
-
-  return { isHydrated };
 }
 
 

@@ -20,6 +20,7 @@ export function ChatMessagesClient({ threadId }: { threadId: string }) {
   // CachedChatWrapper handles loading cached messages and passing them to ChatInterface
   return (
     <CachedChatWrapper
+      key={threadId}
       threadId={threadId}
       customInstructionId={threadInfo?.customInstructionId}
     />
