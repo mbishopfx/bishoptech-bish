@@ -22,6 +22,21 @@ export default function UpdatesPage() {
   // Static data - in a real app, this could come from a CMS or API
   const updates: UpdateItem[] = [
     {
+      id: '1.2.0',
+      version: '1.2.0',
+      date: '2026-01-06',
+      title: 'Mejoras de Rendimiento y Nuevas Funcionalidades',
+      description: 'Actualización importante con mejoras significativas de rendimiento, nuevas instrucciones personalizadas, modelos de IA adicionales y correcciones de estabilidad.',
+      features: [
+        'Mejoras masivas de rendimiento en toda la plataforma',
+        'Nuevo sistema de instrucciones personalizadas para modificar el comportamiento de la IA',
+        'Nuevos modelos de IA agregados a la plataforma',
+        'Múltiples correcciones de estabilidad y bugfixes',
+        'Optimizaciones en el procesamiento de solicitudes y respuestas',
+      ],
+      isInstalled: true
+    },
+    {
       id: '1.1.1',
       version: '1.1.1',
       date: '2025-11-27',

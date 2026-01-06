@@ -1,14 +1,8 @@
 import { ThreadSidebarHeader } from "./thread-sidebar-header";
 import { ThreadSidebarInteractive } from "../thread-sidebar-interactive";
-import { UserProfileSection } from "./user-profile-section-server";
-import { Preloaded } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { UserProfileSection } from "./user-profile-section";
 
-interface ThreadSidebarLayoutProps {
-  preloadedThreads?: Preloaded<typeof api.threads.getUserThreadsPaginatedSafe>;
-}
-
-export function ThreadSidebarLayout({ preloadedThreads }: ThreadSidebarLayoutProps) {
+export function ThreadSidebarLayout() {
   return (
     <div className="h-full w-full bg-background dark:bg-popover-main dark:backdrop-blur-sm border-r border-[#EAEAEA] dark:border-border flex flex-col">
       {/* Header and Search */}
@@ -16,7 +10,7 @@ export function ThreadSidebarLayout({ preloadedThreads }: ThreadSidebarLayoutPro
 
       {/* Thread List with Search */}
       <div className="flex-1 min-h-0">
-        <ThreadSidebarInteractive preloadedThreads={preloadedThreads} />
+        <ThreadSidebarInteractive />
       </div>
 
       {/* User Profile Section */}

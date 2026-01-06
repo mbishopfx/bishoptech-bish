@@ -1,71 +1,52 @@
 'use client';
 
-import { Button } from '@/components/ai/ui/button';
 import { cn } from '@/lib/utils';
-import { ArrowDownIcon } from 'lucide-react';
-import type { ComponentProps } from 'react';
-import { useCallback } from 'react';
-import { StickToBottom, useStickToBottomContext } from 'use-stick-to-bottom';
+import { forwardRef, type ComponentProps } from 'react';
 
-export type ConversationProps = ComponentProps<typeof StickToBottom>;
+export type ConversationProps = ComponentProps<'div'>;
 
-export const Conversation = ({ className, ...props }: ConversationProps) => (
-  <StickToBottom
-    className={cn(
-      'relative h-full w-full flex-1 min-h-0 min-w-0 max-w-[100vw]',
-      className
-    )}
-    initial="instant"
-    resize="smooth"
-    role="log"
-    {...props}
-  />
+export const Conversation = forwardRef<HTMLDivElement, ConversationProps>(
+  ({ className, style, ...props }, ref) => (
+    <div
+      ref={ref}
+      className={cn(
+        'relative h-full w-full flex-1 min-h-0 min-w-0 max-w-[100vw] overflow-y-auto',
+        className
+      )}
+      style={{
+        scrollbarGutter: 'stable both-edges',
+        overflowAnchor: 'none',
+        ...style,
+      }}
+      role="log"
+      {...props}
+    />
+  )
 );
+Conversation.displayName = 'Conversation';
 
-export type ConversationContentProps = ComponentProps<
-  typeof StickToBottom.Content
->;
-
-export const ConversationContent = ({
-  className,
-  ...props
-}: ConversationContentProps) => (
-  <StickToBottom.Content
-    className={cn(
-      'p-4 w-full min-w-0 max-w-[100vw] overflow-x-hidden',
-      className
-    )}
-    {...props}
-  />
-);
-
-export type ConversationScrollButtonProps = ComponentProps<typeof Button>;
-
-export const ConversationScrollButton = ({
-  className,
-  ...props
-}: ConversationScrollButtonProps) => {
-  const { isAtBottom, scrollToBottom } = useStickToBottomContext();
-
-  const handleScrollToBottom = useCallback(() => {
-    scrollToBottom();
-  }, [scrollToBottom]);
-
-  return (
-    !isAtBottom && (
-      <Button
-        className={cn(
-          'absolute bottom-32 left-[50%] translate-x-[-50%] rounded-full z-20',
-          className
-        )}
-        onClick={handleScrollToBottom}
-        size="icon"
-        type="button"
-        variant="outline"
-        {...props}
-      >
-        <ArrowDownIcon className="size-4" />
-      </Button>
-    )
-  );
+export type ConversationContentProps = ComponentProps<'div'> & {
+  withScrollAnchor?: boolean;
 };
+
+export const ConversationContent = forwardRef<HTMLDivElement, ConversationContentProps>(
+  ({ className, children, withScrollAnchor = true, ...props }, ref) => (
+    <div
+      ref={ref}
+      className={cn(
+        'p-4 w-full min-w-0 max-w-[100vw] overflow-x-hidden',
+        className
+      )}
+      {...props}
+    >
+      {children}
+      {withScrollAnchor && (
+        <div 
+          aria-hidden="true"
+          style={{ height: 1, overflowAnchor: 'auto', contain: 'strict' }} 
+        />
+      )}
+    </div>
+  )
+);
+ConversationContent.displayName = 'ConversationContent';

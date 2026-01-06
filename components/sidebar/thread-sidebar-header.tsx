@@ -1,14 +1,17 @@
 "use client";
 
-import Link from "next/link";
 import { Button } from "@/components/ai/ui/button";
 import { AppLogo } from "@/components/ui/icons/svg-icons";
 import { useChatSidebarControls } from "@/components/ai/ChatShellClient";
+import { useSelectedThreadStore } from "@/lib/stores/selected-thread-store";
 
 export function ThreadSidebarHeader() {
   const { closeSidebar, isMobile } = useChatSidebarControls();
+  const setSelectedThreadId = useSelectedThreadStore((s) => s.setSelectedThreadId);
 
-  const handleNewChatClick = () => {
+  const handleNewChatClick = (event: React.MouseEvent) => {
+    event.preventDefault();
+    setSelectedThreadId(null);
     if (isMobile) {
       closeSidebar();
     }
@@ -25,16 +28,14 @@ export function ThreadSidebarHeader() {
 
       <div className="px-3 pb-3 flex-shrink-0">
         <div className="mb-3">
-          <Link href="/chat">
-            <Button
-              size="lg"
-              variant="outline"
-              className="w-full dark:bg-[#111111] dark:border-border outline-none cursor-pointer"
-              onClick={handleNewChatClick}
-            >
-              Nuevo Chat
-            </Button>
-          </Link>
+          <Button
+            size="lg"
+            variant="outline"
+            className="w-full dark:bg-[#111111] dark:border-border outline-none cursor-pointer"
+            onClick={handleNewChatClick}
+          >
+            Nuevo Chat
+          </Button>
         </div>
         <input
           id="thread-search-input"
