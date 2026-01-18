@@ -4,7 +4,7 @@ import { UserProfileSection } from "./user-profile-section";
 
 export function ThreadSidebarLayout() {
   return (
-    <div className="h-full w-full bg-background dark:bg-popover-main dark:backdrop-blur-sm border-r border-[#EAEAEA] dark:border-border flex flex-col">
+    <div className="h-full w-full bg-transparent flex flex-col">
       {/* Header and Search */}
       <ThreadSidebarHeader />
 

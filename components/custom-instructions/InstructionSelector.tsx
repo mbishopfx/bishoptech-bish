@@ -11,15 +11,14 @@ import {
   CommandSeparator,
 } from "@/components/ai/ui/command";
 import { PromptInputButton } from "@/components/ai/prompt-input";
-import * as LucideIcons from "lucide-react";
 import {
   Check,
   type LucideIcon,
-  MessageSquare,
   Slash,
   Settings2,
   PlusIcon,
 } from "lucide-react";
+import { getIconByName } from "./icon-registry";
 import { useAuth } from "@workos-inc/authkit-nextjs/components";
 import { useConvexAuth } from "convex/react";
 import { cn } from "@/lib/utils";
@@ -132,9 +131,7 @@ export function InstructionSelector({
             <>
               <CommandGroup heading="Mis Instrucciones">
                 {myInstructions.map((inst) => {
-                  const Icon =
-                    ((LucideIcons as any)[inst.icon] as LucideIcon) ??
-                    MessageSquare;
+                  const Icon = getIconByName(inst.icon);
                   return (
                     <CommandItem
                       key={inst._id}
@@ -169,9 +166,7 @@ export function InstructionSelector({
             <>
               <CommandGroup heading="Compartidas Conmigo">
                 {sharedWithMe.map((inst) => {
-                  const Icon =
-                    ((LucideIcons as any)[inst.icon] as LucideIcon) ??
-                    MessageSquare;
+                  const Icon = getIconByName(inst.icon);
                   return (
                     <CommandItem
                       key={inst._id}
@@ -208,9 +203,7 @@ export function InstructionSelector({
           {showOrg && (
             <CommandGroup heading="De mi Organización">
               {orgInstructions.map((inst) => {
-                const Icon =
-                  ((LucideIcons as any)[inst.icon] as LucideIcon) ??
-                  MessageSquare;
+                const Icon = getIconByName(inst.icon);
                 return (
                   <CommandItem
                     key={inst._id}

@@ -4,9 +4,9 @@ import * as React from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import * as LucideIcons from "lucide-react";
-import { MessageSquare, type LucideIcon } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getIconByName } from "./icon-registry";
 
 export function SelectedInstructionPill({
   instructionId,
@@ -28,8 +28,7 @@ export function SelectedInstructionPill({
   if (instruction === undefined) return null;
   if (instruction === null) return null;
 
-  const Icon =
-    ((LucideIcons as any)[instruction.icon] as LucideIcon) ?? MessageSquare;
+  const Icon = getIconByName(instruction.icon);
 
   return (
     <div

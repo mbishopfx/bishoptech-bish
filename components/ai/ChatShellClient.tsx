@@ -62,19 +62,18 @@ export function ChatShellClient({ children, className, sidebar }: ChatShellClien
   );
 
   return (
-    <div className="h-[100dvh] w-full overflow-hidden">
+    <div className="h-[100dvh] w-full overflow-hidden bg-background-secondary">
       <div className="flex h-full w-full">
         <aside
           className={cn(
-            "transition-all duration-200 ease-in-out bg-background/95 backdrop-blur-sm border-r dark:bg-popover-main",
+            "transition-all duration-200 ease-in-out bg-background-secondary",
             isMobile
               ? cn(
                   "fixed inset-y-0 left-0 z-50 w-[280px] shadow-2xl",
                   isOpen ? "translate-x-0" : "-translate-x-full"
                 )
               : cn(
-                  "relative hidden shrink-0 md:block",
-                  isOpen ? "border-border" : ""
+                  "relative hidden shrink-0 md:block"
                 )
           )}
           style={sidebarStyle}
@@ -103,33 +102,36 @@ export function ChatShellClient({ children, className, sidebar }: ChatShellClien
           />
         )}
 
-        <main className={cn("relative flex h-full min-h-0 flex-1 flex-col", className)}>
-          {(!isMobile || !isOpen) && (
-            <div className="absolute top-4 left-4 z-10 flex gap-2">
-              <button
-                type="button"
-                onClick={toggle}
-                aria-pressed={isOpen}
-                title={`${isOpen ? 'Hide' : 'Show'} sidebar (⌘+B)`}
-                className={cn(
-                  "inline-flex h-8 w-8 items-center justify-center rounded-md border bg-background/80 backdrop-blur-sm transition-colors shadow-sm dark:bg-popover-main dark:border-border",
-                  "hover:bg-background hover:shadow-md cursor-pointer",
-                  "outline-none"
-                )}
-              >
-                {isOpen ? (
-                  <ChevronLeftIcon className="size-4" />
-                ) : (
-                  <ChevronRightIcon className="size-4" />
-                )}
-              </button>
-              <ThemeToggle size="md" />
-            </div>
+        <main
+          className={cn(
+            "relative flex h-full min-h-0 flex-1 flex-col bg-transparent p-0 sm:p-0 md:p-2.5",
+            className
           )}
-
+        >
           <div className={cn("flex-1 min-h-0")}>
-            {/* Full-width scroll container; pages/components will center content */}
-            <div className="flex h-full min-h-0 flex-col">
+            <div className="relative flex h-full min-h-0 flex-col bg-background sm:rounded-[var(--container-main-border)] sm:border sm:border-border sm:shadow-container overflow-hidden">
+              {(!isMobile || !isOpen) && (
+                <div className="absolute top-4 left-4 z-10 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={toggle}
+                    aria-pressed={isOpen}
+                    title={`${isOpen ? 'Hide' : 'Show'} sidebar (⌘+B)`}
+                    className={cn(
+                      "inline-flex h-8 w-8 items-center justify-center rounded-md border bg-background/80 backdrop-blur-sm transition-colors shadow-sm dark:bg-popover-main dark:border-border",
+                      "hover:bg-background hover:shadow-md cursor-pointer",
+                      "outline-none"
+                    )}
+                  >
+                    {isOpen ? (
+                      <ChevronLeftIcon className="size-4" />
+                    ) : (
+                      <ChevronRightIcon className="size-4" />
+                    )}
+                  </button>
+                  <ThemeToggle size="md" />
+                </div>
+              )}
               {children}
             </div>
           </div>

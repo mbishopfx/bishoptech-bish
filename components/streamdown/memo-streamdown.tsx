@@ -1,13 +1,14 @@
 'use client';
-import { memo, useId, useMemo } from 'react';
+import { memo, useEffect, useId, useMemo, useState } from 'react';
 import ReactMarkdown, { type Options } from 'react-markdown';
-import rehypeKatex from 'rehype-katex';
-import rehypeRaw from 'rehype-raw';
-import remarkGfm from 'remark-gfm';
-import remarkMath from 'remark-math';
-import 'katex/dist/katex.min.css';
+import type { PluggableList } from 'unified';
 import { components as defaultComponents } from './lib/components';
 import { cn } from './lib/utils';
+import {
+  detectMath,
+  detectRawHtml,
+  loadMarkdownPlugins,
+} from './lib/markdown-plugins';
 import {
   useMarkdownBlockByIndex,
   useMarkdownBlockCountForPart,
@@ -37,7 +38,42 @@ const Block = memo(
     const block = useMarkdownBlockByIndex(messageId, partIdx, index);
     if (block === null || block.trim() === '') return null;
 
-    return <ReactMarkdown {...props}>{block}</ReactMarkdown>;
+    const [plugins, setPlugins] = useState<{ remark: PluggableList; rehype: PluggableList } | null>(
+      null
+    );
+
+    useEffect(() => {
+      let active = true;
+      const needsMath = detectMath(block);
+      const needsRaw = detectRawHtml(block);
+
+      loadMarkdownPlugins({ gfm: true, math: needsMath, raw: needsRaw }).then(
+        (loaded) => {
+          if (active) setPlugins(loaded);
+        }
+      );
+
+      return () => {
+        active = false;
+      };
+    }, [block]);
+
+    const remarkPlugins = plugins
+      ? [...plugins.remark, ...(props.remarkPlugins ?? [])]
+      : props.remarkPlugins;
+    const rehypePlugins = plugins
+      ? [...plugins.rehype, ...(props.rehypePlugins ?? [])]
+      : props.rehypePlugins;
+
+    return (
+      <ReactMarkdown
+        {...props}
+        rehypePlugins={rehypePlugins}
+        remarkPlugins={remarkPlugins}
+      >
+        {block}
+      </ReactMarkdown>
+    );
   },
   (prev, next) =>
     prev.messageId === next.messageId &&
@@ -80,8 +116,8 @@ export const Streamdown = memo(
               ...components,
             }}
             key={`${generatedId}-block_${index}`}
-            rehypePlugins={[rehypeKatex, rehypeRaw, ...(rehypePlugins ?? [])]}
-            remarkPlugins={[remarkGfm, remarkMath, ...(remarkPlugins ?? [])]}
+            rehypePlugins={rehypePlugins}
+            remarkPlugins={remarkPlugins}
           />
         ))}
       </div>

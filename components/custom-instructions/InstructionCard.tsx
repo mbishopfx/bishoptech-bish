@@ -1,8 +1,8 @@
 import { Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/components/ai/ui/button";
 import { Badge } from "@/components/ai/ui/badge";
-import { Edit2, Trash2, Users, User, LucideIcon } from "lucide-react";
-import * as LucideIcons from "lucide-react";
+import { Edit2, Trash2, Users, User, type LucideIcon } from "lucide-react";
+import { getIconByName } from "./icon-registry";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { cn } from "@/lib/utils";
@@ -54,7 +54,7 @@ export function InstructionCard({
     }
   };
 
-  const IconComponent = (LucideIcons as any)[instruction.icon] as LucideIcon || LucideIcons.MessageSquare;
+  const IconComponent = getIconByName(instruction.icon);
 
   return (
     <div className="flex items-stretch gap-4 p-4 rounded-2xl border border-border/20 transition-colors group relative bg-white/50 dark:bg-popover-secondary/30">

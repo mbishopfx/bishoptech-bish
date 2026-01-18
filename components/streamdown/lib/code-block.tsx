@@ -1,6 +1,7 @@
 'use client';
 
-import { CheckIcon, CopyIcon } from 'lucide-react';
+import CheckIcon from 'lucide-react/dist/esm/icons/check';
+import CopyIcon from 'lucide-react/dist/esm/icons/copy';
 import {
   type ComponentProps,
   createContext,
@@ -11,7 +12,7 @@ import {
   useState,
   memo,
 } from 'react';
-import { type BundledLanguage, codeToHtml } from 'shiki';
+import type { BundledLanguage } from 'shiki';
 import { cn } from './utils';
 
 type CodeBlockProps = HTMLAttributes<HTMLDivElement> & {
@@ -28,15 +29,16 @@ const CodeBlockContext = createContext<CodeBlockContextType>({
 });
 
 export async function highlightCode(code: string, language: BundledLanguage) {
+  const { codeToHtml } = await import('shiki');
   return Promise.all([
-    await codeToHtml(code, {
+    codeToHtml(code, {
       lang: language,
       theme: 'github-light',
       colorReplacements: {
         '#fff': 'transparent',
       },
     }),
-    await codeToHtml(code, {
+    codeToHtml(code, {
       lang: language,
       theme: 'github-dark',
       colorReplacements: {

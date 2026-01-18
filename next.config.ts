@@ -15,6 +15,7 @@ if (isCI || isVercel) {
 
 const nextConfig: NextConfig = {
   experimental: {
+    optimizePackageImports: ["lucide-react"],
     turbopackFileSystemCacheForDev: true,
   },
   devIndicators: false,
