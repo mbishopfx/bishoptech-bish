@@ -152,6 +152,7 @@ export function ThreadSidebarInteractive({
 
   useEffect(() => {
     if (!hasHydrated) return;
+    if (authLoading) return;
     if (!userKey) return;
     let cancelled = false;
     setCacheLoaded(false);
