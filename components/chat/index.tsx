@@ -752,18 +752,71 @@ function ChatInterfaceInternal({
     }
   }, [id, setInput, setSelectedFiles, setUploadedAttachments, setUploadingFiles, setIsUploading, setIsSendingMessage, setQuotaError, setShowNoSubscriptionDialog]);
 
+  // Use refs for callbacks that need access to latest renderedMessages
+  // This prevents re-creating callbacks on every stream chunk (5.1 Defer State Reads)
+  const renderedMessagesRef = useRef(renderedMessages);
+  renderedMessagesRef.current = renderedMessages;
+
   const onRegenerateAssistant = useCallback(
     (messageId: string) => {
-      handleRegenerateAssistant(messageId, renderedMessages);
+      handleRegenerateAssistant(messageId, renderedMessagesRef.current);
     },
-    [handleRegenerateAssistant, renderedMessages],
+    [handleRegenerateAssistant],
   );
 
   const onRegenerateAfterUser = useCallback(
     (messageId: string) => {
-      handleRegenerateAfterUser(messageId, renderedMessages);
+      handleRegenerateAfterUser(messageId, renderedMessagesRef.current);
     },
-    [handleRegenerateAfterUser, renderedMessages],
+    [handleRegenerateAfterUser],
+  );
+
+  // Stable callback for editing user messages - moved outside .map() to prevent re-creation
+  const onEditUserMessage = useCallback(
+    async (messageId: string, newContent: string) => {
+      const program = Effect.gen(function* () {
+        // Persist edit to Convex
+        yield* updateMessageContentEffect({
+          updateFn: (params) => updateUserMessageContent(params),
+          messageId,
+          content: newContent,
+        });
+
+        // Optimistically update local hook store
+        setMessages((curr: UIMessage[]) =>
+          curr.map((m) =>
+            m.id === messageId
+              ? {
+                  ...m,
+                  parts: [
+                    ...m.parts.filter(
+                      (p: any) => p.type !== "text"
+                    ),
+                    { type: "text", text: newContent } as any,
+                  ],
+                }
+              : m
+          )
+        );
+
+        // Then trigger regeneration (prune-after-user semantics)
+        handleRegenerateAfterUser(messageId, renderedMessagesRef.current);
+      }).pipe(
+        Effect.tapError((error) =>
+          Effect.sync(() => {
+            console.error("Edit message failed", error);
+          })
+        ),
+        Effect.catchAll((error) =>
+          Effect.sync(() => {
+            triggerError(getErrorMessage(error));
+          })
+        )
+      );
+
+      await Effect.runPromise(program);
+    },
+    [handleRegenerateAfterUser, setMessages, triggerError, updateUserMessageContent],
   );
 
   const sendMessageRef = useRef<((message: UIMessage) => Promise<void>) | null>(null);
@@ -987,63 +1040,17 @@ function ChatInterfaceInternal({
             >
               {displayMessages.map((message, index) => {
               const isLast = index === displayMessages.length - 1;
-              const isStreaming = isLast && (status === "streaming");
+              const isMessageStreaming = isLast && (status === "streaming");
               return (
                 <MessageRenderer
                   key={message.id}
                   message={message}
-                  isStreaming={isStreaming}
+                  isStreaming={isMessageStreaming}
                   disableRegenerate={status === "streaming"}
                   onRegenerateAssistantMessage={onRegenerateAssistant}
                   onRegenerateAfterUserMessage={onRegenerateAfterUser}
                   onResponseReady={handleResponseReady}
-                  onEditUserMessage={async (
-                    messageId: string,
-                    newContent: string
-                  ) => {
-                    // Edit with retry
-                    const program = Effect.gen(function* () {
-                      // Persist edit to Convex
-                      yield* updateMessageContentEffect({
-                        updateFn: (params) => updateUserMessageContent(params),
-                        messageId,
-                        content: newContent,
-                      });
-
-                      // Optimistically update local hook store
-                      setMessages((curr: UIMessage[]) =>
-                        curr.map((m) =>
-                          m.id === messageId
-                            ? {
-                                ...m,
-                                parts: [
-                                  ...m.parts.filter(
-                                    (p: any) => p.type !== "text"
-                                  ),
-                                  { type: "text", text: newContent } as any,
-                                ],
-                              }
-                            : m
-                        )
-                      );
-
-                      // Then trigger regeneration (prune-after-user semantics)
-                      handleRegenerateAfterUser(messageId, renderedMessages);
-                    }).pipe(
-                      Effect.tapError((error) =>
-                        Effect.sync(() => {
-                          console.error("Edit message failed", error);
-                        })
-                      ),
-                      Effect.catchAll((error) =>
-                        Effect.sync(() => {
-                          triggerError(getErrorMessage(error));
-                        })
-                      )
-                    );
-
-                    await Effect.runPromise(program);
-                  }}
+                  onEditUserMessage={onEditUserMessage}
                 />
               );
             })}

@@ -423,3 +423,10 @@
   animation-timing-function: linear;
   animation-iteration-count: infinite;
 }
+
+/* Message list performance optimization (6.2 CSS content-visibility) */
+/* Defer off-screen message rendering for faster initial paint and scrolling */
+.message-item {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 120px;
+}

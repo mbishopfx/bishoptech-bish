@@ -159,17 +159,13 @@ export function ModelSelectorPanel({
     [value]
   );
 
-  // Clear search input when popover closes
-  // Sync provider filter with selected model when popover opens
   React.useEffect(() => {
     if (!open) {
       setQuery("");
     } else {
-      // When popover opens, sync provider filter with selected model
       if (selectedModel) {
         setSelectedProvider(selectedModel.provider as ProviderId);
       } else {
-        // If a recommended option is selected or no model, reset to "all"
         setSelectedProvider("all");
       }
     }
@@ -422,7 +418,7 @@ interface ModelRowProps {
   onSelect: (id: string) => void;
 }
 
-const ModelRow = React.memo(function ModelRow({
+function ModelRow({
   model,
   isSelected,
   onSelect,
@@ -495,7 +491,7 @@ const ModelRow = React.memo(function ModelRow({
       </div>
     </button>
   );
-});
+}
 
 interface ProviderButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   isActive: boolean;

@@ -47,7 +47,7 @@ interface ChatInputAreaProps {
   showScrollToBottom?: boolean;
 }
 
-export const ChatInputArea = React.memo(function ChatInputArea({
+export function ChatInputArea({
   disableInput,
   selectedModel,
   onModelChange,
@@ -351,17 +351,4 @@ export const ChatInputArea = React.memo(function ChatInputArea({
       </div>
     </div>
   );
-}, (prevProps, nextProps) => {
-  // Re-render when any external prop used by this component changes
-  return (
-    prevProps.disableInput === nextProps.disableInput &&
-    prevProps.selectedModel === nextProps.selectedModel &&
-    prevProps.onSubmit === nextProps.onSubmit &&
-    prevProps.onStop === nextProps.onStop &&
-    prevProps.onModelChange === nextProps.onModelChange &&
-    prevProps.threadId === nextProps.threadId &&
-    prevProps.isAtBottom === nextProps.isAtBottom &&
-    prevProps.showScrollToBottom === nextProps.showScrollToBottom &&
-    prevProps.onScrollToBottom === nextProps.onScrollToBottom
-  );
-});
+}

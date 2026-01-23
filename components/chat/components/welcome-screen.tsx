@@ -18,7 +18,7 @@ interface WelcomeScreenProps {
   onSuggestionClick?: (prompt: string) => void;
 }
 
-export const WelcomeScreen = React.memo(function WelcomeScreen({ user, onSuggestionClick }: WelcomeScreenProps) {
+export function WelcomeScreen({ user, onSuggestionClick }: WelcomeScreenProps) {
   return (
     <div className="flex items-center justify-center min-h-[70vh]">
       <div className="text-center max-w-2xl">
@@ -167,4 +167,4 @@ export const WelcomeScreen = React.memo(function WelcomeScreen({ user, onSuggest
       </div>
     </div>
   );
-});
+}

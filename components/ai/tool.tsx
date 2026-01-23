@@ -18,17 +18,17 @@ import {
 } from 'lucide-react';
 import type { ComponentProps, ReactNode } from 'react';
 import { CodeBlock } from './code-block';
-import React from 'react';
 
 export type ToolProps = ComponentProps<typeof Collapsible>;
 
-export const Tool = React.memo(({ className, ...props }: ToolProps) => (
-  <Collapsible
-    className={cn('not-prose mb-4 w-full rounded-md border', className)}
-    {...props}
-  />
-));
-Tool.displayName = 'Tool';
+export function Tool({ className, ...props }: ToolProps) {
+  return (
+    <Collapsible
+      className={cn('not-prose mb-4 w-full rounded-md border', className)}
+      {...props}
+    />
+  );
+}
 
 export type ToolHeaderProps = {
   type: ToolUIPart['type'];
@@ -36,7 +36,7 @@ export type ToolHeaderProps = {
   className?: string;
 };
 
-const getStatusBadge = (status: ToolUIPart['state']) => {
+function getStatusBadge(status: ToolUIPart['state']) {
   const labels = {
     'input-streaming': 'Pending',
     'input-available': 'Running',
@@ -57,71 +57,64 @@ const getStatusBadge = (status: ToolUIPart['state']) => {
       {labels[status]}
     </Badge>
   );
-};
+}
 
-export const ToolHeader = React.memo(({
-  className,
-  type,
-  state,
-  ...props
-}: ToolHeaderProps) => (
-  <CollapsibleTrigger
-    className={cn(
-      'flex w-full items-center justify-between gap-4 p-3',
-      className
-    )}
-    {...props}
-  >
-    <div className="flex items-center gap-2">
-      <WrenchIcon className="size-4 text-muted-foreground" />
-      <span className="font-medium text-sm">{type}</span>
-      {getStatusBadge(state)}
-    </div>
-    <ChevronDownIcon className="size-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
-  </CollapsibleTrigger>
-));
-ToolHeader.displayName = 'ToolHeader';
+export function ToolHeader({ className, type, state, ...props }: ToolHeaderProps) {
+  return (
+    <CollapsibleTrigger
+      className={cn(
+        'flex w-full items-center justify-between gap-4 p-3',
+        className
+      )}
+      {...props}
+    >
+      <div className="flex items-center gap-2">
+        <WrenchIcon className="size-4 text-muted-foreground" />
+        <span className="font-medium text-sm">{type}</span>
+        {getStatusBadge(state)}
+      </div>
+      <ChevronDownIcon className="size-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+    </CollapsibleTrigger>
+  );
+}
 
 export type ToolContentProps = ComponentProps<typeof CollapsibleContent>;
 
-export const ToolContent = React.memo(({ className, ...props }: ToolContentProps) => (
-  <CollapsibleContent
-    className={cn(
-      'data-[state=closed]:fade-out-0 data-[state=closed]:slide-out-to-top-2 data-[state=open]:slide-in-from-top-2 text-popover-foreground outline-none data-[state=closed]:animate-out data-[state=open]:animate-in',
-      className
-    )}
-    {...props}
-  />
-));
-ToolContent.displayName = 'ToolContent';
+export function ToolContent({ className, ...props }: ToolContentProps) {
+  return (
+    <CollapsibleContent
+      className={cn(
+        'data-[state=closed]:fade-out-0 data-[state=closed]:slide-out-to-top-2 data-[state=open]:slide-in-from-top-2 text-popover-foreground outline-none data-[state=closed]:animate-out data-[state=open]:animate-in',
+        className
+      )}
+      {...props}
+    />
+  );
+}
 
 export type ToolInputProps = ComponentProps<'div'> & {
   input: ToolUIPart['input'];
 };
 
-export const ToolInput = React.memo(({ className, input, ...props }: ToolInputProps) => (
-  <div className={cn('space-y-2 overflow-hidden p-4', className)} {...props}>
-    <h4 className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
-      Parameters
-    </h4>
-    <div className="rounded-md bg-muted/50">
-      <CodeBlock code={JSON.stringify(input, null, 2)} language="json" />
+export function ToolInput({ className, input, ...props }: ToolInputProps) {
+  return (
+    <div className={cn('space-y-2 overflow-hidden p-4', className)} {...props}>
+      <h4 className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
+        Parameters
+      </h4>
+      <div className="rounded-md bg-muted/50">
+        <CodeBlock code={JSON.stringify(input, null, 2)} language="json" />
+      </div>
     </div>
-  </div>
-));
-ToolInput.displayName = 'ToolInput';
+  );
+}
 
 export type ToolOutputProps = ComponentProps<'div'> & {
   output: ReactNode;
   errorText: ToolUIPart['errorText'];
 };
 
-export const ToolOutput = React.memo(({
-  className,
-  output,
-  errorText,
-  ...props
-}: ToolOutputProps) => {
+export function ToolOutput({ className, output, errorText, ...props }: ToolOutputProps) {
   if (!(output || errorText)) {
     return null;
   }
@@ -144,5 +137,4 @@ export const ToolOutput = React.memo(({
       </div>
     </div>
   );
-});
-ToolOutput.displayName = 'ToolOutput';
+}

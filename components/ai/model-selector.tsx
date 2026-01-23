@@ -392,7 +392,7 @@ interface ModelItemProps {
   model: BaseModelConfig;
 }
 
-const ModelItem = React.memo(function ModelItem({ model }: ModelItemProps) {
+function ModelItem({ model }: ModelItemProps) {
   const ProviderIcon =
     providerIcons[model.provider as keyof typeof providerIcons];
 
@@ -476,6 +476,6 @@ const ModelItem = React.memo(function ModelItem({ model }: ModelItemProps) {
       </span>
     </SelectPrimitive.Item>
   );
-});
+}
 
 export { ModelSelector };
