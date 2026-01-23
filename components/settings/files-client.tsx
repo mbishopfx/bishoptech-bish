@@ -246,7 +246,7 @@ export function FilesClient() {
           <Button 
             variant="ghost" 
             size="sm" 
-            className="h-8 w-8 p-0 text-gray-500 hover:text-gray-900 dark:text-text-muted dark:hover:text-white"
+            className="h-8 w-8 p-0 text-gray-500 hover:text-destructive dark:text-text-muted dark:hover:text-destructive hover:bg-destructive/10 dark:hover:bg-destructive/20"
             onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
               e.stopPropagation();
               handleDelete(attachment._id);

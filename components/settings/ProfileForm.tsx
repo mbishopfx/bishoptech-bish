@@ -141,6 +141,7 @@ export function ProfileForm({ initialUser }: { initialUser: ProfileFormUser }) {
             type="button"
             onClick={() => setIsEditing(true)}
             variant="accent"
+            className="gap-2 border border-border/60 shadow-sm shadow-black/5 dark:shadow-black/30 text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Editar perfil
           </Button>
@@ -198,14 +199,16 @@ export function ProfileForm({ initialUser }: { initialUser: ProfileFormUser }) {
             type="submit" 
             disabled={!isDirty || isPending || isSubmitCoolingDown} 
             variant="accent"
+            className="gap-2 border border-border/60 shadow-sm shadow-black/5 dark:shadow-black/30 text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isPending ? "Guardando..." : "Guardar cambios"}
           </Button>
           <Button
             type="button"
             onClick={handleCancel}
-            variant="outline"
+            variant="ghost"
             disabled={isPending}
+            className="gap-2 border border-border/60 bg-white/90 dark:bg-popover-secondary/75 dark:shadow-black/30 hover:bg-black/[0.04] dark:hover:bg-hover/30 hover:text-foreground dark:hover:text-popover-text disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Cancelar
           </Button>

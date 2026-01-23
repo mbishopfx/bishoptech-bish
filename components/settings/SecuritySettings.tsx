@@ -193,7 +193,7 @@ export function SecuritySettings({
                       type="button"
                       onClick={() => setIsMfaDialogOpen(true)}
                       variant="accent"
-                      className="cursor-pointer"
+                      className="gap-2 border border-border/60 shadow-sm shadow-black/5 dark:shadow-black/30 text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Activar MFA
                     </Button>

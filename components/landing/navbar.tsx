@@ -28,7 +28,7 @@ export default function Navbar() {
           </div>
 
           <div className="flex items-center gap-3">
-            <ThemeToggle size="md" />
+            <ThemeToggle size="md" styleType="ghost" />
             <NavbarAuthButtons />
           </div>
         </div>

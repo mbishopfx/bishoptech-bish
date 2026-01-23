@@ -260,15 +260,15 @@ export function ModelSelectorPanel({
               <input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search models..."
+                placeholder="Buscar modelos..."
                 className="w-full bg-transparent text-sm text-popover-text placeholder:text-muted-foreground outline-none"
-                aria-label="Search models"
+                aria-label="Buscar modelos"
               />
             </div>
             <button
               type="button"
               className="inline-flex size-8 items-center justify-center rounded-md border-0 text-muted-foreground hover:text-popover-text outline-none focus-visible:ring-2 focus-visible:ring-popover-text/40 dark:focus-visible:ring-ring/50 focus-visible:ring-offset-1 focus-visible:ring-offset-popover-main"
-              aria-label="Filter models"
+              aria-label="Filtrar modelos"
             >
               <FilterIcon className="size-4" />
             </button>
@@ -375,7 +375,7 @@ export function ModelSelectorPanel({
                   </div>
                 ) : filteredModels.length === 0 ? (
                   <div className="py-10 text-center text-sm text-muted-foreground">
-                    No models match your search.
+                    No hay modelos que coincidan con tu búsqueda.
                   </div>
                 ) : (
                   <div className="space-y-2">

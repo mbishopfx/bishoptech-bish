@@ -8,20 +8,20 @@ export default function HeroAuthButton() {
   return (
     <>
       <AuthLoading>
-        <Button variant="accent" size="lg" className="font-semibold rounded-lg pointer-events-none" disabled>
+        <Button variant="accent" size="lg" className="font-semibold text-white pointer-events-none" disabled>
           <span className="invisible">Suscribirse</span>
         </Button>
       </AuthLoading>
       
       <Authenticated>
-        <Button asChild variant="accent" size="lg" className="font-semibold rounded-lg cursor-pointer">
-          <Link href="/chat" className="font-semibold">Ir al chat</Link>
+        <Button asChild variant="accent" size="lg" className="font-semibold text-white">
+          <Link href="/chat">Ir al chat</Link>
         </Button>
       </Authenticated>
       
       <Unauthenticated>
-        <Button asChild variant="accent" size="lg" className="font-semibold rounded-lg">
-          <Link href="/#pricing" className="font-semibold">Suscribirse</Link>
+        <Button asChild variant="accent" size="lg" className="font-semibold text-white">
+          <Link href="/#pricing">Suscribirse</Link>
         </Button>
       </Unauthenticated>
     </>
