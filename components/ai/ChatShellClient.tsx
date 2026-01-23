@@ -110,7 +110,7 @@ export function ChatShellClient({ children, className, sidebar }: ChatShellClien
           )}
         >
           <div className={cn("flex-1 min-h-0")}>
-            <div className="relative flex h-full min-h-0 flex-col bg-background rounded-3xl overflow-visible border border-border">
+            <div className="relative flex h-full min-h-0 flex-col bg-background rounded-3xl overflow-visible overflow-x-clip border border-border">
               {(!isMobile || !isOpen) && (
                 <div className="absolute top-4 left-4 z-10 flex gap-2">
                   <Button

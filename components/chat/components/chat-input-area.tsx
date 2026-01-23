@@ -22,7 +22,7 @@ import {
   PromptInputFilePreview,
 } from "@/components/ai/prompt-input";
 import { ChatErrorAlert } from "./chat-error-alert";
-import { ModelSelector } from "@/components/ai/model-selector";
+import { ModelSelectorPanel } from "@/components/ai/model-selector-panel";
 import { InstructionSelector } from "@/components/custom-instructions/InstructionSelector";
 import { SelectedInstructionPill } from "@/components/custom-instructions/SelectedInstructionPill";
 import React from "react";
@@ -326,7 +326,10 @@ export const ChatInputArea = React.memo(function ChatInputArea({
                 </Tooltip>
               </TooltipProvider>
               <div className="flex items-center gap-1">
-                <ModelSelector value={selectedModel} onValueChange={onModelChange} />
+                <ModelSelectorPanel
+                  value={selectedModel}
+                  onValueChange={onModelChange}
+                />
                 <SelectedInstructionPill 
                   instructionId={customInstructionId}
                   onClick={() => {
