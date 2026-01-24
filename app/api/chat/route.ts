@@ -11,12 +11,12 @@ import {
   createUIMessageStream,
   createUIMessageStreamResponse,
 } from "ai";
-import { fetchMutation } from "convex/nextjs";
+import { fetchMutation, fetchQuery } from "convex/nextjs";
 import { api } from "@/convex/_generated/api";
 import { withTracing } from "@posthog/ai";
 import { PostHog } from "posthog-node";
 import * as Sentry from "@sentry/nextjs";
-// import { withSupermemory, supermemoryTools } from "@supermemory/tools/ai-sdk";
+import { withSupermemory, supermemoryTools } from "@supermemory/tools/ai-sdk";
 import {
   getLanguageModel,
   getModel,
@@ -414,23 +414,52 @@ const handleChatRequest = (
         }),
     });
 
-    // const supermemoryEnabled = Boolean(process.env.SUPERMEMORY_API_KEY);
-    // const modelWithMemory = yield* Effect.try({
-    //   try: () =>
-    //     supermemoryEnabled
-    //   ? withSupermemory(baseModel, auth.userId, {
-    //       mode: "profile",
-    //       verbose: process.env.NODE_ENV !== "production",
-    //     })
-    //       : baseModel,
-    //   catch: (error) =>
-    //     new ModelError({
-    //       message: "Failed to initialize Supermemory integration",
-    //       modelId,
-    //       cause: error,
-    //     }),
-    // });
-    const modelWithMemory = baseModel;
+    const baseModelProvider =
+      typeof baseModel !== "string" && (baseModel as any).provider
+        ? (baseModel as any).provider
+        : (() => {
+            const fallbackProvider = modelId.split("/")[0];
+            logger.warn(
+              "Provider not found on gateway model, using fallback from modelId",
+              logContext,
+              { modelId, fallbackProvider }
+            );
+            return fallbackProvider;
+          })();
+
+    // Fetch user's supermemory preference
+    const userConfig = yield* Effect.tryPromise({
+      try: () =>
+        fetchQuery(api.userConfiguration.serverGetUserConfiguration, {
+          secret: process.env.CONVEX_SECRET_TOKEN!,
+          userId: auth.userId,
+        }),
+      catch: (error) =>
+        new DatabaseError({
+          message: "Failed to fetch user configuration",
+          operation: "serverGetUserConfiguration",
+          cause: error,
+        }),
+    });
+
+    // Supermemory is enabled only if both env var exists AND user preference is enabled
+    const supermemoryEnabled = Boolean(process.env.SUPERMEMORY_API_KEY) && userConfig.supermemoryEnabled;
+    const modelWithMemory = yield* Effect.try({
+      try: () =>
+        supermemoryEnabled
+          ? withSupermemory(baseModel, auth.userId, {
+              mode: "profile",
+              verbose: process.env.NODE_ENV !== "production",
+              conversationId: threadId,
+            })
+          : baseModel,
+      catch: (error) =>
+        new ModelError({
+          message: "Failed to initialize Supermemory integration",
+          modelId,
+          cause: error,
+        }),
+    });
 
     // PostHog client - handle gracefully
     const phClient = yield* Effect.try({
@@ -442,32 +471,40 @@ const handleChatRequest = (
         logger.warn("PostHog initialization failed, analytics disabled", logContext, error);
         return null;
       },
-    }).pipe(
-      Effect.catchAll(() => Effect.succeed(null))
-    );
+    }).pipe(Effect.catchAll(() => Effect.succeed(null)));
 
-    // Ensure PostHog cleanup on scope close
     yield* Effect.addFinalizer(() => shutdownPostHog(phClient));
+
+    const modelWithProvider = supermemoryEnabled
+      ? new Proxy(modelWithMemory as object, {
+          get(target, prop) {
+            if (prop === "provider") {
+              return baseModelProvider;
+            }
+            return (target as any)[prop];
+          },
+        }) as LanguageModel
+      : modelWithMemory;
 
     const model = yield* Effect.try({
       try: () => {
         if (phClient) {
-          return withTracing(modelWithMemory, phClient, {
-      posthogDistinctId: auth.userId,
-      posthogTraceId: newMessageId,
-      posthogProperties: {
-        threadId,
-        modelId,
-        quotaType,
-        orgId: auth.orgId || null,
-        trigger: trigger || "submit-message",
+          return withTracing(modelWithProvider as any as Parameters<typeof withTracing>[0], phClient, {
+            posthogDistinctId: auth.userId,
+            posthogTraceId: newMessageId,
+            posthogProperties: {
+              threadId,
+              modelId,
+              quotaType,
+              orgId: auth.orgId || null,
+              trigger: trigger || "submit-message",
               requestId,
-      },
-      posthogPrivacyMode: false,
-      posthogGroups: auth.orgId ? { organization: auth.orgId } : undefined,
-    }) as unknown as LanguageModel;
+            },
+            posthogPrivacyMode: false,
+            posthogGroups: auth.orgId ? { organization: auth.orgId } : undefined,
+          }) as unknown as LanguageModel;
         }
-        return modelWithMemory as unknown as LanguageModel;
+        return modelWithProvider as unknown as LanguageModel;
       },
       catch: (error) =>
         new ModelError({
@@ -508,11 +545,11 @@ const handleChatRequest = (
       try: () => ({
       ...providerTools,
       ...(enabledTools.includes("web_search") ? valyuSearchTools : {}),
-      // ...(process.env.SUPERMEMORY_API_KEY
-      //   ? supermemoryTools(process.env.SUPERMEMORY_API_KEY, {
-      //       containerTags: auth.orgId ? [auth.userId, auth.orgId] : [auth.userId],
-      //     })
-      //   : {}),
+      ...(supermemoryEnabled && process.env.SUPERMEMORY_API_KEY
+        ? supermemoryTools(process.env.SUPERMEMORY_API_KEY, {
+            containerTags: auth.orgId ? [auth.userId, auth.orgId] : [auth.userId],
+          })
+        : {}),
       }),
       catch: (error) =>
         new ToolError({
@@ -639,7 +676,7 @@ const handleChatRequest = (
     const systemPrompt = yield* buildSystemPrompt({
       modelDisplayName,
       customInstructions: customInstructionsContent,
-      // supermemoryEnabled,
+      supermemoryEnabled,
     });
 
     // Create the streaming response

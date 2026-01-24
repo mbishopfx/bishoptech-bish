@@ -22,6 +22,7 @@ import {
   File,
   Bug,
   TrendingUp,
+  Brain,
 } from "lucide-react";
 interface SettingsNavItem {
   title: string;
@@ -224,6 +225,11 @@ const settingsSections: SettingsSection[] = [
         title: "Apariencia",
         href: "/settings/appearance",
         icon: Palette,
+      },
+      {
+        title: "Memoria",
+        href: "/settings/memoria",
+        icon: Brain,
       },
       // {
       //   title: "Atajos",
