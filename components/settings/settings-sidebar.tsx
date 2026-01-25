@@ -5,14 +5,10 @@ import { usePathname } from "next/navigation";
 import authkitSignOut from "@/actions/signout";
 import {
   Users,
-  Home,
   ReceiptText,
-  Key,
   MessageSquare,
   Bot,
-  Lightbulb,
   Palette,
-  Target,
   Bell,
   Mail,
   LogOut,

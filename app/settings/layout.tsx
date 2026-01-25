@@ -1,6 +1,5 @@
 import { SettingsSidebar } from "@/components/settings/settings-sidebar";
 import Link from 'next/link';
-import { getPermissionSet } from "@/lib/permissions";
 import { SettingsShell } from "@/components/settings/settings-shell";
 import { PermissionsProvider } from "@/contexts/permissions-context";
 
@@ -44,18 +43,17 @@ const scrollbarStyles = `
   }
 `;
 
-export default async function SettingsLayout({
+export default function SettingsLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-
-  const permissions = await getPermissionSet();
-
+  // Layout is non-blocking - permissions are parsed client-side instantly
+  // No server-side loading needed - client-side JWT parsing gives same result immediately
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: scrollbarStyles }} />
-      <PermissionsProvider initialPermissions={permissions}>
+      <PermissionsProvider>
         <SettingsShell
           sidebar={<SettingsSidebar />}
         >
