@@ -1,3 +1,5 @@
+"use client";
+
 import { SettingsSection } from "@/components/settings";
 import { EarlyAccessIcon } from "@/components/ui/icons/landing-icons";
 
@@ -79,7 +81,7 @@ const updates: UpdateItem[] = [
     }
 ];
 
-export default async function UpdatesPage() {
+export default function UpdatesPage() {
   return (
     <div className="py-6 px-4 md:py-12 md:px-12 flex flex-col max-w-4xl min-w-0 md:min-w-[520px] w-full min-h-full box-border">
       <SettingsSection

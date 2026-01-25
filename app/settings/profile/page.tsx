@@ -1,12 +1,12 @@
-import { Suspense } from "react";
+"use client";
+
 import { SettingsSection, SettingsDivider } from "@/components/settings";
 import { AdvancedDebugWidget } from "@/components/settings/widgets/AdvancedDebugWidget";
-import { ProfileFormServer } from "@/components/settings/ProfileFormServer";
-import { ProfileDisplay, ProfileFormContent } from "@/components/settings/ProfileFormClient";
+import { ProfileDisplay, ProfileFormContent, ProfileFormProvider } from "@/components/settings/ProfileFormClient";
 import { Skeleton } from "@/components/ai/ui/skeleton";
 import { Button } from "@/components/ai/ui/button";
-
-export const dynamic = 'force-dynamic';
+import { useAuth } from "@/components/auth/auth-context";
+import { type CurrentUserProfile } from "@/actions/getCurrentUserProfile";
 
 const profileSkeleton = (
   <div className="p-6 bg-white dark:bg-popover-secondary rounded-lg border border-gray-200 dark:border-border shadow-sm">
@@ -30,6 +30,48 @@ const profileSkeleton = (
   </div>
 );
 
+function ProfileContent() {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return profileSkeleton;
+  }
+
+  if (!user) {
+    return (
+      <div className="p-6 bg-white dark:bg-popover-secondary rounded-lg border border-gray-200 dark:border-border shadow-sm">
+        <div className="text-center space-y-2">
+          <p className="text-sm font-medium text-gray-900 dark:text-white">
+            No se pudo cargar el perfil
+          </p>
+          <p className="text-sm text-gray-500 dark:text-text-muted">
+            Por favor, intenta recargar la página.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const profileUser: CurrentUserProfile = {
+    id: user.id,
+    email: user.email,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    profilePictureUrl: user.profilePictureUrl,
+  };
+
+  return (
+    <ProfileFormProvider initialUser={profileUser}>
+      <div className="p-6 bg-white dark:bg-popover-secondary rounded-lg border border-gray-200 dark:border-border shadow-sm">
+        <div className="space-y-4">
+          <ProfileDisplay />
+          <ProfileFormContent />
+        </div>
+      </div>
+    </ProfileFormProvider>
+  );
+}
+
 export default function ProfilePage() {
   return (
     <div className="py-6 px-4 md:py-12 md:px-12 flex flex-col max-w-4xl min-w-0 md:min-w-[520px] w-full min-h-full box-border">
@@ -37,16 +79,7 @@ export default function ProfilePage() {
         title="Gestión de Perfil"
         description="Gestiona tu información personal y preferencias."
       >
-        <Suspense fallback={profileSkeleton}>
-          <ProfileFormServer>
-            <div className="p-6 bg-white dark:bg-popover-secondary rounded-lg border border-gray-200 dark:border-border shadow-sm">
-              <div className="space-y-4">
-                <ProfileDisplay />
-                <ProfileFormContent />
-              </div>
-            </div>
-          </ProfileFormServer>
-        </Suspense>
+        <ProfileContent />
       </SettingsSection>
 
       <SettingsDivider />

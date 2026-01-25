@@ -1,3 +1,5 @@
+"use client";
+
 import { SettingsSidebar } from "@/components/settings/settings-sidebar";
 import Link from 'next/link';
 import { SettingsShell } from "@/components/settings/settings-shell";
