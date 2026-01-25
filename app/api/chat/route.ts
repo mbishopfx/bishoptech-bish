@@ -441,6 +441,7 @@ const handleChatRequest = (
         }),
     });
 
+    // Determine if supermemory should be enabled
     const supermemoryEnabled = Boolean(process.env.SUPERMEMORY_API_KEY) && userConfig.supermemoryEnabled;
     const modelWithMemory = yield* Effect.try({
       try: () =>
@@ -543,8 +544,9 @@ const handleChatRequest = (
       try: () => ({
       ...providerTools,
       ...(enabledTools.includes("web_search") ? valyuSearchTools : {}),
-      ...(supermemoryEnabled && process.env.SUPERMEMORY_API_KEY
-        ? supermemoryTools(process.env.SUPERMEMORY_API_KEY, {
+      // Only add supermemory tools if enabled
+      ...(supermemoryEnabled
+        ? supermemoryTools(process.env.SUPERMEMORY_API_KEY!, {
             containerTags: auth.orgId ? [auth.userId, auth.orgId] : [auth.userId],
           })
         : {}),

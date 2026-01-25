@@ -149,7 +149,7 @@ export function SecuritySessionsClient({
       </div>
 
       {otherActiveSessions.length > 0 ? (
-        <div className="pt-4 border-t border-gray-200 dark:border-border">
+        <div className="pt-6">
           <div className="flex items-start justify-between gap-4">
             <div>
               <div className="text-base font-medium text-foreground">
@@ -164,7 +164,7 @@ export function SecuritySessionsClient({
               onClick={onRevokeOtherSessions}
               disabled={isPending}
               variant="accent"
-              className="cursor-pointer"
+              className="cursor-pointer text-white dark:text-white"
             >
               Cerrar otras sesiones
             </Button>
