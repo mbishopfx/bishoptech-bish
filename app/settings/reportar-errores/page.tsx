@@ -157,13 +157,12 @@ export default function ReportarErroresPage() {
             <div className="flex justify-end gap-2 pt-2">
               <Button 
                 type="submit" 
+                variant={submitStatus === 'success' ? "default" : "accent"}
                 disabled={submitStatus === 'submitting'} 
                 className={
-                  submitStatus === 'submitting' 
-                    ? "border border-gray-200 dark:border-border bg-white dark:bg-popover-secondary rounded-lg dark:hover:bg-popover-secondary" 
-                    : submitStatus === 'success'
-                    ? "border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-200 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/40" 
-                    : "border border-gray-200 dark:border-border bg-white dark:bg-popover-secondary rounded-lg dark:hover:bg-popover-secondary"
+                  submitStatus === 'success'
+                    ? "border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-200 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/40 disabled:opacity-50 disabled:cursor-not-allowed"
+                    : "gap-2 border border-border/60 shadow-sm shadow-black/5 dark:shadow-black/30 text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-medium"
                 }
               >
                 {submitStatus === 'submitting' ? "Enviando..." : submitStatus === 'success' ? "¡Enviado!" : "Enviar reporte"}

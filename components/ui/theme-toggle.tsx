@@ -3,18 +3,18 @@
 import * as React from "react";
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
-import { cn } from "@/lib/utils";
-import { buttonVariants } from "@/components/ai/ui/button";
+import { Button } from "@/components/ai/ui/button";
 
 interface ThemeToggleProps {
   className?: string;
   size?: "sm" | "md" | "lg";
   /**
    * Controls visual style without impacting other pages.
-   * - default: legacy styling
-   * - secondary: matches ghost icon buttons used in navs/headers
+   * - default: uses outline variant
+   * - secondary: uses secondary variant
+   * - ghost: uses ghost variant
    */
-  styleType?: "default" | "secondary";
+  styleType?: "default" | "secondary" | "ghost";
 }
 
 export function ThemeToggle({
@@ -29,44 +29,36 @@ export function ThemeToggle({
     setMounted(true);
   }, []);
 
-  const sizeClasses = {
-    sm: "h-6 w-6",
-    md: "h-8 w-8",
-    lg: "h-10 w-10",
-  };
-
-  const iconSizeClasses = {
-    sm: "size-3",
-    md: "size-4",
-    lg: "size-5",
+  const buttonSizeMap = {
+    sm: "sm" as const,
+    md: "icon" as const,
+    lg: "lg" as const,
   };
 
   const isDark = mounted ? resolvedTheme === "dark" : false;
-  const baseClass =
-    styleType === "secondary"
-      ? cn(
-          buttonVariants({ variant: "ghost", size: "icon" }),
-          sizeClasses[size],
-          "cursor-pointer",
-        )
-      : cn(
-          "inline-flex items-center justify-center rounded-md border bg-background/80 backdrop-blur-sm transition-colors shadow-sm dark:bg-popover-main dark:border-border",
-          "hover:bg-background hover:shadow-md cursor-pointer outline-none",
-          sizeClasses[size],
-        );
+
+  const variantMap = {
+    default: "outline" as const,
+    secondary: "secondary" as const,
+    ghost: "ghost" as const,
+  };
+
+  const variant = variantMap[styleType || "default"];
 
   return (
-    <button
+    <Button
       type="button"
+      variant={variant}
+      size={buttonSizeMap[size]}
       onClick={() => setTheme(isDark ? "light" : "dark")}
       title={`Switch to ${isDark ? "light" : "dark"} mode`}
-      className={cn(baseClass, className)}
+      className={className}
     >
       {isDark ? (
-        <Sun className={cn("transition-transform", iconSizeClasses[size])} />
+        <Sun className="transition-transform" />
       ) : (
-        <Moon className={cn("transition-transform", iconSizeClasses[size])} />
+        <Moon className="transition-transform" />
       )}
-    </button>
+    </Button>
   );
 }

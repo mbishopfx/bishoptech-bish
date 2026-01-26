@@ -1,11 +1,6 @@
-import React from 'react';
-import {
-  SettingsSection,
-  SettingsDivider,
-} from "@/components/settings";
-import {
-  ArrowRightIcon,
-} from "lucide-react";
+"use client";
+
+import { SettingsSection } from "@/components/settings";
 import { EarlyAccessIcon } from "@/components/ui/icons/landing-icons";
 
 interface UpdateItem {
@@ -18,9 +13,7 @@ interface UpdateItem {
   isInstalled?: boolean;
 }
 
-export default function UpdatesPage() {
-  // Static data - in a real app, this could come from a CMS or API
-  const updates: UpdateItem[] = [
+const updates: UpdateItem[] = [
     {
       id: '1.2.0',
       version: '1.2.0',
@@ -86,61 +79,54 @@ export default function UpdatesPage() {
       ],
       isInstalled: true
     }
-  ];
+];
 
-  const getStatusIcon = (update: UpdateItem) => {
-    return <EarlyAccessIcon className="size-8 text-gray-500 dark:text-popover-text" />;
-  };
-
+export default function UpdatesPage() {
   return (
-    <div className="py-6 px-4 md:py-12 md:px-12 flex flex-col max-w-4xl min-w-0 md:min-w-[520px] w-full min-h-full box-border bg-background dark:bg-popover-main">
-      {/* Updates Management */}
+    <div className="py-6 px-4 md:py-12 md:px-12 flex flex-col max-w-4xl min-w-0 md:min-w-[520px] w-full min-h-full box-border">
       <SettingsSection
         title="Actualizaciones"
         description="Mantén tu aplicación actualizada con las últimas mejoras y características."
       >
-        <div className="space-y-4">
+        <div className="space-y-6">
           {updates.map((update) => (
             <div
               key={update.id}
-              className="border border-gray-200 dark:border-border bg-white dark:bg-popover-secondary rounded-lg p-4"
+              className="p-6 bg-white dark:bg-popover-secondary rounded-lg border border-gray-200 dark:border-border shadow-sm"
             >
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center space-x-3">
-                  {getStatusIcon(update)}
-                  <div>
-                    <h3 className="font-semibold text-gray-900 dark:text-white">
-                      {update.title}
-                    </h3>
-                    <p className="text-sm text-gray-500 dark:text-text-muted">
-                      Versión {update.version} • {new Date(update.date).toLocaleDateString('es-MX')}
-                    </p>
+              <div className="space-y-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center space-x-3">
+                    <EarlyAccessIcon className="size-8 text-gray-500 dark:text-popover-text" />
+                    <div>
+                      <p className="font-medium text-base leading-6 text-gray-900 dark:text-white">
+                        {update.title}
+                      </p>
+                      <p className="text-gray-500 dark:text-text-muted text-sm leading-5 mt-1">
+                        Versión {update.version} • {new Date(update.date).toLocaleDateString('es-MX')}
+                      </p>
+                    </div>
                   </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                  {/* Status icon only, no text */}
+
+                <p className="text-gray-500 dark:text-text-muted text-sm leading-5">
+                  {update.description}
+                </p>
+
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium text-gray-900 dark:text-white">
+                    Características:
+                  </h4>
+                  <ul className="space-y-1">
+                    {update.features.map((feature, index) => (
+                      <li key={index} className="flex items-start space-x-2 text-sm text-gray-600 dark:text-text-muted">
+                        <div className="w-1.5 h-1.5 mt-2 bg-gray-400 rounded-full flex-shrink-0" />
+                        <span>{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               </div>
-
-              <p className="text-sm text-gray-600 dark:text-text-muted mb-3">
-                {update.description}
-              </p>
-
-              {/* Features List */}
-              <div className="space-y-2">
-                <h4 className="text-sm font-medium text-gray-900 dark:text-white">
-                  Características:
-                </h4>
-                <ul className="space-y-1">
-                  {update.features.map((feature, index) => (
-                    <li key={index} className="flex items-start space-x-2 text-sm text-gray-600 dark:text-text-muted">
-                      <div className="w-1.5 h-1.5 mt-2 bg-gray-400 rounded-full flex-shrink-0" />
-                      <span>{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
             </div>
           ))}
         </div>

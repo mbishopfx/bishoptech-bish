@@ -1,7 +1,10 @@
 "use server";
 
+import { withAuth } from "@workos-inc/authkit-nextjs";
 import { workos } from "@/app/api/workos";
 import { OrganizationMembership, User, Invitation } from "@workos-inc/node";
+import { fetchQuery } from "convex/nextjs";
+import { api } from "@/convex/_generated/api";
 
 export interface OrganizationMembershipWithUser extends OrganizationMembership {
   user: User | null;
@@ -15,12 +18,17 @@ export interface PaginatedOrganizationData {
 }
 
 export async function getPaginatedOrganizationMembers(
-  organizationId: string,
   limit: number = 50,
   after?: string,
   before?: string
 ): Promise<PaginatedOrganizationData> {
   try {
+    const { organizationId } = await withAuth({ ensureSignedIn: true });
+    
+    if (!organizationId) {
+      return { members: [], invitations: [], nextCursor: null, prevCursor: null };
+    }
+
     // Standard Pagination
     const membershipsResponse = await workos.userManagement.listOrganizationMemberships({
       organizationId,
@@ -63,12 +71,40 @@ export async function getPaginatedOrganizationMembers(
   }
 }
 
-export async function getOrganizationMemberCount(organizationId: string): Promise<number> {
+export async function getOrganizationMemberCount(): Promise<number> {
+  const { organizationId } = await withAuth({ ensureSignedIn: true });
+  
+  if (!organizationId) {
+    throw new Error("No organization found in session");
+  }
+
   const [membershipCount, invitationCount] = await Promise.all([
     countAllMemberships(organizationId),
     countPendingInvitations(organizationId)
   ]);
   return membershipCount + invitationCount;
+}
+
+export async function getOrganizationSeatsAndPlan(): Promise<{
+  seatQuantity: number | null;
+  plan: "free" | "plus" | "pro" | "enterprise" | null;
+}> {
+  try {
+    const { organizationId } = await withAuth({ ensureSignedIn: true });
+    
+    if (!organizationId) {
+      throw new Error("No organization found in session");
+    }
+
+    const result = await fetchQuery(api.organizations.getOrganizationSeatsAndPlan, {
+      workos_id: organizationId,
+      secret: process.env.CONVEX_SECRET_TOKEN!,
+    });
+    return result;
+  } catch (error) {
+    console.error("Error fetching seat quantity and plan:", error);
+    return { seatQuantity: null, plan: null };
+  }
 }
 
 async function countAllMemberships(organizationId: string): Promise<number> {

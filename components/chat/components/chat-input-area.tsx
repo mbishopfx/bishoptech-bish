@@ -8,7 +8,6 @@ import { ChevronDown } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from "@/components/ai/ui/tooltip";
 import {
@@ -22,11 +21,11 @@ import {
   PromptInputFilePreview,
 } from "@/components/ai/prompt-input";
 import { ChatErrorAlert } from "./chat-error-alert";
-import { ModelSelector } from "@/components/ai/model-selector";
+import { ModelSelectorPanel } from "@/components/ai/model-selector-panel";
 import { InstructionSelector } from "@/components/custom-instructions/InstructionSelector";
 import { SelectedInstructionPill } from "@/components/custom-instructions/SelectedInstructionPill";
 import React from "react";
-import { useChatStatus } from "@ai-sdk-tools/store";
+type ChatStatus = "submitted" | "streaming" | "ready" | "error";
 import { useChatUIStore } from "../ui-store";
 import { Effect } from "effect";
 import { uploadWithStateEffect } from "../services/upload-service";
@@ -45,6 +44,8 @@ interface ChatInputAreaProps {
   isAtBottom?: boolean;
   onScrollToBottom?: () => void;
   showScrollToBottom?: boolean;
+  // Pass status from parent to avoid duplicate subscriptions (5.1 Defer State Reads)
+  status: ChatStatus;
 }
 
 export const ChatInputArea = React.memo(function ChatInputArea({
@@ -57,8 +58,8 @@ export const ChatInputArea = React.memo(function ChatInputArea({
   isAtBottom,
   onScrollToBottom,
   showScrollToBottom,
+  status,
 }: ChatInputAreaProps) {
-  const status = useChatStatus();
   const input = useChatUIStore((s) => s.input);
   const isSearchEnabled = useChatUIStore((s) => s.isSearchEnabled);
   const quotaError = useChatUIStore((s) => s.quotaError);
@@ -153,8 +154,51 @@ export const ChatInputArea = React.memo(function ChatInputArea({
     ];
   }, [isSendingMessage, uploadedAttachments, uploadingFiles]);
 
+  // Memoize callbacks to prevent re-renders
+  const handleRemoveFile = useCallback((index: number) => {
+    const uploadedCount = uploadedAttachments.length;
+    if (index < uploadedCount) {
+      setUploadedAttachments((prev) => prev.filter((_, i) => i !== index));
+    } else {
+      const uploadingIndex = index - uploadedCount;
+      setUploadingFiles((prev) => prev.filter((_, i) => i !== uploadingIndex));
+    }
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
+    setChatError(null);
+  }, [uploadedAttachments.length, setUploadedAttachments, setUploadingFiles, setSelectedFiles, setChatError]);
+
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInput(e.target.value);
+    setChatError(null);
+  }, [setInput, setChatError]);
+
+  const handleFilesSelected = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    const fileArray = Array.from(files);
+    void runUpload(fileArray);
+  }, [runUpload]);
+
+  const handleAttachmentClick = useCallback(() => {
+    if (disableInput) return;
+    const currentTotalFiles = uploadedAttachments.length + uploadingFiles.length;
+    if (currentTotalFiles >= MAX_TOTAL_FILES) {
+      const errorMsg = `Máximo de ${MAX_TOTAL_FILES} archivos permitidos por mensaje`;
+      triggerError(errorMsg);
+      return;
+    }
+    setChatError(null);
+    fileInputRef.current?.click();
+  }, [disableInput, uploadedAttachments.length, uploadingFiles.length, triggerError, setChatError]);
+
+  const handleInstructionPillClick = useCallback(() => {
+    if (!disableInput) {
+      setInstructionSelectorOpen(true);
+    }
+  }, [disableInput]);
+
   return (
-    <div className="absolute bottom-0 left-0 right-0 md:pb-0">
+    <div className="absolute bottom-0 left-0 right-0 md:pb-0 z-[20]">
       <div className="mx-auto w-full max-w-full md:max-w-3xl px-0 md:px-2 pb-0 md:pb-0 relative">
         {showScrollToBottom && (
           <div className="absolute -top-12 left-0 right-0 flex justify-center pointer-events-none z-20">
@@ -227,30 +271,15 @@ export const ChatInputArea = React.memo(function ChatInputArea({
             </div>
           </div>
         )}
-        <PromptInput onSubmit={onSubmit}>
+        <PromptInput onSubmit={onSubmit} borderClassName="border-border">
           <ChatErrorAlert />
           <PromptInputFilePreview
             files={files}
-            onRemoveFile={(index) => {
-              const uploadedCount = uploadedAttachments.length;
-              if (index < uploadedCount) {
-                setUploadedAttachments((prev) => prev.filter((_, i) => i !== index));
-              } else {
-                const uploadingIndex = index - uploadedCount;
-                setUploadingFiles((prev) => prev.filter((_, i) => i !== uploadingIndex));
-              }
-              setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
-              // Clear error when user removes files
-              setChatError(null);
-            }}
+            onRemoveFile={handleRemoveFile}
             disabled={disableInput}
           />
           <PromptInputTextarea
-            onChange={(e) => {
-              setInput(e.target.value);
-              // Clear error when user starts typing
-              setChatError(null);
-            }}
+            onChange={handleInputChange}
             value={input}
             disabled={disableInput || isUploading}
             placeholder="Escribe tu mensaje..."
@@ -259,12 +288,7 @@ export const ChatInputArea = React.memo(function ChatInputArea({
             <PromptInputTools>
               <PromptInputFileUpload
                 ref={fileInputRef}
-                onFilesSelected={(e) => {
-                  const files = e.target.files;
-                  if (!files || files.length === 0) return;
-                  const fileArray = Array.from(files);
-                  void runUpload(fileArray);
-                }}
+                onFilesSelected={handleFilesSelected}
                 disabled={disableInput || isUploading}
               />
               <InstructionSelector
@@ -275,18 +299,7 @@ export const ChatInputArea = React.memo(function ChatInputArea({
                 onOpenChange={setInstructionSelectorOpen}
               />
               <PromptInputButton
-                onClick={() => {
-                  if (disableInput) return;
-                  const currentTotalFiles = uploadedAttachments.length + uploadingFiles.length;
-                  if (currentTotalFiles >= MAX_TOTAL_FILES) {
-                    const errorMsg = `Máximo de ${MAX_TOTAL_FILES} archivos permitidos por mensaje`;
-                    triggerError(errorMsg);
-                    return;
-                  }
-                  // Clear error when opening file dialog
-                  setChatError(null);
-                  fileInputRef.current?.click();
-                }}
+                onClick={handleAttachmentClick}
                 aria-label="Agregar archivos adjuntos"
                 disabled={disableInput || (uploadedAttachments.length + uploadingFiles.length) >= MAX_TOTAL_FILES}
                 title={
@@ -297,43 +310,40 @@ export const ChatInputArea = React.memo(function ChatInputArea({
               >
                 <AttachmentsIcon className="size-4" />
               </PromptInputButton>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <PromptInputButton
-                      onClick={handleSearchToggle}
-                      aria-label="Activar búsqueda web"
-                      disabled={disableInput}
-                      variant={isSearchEnabled ? "default" : "ghost"}
-                      className={
-                        isSearchEnabled
-                          ? "bg-blue-600 hover:bg-blue-700 border-blue-600 text-white"
-                          : undefined
-                      }
-                    >
-                      <GlobeIcon className="size-4" />
-                    </PromptInputButton>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" align="center">
-                    <p>
-                      {isSearchEnabled ? "Desactivar" : "Activar"} búsqueda
-                      web
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Buscar en la web información actual
-                    </p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <PromptInputButton
+                    onClick={handleSearchToggle}
+                    aria-label="Activar búsqueda web"
+                    disabled={disableInput}
+                    variant={isSearchEnabled ? "default" : "ghost"}
+                    className={
+                      isSearchEnabled
+                        ? "bg-blue-600 hover:bg-blue-700 border-blue-600 text-white"
+                        : undefined
+                    }
+                  >
+                    <GlobeIcon className="size-4" />
+                  </PromptInputButton>
+                </TooltipTrigger>
+                <TooltipContent side="top" align="center">
+                  <p>
+                    {isSearchEnabled ? "Desactivar" : "Activar"} búsqueda
+                    web
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Buscar en la web información actual
+                  </p>
+                </TooltipContent>
+              </Tooltip>
               <div className="flex items-center gap-1">
-                <ModelSelector value={selectedModel} onValueChange={onModelChange} />
+                <ModelSelectorPanel
+                  value={selectedModel}
+                  onValueChange={onModelChange}
+                />
                 <SelectedInstructionPill 
                   instructionId={customInstructionId}
-                  onClick={() => {
-                    if (!disableInput) {
-                      setInstructionSelectorOpen(true);
-                    }
-                  }}
+                  onClick={handleInstructionPillClick}
                 />
               </div>
             </PromptInputTools>
@@ -347,18 +357,5 @@ export const ChatInputArea = React.memo(function ChatInputArea({
         {/* Hidden file input handled by PromptInputFileUpload above via the same ref */}
       </div>
     </div>
-  );
-}, (prevProps, nextProps) => {
-  // Re-render when any external prop used by this component changes
-  return (
-    prevProps.disableInput === nextProps.disableInput &&
-    prevProps.selectedModel === nextProps.selectedModel &&
-    prevProps.onSubmit === nextProps.onSubmit &&
-    prevProps.onStop === nextProps.onStop &&
-    prevProps.onModelChange === nextProps.onModelChange &&
-    prevProps.threadId === nextProps.threadId &&
-    prevProps.isAtBottom === nextProps.isAtBottom &&
-    prevProps.showScrollToBottom === nextProps.showScrollToBottom &&
-    prevProps.onScrollToBottom === nextProps.onScrollToBottom
   );
 });

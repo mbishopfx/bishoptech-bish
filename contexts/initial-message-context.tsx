@@ -8,7 +8,7 @@ import {
   useRef,
   useEffect,
 } from "react";
-import { UIMessage } from "@ai-sdk-tools/store";
+import { UIMessage } from "ai";
 
 interface InitialMessageContextType {
   setInitialMessage: (threadId: string, message: UIMessage) => void;

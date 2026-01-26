@@ -1,7 +1,11 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "@radix-ui/themes/styles.css";
+
 @source "../node_modules/streamdown/dist/index.js";
+@source "../node_modules/@streamdown/code/dist/index.js";
+@source "../node_modules/@streamdown/mermaid/dist/index.js";
+@source "../node_modules/@streamdown/math/dist/index.js";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -53,6 +57,24 @@
   --color-popover-secondary: var(--popover-secondary);
   --color-popover-text: var(--popover-text);
 
+  --color-button-default: var(--button-default);
+  --color-button-default-hover: var(--button-default-hover);
+  --color-button-default-text: var(--button-default-text);
+  --color-button-default-text-hover: var(--button-default-text-hover);
+
+
+  --color-button-destructive: var(--button-destructive);
+  --color-button-outline: var(--button-outline);
+
+  --color-button-secondary: var(--button-secondary);
+  --color-button-secondary-hover: var(--button-secondary-hover);
+  --color-button-secondary-text: var(--button-secondary-text);
+  --color-button-secondary-text-hover: var(--button-secondary-text-hover);
+
+  --color-button-ghost: var(--button-ghost);
+  --color-button-link: var(--button-link);
+  --color-button-accent: var(--button-accent);
+
   /* Landing page custom colors */
   --color-landing-accent: var(--landing-accent);
   --color-landing-text-secondary: var(--landing-text-secondary);
@@ -61,10 +83,8 @@
 
 :root {
   --radius: 0.625rem;
-  --container-main-border: 12px;
-
-  --background: oklch(0.9851 0 0);
-  --background-secondary: oklch(0.9761 0 0);
+  --background: oklch(0.9873 0.0011 197.14);
+  --background-secondary: oklch(0.9642 0 0);
   --background-settings: oklch(0.967 0.0029 264.54);
 
   --stroke-primary: oklch(0.937 0 0);
@@ -82,6 +102,24 @@
   --accent-green: oklch(0.9317 0.0542 156.7);
   --accent-green-2: oklch(0.6198 0.1752 148 / 90%);
   --danger: oklch(0.6417 0.2062 15.77);
+
+  --button-default: #F1F2F2;
+  --button-default-hover: oklch(0.2046 0 0 / 85%);
+  --button-default-text: oklch(0.2046 0 0);
+  --button-default-text-hover: oklch(0.937 0 0);
+
+  --button-destructive: #EF4444;
+  --button-outline: #EBEBEB;
+
+  --button-secondary: #F1F2F2;
+  --button-secondary-hover: oklch(0.2046 0 0 / 85%);
+  --button-secondary-text: oklch(0.2046 0 0);
+  --button-secondary-text-hover: oklch(0.937 0 0);
+
+
+  --button-ghost: #F1F2F2;
+  --button-link: #343434;
+  --button-accent: #007AFF;
 
   --popover-main: oklch(0.2046 0 0 / 85%);
   --popover-main-s: oklch(0.2046 0 0);
@@ -101,9 +139,9 @@
   --muted-foreground: oklch(0.556 0 0); /* #8e8e8e */
   --accent-foreground: oklch(0.205 0 0); /* #343434 */
   --destructive: oklch(0.6417 0.2062 15.77); /* #ef4444 */
-  --border: oklch(0.8483 0 0); /* #eaeaea  */
+  --border: oklch(0.9401 0 0);
   --input: oklch(0.922 0 0); /* #eaeaea */
-  --ring: oklch(0.708 0 0); /* #b5b5b5 */
+  --ring: oklch(0.6028 0.2177 257.42); /* #b5b5b5 */
 
   /* Surface colors */
   --surface-elevated: #ffffff; /* #ffffff */
@@ -118,8 +156,8 @@
 }
 
 .dark {
-  --background: oklch(0.09 0 0);
-  --background-secondary: oklch(0.12 0 0);
+  --background: oklch(0.1149 0 0);
+  --background-secondary: oklch(0.2046 0 0);
   --background-settings: oklch(0.15 0.0029 264.54);
 
   --stroke-primary: oklch(0.2 0 0);
@@ -137,6 +175,24 @@
   --accent-green: oklch(0.7 0.1 156.7);
   --accent-green-2: oklch(0.6 0.15 148 / 90%);
   --danger: oklch(0.6 0.2 15.77);
+
+  --button-default: #111111;
+  --button-default-hover: oklch(0.5742 0 0);
+  --button-default-text: oklch(0.8 0 0);
+  --button-default-text-hover: oklch(0.937 0 0);
+
+
+  --button-destructive: #EF4444;
+  --button-outline: #EBEBEB;
+
+  --button-secondary: #111111;
+  --button-secondary-hover: oklch(0.8205 0 0);
+  --button-secondary-text: oklch(0.8 0 0);
+  --button-secondary-text-hover: oklch(0.2046 0 0);
+
+  --button-ghost: #F1F2F2;
+  --button-link: #343434;
+  --button-accent: #007AFF;
 
   --popover-main: oklch(0.2046 0 0 / 85%);
   --popover-main-s: oklch(0.2046 0 0);
@@ -158,7 +214,7 @@
   --destructive: oklch(0.6 0.2 15.77);
   --border: oklch(0.35 0 0);
   --input: oklch(0.15 0 0);
-  --ring: oklch(0.4 0 0);
+  --ring: oklch(0.6 0.15 243.43);
 
   /* Surface colors for dark mode */
   --surface-elevated: oklch(0.1 0 0);
@@ -254,7 +310,7 @@
   .sidebar-scroll-container:hover {
     scrollbar-color: rgba(156, 163, 175, 0.3) transparent; /* Firefox */
   }
-
+/* Need to remove this for now, not used */
   .shadow-container {
     box-shadow:
       0px 4px 6px -2px rgba(0, 0, 0, 0.05),
@@ -366,4 +422,173 @@
   animation-name: marquee;
   animation-timing-function: linear;
   animation-iteration-count: infinite;
+}
+
+/* Message list performance optimization (6.2 CSS content-visibility) */
+/* Defer off-screen message rendering for faster initial paint and scrolling */
+.message-item {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 120px;
+}
+
+/* Print styles for shared chat pages - Light mode with transparent backgrounds */
+@media print {
+  /* Force light mode - override dark mode */
+  * {
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  /* Main container - white background */
+  body,
+  html {
+    background: white !important;
+    color: #000 !important;
+  }
+
+  /* User messages - light gray background matching chat UI hover color */
+  /* Target the MessageContent div with bg-hover or bg-popover-main */
+  .is-user > div[class*="bg-hover"],
+  .is-user > div[class*="bg-popover-main"],
+  .is-user > div[class*="dark:bg-popover-main"],
+  .is-user [class*="bg-hover"],
+  .is-user [class*="bg-popover-main"] {
+    background: #EBEBEB !important; /* Light gray matching hover: oklch(0.9219 0 0) ≈ #EBEBEB */
+    color: #343434 !important; /* Dark text matching text-secondary: oklch(0.2046 0 0) ≈ #343434 */
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  /* Assistant messages - transparent background */
+  .is-assistant > div,
+  .is-assistant [class*="bg-transparent"] {
+    background: transparent !important;
+    color: #000 !important;
+  }
+
+  /* Override all text colors to ensure readability */
+  [class*="text-foreground"] {
+    color: #000 !important;
+  }
+
+  /* User message text - dark gray */
+  .is-user [class*="text-secondary"],
+  .is-user [class*="text-popover-text"] {
+    color: #343434 !important;
+  }
+
+  /* Muted text - medium gray for print */
+  [class*="text-muted"],
+  [class*="text-muted-foreground"] {
+    color: #666 !important;
+  }
+
+  /* Hide interactive elements */
+  button:not([class*="print:block"]),
+  [role="button"]:not([class*="print:block"]),
+  [class*="Actions"],
+  [class*="Action"],
+  [class*="opacity-0"],
+  [class*="group-hover"] {
+    display: none !important;
+    visibility: hidden !important;
+  }
+
+  /* Hide avatars */
+  [class*="Avatar"],
+  [class*="size-8"][class*="ring"] {
+    display: none !important;
+  }
+
+  /* Hide most icons except in print:block elements */
+  svg:not([class*="print:block"]) {
+    display: none !important;
+  }
+
+  /* Subtle borders for print */
+  [class*="border"]:not([class*="print:block"]) {
+    border-color: #E5E5E5 !important;
+  }
+
+  /* Code blocks - light background */
+  pre,
+  code,
+  [class*="code"] {
+    background: #F5F5F5 !important;
+    color: #000 !important;
+    border: 1px solid #E5E5E5 !important;
+  }
+
+  /* Links */
+  a {
+    color: #000 !important;
+    text-decoration: underline !important;
+  }
+
+  /* Prevent page breaks inside messages */
+  .is-user,
+  .is-assistant {
+    page-break-inside: avoid;
+    margin-bottom: 1rem;
+  }
+
+  /* Footer for print */
+  [class*="print:block"] {
+    display: block !important;
+  }
+
+  /* Override dark mode completely */
+  .dark,
+  .dark * {
+    background: transparent !important;
+    color: #000 !important;
+  }
+
+  /* User messages in dark mode should still have light gray background */
+  .dark .is-user > div[class*="bg-popover-main"],
+  .dark .is-user [class*="bg-popover-main"] {
+    background: #EBEBEB !important;
+    color: #343434 !important;
+  }
+
+  /* Reasoning sections - very light background */
+  [class*="reasoning"],
+  [class*="Reasoning"],
+  [class*="ReasoningContent"] {
+    background: #F9F9F9 !important;
+    border: 1px solid #E5E5E5 !important;
+    color: #000 !important;
+  }
+
+  /* Tool outputs - very light background */
+  [class*="Tool"],
+  [class*="ToolContent"],
+  [class*="ToolOutput"] {
+    background: #F9F9F9 !important;
+    border: 1px solid #E5E5E5 !important;
+    color: #000 !important;
+  }
+
+  /* Sources - transparent with subtle styling */
+  [class*="Source"],
+  [class*="Sources"] {
+    background: transparent !important;
+    color: #000 !important;
+  }
+
+  /* Tables - light styling */
+  table {
+    border-collapse: collapse;
+  }
+
+  th,
+  td {
+    border: 1px solid #E5E5E5 !important;
+    background: transparent !important;
+    color: #000 !important;
+  }
+
+  th {
+    background: #F5F5F5 !important;
+  }
 }

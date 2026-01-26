@@ -110,6 +110,21 @@ export const getOrganizationPlan = query({
   },
 });
 
+export const getOrganizationSeatsAndPlan = query({
+  args: { workos_id: v.string(), ...serverSecretArg },
+  handler: async (ctx, args) => {
+    ensureServerSecret(args.secret);
+    const organization = await ctx.db
+      .query("organizations")
+      .withIndex("by_workos_id", (q) => q.eq("workos_id", args.workos_id))
+      .first();
+    return {
+      seatQuantity: organization?.seatQuantity ?? null,
+      plan: organization?.plan ?? null,
+    };
+  },
+});
+
 export const getByWorkOSId = internalQuery({
   args: { workos_id: v.string() },
   handler: async (ctx, args) => {

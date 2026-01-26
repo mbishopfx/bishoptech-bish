@@ -260,7 +260,8 @@ export function InstructionForm({
             </Button>
             <Button
               type="submit"
-              className="cursor-pointer rounded-lg font-medium gap-2 min-w-[150px]"
+              variant="accent"
+              className="gap-2 border border-border/60 shadow-sm shadow-black/5 dark:shadow-black/30 text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-medium min-w-[150px]"
             >
               Siguiente
             </Button>
@@ -298,8 +299,9 @@ export function InstructionForm({
             <div className="flex gap-3">
               <Button
                 type="submit"
+                variant="accent"
                 disabled={isLoading}
-                className="cursor-pointer rounded-lg font-medium gap-2 min-w-[150px]"
+                className="gap-2 border border-border/60 shadow-sm shadow-black/5 dark:shadow-black/30 text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-medium min-w-[150px]"
               >
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {initialData ? "Actualizar" : "Crear Instrucción"}

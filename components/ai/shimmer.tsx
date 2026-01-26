@@ -2,13 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import { motion } from "motion/react";
-import {
-  type CSSProperties,
-  type ElementType,
-  type JSX,
-  memo,
-  useMemo,
-} from "react";
+import { type CSSProperties, type ElementType, type JSX, useMemo } from "react";
 
 export type TextShimmerProps = {
   children: string;
@@ -18,13 +12,13 @@ export type TextShimmerProps = {
   spread?: number;
 };
 
-const ShimmerComponent = ({
+export function Shimmer({
   children,
   as: Component = "p",
   className,
   duration = 2,
   spread = 2,
-}: TextShimmerProps) => {
+}: TextShimmerProps) {
   const MotionComponent = useMemo(
     () => motion.create(Component as keyof JSX.IntrinsicElements),
     [Component]
@@ -60,6 +54,4 @@ const ShimmerComponent = ({
       {children}
     </MotionComponent>
   );
-};
-
-export const Shimmer = memo(ShimmerComponent);
+}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useRef } from "react";
-import type { UIMessage } from "@ai-sdk-tools/store";
+import type { UIMessage } from "ai";
 import type { RefObject } from "react";
 import { Data, Effect, Fiber, Schedule } from "effect";
 

@@ -11,12 +11,12 @@ import {
   createUIMessageStream,
   createUIMessageStreamResponse,
 } from "ai";
-import { fetchMutation } from "convex/nextjs";
+import { fetchMutation, fetchQuery } from "convex/nextjs";
 import { api } from "@/convex/_generated/api";
 import { withTracing } from "@posthog/ai";
 import { PostHog } from "posthog-node";
 import * as Sentry from "@sentry/nextjs";
-// import { withSupermemory, supermemoryTools } from "@supermemory/tools/ai-sdk";
+import { withSupermemory, supermemoryTools } from "@supermemory/tools/ai-sdk";
 import {
   getLanguageModel,
   getModel,
@@ -27,7 +27,7 @@ import {
 import { createToolsForModel } from "@/lib/ai/model-tools";
 import { ToolType } from "@/lib/ai/config/base";
 import { Id } from "@/convex/_generated/dataModel";
-import { exaWebSearch } from "@/lib/ai/tools/exa-search";
+import { valyuSearchTools } from "@/lib/ai/tools/valyu-search";
 
 export const maxDuration = 500;
 
@@ -304,6 +304,23 @@ const verifyBotProtection = (logContext: LogContext) =>
 */
 
 // ============================================================================
+// Tool Name Constants
+// ============================================================================
+
+// Only these search tools from Valyu should increment quota
+// All other tools are automatically excluded
+const SEARCH_TOOLS = new Set([
+  'webSearch',
+  'financeSearch',
+  'paperSearch',
+  'bioSearch',
+  'patentSearch',
+  'secSearch',
+  'economicsSearch',
+  'companyResearch',
+]);
+
+// ============================================================================
 // Streaming State
 // ============================================================================
 
@@ -311,7 +328,7 @@ interface StreamingState {
   content: string;
   reasoning: string;
   isComplete: boolean;
-  toolCallCount: number;
+  searchToolCallCount: number;
   pendingUpdate: { content: string; reasoning: string };
 }
 
@@ -414,23 +431,51 @@ const handleChatRequest = (
         }),
     });
 
-    // const supermemoryEnabled = Boolean(process.env.SUPERMEMORY_API_KEY);
-    // const modelWithMemory = yield* Effect.try({
-    //   try: () =>
-    //     supermemoryEnabled
-    //   ? withSupermemory(baseModel, auth.userId, {
-    //       mode: "profile",
-    //       verbose: process.env.NODE_ENV !== "production",
-    //     })
-    //       : baseModel,
-    //   catch: (error) =>
-    //     new ModelError({
-    //       message: "Failed to initialize Supermemory integration",
-    //       modelId,
-    //       cause: error,
-    //     }),
-    // });
-    const modelWithMemory = baseModel;
+    const baseModelProvider =
+      typeof baseModel !== "string" && (baseModel as any).provider
+        ? (baseModel as any).provider
+        : (() => {
+            const fallbackProvider = modelId.split("/")[0];
+            logger.warn(
+              "Provider not found on gateway model, using fallback from modelId",
+              logContext,
+              { modelId, fallbackProvider }
+            );
+            return fallbackProvider;
+          })();
+
+    const userConfig = yield* Effect.tryPromise({
+      try: () =>
+        fetchQuery(api.userConfiguration.serverGetUserConfiguration, {
+          secret: process.env.CONVEX_SECRET_TOKEN!,
+          userId: auth.userId,
+        }),
+      catch: (error) =>
+        new DatabaseError({
+          message: "Failed to fetch user configuration",
+          operation: "serverGetUserConfiguration",
+          cause: error,
+        }),
+    });
+
+    // Determine if supermemory should be enabled
+    const supermemoryEnabled = Boolean(process.env.SUPERMEMORY_API_KEY) && userConfig.supermemoryEnabled;
+    const modelWithMemory = yield* Effect.try({
+      try: () =>
+        supermemoryEnabled
+          ? withSupermemory(baseModel, auth.userId, {
+              mode: "profile",
+              verbose: process.env.NODE_ENV !== "production",
+              conversationId: threadId,
+            })
+          : baseModel,
+      catch: (error) =>
+        new ModelError({
+          message: "Failed to initialize Supermemory integration",
+          modelId,
+          cause: error,
+        }),
+    });
 
     // PostHog client - handle gracefully
     const phClient = yield* Effect.try({
@@ -442,32 +487,40 @@ const handleChatRequest = (
         logger.warn("PostHog initialization failed, analytics disabled", logContext, error);
         return null;
       },
-    }).pipe(
-      Effect.catchAll(() => Effect.succeed(null))
-    );
+    }).pipe(Effect.catchAll(() => Effect.succeed(null)));
 
-    // Ensure PostHog cleanup on scope close
     yield* Effect.addFinalizer(() => shutdownPostHog(phClient));
+
+    const modelWithProvider = supermemoryEnabled
+      ? new Proxy(modelWithMemory as object, {
+          get(target, prop) {
+            if (prop === "provider") {
+              return baseModelProvider;
+            }
+            return (target as any)[prop];
+          },
+        }) as LanguageModel
+      : modelWithMemory;
 
     const model = yield* Effect.try({
       try: () => {
         if (phClient) {
-          return withTracing(modelWithMemory, phClient, {
-      posthogDistinctId: auth.userId,
-      posthogTraceId: newMessageId,
-      posthogProperties: {
-        threadId,
-        modelId,
-        quotaType,
-        orgId: auth.orgId || null,
-        trigger: trigger || "submit-message",
+          return withTracing(modelWithProvider as any as Parameters<typeof withTracing>[0], phClient, {
+            posthogDistinctId: auth.userId,
+            posthogTraceId: newMessageId,
+            posthogProperties: {
+              threadId,
+              modelId,
+              quotaType,
+              orgId: auth.orgId || null,
+              trigger: trigger || "submit-message",
               requestId,
-      },
-      posthogPrivacyMode: false,
-      posthogGroups: auth.orgId ? { organization: auth.orgId } : undefined,
-    }) as unknown as LanguageModel;
+            },
+            posthogPrivacyMode: false,
+            posthogGroups: auth.orgId ? { organization: auth.orgId } : undefined,
+          }) as unknown as LanguageModel;
         }
-        return modelWithMemory as unknown as LanguageModel;
+        return modelWithProvider as unknown as LanguageModel;
       },
       catch: (error) =>
         new ModelError({
@@ -507,12 +560,13 @@ const handleChatRequest = (
     const tools = yield* Effect.try({
       try: () => ({
       ...providerTools,
-      ...(enabledTools.includes("web_search") ? { webSearch: exaWebSearch } : {}),
-      // ...(process.env.SUPERMEMORY_API_KEY
-      //   ? supermemoryTools(process.env.SUPERMEMORY_API_KEY, {
-      //       containerTags: auth.orgId ? [auth.userId, auth.orgId] : [auth.userId],
-      //     })
-      //   : {}),
+      ...(enabledTools.includes("web_search") ? valyuSearchTools : {}),
+      // Only add supermemory tools if enabled
+      ...(supermemoryEnabled
+        ? supermemoryTools(process.env.SUPERMEMORY_API_KEY!, {
+            containerTags: auth.orgId ? [auth.userId, auth.orgId] : [auth.userId],
+          })
+        : {}),
       }),
       catch: (error) =>
         new ToolError({
@@ -594,7 +648,7 @@ const handleChatRequest = (
       content: "",
       reasoning: "",
       isComplete: false,
-      toolCallCount: 0,
+      searchToolCallCount: 0,
       pendingUpdate: { content: "", reasoning: "" },
     });
     const queueShutdownRef = yield* Ref.make(false);
@@ -639,7 +693,7 @@ const handleChatRequest = (
     const systemPrompt = yield* buildSystemPrompt({
       modelDisplayName,
       customInstructions: customInstructionsContent,
-      // supermemoryEnabled,
+      supermemoryEnabled,
     });
 
     // Create the streaming response
@@ -731,17 +785,17 @@ const handleChatRequest = (
 
             logger.info("Request aborted by client", logContext, {
               contentLength: finalState.content.length,
-              toolCallCount: finalState.toolCallCount,
+              searchToolCallCount: finalState.searchToolCallCount,
             });
 
-            // Increment tool call quota if any tools were used
-            if (finalState.toolCallCount > 0) {
+            // Increment tool call quota if any search tools were used
+            if (finalState.searchToolCallCount > 0) {
               logger.debug("Incrementing tool quota (abort)", logContext, { 
-                toolCallCount: finalState.toolCallCount 
+                searchToolCallCount: finalState.searchToolCallCount 
               });
               try {
                 await Effect.runPromise(
-                  incrementToolCallQuota(auth.userId, finalState.toolCallCount)
+                  incrementToolCallQuota(auth.userId, finalState.searchToolCallCount)
                 );
               } catch (err) {
                 logger.error("Failed to increment tool quota", logContext, err);
@@ -764,13 +818,13 @@ const handleChatRequest = (
         try {
           const result = streamText({
             model,
-            messages: convertToModelMessages(
+            messages: await convertToModelMessages(
               filterMessagesForModel(messages as UIMessage[], modelId)
             ),
             tools: toolSet,
             system: systemPrompt,
             headers: getAttributionHeaders(),
-            stopWhen: stepCountIs(50),
+            stopWhen: stepCountIs(20),
             experimental_transform: smoothStream({
               delayInMs: 5,
               chunking: "word",
@@ -806,12 +860,20 @@ const handleChatRequest = (
                 logger.debug("Tool call detected", logContext, { 
                   toolName: chunk.toolName,
                 });
-                Effect.runPromise(
-                  Ref.update(stateRef, (s) => ({
-                    ...s,
-                    toolCallCount: s.toolCallCount + 1,
-                  }))
-                );
+                // Only increment quota for search tools; all other tools are automatically excluded
+                if (SEARCH_TOOLS.has(chunk.toolName)) {
+                  Effect.runPromise(
+                    Ref.update(stateRef, (s) => ({
+                      ...s,
+                      searchToolCallCount: s.searchToolCallCount + 1,
+                    }))
+                  );
+                } else {
+                  // Log non-search tool calls but don't increment quota
+                  logger.debug("Non-search tool call (not counted for quota)", logContext, {
+                    toolName: chunk.toolName,
+                  });
+                }
               } else if (
                 chunk.type === "tool-result" &&
                 chunk.toolName === "webSearch"
@@ -884,17 +946,17 @@ const handleChatRequest = (
                 totalTimeMs: totalTime,
                 contentLength: finalState.content.length,
                 reasoningLength: finalState.reasoning.length,
-                toolCallCount: finalState.toolCallCount,
+                searchToolCallCount: finalState.searchToolCallCount,
                 success,
               });
 
-              if (finalState.toolCallCount > 0) {
+              if (finalState.searchToolCallCount > 0) {
                 logger.debug("Incrementing tool quota", logContext, { 
-                  toolCallCount: finalState.toolCallCount 
+                  searchToolCallCount: finalState.searchToolCallCount 
                 });
                 try {
                   await Effect.runPromise(
-                    incrementToolCallQuota(auth.userId, finalState.toolCallCount)
+                    incrementToolCallQuota(auth.userId, finalState.searchToolCallCount)
                   );
                 } catch (err) {
                   logger.error("Failed to increment tool quota", logContext, err);

@@ -45,6 +45,7 @@ import { MoonshotIcon } from "@/components/ui/icons/moonshot-icon";
 import { ZaiIcon } from "@/components/ui/icons/zai-icon";
 import { PrimeIntellectIcon } from "@/components/ui/icons/prime-intellect-icon";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ai/ui/tabs";
+import { Button } from "@/components/ai/ui/button";
 
 // Provider icon mapping
 const providerIcons = {
@@ -236,43 +237,40 @@ function ModelSelector({
           setOpen(false); // Close when a value is selected
         }}
       >
-      <SelectPrimitive.Trigger
-        className={cn(
-          "text-secondary hover:bg-popover-main hover:text-popover-text data-[state=open]:bg-popover-main data-[state=open]:text-popover-text data-[placeholder]:text-muted-foreground [&_svg:not([class*='text-'])]:text-muted-foreground aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive flex w-fit items-center justify-between gap-2 rounded-md bg-transparent px-3 py-2 text-sm whitespace-nowrap outline-none disabled:cursor-not-allowed disabled:opacity-50 h-9 transition-colors dark:hover:bg-hover/60",
-          className,
-        )}
-      >
-        <div className="flex items-center gap-2">
-          {isRecommendedSelected && selectedRecommended ? (
-            <>
-              <selectedRecommended.icon
-                className={cn("size-4", selectedRecommended.color)}
-              />
-              <span className="font-medium">{selectedRecommended.name}</span>
-            </>
-          ) : selectedModel ? (
-            <>
-              {(() => {
-                const IconComponent =
-                  providerIcons[
-                    selectedModel.provider as keyof typeof providerIcons
-                  ];
-                return IconComponent ? (
-                  <IconComponent className="size-4" />
-                ) : null;
-              })()}
-              <span className="font-medium">{selectedModel.name}</span>
-              {selectedModel.isPremium && (
-                <SparklesIcon className="size-3 text-yellow-500" />
-              )}
-            </>
-          ) : (
-            <span className="font-medium">Seleccionar modelo</span>
-          )}
-        </div>
-        <SelectPrimitive.Icon asChild>
-          <ChevronDownIcon className="size-4 opacity-50" />
-        </SelectPrimitive.Icon>
+      <SelectPrimitive.Trigger asChild>
+        <Button variant="ghost" className={cn("w-fit", className)}>
+          <div className="flex items-center gap-2">
+            {isRecommendedSelected && selectedRecommended ? (
+              <>
+                <selectedRecommended.icon
+                  className={cn("size-4", selectedRecommended.color)}
+                />
+                <span className="font-medium">{selectedRecommended.name}</span>
+              </>
+            ) : selectedModel ? (
+              <>
+                {(() => {
+                  const IconComponent =
+                    providerIcons[
+                      selectedModel.provider as keyof typeof providerIcons
+                    ];
+                  return IconComponent ? (
+                    <IconComponent className="size-4" />
+                  ) : null;
+                })()}
+                <span className="font-medium">{selectedModel.name}</span>
+                {selectedModel.isPremium && (
+                  <SparklesIcon className="size-3 text-yellow-500" />
+                )}
+              </>
+            ) : (
+              <span className="font-medium">Seleccionar modelo</span>
+            )}
+          </div>
+          <SelectPrimitive.Icon asChild>
+            <ChevronDownIcon className="size-4 opacity-50" />
+          </SelectPrimitive.Icon>
+        </Button>
       </SelectPrimitive.Trigger>
 
       <SelectPrimitive.Portal>
@@ -394,7 +392,7 @@ interface ModelItemProps {
   model: BaseModelConfig;
 }
 
-const ModelItem = React.memo(function ModelItem({ model }: ModelItemProps) {
+function ModelItem({ model }: ModelItemProps) {
   const ProviderIcon =
     providerIcons[model.provider as keyof typeof providerIcons];
 
@@ -478,6 +476,6 @@ const ModelItem = React.memo(function ModelItem({ model }: ModelItemProps) {
       </span>
     </SelectPrimitive.Item>
   );
-});
+}
 
 export { ModelSelector };

@@ -131,7 +131,7 @@ export function MfaDisableDialog({
                   variant="accent"
                   onClick={openDeleteMfaFlow}
                   disabled={isLoading}
-                  className="cursor-pointer rounded-lg font-medium gap-2 min-w-[150px]"
+                  className="gap-2 border border-border/60 shadow-sm shadow-black/5 dark:shadow-black/30 text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-medium min-w-[150px]"
                 >
                   Continuar
                 </Button>
@@ -201,7 +201,7 @@ export function MfaDisableDialog({
                       variant="accent"
                       onClick={verifyDeleteMfaStepUp}
                       disabled={isLoading || deleteMfaStepUpCode.length !== 6}
-                      className="cursor-pointer rounded-lg font-medium gap-2 min-w-[150px]"
+                      className="gap-2 border border-border/60 shadow-sm shadow-black/5 dark:shadow-black/30 text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-medium min-w-[150px]"
                     >
                       {isLoading ? "Verificando..." : "Verificar"}
                     </Button>

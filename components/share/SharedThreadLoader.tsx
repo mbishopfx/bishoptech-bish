@@ -10,7 +10,7 @@ import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { Conversation, ConversationContent } from "@/components/ai/conversation";
 import { MessageRenderer } from "@/components/chat/components/message-renderer";
 import { ChatStoreProvider } from "@/lib/stores/hooks";
-import type { UIMessage } from "@ai-sdk-tools/store";
+import type { UIMessage } from "ai";
 
 const PAGE_SIZE = 30;
 
@@ -142,7 +142,7 @@ function ShareAccessMessage({ status }: { status: SharedThreadAccessDenied["stat
             <h1 className="truncate text-lg font-semibold">Enlace compartido</h1>
           </div>
           <div className="flex items-center gap-2">
-            <ThemeToggle size="md" />
+            <ThemeToggle size="md" styleType="ghost" />
           </div>
         </div>
       </div>
@@ -178,9 +178,11 @@ function ShareAccessMessage({ status }: { status: SharedThreadAccessDenied["stat
               <h2 className="text-xl font-semibold">{current.title}</h2>
               <p className="text-sm text-muted-foreground">{current.description}</p>
               {current.action && (
-                <Button asChild className="w-fit">
-                  <a href={current.action.href}>{current.action.label}</a>
-                </Button>
+                <div className="flex justify-end">
+                  <Button asChild className="w-fit">
+                    <a href={current.action.href}>{current.action.label}</a>
+                  </Button>
+                </div>
               )}
             </div>
           </div>

@@ -1,4 +1,4 @@
-import type { UIMessage } from "@ai-sdk-tools/store";
+import type { UIMessage } from "ai";
 
 type ConvexThreadMessage = {
   messageId: string;

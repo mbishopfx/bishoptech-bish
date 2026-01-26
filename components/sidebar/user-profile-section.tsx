@@ -19,8 +19,8 @@ export function ProfileSkeleton() {
 export function UserProfileSection() {
   return (
     <div
-      className="border-t border-border p-4 flex-shrink-0 flex items-center justify-center"
-      style={{ minHeight: "80px" }}
+      className="p-3 flex-shrink-0 flex items-center justify-center"
+      style={{ minHeight: "72px" }}
     >
       <UserProfileSectionClient serverSkeleton={<ProfileSkeleton />} />
     </div>

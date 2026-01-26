@@ -42,7 +42,6 @@ import { cn } from "@/lib/utils"
 
 interface MembersListProps {
   initialData: PaginatedOrganizationData
-  organizationId: string
   currentUserId: string
   seatQuantity?: number | null
   totalMemberCount: number
@@ -54,7 +53,7 @@ interface InvitationFormData {
   role: string
 }
 
-export function MembersList({ initialData, organizationId, currentUserId, seatQuantity, totalMemberCount, plan }: MembersListProps) {
+export function MembersList({ initialData, currentUserId, seatQuantity, totalMemberCount, plan }: MembersListProps) {
   const router = useRouter()
   const [data, setData] = useState<PaginatedOrganizationData>(initialData)
   const [loading, setLoading] = useState(false)
@@ -94,14 +93,14 @@ export function MembersList({ initialData, organizationId, currentUserId, seatQu
   const fetchMembers = useCallback(async (after?: string, before?: string) => {
     setLoading(true)
     try {
-        const newData = await getPaginatedOrganizationMembers(organizationId, 50, after, before)
+        const newData = await getPaginatedOrganizationMembers(50, after, before)
         setData(newData)
     } catch (e) {
         console.error("Failed to fetch members", e)
     } finally {
         setLoading(false)
     }
-  }, [organizationId])
+  }, [])
 
   const handleNextPage = () => {
     if (data.nextCursor) {
@@ -159,7 +158,7 @@ export function MembersList({ initialData, organizationId, currentUserId, seatQu
 
       const results = await Promise.all(
         validInvitations
-          .map(inv => inviteUser(organizationId, inv.email, inv.role))
+          .map(inv => inviteUser(inv.email, inv.role))
       )
 
       const failures = results.filter(r => !r.success)
@@ -379,7 +378,7 @@ export function MembersList({ initialData, organizationId, currentUserId, seatQu
                 placeholder="Buscar por correo..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="relative z-[1] border-none bg-transparent pl-9 focus:outline-none focus:ring-0"
+                className="relative z-[1] !border-none !bg-transparent dark:!bg-transparent rounded-md pl-9 focus:outline-none focus:ring-0"
               />
             </div>
             <Dialog open={isInviteOpen} onOpenChange={(open) => {
@@ -393,8 +392,9 @@ export function MembersList({ initialData, organizationId, currentUserId, seatQu
             }}>
               <DialogTrigger asChild>
                 <Button 
+                  variant="ghost"
                   disabled={isLimitReached || plan !== "enterprise"}
-                  className="cursor-pointer gap-2 rounded-md border border-border/60 bg-white/90 shadow-sm shadow-black/5 dark:bg-popover-secondary/75 dark:shadow-black/30 hover:bg-black/[0.04] dark:hover:bg-hover/30 hover:text-foreground dark:hover:text-popover-text disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="gap-2 border border-border/60 bg-white/90 dark:bg-popover-secondary/75 dark:shadow-black/30 hover:bg-black/[0.04] dark:hover:bg-hover/30 hover:text-foreground dark:hover:text-popover-text disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <span className="hidden sm:inline">Invitar Miembros</span>
                   <span className="sm:hidden">Invitar</span>
@@ -789,19 +789,21 @@ export function MembersList({ initialData, organizationId, currentUserId, seatQu
       {/* Pagination Controls */}
       <div className="flex items-center justify-end space-x-2 py-4">
         <Button
-          variant="outline"
+          variant="ghost"
           size="sm"
           onClick={handlePrevPage}
           disabled={!data.prevCursor || loading}
+          className="gap-2 border border-border/60 bg-white/90 dark:bg-popover-secondary/75 dark:shadow-black/30 hover:bg-black/[0.04] dark:hover:bg-hover/30 hover:text-foreground dark:hover:text-popover-text disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <ChevronLeftIcon className="h-4 w-4" />
           Anterior
         </Button>
         <Button
-          variant="outline"
+          variant="ghost"
           size="sm"
           onClick={handleNextPage}
           disabled={!data.nextCursor || loading}
+          className="gap-2 border border-border/60 bg-white/90 dark:bg-popover-secondary/75 dark:shadow-black/30 hover:bg-black/[0.04] dark:hover:bg-hover/30 hover:text-foreground dark:hover:text-popover-text disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Siguiente
           <ChevronRightIcon className="h-4 w-4" />

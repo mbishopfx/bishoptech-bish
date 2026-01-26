@@ -4,7 +4,7 @@ import { Button } from '@/components/ai/ui/button';
 import { cn } from '@/lib/utils';
 import { CheckIcon, CopyIcon } from 'lucide-react';
 import type { ComponentProps, HTMLAttributes, ReactNode } from 'react';
-import { createContext, useContext, useState, useEffect, useRef, memo } from 'react';
+import { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { type BundledLanguage, codeToHtml } from 'shiki';
 
 type CodeBlockContextType = {
@@ -40,8 +40,7 @@ async function highlightCode(code: string, language: string) {
         },
       }),
     ]);
-  } catch (error) {
-    // Fallback to plaintext if language is not supported
+  } catch {
     return await Promise.all([
       codeToHtml(code, {
         lang: 'plaintext',
@@ -61,14 +60,14 @@ async function highlightCode(code: string, language: string) {
   }
 }
 
-export const CodeBlock = memo(({
+export function CodeBlock({
   code,
   language,
   showLineNumbers = false,
   className,
   children,
   ...props
-}: CodeBlockProps) => {
+}: CodeBlockProps) {
   const [html, setHtml] = useState<string>('');
   const [darkHtml, setDarkHtml] = useState<string>('');
   const mounted = useRef(false);
@@ -114,9 +113,7 @@ export const CodeBlock = memo(({
       </div>
     </CodeBlockContext.Provider>
   );
-}, (prev, next) => prev.code === next.code && prev.language === next.language);
-
-CodeBlock.displayName = 'CodeBlock';
+}
 
 export type CodeBlockCopyButtonProps = ComponentProps<typeof Button> & {
   onCopy?: () => void;
@@ -124,14 +121,14 @@ export type CodeBlockCopyButtonProps = ComponentProps<typeof Button> & {
   timeout?: number;
 };
 
-export const CodeBlockCopyButton = ({
+export function CodeBlockCopyButton({
   onCopy,
   onError,
   timeout = 2000,
   children,
   className,
   ...props
-}: CodeBlockCopyButtonProps) => {
+}: CodeBlockCopyButtonProps) {
   const [isCopied, setIsCopied] = useState(false);
   const { code } = useContext(CodeBlockContext);
 
@@ -164,4 +161,4 @@ export const CodeBlockCopyButton = ({
       {children ?? <Icon size={14} />}
     </Button>
   );
-};
+}

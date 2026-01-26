@@ -1,6 +1,5 @@
 import type { UIMessage } from 'ai';
 import { marked } from 'marked';
-import { parseIncompleteMarkdown } from '@/components/streamdown/lib/parse-incomplete-markdown';
 
 export type MarkdownCacheEntry = {
   text: string;
@@ -142,7 +141,7 @@ export function precomputeMarkdownForAllMessages(
           messageId: lastMessage.id,
           partIdx: lastPartIdx,
           text,
-          preparedText: parseIncompleteMarkdown(text),
+          preparedText: text,
           streaming,
         });
       }

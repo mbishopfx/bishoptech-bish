@@ -1,6 +1,6 @@
 import { fetchQuery } from "convex/nextjs";
 import { api } from "@/convex/_generated/api";
-import type { UIMessage } from "@ai-sdk-tools/store";
+import type { UIMessage } from "ai";
 import { notFound } from "next/navigation";
 import { Id } from "@/convex/_generated/dataModel";
 import SharedChatViewer from "@/components/share/SharedChatViewer";

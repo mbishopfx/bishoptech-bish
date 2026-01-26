@@ -15,7 +15,6 @@ import {
   SentIcon,
   LoadingIcon,
   StopIcon,
-  DeleteIcon,
   XIcon,
   AttachmentsIcon,
 } from "@/components/ui/icons/svg-icons";
@@ -28,17 +27,186 @@ import type {
 } from "react";
 import { Children, useRef, useEffect, useCallback, useState } from "react";
 
-export type PromptInputProps = HTMLAttributes<HTMLFormElement>;
+// Constants for the prompt input shape
+const FLARE_SIZE = 64; // w-16 = 64px (size of corner flare squares)
+const TOP_BORDER_RADIUS = 24; // rounded-t-3xl = 1.5rem = 24px
 
-export const PromptInput = ({ className, ...props }: PromptInputProps) => (
-  <form
+export type PromptInputProps = HTMLAttributes<HTMLFormElement> & {
+  borderClassName?: string;
+};
+
+/**
+ * SVG border that traces the unified shape outline including the corner flares.
+ * Creates a single continuous path that follows:
+ * - Left flare arc (concave curve)
+ * - Left side of form
+ * - Top-left rounded corner
+ * - Top edge
+ * - Top-right rounded corner
+ * - Right side of form
+ * - Right flare arc (concave curve)
+ */
+const PromptInputBorderSvg = ({ 
+  width, 
+  height, 
+  strokeStyle,
+  className
+}: { 
+  width: number; 
+  height: number; 
+  strokeStyle: React.CSSProperties;
+  className?: string;
+}) => {
+  const totalWidth = width + (FLARE_SIZE * 2);
+  const totalHeight = height;
+  
+  if (height < FLARE_SIZE) return null;
+  
+  const formLeft = FLARE_SIZE;
+  const formRight = FLARE_SIZE + width;
+  const flareTop = totalHeight - FLARE_SIZE;
+  
+  const path = [
+    `M 0 ${totalHeight}`,
+    `A ${FLARE_SIZE} ${FLARE_SIZE} 0 0 0 ${formLeft} ${flareTop}`,
+    `L ${formLeft} ${TOP_BORDER_RADIUS}`,
+    `A ${TOP_BORDER_RADIUS} ${TOP_BORDER_RADIUS} 0 0 1 ${formLeft + TOP_BORDER_RADIUS} 0`,
+    `L ${formRight - TOP_BORDER_RADIUS} 0`,
+    `A ${TOP_BORDER_RADIUS} ${TOP_BORDER_RADIUS} 0 0 1 ${formRight} ${TOP_BORDER_RADIUS}`,
+    `L ${formRight} ${flareTop}`,
+    `A ${FLARE_SIZE} ${FLARE_SIZE} 0 0 0 ${totalWidth} ${totalHeight}`,
+  ].join(' ');
+
+  return (
+    <svg
+      className={cn("absolute pointer-events-none hidden md:block z-20", className)}
+      style={{
+        left: -FLARE_SIZE,
+        bottom: 0,
+        width: totalWidth,
+        height: totalHeight,
+      }}
+      viewBox={`0 0 ${totalWidth} ${totalHeight}`}
+      fill="none"
+      overflow="visible"
+    >
+      <path
+        d={path}
+        strokeWidth="1"
+        style={strokeStyle}
+        fill="none"
+        vectorEffect="non-scaling-stroke"
+      />
+    </svg>
+  );
+};
+
+/** Mobile border - simple rectangle without flares */
+const PromptInputMobileBorder = ({ className }: { className?: string }) => (
+  <div 
     className={cn(
-      "w-full divide-y overflow-hidden rounded-none md:rounded-t-xl rounded-b-none border bg-background shadow-sm dark:bg-popover-main dark:backdrop-blur-sm",
-      className,
+      "absolute inset-0 rounded-none pointer-events-none md:hidden border",
+      className
     )}
-    {...props}
   />
 );
+
+/** Extracts the color value from border class and applies it to SVG stroke */
+const getBorderColorForSvg = (
+  borderClass?: string
+): { strokeStyle: React.CSSProperties; className?: string } => {
+  if (!borderClass) {
+    return { strokeStyle: { stroke: "transparent" } };
+  }
+  
+  // Handle custom border classes by using CSS variable directly
+  if (borderClass === "border-border") {
+    return { strokeStyle: { stroke: "var(--color-border)" } };
+  }
+  
+  // For other border classes (like "border-red-500"), convert to text color class
+  // and use currentColor in the SVG stroke
+  const textClass = borderClass.replace(/^border-/, "text-");
+  return { 
+    strokeStyle: { stroke: "currentColor" },
+    className: textClass
+  };
+};
+
+export const PromptInput = ({
+  className,
+  children,
+  borderClassName,
+  ...props
+}: PromptInputProps) => {
+  const formRef = useRef<HTMLFormElement>(null);
+  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+
+  useEffect(() => {
+    const updateDimensions = () => {
+      if (formRef.current) {
+        setDimensions({
+          width: formRef.current.offsetWidth,
+          height: formRef.current.offsetHeight,
+        });
+      }
+    };
+
+    updateDimensions();
+
+    const resizeObserver = new ResizeObserver(updateDimensions);
+    if (formRef.current) {
+      resizeObserver.observe(formRef.current);
+    }
+
+    return () => resizeObserver.disconnect();
+  }, []);
+
+  const { strokeStyle, className: svgClassName } = getBorderColorForSvg(borderClassName);
+
+  return (
+    <div className="relative w-full z-[20] overflow-visible">
+      {/* Desktop: SVG border tracing the unified shape */}
+      {dimensions.width > 0 && dimensions.height > 0 && (
+        <PromptInputBorderSvg
+          width={dimensions.width}
+          height={dimensions.height}
+          strokeStyle={strokeStyle}
+          className={svgClassName}
+        />
+      )}
+
+      {/* Mobile: Simple border */}
+      <PromptInputMobileBorder className={borderClassName} />
+
+      {/* Left flare: outward-curving corner effect */}
+      <div className="absolute bottom-0 right-full w-16 h-16 bg-background-secondary overflow-hidden md:block hidden">
+        <div className="absolute top-0 left-0 w-[200%] h-[200%] rounded-full bg-background -translate-x-1/2 -translate-y-1/2" />
+      </div>
+      
+      <form
+        ref={formRef}
+        className={cn(
+          "relative w-full divide-y overflow-hidden rounded-none md:rounded-t-3xl rounded-b-none bg-background-secondary z-10",
+          className,
+        )}
+        {...props}
+      >
+        {children}
+      </form>
+
+      {/* Right flare: outward-curving corner effect */}
+      <div className="absolute bottom-0 left-full w-16 h-16 bg-background-secondary overflow-hidden md:block hidden">
+        <div className="absolute top-0 right-0 w-[200%] h-[200%] rounded-full bg-background translate-x-1/2 -translate-y-1/2" />
+      </div>
+
+      {/* Floor: covers parent border below the prompt input */}
+      <div className="absolute top-full left-0 right-0 h-4 bg-background-secondary md:block hidden" />
+      <div className="absolute top-full right-full w-16 h-4 bg-background-secondary md:block hidden" />
+      <div className="absolute top-full left-full w-16 h-4 bg-background-secondary md:block hidden" />
+    </div>
+  );
+};
 
 export type PromptInputTextareaProps = ComponentProps<typeof Textarea>;
 
@@ -148,7 +316,7 @@ export const PromptInputButton = ({
     <Button
       className={cn(
         "shrink-0 gap-1.5",
-        variant === "ghost" && "text-secondary hover:bg-popover-main hover:text-popover-text dark:hover:bg-hover/60",
+        variant === "ghost" && "",
         newSize === "default" && "px-3",
         className,
       )}
@@ -167,7 +335,7 @@ export type PromptInputSubmitProps = ComponentProps<typeof Button> & {
 
 export const PromptInputSubmit = ({
   className,
-  variant = "default",
+  variant = "secondary",
   size = "icon",
   status,
   children,
@@ -319,9 +487,9 @@ export const PromptInputError = ({
   if (!error) return null;
 
   return (
-    <div className="flex items-start gap-2 p-3 border-t bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-900/50">
+    <div className="flex items-start gap-2 p-3 bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-900/50">
       <AlertTriangle className="size-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
-      <div className="flex-1 text-sm text-red-800 dark:text-red-200">
+      <div className="flex-1 text-sm text-red-800 dark:text-red-200 max-h-[200px] overflow-y-auto">
         {error}
       </div>
       {onDismiss && (
@@ -352,7 +520,7 @@ export const PromptInputFilePreview = ({
   if (files.length === 0) return null;
 
   return (
-    <div className="flex flex-wrap gap-2 p-2 border-t dark:bg-black/25">
+    <div className="flex flex-wrap gap-2 p-2 dark:bg-black/25">
       {files.map((file, index) => {
         const isImage = file.type.startsWith('image/');
         const isPdf = file.type === 'application/pdf';

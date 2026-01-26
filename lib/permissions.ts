@@ -89,10 +89,10 @@ export function anyPermission(
  * ```
  */
 export async function hasPermission(permissionKey: PermissionKey): Promise<boolean> {
-  const { withAuth } = await import("@workos-inc/authkit-nextjs");
+  const { requireAuth } = await import("./auth-server");
   
   try {
-    const { accessToken } = await withAuth({ ensureSignedIn: true });
+    const { accessToken } = await requireAuth();
     const permissions = parsePermissionsFromAccessToken(accessToken);
     return permissions.has(PERMISSIONS[permissionKey]);
   } catch {

@@ -17,7 +17,7 @@ import { toast } from "sonner";
 import { cn, copyToClipboard } from "@/lib/utils";
 import { useChatSidebarControls } from "@/components/ai/ChatShellClient";
 import { logThreadRemoved, logThreadRenamed } from "@/actions/audit";
-import { CheckIcon, AlertTriangleIcon } from "lucide-react";
+import { AlertTriangleIcon } from "lucide-react";
 import { EditIcon, DeleteIcon, PinIcon, ShareIcon } from "@/components/ui/icons/svg-icons";
 import {
   Tooltip,
@@ -70,7 +70,6 @@ const GROUP_ORDER = [
   "Anteriores",
 ] as const;
 const MAX_TITLE_LENGTH = 35;
-const BLUR_DELAY = 150;
 
 const sortThreads = (a: Thread, b: Thread) => {
   if (a.pinned && !b.pinned) return -1;
@@ -128,6 +127,59 @@ export function ThreadSidebarInteractive({
     setHasHydrated(true);
   }, []);
 
+  const handleCancelEdit = useCallback(() => {
+    setEditingThreadId(null);
+    setEditingTitle("");
+  }, []);
+
+  useEffect(() => {
+    if (!editingThreadId) {
+      return;
+    }
+
+    const input = inputRef.current;
+    if (input) {
+      requestAnimationFrame(() => {
+        input.focus();
+        input.select();
+      });
+    }
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!input) {
+        return;
+      }
+
+      const target = event.target as Node | null;
+      if (!target) {
+        handleCancelEdit();
+        return;
+      }
+
+      // Don't cancel if clicking on the input or its container
+      if (input === target || input.contains(target) || input.parentElement?.contains(target)) {
+        return;
+      }
+
+      // Don't cancel if clicking on context menu or other UI overlays
+      const element = target as Element;
+      if (
+        element.closest('[data-slot="context-menu-content"]') ||
+        element.closest('[role="dialog"]') ||
+        element.closest('[data-radix-portal]')
+      ) {
+        return;
+      }
+
+      handleCancelEdit();
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown, true);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown, true);
+    };
+  }, [editingThreadId, handleCancelEdit]);
+
   const shouldUsePaginated = hasHydrated && isAuthenticated && !authLoading;
   const paginatedArgs = useMemo(
     () => ({
@@ -152,6 +204,7 @@ export function ThreadSidebarInteractive({
 
   useEffect(() => {
     if (!hasHydrated) return;
+    if (authLoading) return;
     if (!userKey) return;
     let cancelled = false;
     setCacheLoaded(false);
@@ -182,14 +235,6 @@ export function ThreadSidebarInteractive({
     : "Exhausted";
   const loadMore = paginated?.loadMore;
 
-  useEffect(() => {
-    if (editingThreadId && inputRef.current) {
-      setTimeout(() => {
-        inputRef.current?.focus();
-        inputRef.current?.select();
-      }, 0);
-    }
-  }, [editingThreadId]);
 
   useEffect(() => {
     const searchInput = document.getElementById(
@@ -350,10 +395,7 @@ export function ThreadSidebarInteractive({
     setEditingTitle(currentTitle);
   };
 
-  const handleSaveEdit = async (threadId: string, event: React.MouseEvent) => {
-    event.preventDefault();
-    event.stopPropagation();
-
+  const handleSaveEdit = async (threadId: string) => {
     const trimmedTitle = editingTitle.trim();
     if (!trimmedTitle) {
       toast.error("El título no puede estar vacío");
@@ -400,11 +442,6 @@ export function ThreadSidebarInteractive({
     }
   };
 
-  const handleCancelEdit = () => {
-    setEditingThreadId(null);
-    setEditingTitle("");
-  };
-
   const handleTogglePin = async (threadId: string, event: React.MouseEvent) => {
     event.stopPropagation();
     try {
@@ -420,20 +457,13 @@ export function ThreadSidebarInteractive({
     if (event.key === "Enter") {
       event.preventDefault();
       event.stopPropagation();
-      handleSaveEdit(threadId, event as unknown as React.MouseEvent);
+      handleSaveEdit(threadId);
     }
 
     if (event.key === "Escape") {
       event.preventDefault();
       event.stopPropagation();
       handleCancelEdit();
-    }
-  };
-
-  const handleInputBlur = (event: React.FocusEvent) => {
-    const relatedTarget = event.relatedTarget as HTMLElement | null;
-    if (!relatedTarget || !relatedTarget.closest("button")) {
-      setTimeout(() => handleCancelEdit(), BLUR_DELAY);
     }
   };
 
@@ -557,7 +587,9 @@ export function ThreadSidebarInteractive({
               }
             }}
             className={cn(
-              "group relative mb-1 flex cursor-pointer items-center gap-2 overflow-hidden rounded-lg p-2.5 transition-colors",
+              "group relative mb-1 flex cursor-pointer items-center gap-2 overflow-hidden rounded-lg p-2.25",
+              "transition-colors duration-10 ease-out",
+              "will-change-[background-color]",
               "hover:bg-hover hover:text-accent-foreground",
               selectedThreadId === thread.threadId &&
                 "bg-hover text-accent-foreground",
@@ -574,23 +606,14 @@ export function ThreadSidebarInteractive({
                       value={editingTitle}
                       onChange={(event) => setEditingTitle(event.target.value)}
                       onKeyDown={(event) => handleKeyDown(event, thread.threadId)}
-                      onBlur={handleInputBlur}
+                      autoFocus
                       className="h-5 min-w-0 flex-1 border-none bg-transparent text-sm font-medium leading-5 outline-none"
                       maxLength={MAX_TITLE_LENGTH}
                     />
-                    <Button
-                      onClick={(event) => handleSaveEdit(thread.threadId, event)}
-                      onMouseDown={(event) => event.preventDefault()}
-                      size="sm"
-                      variant="ghost"
-                      className="flex-shrink-0 h-6 w-6 p-0 hover:bg-green-500 hover:text-white"
-                    >
-                      <CheckIcon className="h-3 w-3" />
-                    </Button>
                   </div>
                 ) : (
                   <div className="flex min-w-0 flex-1 items-center gap-2">
-                    <h3 className="flex-1 truncate text-sm font-medium leading-5">
+                    <h3 className="flex-1 truncate text-sm font-light leading-5 subpixel-antialiased text-foreground/75 dark:text-foreground/90">
                       {optimisticTitles[thread.threadId] || thread.title}
                     </h3>
                     {/* Always reserve space for status icons to prevent layout shift */}
@@ -636,7 +659,22 @@ export function ThreadSidebarInteractive({
             </div>
           </a>
         </ContextMenuTrigger>
-        <ContextMenuContent className="border border-zinc-200 bg-white shadow-md dark:border-zinc-800/70 dark:bg-zinc-950 dark:shadow-2xl">
+        <ContextMenuContent
+          className="border border-zinc-200 bg-white shadow-md dark:border-zinc-800/70 dark:bg-zinc-950 dark:shadow-2xl"
+          onCloseAutoFocus={(event) => {
+            if (editingThreadId !== thread.threadId) {
+              return;
+            }
+            event.preventDefault();
+            requestAnimationFrame(() => {
+              const input = inputRef.current;
+              if (input) {
+                input.focus();
+                input.select();
+              }
+            });
+          }}
+        >
           <ContextMenuItem
             className="hover:bg-hover"
             onClick={(event: React.MouseEvent) =>
@@ -691,12 +729,12 @@ export function ThreadSidebarInteractive({
 
     return (
       <div key={groupName} className="mb-4">
-        <div className="px-5 py-2">
-          <span className="text-xs font-semibold text-black/75 dark:text-popover-text/75">
+        <div className="px-5 py-1">
+          <span className="text-xs font-semibold text-black/75 dark:text-popover-text tracking-wide">
             {groupName}
           </span>
         </div>
-        <div className="space-y-0.5 px-3">{groupThreads.map(renderThreadItem)}</div>
+        <div className="space-y-0.5 pl-5 pr-3">{groupThreads.map(renderThreadItem)}</div>
       </div>
     );
   };

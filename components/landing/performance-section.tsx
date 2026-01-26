@@ -170,7 +170,7 @@ export default function PerformanceSection() {
                   <div className="w-full overflow-hidden">
                     <ModelsMarquee />
                   </div>
-                  <Button asChild variant="accent" size="lg" className="font-semibold">
+                  <Button asChild variant="accent" size="lg" className="font-semibold text-white">
                     <Link href="/models" className="inline-flex items-center gap-2" aria-label="Ver catálogo completo de modelos">
                       Conocer todos los modelos
                       <ArrowRightIcon className="size-4" />

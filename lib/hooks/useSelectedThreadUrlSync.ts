@@ -18,11 +18,14 @@ function ensureHistoryPatched() {
   const originalReplaceState = window.history.replaceState.bind(window.history);
 
   const dispatch = () => {
-    try {
-      window.dispatchEvent(new Event(RIFT_NAV_EVENT));
-    } catch {
-      // ignore
-    }
+    // Defer to avoid triggering state updates during useInsertionEffect or render
+    queueMicrotask(() => {
+      try {
+        window.dispatchEvent(new Event(RIFT_NAV_EVENT));
+      } catch {
+        // ignore
+      }
+    });
   };
 
   window.history.pushState = ((data: any, unused: string, url?: string | URL | null) => {
@@ -56,6 +59,11 @@ export function useSelectedThreadUrlSync() {
 
   const skipNextUrlWriteRef = useRef(false);
   const hasInitializedRef = useRef(false);
+  const setSelectedThreadIdRef = useRef(setSelectedThreadId);
+
+  useEffect(() => {
+    setSelectedThreadIdRef.current = setSelectedThreadId;
+  }, [setSelectedThreadId]);
 
   // Initialize store from current URL + keep in sync on back/forward.
   useEffect(() => {
@@ -73,7 +81,7 @@ export function useSelectedThreadUrlSync() {
     const syncFromLocation = () => {
       const fromUrl = parseThreadIdFromPathname(window.location.pathname);
       skipNextUrlWriteRef.current = true;
-      setSelectedThreadId(fromUrl);
+      setSelectedThreadIdRef.current(fromUrl);
     };
 
     const onPopState = () => syncFromLocation();
@@ -85,22 +93,37 @@ export function useSelectedThreadUrlSync() {
       window.removeEventListener("popstate", onPopState);
       window.removeEventListener(RIFT_NAV_EVENT, onNavEvent);
     };
-  }, [setSelectedThreadId]);
+  }, []);
 
   // Write URL when selection changes (in-app thread switching).
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (!hasInitializedRef.current) return;
 
-    if (skipNextUrlWriteRef.current) {
-      skipNextUrlWriteRef.current = false;
+    const nextPath = pathnameForThreadId(selectedThreadId);
+    const currentPath = window.location.pathname;
+    
+    if (currentPath === nextPath) {
+      if (skipNextUrlWriteRef.current) {
+        skipNextUrlWriteRef.current = false;
+      }
       return;
     }
 
-    const nextPath = pathnameForThreadId(selectedThreadId);
-    if (window.location.pathname === nextPath) return;
+    if (skipNextUrlWriteRef.current) {
+      const currentUrlThreadId = parseThreadIdFromPathname(currentPath);
+      if (currentUrlThreadId === selectedThreadId) {
+        skipNextUrlWriteRef.current = false;
+        return;
+      }
+      skipNextUrlWriteRef.current = false;
+    }
 
-    window.history.pushState({ threadId: selectedThreadId }, "", nextPath);
+    if (selectedThreadId === null) {
+      window.history.replaceState({ threadId: selectedThreadId }, "", nextPath);
+    } else {
+      window.history.pushState({ threadId: selectedThreadId }, "", nextPath);
+    }
   }, [selectedThreadId]);
 }
 

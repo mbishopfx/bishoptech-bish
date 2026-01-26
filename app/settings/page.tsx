@@ -1,14 +1,8 @@
-import { withAuth } from "@workos-inc/authkit-nextjs";
+"use client";
+
 import SettingsPageContent from "./SettingsPageContent";
 
-interface WorkOSUser {
-  id?: string;
-  email?: string;
-  [key: string]: unknown;
-}
-
-export default async function SettingsPage() {
-  await withAuth();
+export default function SettingsPage() {
 
   return (
     <div className="min-h-screen bg-background dark:bg-popover-main">

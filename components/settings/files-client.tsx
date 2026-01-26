@@ -1,16 +1,16 @@
 "use client";
 
-import { usePaginatedQuery, useMutation, Authenticated, Unauthenticated, AuthLoading, useConvexAuth } from "convex/react";
+import { usePaginatedQuery, useMutation, useConvexAuth } from "convex/react";
 import { useMemo, useState } from "react";
 import Image from "next/image";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
-import { DataTable } from "@/components/ai/ui/data-table";
 import { Button } from "@/components/ai/ui/button";
-import { ColumnDef, Row, Table } from "@tanstack/react-table";
-import { File, Image as ImageIcon, FileText, Trash2 } from "lucide-react";
+import { File, Image as ImageIcon, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { Checkbox } from "@/components/ai/ui/checkbox";
 import { logAttachmentDeleted, logAttachmentsBulkDeleted } from "@/actions/audit";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ai/ui/table";
+import { cn } from "@/lib/utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -84,10 +84,10 @@ function getPreview(attachment: Attachment): React.ReactNode {
 }
 
 export function FilesClient() {
-  const { isAuthenticated } = useConvexAuth();
+  const { isAuthenticated, isLoading: isAuthLoading } = useConvexAuth();
   const { results: attachments, status, loadMore } = usePaginatedQuery(
     api.users.getUserAttachmentsPaginated,
-    isAuthenticated ? {} : "skip",
+    {},
     { initialNumItems: 20 }
   );
   const deleteAttachment = useMutation(api.users.deleteAttachment);
@@ -104,6 +104,14 @@ export function FilesClient() {
     if (hiddenIds.size === 0) return attachments as Attachment[];
     return (attachments as Attachment[]).filter(a => !hiddenIds.has(a._id));
   }, [attachments, hiddenIds]);
+
+  if (!isAuthLoading && !isAuthenticated) {
+    return (
+      <div className="text-center py-12 text-muted-foreground">
+        Inicia sesión para ver tus archivos.
+      </div>
+    );
+  }
 
   const handleDelete = (attachmentId: string) => {
     setPendingDeleteId(attachmentId);
@@ -184,81 +192,38 @@ export function FilesClient() {
     return `${count} archivos seleccionados`;
   };
 
-  const filesColumns: ColumnDef<Attachment, unknown>[] = [
-    {
-      id: "select",
-      header: ({ table }: { table: Table<Attachment> }) => (
-        <Checkbox
-          checked={table.getIsAllPageRowsSelected()}
-          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-          aria-label="Seleccionar todo"
-          className="data-[state=unchecked]:bg-transparent border-border"
-        />
-      ),
-      cell: ({ row }: { row: Row<Attachment> }) => (
-        <Checkbox
-          checked={row.getIsSelected()}
-          onCheckedChange={(value) => row.toggleSelected(!!value)}
-          aria-label="Seleccionar fila"
-          className="data-[state=unchecked]:bg-transparent border-border"
-        />
-      ),
-      enableSorting: false,
-      enableHiding: false,
-    },
-    {
-      accessorKey: "fileName",
-      header: "Archivo",
-      cell: ({ row }: { row: Row<Attachment> }) => {
-        const attachment = row.original;
-        return (
-          <div className="flex items-center">
-            {getPreview(attachment)}
-            <a 
-              href={attachment.attachmentUrl} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="font-medium text-sm hover:underline truncate text-gray-900 dark:text-white"
-              title={attachment.fileName}
-            >
-              {attachment.fileName}
-            </a>
-          </div>
-        );
-      },
-    },
-    {
-      accessorKey: "_creationTime",
-      header: "Creado",
-      cell: ({ row }: { row: Row<Attachment> }) => {
-        const attachment = row.original;
-        return <div className="text-sm text-gray-500 dark:text-text-muted">{formatDate(attachment._creationTime)}</div>;
-      },
-      sortingFn: (rowA: Row<Attachment>, rowB: Row<Attachment>, columnId: string) => {
-        return (rowA.getValue(columnId) as number) - (rowB.getValue(columnId) as number);
-      },
-    },
-    {
-      id: "actions",
-      cell: ({ row }: { row: Row<Attachment> }) => {
-        const attachment = row.original;
-        return (
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="h-8 w-8 p-0 text-gray-500 hover:text-gray-900 dark:text-text-muted dark:hover:text-white"
-            onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
-              e.stopPropagation();
-              handleDelete(attachment._id);
-            }}
-          >
-            <Trash2 className="h-4 w-4" />
-            <span className="sr-only">Eliminar</span>
-          </Button>
-        );
-      },
-    },
-  ];
+  const isAllSelected = visibleAttachments.length > 0 && selectedIds.length === visibleAttachments.length;
+  const isSomeSelected = selectedIds.length > 0 && selectedIds.length < visibleAttachments.length;
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedIds(visibleAttachments.map(a => a._id as Id<"attachments">));
+    } else {
+      setSelectedIds([]);
+      setClearSelectionSignal((x) => x + 1);
+    }
+  };
+
+  const handleSelectRow = (attachmentId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedIds(prev => [...prev, attachmentId as Id<"attachments">]);
+    } else {
+      setSelectedIds(prev => prev.filter(id => id !== attachmentId));
+    }
+  };
+
+  const isRowSelected = (attachmentId: string) => {
+    return selectedIds.includes(attachmentId as Id<"attachments">);
+  };
+
+  // Handle unauthenticated state (only after auth has loaded)
+  if (!isAuthenticated && !isAuthLoading) {
+    return (
+      <div className="text-center py-12 text-muted-foreground">
+        Inicia sesión para ver tus archivos.
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-2">
@@ -276,33 +241,109 @@ export function FilesClient() {
         </div>
       </div>
 
-      {/* Table Container */}
-      <AuthLoading>
-        <div className="border border-gray-200 dark:border-border bg-white dark:bg-popover-secondary rounded-lg p-4">
-          <div className="text-sm text-muted-foreground">Cargando archivos…</div>
+      {/* Table Container - matching members page styling */}
+      <div className="rounded-2xl border border-border/60 bg-white/95 shadow-lg shadow-black/5 backdrop-blur-sm dark:bg-popover-secondary/80 dark:shadow-black/30 overflow-hidden">
+        <Table className="min-w-full">
+          <TableHeader>
+            <TableRow className="text-muted-foreground border-b border-border/50 bg-gradient-to-r from-white/90 via-white/70 to-white/40 dark:from-transparent dark:via-transparent dark:to-transparent">
+              <TableHead className="w-12">
+                <Checkbox
+                  checked={isAllSelected}
+                  onCheckedChange={(checked) => handleSelectAll(checked === true)}
+                  aria-label="Seleccionar todo"
+                  className={cn(
+                    "data-[state=unchecked]:bg-transparent border-border",
+                    isSomeSelected && "data-[state=checked]:bg-accent"
+                  )}
+                />
+              </TableHead>
+              <TableHead>
+                <span className="text-xs font-semibold uppercase tracking-wide">Archivo</span>
+              </TableHead>
+              <TableHead>
+                <span className="text-xs font-semibold uppercase tracking-wide">Creado</span>
+              </TableHead>
+              <TableHead className="w-12" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {visibleAttachments.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={4} className="py-12 text-center text-sm text-muted-foreground">
+                  Cargando archivos...
+                </TableCell>
+              </TableRow>
+            ) : (
+              visibleAttachments.map((attachment, index) => (
+                <TableRow
+                  key={attachment._id}
+                  className={cn(
+                    "border-border/50 transition",
+                    index % 2 === 0 ? "bg-black/0 dark:bg-transparent" : "bg-black/[0.015] dark:bg-transparent",
+                    "hover:bg-black/[0.04] dark:hover:bg-hover/30",
+                    isRowSelected(attachment._id) && "bg-hover/50 dark:bg-hover/50"
+                  )}
+                >
+                  <TableCell>
+                    <Checkbox
+                      checked={isRowSelected(attachment._id)}
+                      onCheckedChange={(checked) => handleSelectRow(attachment._id, checked === true)}
+                      aria-label="Seleccionar fila"
+                      className="data-[state=unchecked]:bg-transparent border-border"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center">
+                      {getPreview(attachment)}
+                      <a 
+                        href={attachment.attachmentUrl} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="font-semibold text-foreground hover:underline truncate"
+                        title={attachment.fileName}
+                      >
+                        {attachment.fileName}
+                      </a>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <span className="text-sm text-muted-foreground">{formatDate(attachment._creationTime)}</span>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      className="cursor-pointer text-muted-foreground hover:text-destructive hover:bg-black/5 dark:hover:bg-hover/40"
+                      onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+                        e.stopPropagation();
+                        handleDelete(attachment._id);
+                      }}
+                    >
+                      <span className="sr-only">Eliminar</span>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      {/* Pagination Controls - matching members page styling */}
+      {status === "CanLoadMore" && (
+        <div className="flex items-center justify-end space-x-2 py-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => loadMore(20)}
+            disabled={status !== "CanLoadMore"}
+            className="gap-2 border border-border/60 bg-white/90 dark:bg-popover-secondary/75 dark:shadow-black/30 hover:bg-black/[0.04] dark:hover:bg-hover/30 hover:text-foreground dark:hover:text-popover-text disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Cargar más
+          </Button>
         </div>
-      </AuthLoading>
-      <Authenticated>
-        <div className="border border-gray-200 dark:border-border bg-white dark:bg-popover-secondary rounded-lg p-4">
-          <DataTable 
-            columns={filesColumns} 
-            data={visibleAttachments}
-            showSearch={false}
-            showPagination={true}
-            pageSize={20}
-            getRowId={(row) => (row as any)._id}
-            onRowSelectionChange={(selection) => setSelectedIds(Object.keys(selection) as Id<"attachments">[])}
-            clearSelectionSignal={clearSelectionSignal}
-            emptyStateMessage="No has subido ningún archivo adjunto aún."
-            className=""
-          />
-        </div>
-      </Authenticated>
-      <Unauthenticated>
-        <div className="text-center py-12 text-muted-foreground">
-          Inicia sesión para ver tus archivos.
-        </div>
-      </Unauthenticated>
+      )}
 
       {/* Single Delete Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

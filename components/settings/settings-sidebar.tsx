@@ -5,14 +5,10 @@ import { usePathname } from "next/navigation";
 import authkitSignOut from "@/actions/signout";
 import {
   Users,
-  Home,
   ReceiptText,
-  Key,
   MessageSquare,
   Bot,
-  Lightbulb,
   Palette,
-  Target,
   Bell,
   Mail,
   LogOut,
@@ -22,7 +18,10 @@ import {
   File,
   Bug,
   TrendingUp,
+  Brain,
 } from "lucide-react";
+import { usePermissionsContext } from "@/contexts/permissions-context";
+import { PERMISSIONS } from "@/lib/permissions";
 interface SettingsNavItem {
   title: string;
   href: string;
@@ -97,10 +96,12 @@ function SettingItem({
   }
 
   // For internal navigation items, render as Link with proper styling
+  // Next.js Link automatically prefetches on hover/focus, which is critical for production latency
   return (
     <Link 
       href={href}
       className={baseClasses}
+      prefetch={true}
     >
       <Icon className={iconClasses} />
       <span className="flex-1 text-left truncate">{title}</span>
@@ -225,6 +226,11 @@ const settingsSections: SettingsSection[] = [
         href: "/settings/appearance",
         icon: Palette,
       },
+      {
+        title: "Memoria",
+        href: "/settings/memoria",
+        icon: Brain,
+      },
       // {
       //   title: "Atajos",
       //   href: "/settings/shortcuts",
@@ -251,17 +257,16 @@ const footerItems: SettingsNavItem[] = [
     icon: Mail,
   },
 ];
-export function SettingsSidebar({
-  canManageMembers = false,
-  canManageDomainSso = false,
-  canViewAnalytics = false,
-  canManageBilling = false,
-}: {
-  canManageMembers?: boolean;
-  canManageDomainSso?: boolean;
-  canViewAnalytics?: boolean;
-  canManageBilling?: boolean;
-}) {
+export function SettingsSidebar() {
+  const { permissions } = usePermissionsContext();
+  
+  // Check permissions from context
+  const canManageMembers = permissions.has(PERMISSIONS.WIDGETS_USERS_TABLE_MANAGE);
+  const canManageDomainSso = permissions.has(PERMISSIONS.WIDGETS_DOMAIN_VERIFICATION_MANAGE);
+  const isProduction = process.env.VERCEL_ENV === 'production' || process.env.NODE_ENV === 'production';
+  const canViewAnalytics = isProduction ? false : permissions.has(PERMISSIONS.VIEW_ORG_ANALYTICS);
+  const canManageBilling = permissions.has(PERMISSIONS.MANAGE_BILLING);
+
   const handleLogout = async () => {
     try {
       await authkitSignOut();

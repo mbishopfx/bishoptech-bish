@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useQuery, useConvexAuth, useMutation, Unauthenticated } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import type { UIMessage } from "@ai-sdk-tools/store";
+import type { UIMessage } from "ai";
 import { isTextUIPart } from "ai";
 import {
   Conversation,
@@ -77,14 +77,22 @@ export default function SharedChatViewer({
   initialCursor,
   initialIsDone,
 }: SharedChatViewerProps) {
+  const router = useRouter();
   const [messages, setMessages] = useState<UIMessage[]>(initialMessages);
+
+  const handleSignInHover = () => {
+    router.prefetch("/sign-in");
+  };
+
+  const handleSignUpHover = () => {
+    router.prefetch("/sign-up");
+  };
   const [cursor, setCursor] = useState<string | null>(initialCursor);
   const [isDone, setIsDone] = useState(initialIsDone);
   const [requestedCursor, setRequestedCursor] = useState<string | null>(null);
   
   const { isAuthenticated } = useConvexAuth();
   const cloneThread = useMutation(api.share.cloneSharedThread);
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [isCopied, setIsCopied] = useState(false);
   const [isCloning, setIsCloning] = useState(false);
@@ -220,7 +228,7 @@ export default function SharedChatViewer({
                 </p>
                 <h1 className="truncate text-lg font-semibold">{thread.title}</h1>
               </div>
-              <ThemeToggle size="md" styleType="secondary" />
+              <ThemeToggle size="md" styleType="ghost" />
 
               <div className="flex items-center gap-2">
                 <Button
@@ -247,7 +255,7 @@ export default function SharedChatViewer({
                   {...NAV_CTA_BUTTON_PROPS}
                   onClick={() => handleClone()}
                   disabled={isCloning}
-                  className="gap-2 cursor-pointer"
+                  className="gap-2 cursor-pointer text-white dark:text-white"
                 >
                   <GitFork className="h-4 w-4" />
                   {isCloning ? "Clonando..." : "Clonar chat"}
@@ -260,10 +268,10 @@ export default function SharedChatViewer({
               <div className="flex items-center space-x-4">
                 <Unauthenticated>
                   <Button {...NAV_TEXT_BUTTON_PROPS} asChild className="cursor-pointer">
-                    <Link href="/sign-in">Iniciar sesión</Link>
+                    <Link href="/sign-in" onMouseEnter={handleSignInHover}>Iniciar sesión</Link>
                   </Button>
                   <Button {...NAV_CTA_BUTTON_PROPS} asChild className="cursor-pointer">
-                    <Link href="/sign-up">Registrarse</Link>
+                    <Link href="/sign-up" onMouseEnter={handleSignUpHover}>Registrarse</Link>
                   </Button>
                 </Unauthenticated>
               </div>
@@ -285,7 +293,7 @@ export default function SharedChatViewer({
 
               {/* Right: Theme Toggle + More Options */}
               <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-                <ThemeToggle size="md" styleType="secondary" />
+                <ThemeToggle size="md" styleType="ghost" />
                 <Button
                   {...NAV_ICON_BUTTON_PROPS}
                   onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -338,14 +346,14 @@ export default function SharedChatViewer({
                         asChild
                         className="w-full justify-start cursor-pointer"
                       >
-                        <Link href="/sign-in">Iniciar sesión</Link>
+                        <Link href="/sign-in" onMouseEnter={handleSignInHover}>Iniciar sesión</Link>
                       </Button>
                       <Button
                         {...NAV_CTA_BUTTON_PROPS}
                         asChild
                         className="w-full justify-start cursor-pointer"
                       >
-                        <Link href="/sign-up">Registrarse</Link>
+                        <Link href="/sign-up" onMouseEnter={handleSignUpHover}>Registrarse</Link>
                       </Button>
                     </div>
                   </Unauthenticated>

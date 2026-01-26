@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import type { UIMessage } from "@ai-sdk-tools/store";
+import type { UIMessage } from "ai";
 import * as Sentry from "@sentry/nextjs";
 import { useConvex } from "convex/react";
 import { api } from "@/convex/_generated/api";

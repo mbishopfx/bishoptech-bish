@@ -1,5 +1,5 @@
 import { openDB, type IDBPDatabase } from "idb";
-import type { UIMessage } from "@ai-sdk-tools/store";
+import type { UIMessage } from "ai";
 
 type CachedThreadMessages = {
   threadId: string;

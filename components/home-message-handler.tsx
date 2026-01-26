@@ -6,7 +6,7 @@ import { api } from "@/convex/_generated/api";
 import { useModel } from "@/contexts/model-context";
 import { useInitialMessage } from "@/contexts/initial-message-context";
 import { generateUUID } from "@/lib/utils";
-import { UIMessage } from "@ai-sdk-tools/store";
+import { UIMessage } from "ai";
 import { ReactNode } from "react";
 import { logThreadCreated } from "@/actions/audit";
 import { toast } from "sonner";

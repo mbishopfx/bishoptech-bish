@@ -1,6 +1,7 @@
 "use client";
 
-import { useChat, type UIMessage } from "@ai-sdk-tools/store";
+import { useChat } from "@ai-sdk/react";
+import type { UIMessage } from "ai";
 import { DefaultChatTransport } from "ai";
 import { usePathname, useRouter } from "next/navigation";
 import { generateUUID } from "@/lib/utils";
@@ -20,6 +21,7 @@ import {
   ConversationContent,
 } from "@/components/ai/conversation";
 import { Message, MessageContent } from "@/components/ai/message";
+import { TooltipProvider } from "@/components/ai/ui/tooltip";
 
 import { useChatUIStore } from "./ui-store";
 import { WelcomeScreen } from "./components/welcome-screen";
@@ -501,6 +503,10 @@ function ChatInterfaceInternal({
   const { messages, status, setMessages, sendMessage, stop } = chatHelpers as any;
   const regenerateRef = useRef<null | ((opts?: { messageId?: string }) => Promise<void>)>(null);
   regenerateRef.current = (chatHelpers as any).regenerate ?? null;
+  
+  // Use ref for status to avoid recreating callbacks on every status change (5.1 Defer State Reads)
+  const statusRef = useRef(status);
+  statusRef.current = status;
 
   useEffect(() => {
     chatStateInstance.syncFromAISDK(messages, status === 'streaming' ? 'streaming' : 'ready');
@@ -752,18 +758,71 @@ function ChatInterfaceInternal({
     }
   }, [id, setInput, setSelectedFiles, setUploadedAttachments, setUploadingFiles, setIsUploading, setIsSendingMessage, setQuotaError, setShowNoSubscriptionDialog]);
 
+  // Use refs for callbacks that need access to latest renderedMessages
+  // This prevents re-creating callbacks on every stream chunk (5.1 Defer State Reads)
+  const renderedMessagesRef = useRef(renderedMessages);
+  renderedMessagesRef.current = renderedMessages;
+
   const onRegenerateAssistant = useCallback(
     (messageId: string) => {
-      handleRegenerateAssistant(messageId, renderedMessages);
+      handleRegenerateAssistant(messageId, renderedMessagesRef.current);
     },
-    [handleRegenerateAssistant, renderedMessages],
+    [handleRegenerateAssistant],
   );
 
   const onRegenerateAfterUser = useCallback(
     (messageId: string) => {
-      handleRegenerateAfterUser(messageId, renderedMessages);
+      handleRegenerateAfterUser(messageId, renderedMessagesRef.current);
     },
-    [handleRegenerateAfterUser, renderedMessages],
+    [handleRegenerateAfterUser],
+  );
+
+  // Stable callback for editing user messages - moved outside .map() to prevent re-creation
+  const onEditUserMessage = useCallback(
+    async (messageId: string, newContent: string) => {
+      const program = Effect.gen(function* () {
+        // Persist edit to Convex
+        yield* updateMessageContentEffect({
+          updateFn: (params) => updateUserMessageContent(params),
+          messageId,
+          content: newContent,
+        });
+
+        // Optimistically update local hook store
+        setMessages((curr: UIMessage[]) =>
+          curr.map((m) =>
+            m.id === messageId
+              ? {
+                  ...m,
+                  parts: [
+                    ...m.parts.filter(
+                      (p: any) => p.type !== "text"
+                    ),
+                    { type: "text", text: newContent } as any,
+                  ],
+                }
+              : m
+          )
+        );
+
+        // Then trigger regeneration (prune-after-user semantics)
+        handleRegenerateAfterUser(messageId, renderedMessagesRef.current);
+      }).pipe(
+        Effect.tapError((error) =>
+          Effect.sync(() => {
+            console.error("Edit message failed", error);
+          })
+        ),
+        Effect.catchAll((error) =>
+          Effect.sync(() => {
+            triggerError(getErrorMessage(error));
+          })
+        )
+      );
+
+      await Effect.runPromise(program);
+    },
+    [handleRegenerateAfterUser, setMessages, triggerError, updateUserMessageContent],
   );
 
   const sendMessageRef = useRef<((message: UIMessage) => Promise<void>) | null>(null);
@@ -814,8 +873,10 @@ function ChatInterfaceInternal({
         uploadingFiles,
         isSendingMessage,
       } = state;
+      // Use ref to avoid recreating callback on every status change
+      const currentStatus = statusRef.current;
       const isGenerating =
-        status === "streaming" || status === "submitted" || isSendingMessage;
+        currentStatus === "streaming" || currentStatus === "submitted" || isSendingMessage;
 
       // Prevent sending when input is disabled, unauthenticated, or while auth is (re)loading
       if (
@@ -891,7 +952,6 @@ function ChatInterfaceInternal({
     },
     [
       promptDisabled,
-      status,
       id,
       onInitialMessage,
       setMessages,
@@ -923,44 +983,53 @@ function ChatInterfaceInternal({
     scrollToBottom("smooth");
   }, [scrollToBottom]);
 
+  // Memoize drag handlers to prevent re-renders
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
+    const dt = e.dataTransfer;
+    const hasFiles = !!dt && Array.from(dt.types || []).includes("Files");
+    if (!hasFiles) return;
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current += 1;
+    setIsDragActive(true);
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    const dt = e.dataTransfer;
+    const hasFiles = !!dt && Array.from(dt.types || []).includes("Files");
+    if (!hasFiles) return;
+    e.preventDefault();
+    dt.dropEffect = "copy";
+    setIsDragActive(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    if (dragCounterRef.current > 0) {
+      dragCounterRef.current -= 1;
+    }
+    if (dragCounterRef.current <= 0) {
+      setIsDragActive(false);
+    }
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current = 0;
+    setIsDragActive(false);
+    const files = Array.from(e.dataTransfer?.files || []);
+    if (!files || files.length === 0) return;
+    void handleProcessFiles(files);
+  }, [handleProcessFiles]);
+
   return (
     <div
       className="flex h-screen w-full min-h-0 flex-col relative"
-      onDragEnter={(e) => {
-        const dt = e.dataTransfer;
-        const hasFiles = !!dt && Array.from(dt.types || []).includes("Files");
-        if (!hasFiles) return;
-        e.preventDefault();
-        e.stopPropagation();
-        dragCounterRef.current += 1;
-        setIsDragActive(true);
-      }}
-      onDragOver={(e) => {
-        const dt = e.dataTransfer;
-        const hasFiles = !!dt && Array.from(dt.types || []).includes("Files");
-        if (!hasFiles) return;
-        e.preventDefault();
-        dt.dropEffect = "copy";
-        setIsDragActive(true);
-      }}
-      onDragLeave={(e) => {
-        e.preventDefault();
-        if (dragCounterRef.current > 0) {
-          dragCounterRef.current -= 1;
-        }
-        if (dragCounterRef.current <= 0) {
-          setIsDragActive(false);
-        }
-      }}
-      onDrop={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        dragCounterRef.current = 0;
-        setIsDragActive(false);
-        const files = Array.from(e.dataTransfer?.files || []);
-        if (!files || files.length === 0) return;
-        void handleProcessFiles(files);
-      }}
+      onDragEnter={handleDragEnter}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
     >
       <div className="flex-1 min-h-0">
         <Conversation ref={scrollRef as React.RefObject<HTMLDivElement>}>
@@ -987,63 +1056,17 @@ function ChatInterfaceInternal({
             >
               {displayMessages.map((message, index) => {
               const isLast = index === displayMessages.length - 1;
-              const isStreaming = isLast && (status === "streaming");
+              const isMessageStreaming = isLast && (status === "streaming");
               return (
                 <MessageRenderer
                   key={message.id}
                   message={message}
-                  isStreaming={isStreaming}
+                  isStreaming={isMessageStreaming}
                   disableRegenerate={status === "streaming"}
                   onRegenerateAssistantMessage={onRegenerateAssistant}
                   onRegenerateAfterUserMessage={onRegenerateAfterUser}
                   onResponseReady={handleResponseReady}
-                  onEditUserMessage={async (
-                    messageId: string,
-                    newContent: string
-                  ) => {
-                    // Edit with retry
-                    const program = Effect.gen(function* () {
-                      // Persist edit to Convex
-                      yield* updateMessageContentEffect({
-                        updateFn: (params) => updateUserMessageContent(params),
-                        messageId,
-                        content: newContent,
-                      });
-
-                      // Optimistically update local hook store
-                      setMessages((curr: UIMessage[]) =>
-                        curr.map((m) =>
-                          m.id === messageId
-                            ? {
-                                ...m,
-                                parts: [
-                                  ...m.parts.filter(
-                                    (p: any) => p.type !== "text"
-                                  ),
-                                  { type: "text", text: newContent } as any,
-                                ],
-                              }
-                            : m
-                        )
-                      );
-
-                      // Then trigger regeneration (prune-after-user semantics)
-                      handleRegenerateAfterUser(messageId, renderedMessages);
-                    }).pipe(
-                      Effect.tapError((error) =>
-                        Effect.sync(() => {
-                          console.error("Edit message failed", error);
-                        })
-                      ),
-                      Effect.catchAll((error) =>
-                        Effect.sync(() => {
-                          triggerError(getErrorMessage(error));
-                        })
-                      )
-                    );
-
-                    await Effect.runPromise(program);
-                  }}
+                  onEditUserMessage={onEditUserMessage}
                 />
               );
             })}
@@ -1072,6 +1095,7 @@ function ChatInterfaceInternal({
         isAtBottom={isAtBottom}
         onScrollToBottom={handleScrollToBottom}
         showScrollToBottom={!isAtBottom && displayMessages.length > 0}
+        status={status}
       />
 
       {isDragActive && (
@@ -1092,8 +1116,10 @@ function ChatInterfaceInternal({
 
 export default function ChatInterface(props: ChatInterfaceProps) {
   return (
-    <ChatStoreProvider initialMessages={props.initialMessages || []}>
-      <ChatInterfaceInternal {...props} />
-    </ChatStoreProvider>
+    <TooltipProvider>
+      <ChatStoreProvider initialMessages={props.initialMessages || []}>
+        <ChatInterfaceInternal {...props} />
+      </ChatStoreProvider>
+    </TooltipProvider>
   );
 }

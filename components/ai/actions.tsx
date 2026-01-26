@@ -1,30 +1,33 @@
 'use client';
 
+import React from 'react';
 import { Button } from '@/components/ai/ui/button';
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from '@/components/ai/ui/tooltip';
 import { cn } from '@/lib/utils';
 import type { ComponentProps } from 'react';
-import React from 'react';
 
 export type ActionsProps = ComponentProps<'div'>;
 
-export const Actions = ({ className, children, ...props }: ActionsProps) => (
-  <div className={cn('flex items-center gap-1', className)} {...props}>
-    {children}
-  </div>
-);
+export function Actions({ className, children, ...props }: ActionsProps) {
+  return (
+    <div className={cn('flex items-center gap-1', className)} {...props}>
+      {children}
+    </div>
+  );
+}
 
 export type ActionProps = ComponentProps<typeof Button> & {
   tooltip?: string;
   label?: string;
 };
 
-export const Action = React.memo(({
+// Memoize Action to prevent unnecessary re-renders of Tooltip components
+// TooltipProvider should be wrapped at a higher level (e.g., ChatInterface)
+export const Action = React.memo(function Action({
   tooltip,
   children,
   label,
@@ -32,7 +35,7 @@ export const Action = React.memo(({
   variant = 'ghost',
   size = 'sm',
   ...props
-}: ActionProps) => {
+}: ActionProps) {
   const button = (
     <Button
       className={cn(
@@ -51,18 +54,14 @@ export const Action = React.memo(({
 
   if (tooltip) {
     return (
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>{button}</TooltipTrigger>
-          <TooltipContent side="bottom" sideOffset={0}>
-            <p>{tooltip}</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>{button}</TooltipTrigger>
+        <TooltipContent side="bottom" sideOffset={0}>
+          <p>{tooltip}</p>
+        </TooltipContent>
+      </Tooltip>
     );
   }
 
   return button;
 });
-
-Action.displayName = 'Action';

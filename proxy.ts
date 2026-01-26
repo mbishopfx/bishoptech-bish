@@ -34,9 +34,10 @@ export default authkitMiddleware({
 
 export const config = {
   matcher: [
-    // Skip Next.js internals and all static files, unless found in search params
+    // All routes except Next.js internals and static files
+    // Note: settings routes are included because server actions called from settings pages require withAuth()
     '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
-    // Always run for API routes - using more explicit patterns
+    // Always run for API routes (no prefetch for API routes)
     '/api/chat',
     '/api/generate-title',
     '/api/subscribe',

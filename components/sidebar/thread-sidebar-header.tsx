@@ -1,9 +1,11 @@
 "use client";
 
 import { Button } from "@/components/ai/ui/button";
+import { Input } from "@/components/ai/ui/input";
 import { AppLogo } from "@/components/ui/icons/svg-icons";
 import { useChatSidebarControls } from "@/components/ai/ChatShellClient";
 import { useSelectedThreadStore } from "@/lib/stores/selected-thread-store";
+import { Search } from "lucide-react";
 
 export function ThreadSidebarHeader() {
   const { closeSidebar, isMobile } = useChatSidebarControls();
@@ -20,30 +22,33 @@ export function ThreadSidebarHeader() {
   return (
     <>
       {/* Header */}
-      <div className="p-6 flex-shrink-0">
+      <div className="pt-6 pb-4 flex-shrink-0">
         <div className="flex items-center justify-center">
           <AppLogo className="h-8 text-foreground dark:text-white" />
         </div>
       </div>
 
-      <div className="px-3 pb-3 flex-shrink-0">
-        <div className="mb-3">
+      <div className="px-3 pb-2 flex-shrink-0">
+        <div className="mb-2">
           <Button
             size="lg"
-            variant="outline"
-            className="w-full dark:bg-[#111111] dark:border-border outline-none cursor-pointer"
+            variant="default"
+            className="w-full"
             onClick={handleNewChatClick}
           >
             Nuevo Chat
           </Button>
         </div>
-        <input
-          id="thread-search-input"
-          type="text"
-          placeholder="Buscar chats..."
-          className="w-full px-2 py-1.5 text-xs border border-transparent rounded-sm bg-transparent text-muted-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:bg-background focus:text-foreground focus:border-input/50 transition-all duration-200"
-          readOnly
-        />
+        <div className="relative group">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 size-4 text-muted-foreground/60 group-focus-within:text-muted-foreground transition-colors pointer-events-none z-10" />
+          <Input
+            id="thread-search-input"
+            type="text"
+            placeholder="Buscar"
+            className="w-full pl-10 border-0 dark:bg-transparent dark:text-popover-text"
+            readOnly
+          />
+        </div>
       </div>
     </>
   );

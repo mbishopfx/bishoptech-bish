@@ -1,5 +1,5 @@
 import { Cause, Effect, Option } from "effect";
-import type { UIMessage } from "@ai-sdk-tools/store";
+import type { UIMessage } from "ai";
 import { AbortError, MessageSubmitError, type ChatError } from "../errors";
 
 const isChatError = (error: unknown): error is ChatError =>

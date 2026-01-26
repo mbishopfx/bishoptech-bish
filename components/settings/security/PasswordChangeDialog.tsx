@@ -187,8 +187,8 @@ export function PasswordChangeDialog({ hasPassword, isPending: parentIsPending }
         onOpenChange={setIsPasswordPreDialogOpen}
       >
         <DialogTrigger asChild>
-          <Button type="button" variant="accent" className="cursor-pointer">
-            {hasPassword ? "Cambiar contraseña" : "Crear contraseña"}
+          <Button type="button" variant="accent" className="gap-2 border border-border/60 shadow-sm shadow-black/5 dark:shadow-black/30 text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed">
+            Cambiar contraseña
           </Button>
         </DialogTrigger>
         <DialogContent 
@@ -224,7 +224,7 @@ export function PasswordChangeDialog({ hasPassword, isPending: parentIsPending }
                   variant="accent"
                   onClick={openPasswordFlow}
                   disabled={isLoading}
-                  className="cursor-pointer rounded-lg font-medium gap-2 min-w-[150px]"
+                  className="gap-2 border border-border/60 shadow-sm shadow-black/5 dark:shadow-black/30 text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-medium min-w-[150px]"
                 >
                   Continuar
                 </Button>
@@ -279,7 +279,7 @@ export function PasswordChangeDialog({ hasPassword, isPending: parentIsPending }
               <div className="flex items-center gap-4 pt-4">
                 <Button
                   onClick={handleClosePasswordDialog}
-                  className="cursor-pointer rounded-lg font-medium min-w-[100px]"
+                  className="gap-2 border border-border/60 shadow-sm shadow-black/5 dark:shadow-black/30 text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-medium min-w-[100px]"
                   variant="accent"
                 >
                   Cerrar
@@ -290,7 +290,7 @@ export function PasswordChangeDialog({ hasPassword, isPending: parentIsPending }
             <div className="space-y-6 p-2">
               <DialogHeader className="space-y-2">
                 <DialogTitle className="text-2xl font-bold text-foreground dark:text-popover-text">
-                  {hasPassword ? "Cambiar contraseña" : "Crear contraseña"}
+                  Cambiar contraseña
                 </DialogTitle>
                 {!passwordStepUpVerified ? (
                   <DialogDescription className="text-base text-muted-foreground leading-relaxed">
@@ -343,7 +343,7 @@ export function PasswordChangeDialog({ hasPassword, isPending: parentIsPending }
                       <Button
                         type="button"
                         disabled={isLoading || passwordStepUpCode.length !== 6}
-                        className="cursor-pointer rounded-lg font-medium gap-2 min-w-[150px]"
+                        className="gap-2 border border-border/60 shadow-sm shadow-black/5 dark:shadow-black/30 text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-medium min-w-[150px]"
                         variant="accent"
                         onClick={verifyPasswordStepUp}
                       >
@@ -513,7 +513,7 @@ export function PasswordChangeDialog({ hasPassword, isPending: parentIsPending }
                     <Button
                       type="submit"
                       disabled={isLoading || !isPasswordValid || !isConfirmValid}
-                      className="cursor-pointer rounded-lg font-medium gap-2 min-w-[150px]"
+                      className="gap-2 border border-border/60 shadow-sm shadow-black/5 dark:shadow-black/30 text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-medium min-w-[150px]"
                       variant="accent"
                     >
                       {isLoading ? "Guardando..." : "Guardar cambios"}
