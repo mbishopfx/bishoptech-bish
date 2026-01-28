@@ -1,5 +1,6 @@
 ---
-alwaysApply: false
+name: effect
+description: Effect-TS Best Practices for Next.js Apps
 ---
 # Effect-TS Best Practices for Next.js Apps
 

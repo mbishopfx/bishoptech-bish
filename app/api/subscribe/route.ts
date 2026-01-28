@@ -230,7 +230,140 @@ export const POST = async (req: NextRequest) => {
       }
     }
 
-    // Create Checkout Session
+    // For paid plans (plus/pro), handle subscription logic
+    if (customerId && (subscriptionLevel === 'plus' || subscriptionLevel === 'pro')) {
+      const freePriceId = priceIds['free'];
+      
+      // Get current active subscription to check plan
+      const existingSubscriptions = await stripe.subscriptions.list({
+        customer: customerId,
+        status: 'all',
+        limit: 100,
+        expand: ['data.items.data.price'],
+      });
+
+      // Find the active (non-canceled) subscription
+      const activeSubscription = existingSubscriptions.data.find(sub => 
+        sub.status !== 'canceled' && !sub.cancel_at_period_end
+      );
+
+      if (activeSubscription) {
+        const currentPriceId = activeSubscription.items.data[0]?.price?.id;
+        const currentLookupKey = activeSubscription.items.data[0]?.price?.lookup_key || '';
+        
+        // 1. Check if user is trying to subscribe to the same plan they already have
+        if (currentPriceId === priceId || currentLookupKey === subscriptionLevel) {
+          const planName = subscriptionLevel.charAt(0).toUpperCase() + subscriptionLevel.slice(1);
+          return NextResponse.json({ 
+            error: `You are already subscribed to the ${planName} plan.`,
+            url: `${baseUrl}/settings/billing`,
+            alreadySubscribed: true
+          }, { status: 400 });
+        }
+
+        // 2. If user has a paid plan (plus/pro) and wants to change it, UPDATE the subscription
+        if (currentLookupKey === 'plus' || currentLookupKey === 'pro') {
+          const subscriptionItemId = activeSubscription.items.data[0]?.id;
+          
+          if (!subscriptionItemId) {
+            return NextResponse.json(
+              { error: "Unable to update subscription: subscription item not found" },
+              { status: 500 }
+            );
+          }
+
+          try {
+            // Update the subscription to the new plan
+            // Stripe will handle proration automatically
+            const updatedSubscription = await stripe.subscriptions.update(
+              activeSubscription.id,
+              {
+                items: [{
+                  id: subscriptionItemId,
+                  price: priceId,
+                }],
+                proration_behavior: 'always_invoice', // Prorate the change
+                expand: ['latest_invoice'],
+              }
+            );
+
+            // Check if payment is needed (e.g., upgrade from plus to pro)
+            const invoice = updatedSubscription.latest_invoice;
+            if (invoice && typeof invoice !== 'string') {
+              const inv = invoice as Stripe.Invoice;
+              const status = inv.status;
+
+              // Only return success when the upgrade invoice is actually paid
+              if (status === 'paid') {
+                return NextResponse.json({
+                  success: true,
+                  organizationId: targetOrganizationId,
+                  subscriptionId: updatedSubscription.id,
+                  url: `${baseUrl}/chat`,
+                  message: `Successfully updated to ${subscriptionLevel} plan`,
+                });
+              }
+
+              // Invoice is open (unpaid) — direct user to pay the *existing* invoice.
+              // Use hosted_invoice_url so we pay the real proration invoice (avoids double-charge
+              // from a separate one-time payment). Fallback to Customer Portal if unavailable.
+              if (status === 'open') {
+                const hostedUrl = inv.hosted_invoice_url ?? null;
+                if (hostedUrl) {
+                  return NextResponse.json({
+                    url: hostedUrl,
+                    organizationId: targetOrganizationId,
+                    message: 'Payment required for your plan upgrade. Complete payment on the next page, then return to Settings > Billing.',
+                  });
+                }
+                const portalSession = await stripe.billingPortal.sessions.create({
+                  customer: customerId,
+                  return_url: `${baseUrl}/settings/billing`,
+                });
+                return NextResponse.json({
+                  url: portalSession.url,
+                  organizationId: targetOrganizationId,
+                  message: 'Payment required. Update your payment method and pay your invoice in the billing portal.',
+                });
+              }
+
+              // Other invoice status (draft, void, uncollectible) — send to portal
+              const portalSession = await stripe.billingPortal.sessions.create({
+                customer: customerId,
+                return_url: `${baseUrl}/settings/billing`,
+              });
+              return NextResponse.json({
+                url: portalSession.url,
+                organizationId: targetOrganizationId,
+              });
+            }
+
+            // No invoice or invoice is an ID string — unexpected for proration. Send to portal.
+            const portalSession = await stripe.billingPortal.sessions.create({
+              customer: customerId,
+              return_url: `${baseUrl}/settings/billing`,
+            });
+            return NextResponse.json({
+              url: portalSession.url,
+              organizationId: targetOrganizationId,
+            });
+          } catch (error: any) {
+            console.error("Error updating subscription:", error);
+            return NextResponse.json(
+              { error: `Failed to update subscription: ${error.message}` },
+              { status: 500 }
+            );
+          }
+        }
+
+        // 3. If user has free plan, allow checkout (Stripe will handle gracefully)
+        // The webhook will cancel the free subscription after paid subscription is created
+      }
+    }
+
+    // Create Checkout Session for:
+    // - New customers (no subscription)
+    // - Free users upgrading to paid (Stripe will handle duplicate gracefully)
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       billing_address_collection: 'auto',

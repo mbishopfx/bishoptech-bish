@@ -141,17 +141,34 @@ function SubscribePageContent() {
                 }),
             });
 
-            const { error, url } = await res.json();
+            const response = await res.json();
+            const { error, url, success, message, alreadySubscribed } = response;
 
+            // Handle successful subscription update (no checkout needed)
+            if (success && url) {
+                router.push(url);
+                return;
+            }
+
+            // Handle checkout redirect (new subscription or payment required)
             if (!error && url) {
                 router.push(url);
-            } else if (error && url) {
-                // Display error message to user instead of silently redirecting
-                setError(error);
-                setRedirectUrl(url);
-                setLoading(false);
-            } else {
-                setError(error || "Error desconocido al iniciar suscripción");
+                return;
+            }
+
+            // Handle errors
+            if (error) {
+                // Check if user is already subscribed to the same plan
+                if (alreadySubscribed) {
+                    setError(error);
+                    setRedirectUrl(url || "/settings/billing");
+                } else if (url) {
+                    // Display error message to user instead of silently redirecting
+                    setError(error);
+                    setRedirectUrl(url);
+                } else {
+                    setError(error || "Error desconocido al iniciar suscripción");
+                }
                 setLoading(false);
             }
         } catch (err) {
@@ -188,7 +205,7 @@ function SubscribePageContent() {
                                 onClick={() => router.push(redirectUrl)}
                                 className="mt-4"
                             >
-                                Volver al chat
+                                {redirectUrl.includes("/settings/billing") ? "Ver configuración de facturación" : "Volver al chat"}
                             </Button>
                         )}
                     </>

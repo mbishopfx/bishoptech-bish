@@ -79,6 +79,66 @@ export const processStripeEvent = internalAction({
         );
       }
 
+      // Cancel free subscriptions when a paid subscription is successfully created
+      if (event.type === "checkout.session.completed" || event.type === "customer.subscription.created") {
+        const stripe = new Stripe(process.env.STRIPE_API_KEY as string);
+        const freePriceId = process.env.FREE_PRICE_ID;
+        
+        // Get the subscription from the event
+        let subscription: Stripe.Subscription | null = null;
+        if (event.type === "checkout.session.completed") {
+          const session = event.data.object as Stripe.Checkout.Session;
+          if (session.subscription && typeof session.subscription === "string") {
+            subscription = await stripe.subscriptions.retrieve(session.subscription, {
+              expand: ["items.data.price"],
+            });
+          }
+        } else if (event.type === "customer.subscription.created") {
+          subscription = event.data.object as Stripe.Subscription;
+        }
+
+        // If this is a paid subscription (not free), cancel any free subscriptions
+        if (subscription && freePriceId) {
+          const subscriptionPriceId = subscription.items.data[0]?.price?.id;
+          const subscriptionLookupKey = subscription.items.data[0]?.price?.lookup_key;
+          
+          // Check if this is a paid subscription (plus or pro)
+          const isPaidSubscription = subscriptionPriceId !== freePriceId && 
+                                      subscriptionLookupKey !== 'free' &&
+                                      (subscriptionLookupKey === 'plus' || subscriptionLookupKey === 'pro');
+
+          if (isPaidSubscription) {
+            // Find and cancel any free subscriptions for this customer
+            const allSubscriptions = await stripe.subscriptions.list({
+              customer: customerId,
+              status: 'all',
+              limit: 100,
+              expand: ['data.items.data.price'],
+            });
+
+            const freeSubscriptions = allSubscriptions.data.filter(sub => {
+              if (sub.id === subscription!.id || sub.status === 'canceled') {
+                return false;
+              }
+              const subPriceId = sub.items.data[0]?.price?.id;
+              const subLookupKey = sub.items.data[0]?.price?.lookup_key;
+              return subPriceId === freePriceId || subLookupKey === 'free';
+            });
+
+            for (const freeSub of freeSubscriptions) {
+              try {
+                await stripe.subscriptions.cancel(freeSub.id);
+                console.log(`Cancelled free subscription ${freeSub.id} after paid subscription ${subscription.id} was created`);
+              } catch (error: any) {
+                if (error?.code !== 'resource_missing') {
+                  console.error(`Error canceling free subscription ${freeSub.id}:`, error);
+                }
+              }
+            }
+          }
+        }
+      }
+
       // Extract billing period from webhook event data
       let billingPeriod: { start: number; end: number } | undefined;
 
