@@ -66,6 +66,8 @@
     "@zxcvbn-ts/language-common": "^3.0.4",
     "@zxcvbn-ts/language-en": "^3.0.2",
     "ai": "^6.0.49",
+    "atmn": "^0.0.36",
+    "autumn-js": "^0.1.74",
     "axiom": "^0.35.0",
     "botid": "^1.5.10",
     "class-variance-authority": "^0.7.1",

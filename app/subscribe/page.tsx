@@ -1,9 +1,10 @@
 "use client";
 
+import { useCustomer, CheckoutDialog } from "autumn-js/react";
 import { useAuth } from "@workos-inc/authkit-nextjs/components";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Authenticated, Unauthenticated, AuthLoading } from "convex/react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { InfoCircledIcon } from "@radix-ui/react-icons";
 import { LoadingIcon } from "@/components/ui/icons/svg-icons";
 import { Button } from "@/components/ai/ui/button";
@@ -101,14 +102,16 @@ function GradientBackground({ id }: { id: string }) {
   );
 }
 
+const PAID_PLANS = ["plus", "pro"] as const;
+
 function SubscribePageContent() {
   const { user, organizationId, switchToOrganization } = useAuth();
+  const { checkout } = useCustomer();
   const searchParams = useSearchParams();
-  const planParam = searchParams.get("plan");
-  const cancelAllExistingSubscriptions = searchParams.get("cancel_existing_subscription") === "true";
-  const idempotencyKey = searchParams.get("idempotency_key");
+  const planParam = searchParams.get("plan")?.toLowerCase() ?? null;
   const router = useRouter();
-  
+  const checkoutStartedRef = useRef(false);
+
   const [orgName, setOrgName] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -121,66 +124,62 @@ function SubscribePageContent() {
   const gradientId = selectedPlan?.gradientId || "1";
   const planName = selectedPlan?.name || planParam;
 
-  // Auto-redirect if user has organization
+  // When user has org: free → POST and redirect to url; plus/pro → Autumn checkout and redirect
   useEffect(() => {
-    const handleAutoSubscribe = async () => {
-      if (user && organizationId && planParam && !loading) {
-        setLoading(true);
-        try {
-            const res = await fetch("/api/subscribe", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    userId: user.id,
-                    organizationId,
-                    subscriptionLevel: planParam.toLowerCase(),
-                    cancelAllExistingSubscriptions: cancelAllExistingSubscriptions,
-                    idempotencyKey,
-                }),
-            });
+    if (!user || !organizationId || !planParam) return;
+    if (checkoutStartedRef.current) return;
 
-            const response = await res.json();
-            const { error, url, success, message, alreadySubscribed } = response;
-
-            // Handle successful subscription update (no checkout needed)
-            if (success && url) {
-                router.push(url);
-                return;
-            }
-
-            // Handle checkout redirect (new subscription or payment required)
-            if (!error && url) {
-                router.push(url);
-                return;
-            }
-
-            // Handle errors
-            if (error) {
-                // Check if user is already subscribed to the same plan
-                if (alreadySubscribed) {
-                    setError(error);
-                    setRedirectUrl(url || "/settings/billing");
-                } else if (url) {
-                    // Display error message to user instead of silently redirecting
-                    setError(error);
-                    setRedirectUrl(url);
-                } else {
-                    setError(error || "Error desconocido al iniciar suscripción");
-                }
-                setLoading(false);
-            }
-        } catch (err) {
-            setError("Error de conexión al iniciar suscripción");
-            setLoading(false);
+    const runFlow = async () => {
+      setLoading(true);
+      try {
+        if (planParam === "free") {
+          const res = await fetch("/api/subscribe", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              userId: user.id,
+              organizationId,
+              subscriptionLevel: "free",
+            }),
+          });
+          const data = await res.json();
+          if (data.url) {
+            router.push(data.url);
+            return;
+          }
+          if (data.error) {
+            setError(data.error);
+          }
+          setLoading(false);
+          return;
         }
+
+        if (PAID_PLANS.includes(planParam as (typeof PAID_PLANS)[number])) {
+          checkoutStartedRef.current = true;
+          const successUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/chat`;
+          const result = await checkout({
+            productId: planParam,
+            dialog: CheckoutDialog,
+            successUrl,
+          });
+          const redirectUrlFromCheckout = result?.url ?? result?.checkout_url;
+          if (redirectUrlFromCheckout) {
+            window.location.href = redirectUrlFromCheckout;
+            return;
+          }
+        }
+        setLoading(false);
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : "Error de conexión al iniciar suscripción"
+        );
+        checkoutStartedRef.current = false;
       }
+      setLoading(false);
     };
 
-    handleAutoSubscribe();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, organizationId, planParam, router]);
+    runFlow();
+  }, [user, organizationId, planParam, router, checkout]);
 
   if (!planParam) {
      return <div>Error: No plan selected.</div>;
@@ -241,16 +240,25 @@ function SubscribePageContent() {
             }),
         });
 
-        const { error, url, organizationId: newOrgId } = await res.json();
+        const data = await res.json();
+        const { error: errMsg, url: redirectUrlFromApi, organizationId: newOrgId } = data;
 
-        if (!error && url) {
-            if (newOrgId) {
-                await switchToOrganization(newOrgId);
-            }
-            router.push(url);
+        if (errMsg) {
+          setError(errMsg);
+          setLoading(false);
+          return;
+        }
+
+        if (newOrgId) {
+          await switchToOrganization(newOrgId);
+        }
+        if (redirectUrlFromApi) {
+          router.push(redirectUrlFromApi);
+        } else if (newOrgId && planParam) {
+          router.push(`/subscribe?plan=${planParam}`);
         } else {
-            setError(error || "Error desconocido");
-            setLoading(false);
+          setError("Error desconocido");
+          setLoading(false);
         }
     } catch (err) {
         setError("Error de conexión");

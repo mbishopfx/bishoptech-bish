@@ -4,11 +4,9 @@ import React, { useState } from "react";
 import { Dialog } from "@radix-ui/themes";
 import { InfoCircledIcon } from "@radix-ui/react-icons";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@workos-inc/authkit-nextjs/components";
 import { SettingsInput } from "@/components/settings";
 
-/**
- * subscriptionLevel was used as Stripe price lookup key. Replace with new provider's plan/price mapping when migrating.
- */
 export function ModalDialog({
   subscriptionLevel,
   userId,
@@ -23,6 +21,7 @@ export function ModalDialog({
   trigger?: React.ReactNode;
 }) {
   const router = useRouter();
+  const { switchToOrganization } = useAuth();
 
   const [orgName, setOrgName] = useState("");
   const [error, setError] = useState("");
@@ -55,14 +54,28 @@ export function ModalDialog({
       }),
     });
 
-    const { error, url } = await res.json();
+    const data = await res.json();
+    const { error: errMsg, url: redirectUrl, organizationId: newOrgId } = data;
 
-    if (!error) {
-      return router.push(url);
+    if (errMsg) {
+      setLoading(false);
+      setError(`Error al suscribirse al plan: ${errMsg}`);
+      return;
+    }
+
+    if (redirectUrl) {
+      router.push(redirectUrl);
+      return;
+    }
+
+    if (newOrgId) {
+      await switchToOrganization(newOrgId);
+      router.push(`/subscribe?plan=${subscriptionLevel.toLowerCase()}`);
+      return;
     }
 
     setLoading(false);
-    setError(`Error al suscribirse al plan: ${error}`);
+    setError("Error desconocido al suscribirse.");
   };
 
   return (

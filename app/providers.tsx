@@ -1,5 +1,6 @@
 "use client";
 
+import { AutumnProvider } from "autumn-js/react";
 import { InitialMessageProvider } from "@/contexts/initial-message-context";
 import { Theme } from "@radix-ui/themes";
 import { ReactNode } from "react";
@@ -22,7 +23,9 @@ export function Providers({ children }: ProvidersProps) {
     <Theme>
       {isProd ? <Analytics /> : null}
       <Toaster />
-      <InitialMessageProvider>{children}</InitialMessageProvider>
+      <AutumnProvider includeCredentials>
+        <InitialMessageProvider>{children}</InitialMessageProvider>
+      </AutumnProvider>
     </Theme>
   );
 }
