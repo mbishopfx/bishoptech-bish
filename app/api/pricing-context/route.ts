@@ -28,12 +28,12 @@ export async function GET(): Promise<NextResponse<PricingContext>> {
       { token: session.accessToken },
     );
 
-    const subscriptionStatus = planInfo?.subscriptionStatus ?? null;
+    const productStatus = planInfo?.productStatus ?? null;
     const planValue = planInfo?.plan ?? null;
     const currentPlan = isSubscriptionPlan(planValue) ? planValue : null;
 
     const subscriptionIsActive =
-      subscriptionStatus === "active" || subscriptionStatus === "trialing";
+      productStatus === "active" || productStatus === "trialing";
     let activePlan: PlanSlug | null = null;
     if (subscriptionIsActive && currentPlan && currentPlan !== "free") {
       activePlan = currentPlan;

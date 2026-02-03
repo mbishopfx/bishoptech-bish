@@ -34,14 +34,15 @@ interface Organization {
   _creationTime: number;
   workos_id: string;
   name: string;
-  plan?: "plus" | "pro";
+  plan?: "free" | "plus" | "pro" | "enterprise";
   standardQuotaLimit?: number;
   premiumQuotaLimit?: number;
-  billingCycleStart?: number;
-  billingCycleEnd?: number;
-  subscriptionStatus?: string;
-  /** (formerly Stripe) payment-provider customer ID */
-  stripeCustomerId?: string;
+  seatQuantity?: number;
+  productId?: string;
+  productStatus?: string;
+  currentPeriodStart?: number;
+  currentPeriodEnd?: number;
+  subscriptionIds?: string[];
   cancelAtPeriodEnd?: boolean;
 }
 
@@ -235,10 +236,10 @@ export default function AdminDashboardClient() {
       },
     },
     {
-      accessorKey: "billingCycleStart",
+      accessorKey: "currentPeriodStart",
       header: "Billing Start",
       cell: ({ row }) => {
-        const start = row.getValue("billingCycleStart") as number;
+        const start = row.getValue("currentPeriodStart") as number;
         return (
           <div className="text-sm">
             {formatDate(start)}
@@ -247,10 +248,10 @@ export default function AdminDashboardClient() {
       },
     },
     {
-      accessorKey: "billingCycleEnd",
+      accessorKey: "currentPeriodEnd",
       header: "Billing End",
       cell: ({ row }) => {
-        const end = row.getValue("billingCycleEnd") as number;
+        const end = row.getValue("currentPeriodEnd") as number;
         return (
           <div className="text-sm">
             {formatDate(end)}
@@ -259,10 +260,10 @@ export default function AdminDashboardClient() {
       },
     },
     {
-      accessorKey: "subscriptionStatus",
+      accessorKey: "productStatus",
       header: "Status",
       cell: ({ row }) => {
-        const status = row.getValue("subscriptionStatus") as string;
+        const status = row.getValue("productStatus") as string;
         return <span className="text-sm">{status ? capitalizeFirstLetter(status) : "None"}</span>;
       },
     },
@@ -270,8 +271,8 @@ export default function AdminDashboardClient() {
       accessorKey: "cancelAtPeriodEnd",
       header: "CPE?",
       cell: ({ row }) => {
-        const cancelAtPeriodEnd = row.getValue("cancelAtPeriodEnd") as boolean;
-        return <span className="text-sm">{cancelAtPeriodEnd ? "Yes" : "No"}</span>;
+        const cpe = row.getValue("cancelAtPeriodEnd") as boolean;
+        return <span className="text-sm">{cpe ? "Yes" : "No"}</span>;
       },
     },
     {
@@ -279,7 +280,7 @@ export default function AdminDashboardClient() {
       header: "Actions",
       cell: ({ row }) => {
         const org = row.original;
-        const hasActiveSubscription = org.plan && org.subscriptionStatus === "active";
+        const hasActiveSubscription = org.plan && org.productStatus === "active";
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -569,7 +570,7 @@ export default function AdminDashboardClient() {
             {cancelType === "end_of_cycle" && (
               <div className="p-3 bg-yellow-50 dark:bg-popover-secondary/20 border border-yellow-200 dark:border-border rounded-md">
                 <p className="text-sm text-yellow-800 dark:text-popover-text">
-                  <strong>Note:</strong> The subscription will remain active until the end of the current billing cycle ({selectedOrg?.billingCycleEnd ? new Date(selectedOrg.billingCycleEnd).toLocaleDateString() : "Unknown"}).
+                  <strong>Note:</strong> The subscription will remain active until the end of the current billing cycle ({selectedOrg?.currentPeriodEnd ? new Date(selectedOrg.currentPeriodEnd).toLocaleDateString() : "Unknown"}).
                 </p>
               </div>
             )}

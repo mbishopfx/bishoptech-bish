@@ -114,13 +114,13 @@ export async function checkQuotaLimit(
       };
     }
 
-    const subscriptionStatus = organization.subscriptionStatus || "none";
+    const productStatus = organization.productStatus ?? "none";
     const hasValidSubscription =
-      subscriptionStatus === "active" || subscriptionStatus === "trialing";
+      productStatus === "active" || productStatus === "trialing";
 
     if (!hasValidSubscription) {
       console.warn(
-        `Organization ${orgWorkosId} has inactive subscription status: ${subscriptionStatus}`,
+        `Organization ${orgWorkosId} has inactive product status: ${productStatus}`,
       );
       return {
         allowed: false,
@@ -308,8 +308,8 @@ export async function getOrganizationBillingCycle(
     }
 
     return {
-      billingCycleStart: organization.billingCycleStart,
-      billingCycleEnd: organization.billingCycleEnd,
+      billingCycleStart: organization.currentPeriodStart,
+      billingCycleEnd: organization.currentPeriodEnd,
     };
   } catch (error) {
     console.error("Error getting organization billing cycle:", error);

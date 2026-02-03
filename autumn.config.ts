@@ -19,6 +19,12 @@ export const standard = feature({
 	type: "single_use",
 });
 
+export const preUserUsage = feature({
+	id: "pre_user_usage",
+	name: "Pre User Usage",
+	type: "boolean",
+});
+
 export const seats = feature({
 	id: "seats",
 	name: "Seats",
@@ -26,20 +32,44 @@ export const seats = feature({
 });
 
 // Products
-export const free = product({
-	id: "free",
-	name: "Free",
-	is_default: true,
+export const enterprise = product({
+	id: "enterprise",
+	name: "enterprise",
 	items: [
 		featureItem({
+			feature_id: preUserUsage.id,
+			included_usage: 0,
+		}),
+
+		featureItem({
 			feature_id: premium.id,
-			included_usage: 5,
+			included_usage: 100,
 			interval: "month",
 		}),
 
 		featureItem({
 			feature_id: seats.id,
 			included_usage: 1,
+		}),
+
+		featureItem({
+			feature_id: standard.id,
+			included_usage: 1000,
+			interval: "month",
+		}),
+	],
+});
+
+export const free = product({
+	id: "free",
+	name: "Free",
+	group: "Sub",
+	is_default: true,
+	items: [
+		featureItem({
+			feature_id: premium.id,
+			included_usage: 5,
+			interval: "month",
 		}),
 
 		featureItem({
@@ -53,14 +83,11 @@ export const free = product({
 export const plus = product({
 	id: "plus",
 	name: "plus",
+	group: "Sub",
 	items: [
-		pricedFeatureItem({
-			feature_id: seats.id,
+		priceItem({
 			price: 190,
 			interval: "month",
-			included_usage: 1,
-			billing_units: 1,
-			usage_model: "prepaid",
 		}),
 
 		featureItem({
@@ -80,14 +107,11 @@ export const plus = product({
 export const pro = product({
 	id: "pro",
 	name: "pro",
+	group: "Sub",
 	items: [
-		pricedFeatureItem({
-			feature_id: seats.id,
-			price: 480,
+		priceItem({
+			price: 490,
 			interval: "month",
-			included_usage: 1,
-			billing_units: 1,
-			usage_model: "prepaid",
 		}),
 
 		featureItem({

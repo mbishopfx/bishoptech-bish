@@ -107,8 +107,8 @@ export function NoSubscriptionDialog({
     const defaultOrgName = orgName ?? organizationInfo?.name ?? billingInfo?.name ?? null;
     const defaultSubscriptionStatus =
       subscriptionStatus ??
-      billingInfo?.subscriptionStatus ??
-      organizationInfo?.subscriptionStatus ??
+      billingInfo?.productStatus ??
+      organizationInfo?.productStatus ??
       null;
     const defaultCanManageBilling =
       typeof canManageBilling === "boolean"

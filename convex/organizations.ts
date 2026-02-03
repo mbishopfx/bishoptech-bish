@@ -2,7 +2,6 @@ import {
   query,
   internalQuery,
   internalMutation,
-  internalAction,
 } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
@@ -11,41 +10,24 @@ import { getAuthUserIdentity } from "./helpers/getUser";
 import { extractOrganizationIdFromJWT } from "./helpers/quota";
 import { PermissionQuery, AuthOrgQuery } from "./helpers/authenticated";
 import { serverSecretArg, ensureServerSecret } from "./helpers/auth";
+import { productStatusValidator } from "./schema";
 
-// Plan quota configuration // Could remove and use stripe metadata to fetch plan details
-const PLAN_QUOTAS = {
-  free: {
-    standardQuotaLimit: 20,
-    premiumQuotaLimit: 1,
-  },
-  plus: {
-    standardQuotaLimit: 1000,
-    premiumQuotaLimit: 100,
-  },
-  pro: {
-    standardQuotaLimit: 2700,
-    premiumQuotaLimit: 270,
-  },
-} as const;
-
-type PlanType = keyof typeof PLAN_QUOTAS;
-
-// Get plan from lookup key
-function getPlanFromLookupKey(lookupKey: string | null): PlanType | null {
+// Map Autumn product id (or lookup key) to plan name.
+function getPlanFromLookupKey(
+  lookupKey: string | null,
+): "free" | "plus" | "pro" | "enterprise" | null {
   if (!lookupKey) return null;
-
   if (lookupKey === "free") return "free";
   if (lookupKey === "plus") return "plus";
   if (lookupKey === "pro") return "pro";
-
+  if (lookupKey === "enterprise") return "enterprise";
   return null;
 }
 
 export const createOrganization = internalMutation({
-  args: { 
-    workos_id: v.string(), 
+  args: {
+    workos_id: v.string(),
     name: v.string(),
-    stripeCustomerId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const existing = await ctx.db
@@ -54,18 +36,13 @@ export const createOrganization = internalMutation({
       .first();
 
     if (existing) {
-      const patch: { name: string; stripeCustomerId?: string } = { name: args.name };
-      if (args.stripeCustomerId !== undefined) {
-        patch.stripeCustomerId = args.stripeCustomerId;
-      }
-      await ctx.db.patch(existing._id, patch);
+      await ctx.db.patch(existing._id, { name: args.name });
       return existing._id;
     }
 
     return await ctx.db.insert("organizations", {
       workos_id: args.workos_id,
       name: args.name,
-      ...(args.stripeCustomerId !== undefined && { stripeCustomerId: args.stripeCustomerId }),
     });
   },
 });
@@ -76,13 +53,15 @@ export const updateOrganization = internalMutation({
     patch: v.object({
       workos_id: v.optional(v.string()),
       name: v.optional(v.string()),
-      stripeCustomerId: v.optional(v.string()),
-      billingCycleStart: v.optional(v.number()),
-      billingCycleEnd: v.optional(v.number()),
       plan: v.optional(v.union(v.literal("free"), v.literal("plus"), v.literal("pro"), v.literal("enterprise"))),
       standardQuotaLimit: v.optional(v.number()),
       premiumQuotaLimit: v.optional(v.number()),
       seatQuantity: v.optional(v.number()),
+      productId: v.optional(v.string()),
+      productStatus: v.optional(productStatusValidator),
+      currentPeriodStart: v.optional(v.number()),
+      currentPeriodEnd: v.optional(v.number()),
+      subscriptionIds: v.optional(v.array(v.string())),
     }),
   },
   handler: async (ctx, args) => {
@@ -178,165 +157,52 @@ export const getOrganizationInfo = internalQuery({
       standardQuotaLimit: organization.standardQuotaLimit,
       premiumQuotaLimit: organization.premiumQuotaLimit,
       seatQuantity: organization.seatQuantity,
-      billingCycleStart: organization.billingCycleStart,
-      billingCycleEnd: organization.billingCycleEnd,
+      currentPeriodStart: organization.currentPeriodStart,
+      currentPeriodEnd: organization.currentPeriodEnd,
       hasBillingCycle: !!(
-        organization.billingCycleStart && organization.billingCycleEnd
+        organization.currentPeriodStart && organization.currentPeriodEnd
       ),
     };
   },
 });
 
-// Previously set Stripe customer ID. Reuse for new provider's customer ID when migrating.
-export const setStripeCustomerIdByWorkOSId = internalMutation({
-  args: { workos_id: v.string(), stripeCustomerId: v.string() },
+// Product shape from webhook (customer.products[] / updated_product)
+const productDataValidator = v.object({
+  productId: v.optional(v.union(v.string(), v.null())),
+  status: v.optional(productStatusValidator),
+  currentPeriodStart: v.optional(v.union(v.number(), v.null())),
+  currentPeriodEnd: v.optional(v.union(v.number(), v.null())),
+  subscriptionIds: v.optional(v.union(v.array(v.string()), v.null())),
+});
+
+export const syncAutumnSubscriptionData = internalMutation({
+  args: {
+    workos_id: v.string(),
+    product: productDataValidator,
+  },
+  returns: v.id("organizations"),
   handler: async (ctx, args) => {
-    const existing = await ctx.db
+    const organization = await ctx.db
       .query("organizations")
       .withIndex("by_workos_id", (q) => q.eq("workos_id", args.workos_id))
       .first();
 
-    if (existing?._id) {
-      await ctx.db.patch(existing._id, {
-        stripeCustomerId: args.stripeCustomerId,
-      });
-      return existing._id;
-    }
-
-    return await ctx.db.insert("organizations", {
-      workos_id: args.workos_id,
-      name: "",
-      stripeCustomerId: args.stripeCustomerId,
-    });
-  },
-});
-
-// Lookup org by payment-provider customer ID (was Stripe). Reuse index for new provider.
-export const getOrganizationByStripeCustomerId = internalQuery({
-  args: { stripeCustomerId: v.string() },
-  handler: async (ctx, args) => {
-    const organization = await ctx.db
-      .query("organizations")
-      .withIndex("by_stripe_customer_id", (q) =>
-        q.eq("stripeCustomerId", args.stripeCustomerId),
-      )
-      .first();
-    return organization;
-  },
-});
-
-// Writes subscription fields (plan, status, billing cycle, payment method, etc.) from payment-provider. Was driven by Stripe data.
-export const syncStripeSubscriptionData = internalMutation({
-  args: {
-    stripeCustomerId: v.string(),
-    subscriptionData: v.object({
-      subscriptionId: v.optional(v.string()),
-      status: v.string(),
-      priceId: v.optional(v.union(v.string(), v.null())),
-      lookupKey: v.optional(v.union(v.string(), v.null())),
-      billingCycleStart: v.optional(v.union(v.number(), v.null())),
-      billingCycleEnd: v.optional(v.union(v.number(), v.null())),
-      cancelAtPeriodEnd: v.optional(v.boolean()),
-      paymentMethodBrand: v.optional(v.union(v.string(), v.null())),
-      paymentMethodLast4: v.optional(v.union(v.string(), v.null())),
-      seatQuantity: v.optional(v.union(v.number(), v.null())),
-    }),
-  },
-  handler: async (ctx, args) => {
-    const organization = await ctx.db
-      .query("organizations")
-      .withIndex("by_stripe_customer_id", (q) =>
-        q.eq("stripeCustomerId", args.stripeCustomerId),
-      )
-      .first();
-
     if (!organization) {
-      throw new Error(
-        `Organization not found for Stripe customer ID: ${args.stripeCustomerId}`,
-      );
+      throw new Error(`Organization not found for workos_id: ${args.workos_id}`);
     }
 
-    // Determine plan from lookup key
-    const newPlan = getPlanFromLookupKey(
-      args.subscriptionData.lookupKey || null,
-    );
+    const newPlan = getPlanFromLookupKey(args.product.productId ?? null);
+    const shouldUpdatePlan = !organization.plan || organization.plan !== newPlan;
 
-    // Check if plan changed or quotas need to be set for the first time
-    const shouldUpdateQuotas =
-      !organization.plan || organization.plan !== newPlan;
-
-    const updateData: {
-      subscriptionId?: string;
-      subscriptionStatus?:
-        | "active"
-        | "canceled"
-        | "incomplete"
-        | "incomplete_expired"
-        | "past_due"
-        | "trialing"
-        | "unpaid"
-        | "none";
-      priceId?: string;
-      cancelAtPeriodEnd?: boolean;
-      paymentMethodBrand?: string;
-      paymentMethodLast4?: string;
-      billingCycleStart?: number;
-      billingCycleEnd?: number;
-      plan?: "free" | "plus" | "pro" | "enterprise";
-      standardQuotaLimit?: number;
-      premiumQuotaLimit?: number;
-      seatQuantity?: number;
-    } = {
-      subscriptionId: args.subscriptionData.subscriptionId,
-      subscriptionStatus: args.subscriptionData.status as
-        | "active"
-        | "canceled"
-        | "incomplete"
-        | "incomplete_expired"
-        | "past_due"
-        | "trialing"
-        | "unpaid"
-        | "none",
-      priceId: args.subscriptionData.priceId || undefined,
-      cancelAtPeriodEnd: args.subscriptionData.cancelAtPeriodEnd,
-      paymentMethodBrand: args.subscriptionData.paymentMethodBrand || undefined,
-      paymentMethodLast4: args.subscriptionData.paymentMethodLast4 || undefined,
-      billingCycleStart: args.subscriptionData.billingCycleStart || undefined,
-      billingCycleEnd: args.subscriptionData.billingCycleEnd || undefined,
-      seatQuantity:
-        typeof args.subscriptionData.seatQuantity === "number"
-          ? args.subscriptionData.seatQuantity
-          : undefined,
-    };
-
-    // Update plan and quotas only if plan changed
-    if (shouldUpdateQuotas && newPlan) {
-      updateData.plan = newPlan;
-      updateData.standardQuotaLimit = PLAN_QUOTAS[newPlan].standardQuotaLimit;
-      updateData.premiumQuotaLimit = PLAN_QUOTAS[newPlan].premiumQuotaLimit;
-    }
-
-    await ctx.db.patch(organization._id, updateData);
+    await ctx.db.patch(organization._id, {
+      productId: args.product.productId ?? undefined,
+      productStatus: args.product.status ?? undefined,
+      currentPeriodStart: args.product.currentPeriodStart ?? undefined,
+      currentPeriodEnd: args.product.currentPeriodEnd ?? undefined,
+      subscriptionIds: args.product.subscriptionIds ?? undefined,
+      ...(shouldUpdatePlan && newPlan ? { plan: newPlan } : {}),
+    });
     return organization._id;
-  },
-});
-
-// STRIPE: 1) org = getOrganizationByStripeCustomerId(stripeCustomerId). If !org: customer = stripe.customers.retrieve(stripeCustomerId), workOSOrganizationId = customer.metadata.workOSOrganizationId; getOrCreate org by workos_id, set stripeCustomerId.
-// STRIPE: 2) subscriptions = stripe.subscriptions.list({ customer, limit: 1, status: 'all', expand: [default_payment_method, items.data.price] })
-// STRIPE: 3) If none: subscriptionData = { status: 'none', billingCycleStart: billingPeriod?.start, billingCycleEnd: billingPeriod?.end }. Else: subscriptionData = { subscriptionId, status, priceId, lookupKey, billingCycleStart/End, cancelAtPeriodEnd, paymentMethodBrand/Last4, seatQuantity } from subscription and first item.
-// STRIPE: 4) await syncStripeSubscriptionData(stripeCustomerId, subscriptionData). Return subscriptionData.
-export const syncStripeDataWithPeriod = internalAction({
-  args: {
-    stripeCustomerId: v.string(),
-    billingPeriod: v.optional(
-      v.object({
-        start: v.number(),
-        end: v.number(),
-      }),
-    ),
-  },
-  handler: async (_ctx, _args) => {
-    throw new Error("Stripe removed. Replace with new provider sync. See pseudocode above.");
   },
 });
 
@@ -353,19 +219,15 @@ export const getSubscriptionData = internalQuery({
     }
 
     return {
-      subscriptionId: organization.subscriptionId,
-      subscriptionStatus: organization.subscriptionStatus || "none",
-      priceId: organization.priceId,
       plan: organization.plan,
       standardQuotaLimit: organization.standardQuotaLimit,
       premiumQuotaLimit: organization.premiumQuotaLimit,
       seatQuantity: organization.seatQuantity,
-      billingCycleStart: organization.billingCycleStart,
-      billingCycleEnd: organization.billingCycleEnd,
-      cancelAtPeriodEnd: organization.cancelAtPeriodEnd,
-      paymentMethodBrand: organization.paymentMethodBrand,
-      paymentMethodLast4: organization.paymentMethodLast4,
-      stripeCustomerId: organization.stripeCustomerId,
+      productId: organization.productId,
+      productStatus: organization.productStatus ?? "none",
+      currentPeriodStart: organization.currentPeriodStart,
+      currentPeriodEnd: organization.currentPeriodEnd,
+      subscriptionIds: organization.subscriptionIds,
     };
   },
 });
@@ -385,7 +247,7 @@ export const getCurrentOrganizationPlan = AuthOrgQuery({
 
       return {
         plan: organization.plan || null,
-        subscriptionStatus: organization.subscriptionStatus || "none",
+        productStatus: organization.productStatus ?? "none",
       };
     } catch (error) {
       console.error("Error getting current organization plan:", error);
@@ -411,7 +273,7 @@ export const getCurrentOrganizationInfo = AuthOrgQuery({
       return {
         name: organization.name,
         plan: organization.plan || null,
-        subscriptionStatus: organization.subscriptionStatus || "none",
+        productStatus: organization.productStatus ?? "none",
       };
     } catch (error) {
       console.error("Error getting current organization info:", error);
@@ -434,20 +296,17 @@ export const getOrganizationBillingInfo = PermissionQuery({
     }
 
     return {
-      subscriptionId: organization.subscriptionId,
-      subscriptionStatus: organization.subscriptionStatus || "none",
-      priceId: organization.priceId,
+      name: organization.name,
       plan: organization.plan,
       standardQuotaLimit: organization.standardQuotaLimit,
       premiumQuotaLimit: organization.premiumQuotaLimit,
       seatQuantity: organization.seatQuantity,
-      billingCycleStart: organization.billingCycleStart,
-      billingCycleEnd: organization.billingCycleEnd,
-      cancelAtPeriodEnd: organization.cancelAtPeriodEnd,
-      paymentMethodBrand: organization.paymentMethodBrand,
-      paymentMethodLast4: organization.paymentMethodLast4,
-      stripeCustomerId: organization.stripeCustomerId,
-      name: organization.name,
+      productId: organization.productId,
+      productStatus: organization.productStatus ?? "none",
+      currentPeriodStart: organization.currentPeriodStart,
+      currentPeriodEnd: organization.currentPeriodEnd,
+      subscriptionIds: organization.subscriptionIds,
+      workosId: organization.workos_id,
     };
   },
 });

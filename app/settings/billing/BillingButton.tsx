@@ -2,19 +2,27 @@
 
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
-// createStripePortalSession opens payment-provider billing portal (Stripe removed, currently throws).
+import { getAutumnBillingPortalUrl } from "@/actions/getAutumnBillingPortalUrl";
 
-export function BillingButton({ stripeCustomerId }: { stripeCustomerId?: string }) {
+export function BillingButton({ workosId }: { workosId?: string }) {
   const [loading, setLoading] = useState(false);
 
   const handleManageBilling = async () => {
-    if (!stripeCustomerId) return;
-    
+    if (!workosId) return;
+
     setLoading(true);
     try {
-      const { url } = await createStripePortalSession(stripeCustomerId);
-      if (url) {
-        window.location.href = url;
+      const returnUrl = typeof window !== "undefined" ? window.location.href : undefined;
+      const result = await getAutumnBillingPortalUrl(workosId, returnUrl);
+
+      if ("error" in result) {
+        console.error("Autumn billing portal error:", result.error);
+        alert("No se pudo acceder al portal de facturación. Por favor intenta más tarde.");
+        return;
+      }
+
+      if (result.url) {
+        window.location.href = result.url;
       }
     } catch (error) {
       console.error("Failed to redirect to billing portal:", error);
@@ -24,7 +32,7 @@ export function BillingButton({ stripeCustomerId }: { stripeCustomerId?: string 
     }
   };
 
-  if (!stripeCustomerId) return null;
+  if (!workosId) return null;
 
   return (
     <button

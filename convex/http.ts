@@ -32,15 +32,60 @@ http.route({
       { workos_id },
     );
 
-    // stripeCustomerId was the Stripe customer ID; reuse this field for new provider's customer ID when migrating.
     const response = {
-      stripeCustomerId: organization?.stripeCustomerId || null,
+      billingCustomerId: organization?.workos_id ?? null,
     };
 
     return new Response(JSON.stringify(response), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
+  }),
+});
+
+http.route({
+  path: "/autumn-webhook",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    if (!process.env.AUTUMN_WEBHOOK_SECRET) {
+      console.error("[Autumn webhook] AUTUMN_WEBHOOK_SECRET is not set");
+      return new Response(
+        JSON.stringify({ error: "AUTUMN_WEBHOOK_SECRET is not set" }),
+        { status: 500, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
+    const payload = await request.text();
+    const svixId = request.headers.get("svix-id") ?? "";
+    const svixTimestamp = request.headers.get("svix-timestamp") ?? "";
+    const svixSignature = request.headers.get("svix-signature") ?? "";
+
+    try {
+      const result = await ctx.runAction(internal.autumn.handleAutumnWebhook, {
+        payload,
+        svixId,
+        svixTimestamp,
+        svixSignature,
+      });
+
+      return new Response(JSON.stringify(result), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Invalid webhook signature";
+      const isOrgNotFound =
+        typeof message === "string" && message.includes("Organization not found");
+      const status = isOrgNotFound ? 503 : 400;
+      console.error("[Autumn webhook] Failed:", message, "status:", status);
+      return new Response(
+        JSON.stringify({ error: message }),
+        {
+          status,
+          headers: { "Content-Type": "application/json" },
+        },
+      );
+    }
   }),
 });
 
@@ -116,7 +161,6 @@ http.route({
 
           break;
         }
-        // STRIPE: WorkOS may send stripe_customer_id; we stored it. Omit when migrating to new provider.
         case "organization.created": {
           await ctx.runMutation(internal.organizations.createOrganization, {
             name: data.name,
@@ -160,7 +204,6 @@ http.route({
             );
           }
 
-          // STRIPE: optionally update stripeCustomerId from WorkOS. Omit when migrating.
           const patch = { name: data.name };
 
           await ctx.runMutation(internal.organizations.updateOrganization, {

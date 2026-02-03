@@ -215,7 +215,7 @@ export const getUserFullQuotaInfo = AuthOrgQuery({
         limit: premiumQuota.limit,
         quotaConfigured: premiumQuota.quotaConfigured,
       },
-      nextResetDate: organization.billingCycleEnd || billingCycle?.billingCycleEnd,
+      nextResetDate: organization.currentPeriodEnd ?? billingCycle?.billingCycleEnd,
     };
   },
 });

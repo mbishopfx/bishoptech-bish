@@ -16,6 +16,19 @@ export const MessagesStatusValidor = v.union(
   v.literal("cancelled"),
 );
 
+export const productStatusValidator = v.union(
+  v.literal("active"),
+  v.literal("expired"),
+  v.literal("scheduled"),
+  v.literal("trialing"),
+  v.literal("past_due"),
+  v.literal("canceled"),
+  v.literal("none"),
+  v.literal("incomplete"),
+  v.literal("incomplete_expired"),
+  v.literal("unpaid"),
+);
+
 export default defineSchema({
   users: defineTable({
     email: v.string(),
@@ -30,36 +43,26 @@ export default defineSchema({
   organizations: defineTable({
     workos_id: v.string(),
     name: v.string(),
-    // Payment-provider customer ID (was Stripe). Replace with new provider's field when migrating.
-    stripeCustomerId: v.optional(v.string()),
-    billingCycleStart: v.optional(v.number()),
-    billingCycleEnd: v.optional(v.number()),
     standardQuotaLimit: v.optional(v.number()),
     premiumQuotaLimit: v.optional(v.number()),
-    // Plan; was based on Stripe price lookup key. Subscription data below was synced from Stripe; repurpose for new provider.
     plan: v.optional(v.union(v.literal("free"), v.literal("plus"), v.literal("pro"), v.literal("enterprise"))),
     seatQuantity: v.optional(v.number()),
-    subscriptionId: v.optional(v.string()),
-    subscriptionStatus: v.optional(
-      v.union(
-        v.literal("active"),
-        v.literal("canceled"),
-        v.literal("incomplete"),
-        v.literal("incomplete_expired"),
-        v.literal("past_due"),
-        v.literal("trialing"),
-        v.literal("unpaid"),
-        v.literal("none"),
-      ),
-    ),
-    priceId: v.optional(v.string()),
+    productId: v.optional(v.string()),
+    productStatus: v.optional(productStatusValidator),
+    currentPeriodStart: v.optional(v.number()),
+    currentPeriodEnd: v.optional(v.number()),
+    subscriptionIds: v.optional(v.array(v.string())),
     cancelAtPeriodEnd: v.optional(v.boolean()),
+    // Legacy fields (allow existing docs to validate; remove after migration)
+    billingCycleStart: v.optional(v.number()),
+    billingCycleEnd: v.optional(v.number()),
+    stripeCustomerId: v.optional(v.string()),
+    subscriptionId: v.optional(v.string()),
+    subscriptionStatus: v.optional(v.string()),
+    priceId: v.optional(v.string()),
     paymentMethodBrand: v.optional(v.string()),
     paymentMethodLast4: v.optional(v.string()),
-  })
-    .index("by_workos_id", ["workos_id"])
-    // Reuse for new provider's customer ID when migrating.
-    .index("by_stripe_customer_id", ["stripeCustomerId"]),
+  }).index("by_workos_id", ["workos_id"]),
   threads: defineTable({
     threadId: v.string(), // User client Defined
     title: v.string(),

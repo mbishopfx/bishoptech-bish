@@ -3,11 +3,6 @@ import { NextRequest, NextResponse } from "next/server";
 const CONVEX_SITE_URL = process.env.CONVEX_SITE_URL || process.env.NEXT_PUBLIC_CONVEX_URL!.replace('.convex.cloud', '.convex.site');
 const CONVEX_ADMIN_TOKEN = process.env.CONVEX_ADMIN_TOKEN!;
 
-// STRIPE (enterprise): 1) workosOrg = workos.organizations.getOrganization(workos_id). customerId = workosOrg.stripeCustomerId
-// STRIPE: 2) if !customerId: customer = stripe.customers.create({ name, metadata: { workOSOrganizationId: workos_id } }, { idempotencyKey }); customerId = customer.id; workos.organizations.updateOrganization({ organization: workos_id, stripeCustomerId: customerId })
-// STRIPE: 3) existingSubscriptions = stripe.subscriptions.list({ customer, status: 'active' }). Create or update subscription for ENTERPRISE_PRICE_ID and seatQuantity; for features, stripe.prices.list(lookup_keys) and subscriptionItems.create/del
-// STRIPE: 4) POST /sync-stripe-customer { workos_id, stripeCustomerId: customerId }
-
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
