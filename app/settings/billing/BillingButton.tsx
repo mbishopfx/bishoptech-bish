@@ -2,37 +2,38 @@
 
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
+import { useHasPermission } from "@/lib/permissions-client";
 import { getAutumnBillingPortalUrl } from "@/actions/getAutumnBillingPortalUrl";
 
 export function BillingButton({ workosId }: { workosId?: string }) {
   const [loading, setLoading] = useState(false);
+  const canManageBilling = useHasPermission("MANAGE_BILLING");
 
   const handleManageBilling = async () => {
-    if (!workosId) return;
+    if (!workosId || !canManageBilling) return;
 
     setLoading(true);
     try {
       const returnUrl = typeof window !== "undefined" ? window.location.href : undefined;
-      const result = await getAutumnBillingPortalUrl(workosId, returnUrl);
+      const result = await getAutumnBillingPortalUrl(returnUrl);
 
       if ("error" in result) {
-        console.error("Autumn billing portal error:", result.error);
+        console.error("Billing portal error:", result.error);
         alert("No se pudo acceder al portal de facturación. Por favor intenta más tarde.");
         return;
       }
-
       if (result.url) {
         window.location.href = result.url;
       }
     } catch (error) {
-      console.error("Failed to redirect to billing portal:", error);
+      console.error("Failed to open billing portal:", error);
       alert("No se pudo acceder al portal de facturación. Por favor intenta más tarde.");
     } finally {
       setLoading(false);
     }
   };
 
-  if (!workosId) return null;
+  if (!workosId || !canManageBilling) return null;
 
   return (
     <button

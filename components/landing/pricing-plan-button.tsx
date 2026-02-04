@@ -12,6 +12,8 @@ import {
   PricingContext,
   SubscriptionPlan,
 } from "@/lib/pricing-context";
+import { useHasPermission } from "@/lib/permissions-client";
+import { getAutumnBillingPortalUrl } from "@/actions/getAutumnBillingPortalUrl";
 
 const CTA_BUTTON_CLASS =
   "hover:bg-white hover:text-[color(display-p3_0.1725490196_0.1764705882_0.1882352941/1)] hover:shadow-[rgba(0,0,0,0.1)_0px_0px_0px_1px] relative flex w-full cursor-pointer select-none items-center justify-center whitespace-nowrap bg-white text-sm leading-4 tracking-normal duration-[0.17s] text-[color(display-p3_0.1725490196_0.1764705882_0.1882352941/1)] dark:bg-zinc-900 dark:text-white dark:hover:bg-zinc-800 shadow-[rgba(0,0,0,0.05)_0px_0px_0px_1px] rounded-[50px] h-10 border-none disabled:opacity-50 disabled:cursor-not-allowed";
@@ -21,6 +23,7 @@ type PlanButtonConfig = {
   href?: string;
   external?: boolean;
   disabled: boolean;
+  openBillingPortal?: boolean;
 };
 
 type PricingPlanButtonProps = {
@@ -34,7 +37,9 @@ export function PricingPlanButton({ plan, slug }: PricingPlanButtonProps) {
   const [context, setContext] = useState<PricingContext | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isCheckoutLoading, setIsCheckoutLoading] = useState(false);
+  const [isPortalLoading, setIsPortalLoading] = useState(false);
   const { checkout } = useCustomer();
+  const canManageBilling = useHasPermission("MANAGE_BILLING");
 
   useEffect(() => {
     let cancelled = false;
@@ -72,32 +77,21 @@ export function PricingPlanButton({ plan, slug }: PricingPlanButtonProps) {
   let linkHref: string | null =
     !cta.disabled && typeof cta.href === "string" ? cta.href : null;
 
+  if (cta.openBillingPortal && !canManageBilling) {
+    linkHref = null;
+  }
+
   const isUpgradeFlow =
     Boolean(linkHref) &&
     !cta.external &&
     resolvedContext.hasActiveSubscription &&
     resolvedContext.canManageBilling &&
-    PAID_PLAN_SLUGS.includes(slug);
-
-  // Plus/Pro: fixed single-seat price (1 user per org). Enterprise is manually activated, not from this flow.
-  let priceEstimate: string | null = null;
-  if (slug === "plus" || slug === "pro") {
-    const base = slug === "plus" ? 190 : 480;
-    priceEstimate = new Intl.NumberFormat("es-MX", {
-      style: "currency",
-      currency: "MXN",
-      maximumFractionDigits: 0,
-    }).format(base);
-  }
+    PAID_PLAN_SLUGS.includes(slug) &&
+    slug !== resolvedContext.activePlan;
 
   if (isLoading) {
     return (
       <div className="flex w-full flex-col gap-3">
-        {priceEstimate ? (
-          <p className="text-xs text-[color(display-p3_0.1725490196_0.1764705882_0.1882352941/0.6)] dark:text-zinc-400">
-            {priceEstimate} / mes
-          </p>
-        ) : null}
         <Button className={CTA_BUTTON_CLASS} disabled aria-busy="true" aria-live="polite">
           Suscribirse
         </Button>
@@ -105,20 +99,35 @@ export function PricingPlanButton({ plan, slug }: PricingPlanButtonProps) {
     );
   }
 
-  if (!linkHref) {
+  const isManageBillingFlow = Boolean(
+    linkHref && cta.openBillingPortal && canManageBilling,
+  );
+
+  if (!linkHref && !isManageBillingFlow) {
     return (
       <div className="flex w-full flex-col gap-3">
-        {priceEstimate ? (
-          <p className="text-xs text-[color(display-p3_0.1725490196_0.1764705882_0.1882352941/0.6)] dark:text-zinc-400">
-            {priceEstimate} / mes
-          </p>
-        ) : null}
         <Button className={CTA_BUTTON_CLASS} disabled>
           {cta.label}
         </Button>
       </div>
     );
   }
+
+  const handleOpenBillingPortal = async () => {
+    if (isPortalLoading || !canManageBilling) return;
+    setIsPortalLoading(true);
+    try {
+      const returnUrl = typeof window !== "undefined" ? window.location.href : undefined;
+      const result = await getAutumnBillingPortalUrl(returnUrl);
+      if ("url" in result && result.url) {
+        window.location.href = result.url;
+      }
+    } catch (error) {
+      console.error("Failed to open billing portal:", error);
+    } finally {
+      setIsPortalLoading(false);
+    }
+  };
 
   const handleUpgradeClick = async () => {
     if (!linkHref || isCheckoutLoading) return;
@@ -142,12 +151,16 @@ export function PricingPlanButton({ plan, slug }: PricingPlanButtonProps) {
 
   return (
     <div className="flex w-full flex-col gap-3">
-      {priceEstimate ? (
-        <p className="text-xs text-[color(display-p3_0.1725490196_0.1764705882_0.1882352941/0.6)] dark:text-zinc-400">
-          {priceEstimate} / mes
-        </p>
-      ) : null}
-      {isUpgradeFlow ? (
+      {isManageBillingFlow ? (
+        <Button
+          className={CTA_BUTTON_CLASS}
+          onClick={handleOpenBillingPortal}
+          disabled={isPortalLoading}
+          aria-busy={isPortalLoading}
+        >
+          {isPortalLoading ? "…" : cta.label}
+        </Button>
+      ) : isUpgradeFlow ? (
         <Button
           className={CTA_BUTTON_CLASS}
           onClick={handleUpgradeClick}
@@ -215,6 +228,7 @@ function buildPlanCta(
         href: "/settings/billing",
         external: false,
         disabled: false,
+        openBillingPortal: true,
       };
     }
 
