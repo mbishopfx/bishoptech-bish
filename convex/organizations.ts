@@ -162,13 +162,13 @@ export const getOrganizationInfo = internalQuery({
   },
 });
 
-// Product shape from webhook (customer.products[] / updated_product)
 const productDataValidator = v.object({
   productId: v.optional(v.union(v.string(), v.null())),
   status: v.optional(productStatusValidator),
   currentPeriodStart: v.optional(v.union(v.number(), v.null())),
   currentPeriodEnd: v.optional(v.union(v.number(), v.null())),
   subscriptionIds: v.optional(v.union(v.array(v.string()), v.null())),
+  seatQuantity: v.optional(v.union(v.number(), v.null())),
 });
 
 export const syncAutumnSubscriptionData = internalMutation({
@@ -196,6 +196,9 @@ export const syncAutumnSubscriptionData = internalMutation({
       currentPeriodStart: args.product.currentPeriodStart ?? undefined,
       currentPeriodEnd: args.product.currentPeriodEnd ?? undefined,
       subscriptionIds: args.product.subscriptionIds ?? undefined,
+      ...(args.product.seatQuantity !== undefined && args.product.seatQuantity !== null
+        ? { seatQuantity: args.product.seatQuantity }
+        : {}),
       ...(shouldUpdatePlan && newPlan ? { plan: newPlan } : {}),
     });
     return organization._id;

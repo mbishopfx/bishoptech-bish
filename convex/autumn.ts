@@ -140,12 +140,22 @@ export const handleAutumnWebhook = internalAction({
     const products = event.data.customer?.products ?? [];
     const productToSync = getProductToSync(products, updatedProductId);
 
+    const customerData = event.data.customer as { features?: { seats?: { balance?: number; included_usage?: number } } } | undefined;
+    const seatsFeature = customerData?.features?.seats;
+    const seatQuantity =
+      typeof seatsFeature?.balance === "number" && Number.isInteger(seatsFeature.balance) && seatsFeature.balance >= 0
+        ? seatsFeature.balance
+        : typeof seatsFeature?.included_usage === "number" && Number.isInteger(seatsFeature.included_usage) && seatsFeature.included_usage >= 0
+          ? seatsFeature.included_usage
+          : undefined;
+
     const product = {
       productId: productToSync?.id ?? null,
       status: normalizeProductStatus(productToSync?.status),
       currentPeriodStart: productToSync?.current_period_start ?? undefined,
       currentPeriodEnd: productToSync?.current_period_end ?? undefined,
       subscriptionIds: productToSync?.subscription_ids ?? undefined,
+      seatQuantity: seatQuantity ?? null,
     };
 
     await ctx.runMutation(internal.organizations.syncAutumnSubscriptionData, {

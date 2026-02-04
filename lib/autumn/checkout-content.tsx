@@ -1,23 +1,33 @@
 import { type CheckoutResult } from "autumn-js";
 
+function formatPlanName(name: string): string {
+  const lower = name.toLowerCase();
+  if (lower === "plus") return "Plus";
+  if (lower === "pro") return "Pro";
+  return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+}
+
 export const getCheckoutContent = (checkoutResult: CheckoutResult) => {
   const { product, current_product, next_cycle } = checkoutResult;
   const { is_one_off, is_free, has_trial, updateable } = product.properties;
   const scenario = product.scenario;
 
   const nextCycleAtStr = next_cycle
-    ? new Date(next_cycle.starts_at).toLocaleDateString()
+    ? new Date(next_cycle.starts_at).toLocaleDateString("es-MX")
     : undefined;
 
-  const productName = product.name;
+  const productName = formatPlanName(product.name);
+  const currentProductName = current_product
+    ? formatPlanName(current_product.name)
+    : "";
 
   if (is_one_off) {
     return {
-      title: <p>Purchase {productName}</p>,
+      title: <p>Comprar {productName}</p>,
       message: (
         <p>
-          By clicking confirm, you will purchase {productName} and your card
-          will be charged immediately.
+          Al confirmar, se cobrará a tu método de pago el monto indicado más
+          abajo.
         </p>
       ),
     };
@@ -26,11 +36,11 @@ export const getCheckoutContent = (checkoutResult: CheckoutResult) => {
   if (scenario == "active" && updateable) {
     if (updateable) {
       return {
-        title: <p>Update Plan</p>,
+        title: <p>Actualizar cantidad del plan</p>,
         message: (
           <p>
-            Update your prepaid quantity. You&apos;ll be charged or credited the
-            prorated difference based on your current billing cycle.
+            Puedes cambiar la cantidad prepagada. La diferencia se cobrará o
+            acreditará de forma prorrateada según tu ciclo actual.
           </p>
         ),
       };
@@ -39,11 +49,11 @@ export const getCheckoutContent = (checkoutResult: CheckoutResult) => {
 
   if (has_trial) {
     return {
-      title: <p>Start trial for {productName}</p>,
+      title: <p>Prueba gratuita de {productName}</p>,
       message: (
         <p>
-          By clicking confirm, you will start a free trial of {productName}{" "}
-          which ends on {nextCycleAtStr}.
+          Al confirmar, comenzará tu prueba gratuita de {productName}. La prueba
+          termina el {nextCycleAtStr}.
         </p>
       ),
     };
@@ -52,91 +62,98 @@ export const getCheckoutContent = (checkoutResult: CheckoutResult) => {
   switch (scenario) {
     case "scheduled":
       return {
-        title: <p>{productName} product already scheduled</p>,
+        title: <p>Cambio ya programado</p>,
         message: (
           <p>
-            You are currently on product {current_product.name} and are
-            scheduled to start {productName} on {nextCycleAtStr}.
+            Tu paso a {productName} ya está programado para el {nextCycleAtStr}.
+            No necesitas hacer nada más.
           </p>
         ),
       };
 
     case "active":
       return {
-        title: <p>Product already active</p>,
-        message: <p>You are already subscribed to this product.</p>,
+        title: <p>Ya tienes este plan</p>,
+        message: (
+          <p>Tu suscripción a {productName} ya está activa.</p>
+        ),
       };
 
     case "new":
       if (is_free) {
         return {
-          title: <p>Enable {productName}</p>,
+          title: <p>Activar {productName}</p>,
           message: (
             <p>
-              By clicking confirm, {productName} will be enabled immediately.
+              Al confirmar, se activará {productName} de inmediato y no se
+              realizará ningún cargo.
             </p>
           ),
         };
       }
 
       return {
-        title: <p>Subscribe to {productName}</p>,
+        title: <p>Suscribirte a {productName}</p>,
         message: (
           <p>
-            By clicking confirm, you will be subscribed to {productName} and
-            your card will be charged immediately.
+            Al confirmar, se activará tu suscripción a {productName} y se
+            cobrará el monto indicado a tu método de pago.
           </p>
         ),
       };
     case "renew":
       return {
-        title: <p>Renew</p>,
+        title: <p>Renovar suscripción</p>,
         message: (
           <p>
-            By clicking confirm, you will renew your subscription to{" "}
-            {productName}.
+            Al confirmar, se renovará tu suscripción a {productName} y se
+            realizará el cargo correspondiente.
           </p>
         ),
       };
 
     case "upgrade":
       return {
-        title: <p>Upgrade to {productName}</p>,
+        title: <p>Subir a {productName}</p>,
         message: (
           <p>
-            By clicking confirm, you will upgrade to {productName} and your
-            payment method will be charged immediately.
+            Al confirmar, pasarás al plan {productName}. Se cobrará a tu método
+            de pago el monto indicado (prorrateado si aplica).
           </p>
         ),
       };
 
     case "downgrade":
       return {
-        title: <p>Downgrade to {productName}</p>,
+        title: <p>Bajar a {productName}</p>,
         message: (
           <p>
-            By clicking confirm, your current subscription to{" "}
-            {current_product.name} will be cancelled and a new subscription to{" "}
-            {productName} will begin on {nextCycleAtStr}.
+            Tu plan actual ({currentProductName}) se dará de baja y el plan{" "}
+            {productName} comenzará el {nextCycleAtStr}. El monto a pagar hoy se
+            muestra abajo.
           </p>
         ),
       };
 
     case "cancel":
       return {
-        title: <p>Cancel</p>,
+        title: <p>Cancelar suscripción</p>,
         message: (
           <p>
-            By clicking confirm, your subscription to {current_product.name}{" "}
-            will end on {nextCycleAtStr}.
+            Tu suscripción a {currentProductName} terminará el{" "}
+            {nextCycleAtStr}. A partir de esa fecha no se realizarán más cargos.
           </p>
         ),
       };
 
     default:
       return {
-        title: <p>Change Subscription</p>,
-        message: <p>You are about to change your subscription.</p>,
+        title: <p>Cambio de plan</p>,
+        message: (
+          <p>
+            Revisa el resumen y el monto a pagar antes de confirmar el cambio.
+          </p>
+        ),
       };
   }
 };

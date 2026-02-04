@@ -1,8 +1,10 @@
 'use client';
 
+import { useCustomer } from "autumn-js/react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ai/ui/button";
+import CheckoutDialog from "@/components/autumn/checkout-dialog";
 import type { LandingPlan } from "@/components/landing/data/pricing";
 import {
   DEFAULT_PRICING_CONTEXT,
@@ -26,9 +28,13 @@ type PricingPlanButtonProps = {
   slug: PlanSlug;
 };
 
+const PAID_PLAN_SLUGS: PlanSlug[] = ["plus", "pro"];
+
 export function PricingPlanButton({ plan, slug }: PricingPlanButtonProps) {
   const [context, setContext] = useState<PricingContext | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isCheckoutLoading, setIsCheckoutLoading] = useState(false);
+  const { checkout } = useCustomer();
 
   useEffect(() => {
     let cancelled = false;
@@ -65,6 +71,13 @@ export function PricingPlanButton({ plan, slug }: PricingPlanButtonProps) {
 
   let linkHref: string | null =
     !cta.disabled && typeof cta.href === "string" ? cta.href : null;
+
+  const isUpgradeFlow =
+    Boolean(linkHref) &&
+    !cta.external &&
+    resolvedContext.hasActiveSubscription &&
+    resolvedContext.canManageBilling &&
+    PAID_PLAN_SLUGS.includes(slug);
 
   // Plus/Pro: fixed single-seat price (1 user per org). Enterprise is manually activated, not from this flow.
   let priceEstimate: string | null = null;
@@ -107,6 +120,26 @@ export function PricingPlanButton({ plan, slug }: PricingPlanButtonProps) {
     );
   }
 
+  const handleUpgradeClick = async () => {
+    if (!linkHref || isCheckoutLoading) return;
+    setIsCheckoutLoading(true);
+    try {
+      const { data, error } = await checkout({
+        productId: slug,
+        dialog: CheckoutDialog,
+      });
+      if (error) {
+        console.error("Checkout error:", error);
+        return;
+      }
+      if (data?.url) {
+        window.location.href = data.url;
+      }
+    } finally {
+      setIsCheckoutLoading(false);
+    }
+  };
+
   return (
     <div className="flex w-full flex-col gap-3">
       {priceEstimate ? (
@@ -114,13 +147,24 @@ export function PricingPlanButton({ plan, slug }: PricingPlanButtonProps) {
           {priceEstimate} / mes
         </p>
       ) : null}
-      <Button className={CTA_BUTTON_CLASS} asChild>
-        {cta.external ? (
-          <a href={linkHref}>{cta.label}</a>
-        ) : (
-          <Link href={linkHref}>{cta.label}</Link>
-        )}
-      </Button>
+      {isUpgradeFlow ? (
+        <Button
+          className={CTA_BUTTON_CLASS}
+          onClick={handleUpgradeClick}
+          disabled={isCheckoutLoading}
+          aria-busy={isCheckoutLoading}
+        >
+          {isCheckoutLoading ? "…" : cta.label}
+        </Button>
+      ) : (
+        <Button className={CTA_BUTTON_CLASS} asChild>
+          {cta.external ? (
+            <a href={linkHref!}>{cta.label}</a>
+          ) : (
+            <Link href={linkHref!}>{cta.label}</Link>
+          )}
+        </Button>
+      )}
     </div>
   );
 }
