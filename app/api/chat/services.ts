@@ -642,7 +642,6 @@ const AUTUMN_ENTITY_NOT_FOUND_ERROR_SNIPPET =
 const isAutumnEntityNotFoundError = (message?: string): boolean =>
   Boolean(message?.includes(AUTUMN_ENTITY_NOT_FOUND_ERROR_SNIPPET));
 
-/** Treats seat/quota/limit errors from entities.create (e.g. race when seat limit reached) as no_seats. */
 const isAutumnSeatLimitError = (message?: string): boolean =>
   Boolean(message && /seat|quota|limit/i.test(message));
 
