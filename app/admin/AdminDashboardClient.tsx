@@ -105,7 +105,6 @@ export default function AdminDashboardClient() {
     const result = await cancelOrganizationSubscriptionAction({
       organizationId: selectedOrg._id,
       workos_id: selectedOrg.workos_id,
-      productId: selectedOrg.productId,
       cancelType,
       subscriptionStatus: cancelStatus,
     });
@@ -163,67 +162,11 @@ export default function AdminDashboardClient() {
       },
     },
     {
-      accessorKey: "standardQuotaLimit",
-      header: "Standard",
-      cell: ({ row }) => {
-        const quota = row.getValue("standardQuotaLimit") as number;
-        return (
-          <div className="text-sm font-medium">
-            {quota || 0}
-          </div>
-        );
-      },
-    },
-    {
-      accessorKey: "premiumQuotaLimit",
-      header: "Premium",
-      cell: ({ row }) => {
-        const quota = row.getValue("premiumQuotaLimit") as number;
-        return (
-          <div className="text-sm font-medium">
-            {quota || 0}
-          </div>
-        );
-      },
-    },
-    {
-      accessorKey: "currentPeriodStart",
-      header: "Billing Start",
-      cell: ({ row }) => {
-        const start = row.getValue("currentPeriodStart") as number;
-        return (
-          <div className="text-sm">
-            {formatDate(start)}
-          </div>
-        );
-      },
-    },
-    {
-      accessorKey: "currentPeriodEnd",
-      header: "Billing End",
-      cell: ({ row }) => {
-        const end = row.getValue("currentPeriodEnd") as number;
-        return (
-          <div className="text-sm">
-            {formatDate(end)}
-          </div>
-        );
-      },
-    },
-    {
       accessorKey: "productStatus",
       header: "Status",
       cell: ({ row }) => {
         const status = row.getValue("productStatus") as string;
         return <span className="text-sm">{status ? capitalizeFirstLetter(status) : "None"}</span>;
-      },
-    },
-    {
-      accessorKey: "cancelAtPeriodEnd",
-      header: "CPE?",
-      cell: ({ row }) => {
-        const cpe = row.getValue("cancelAtPeriodEnd") as boolean;
-        return <span className="text-sm">{cpe ? "Yes" : "No"}</span>;
       },
     },
     {
@@ -444,7 +387,7 @@ export default function AdminDashboardClient() {
             {cancelType === "end_of_cycle" && (
               <div className="p-3 bg-yellow-50 dark:bg-popover-secondary/20 border border-yellow-200 dark:border-border rounded-md">
                 <p className="text-sm text-yellow-800 dark:text-popover-text">
-                  <strong>Note:</strong> The subscription will remain active until the end of the current billing cycle ({selectedOrg?.currentPeriodEnd ? new Date(selectedOrg.currentPeriodEnd).toLocaleDateString() : "Unknown"}).
+                  <strong>Note:</strong> The subscription will remain active until the end of the current billing cycle.
                 </p>
               </div>
             )}

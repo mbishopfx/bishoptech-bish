@@ -26,15 +26,7 @@ export type OrganizationRow = {
   workos_id: string;
   name: string;
   plan?: "free" | "plus" | "pro" | "enterprise";
-  standardQuotaLimit?: number;
-  premiumQuotaLimit?: number;
-  seatQuantity?: number;
-  productId?: string;
   productStatus?: string;
-  currentPeriodStart?: number;
-  currentPeriodEnd?: number;
-  subscriptionIds?: string[];
-  cancelAtPeriodEnd?: boolean;
 };
 
 export async function listOrganizationsAction(): Promise<

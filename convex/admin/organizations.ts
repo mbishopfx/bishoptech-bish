@@ -8,22 +8,6 @@ import {
   import { productStatusValidator } from "../schema";
   import { serverSecretArg, ensureServerSecret } from "../helpers/auth";
   
-  // Plan configurations for admin dashboard
-  const ADMIN_PLAN_CONFIGS = {
-    free: {
-      standardQuotaLimit: 20,
-      premiumQuotaLimit: 1,
-    },
-    plus: {
-      standardQuotaLimit: 1000,
-      premiumQuotaLimit: 100,
-    },
-    pro: {
-      standardQuotaLimit: 1500,
-      premiumQuotaLimit: 300,
-    },
-  } as const;
-    
   /**
    * List all organizations with their data for admin dashboard.
    */
@@ -36,15 +20,7 @@ import {
         workos_id: v.string(),
         name: v.string(),
         plan: v.optional(v.union(v.literal("free"), v.literal("plus"), v.literal("pro"), v.literal("enterprise"))),
-        standardQuotaLimit: v.optional(v.number()),
-        premiumQuotaLimit: v.optional(v.number()),
-        seatQuantity: v.optional(v.number()),
-        productId: v.optional(v.string()),
         productStatus: v.optional(productStatusValidator),
-        currentPeriodStart: v.optional(v.number()),
-        currentPeriodEnd: v.optional(v.number()),
-        subscriptionIds: v.optional(v.array(v.string())),
-        cancelAtPeriodEnd: v.optional(v.boolean()),
       }),
     ),
     handler: async (ctx) => {
@@ -53,15 +29,12 @@ import {
   });
   
   /**
-   * Set organization plan and update quotas
+   * Set organization plan
    */
   export const setOrganizationPlan = internalMutation({
     args: {
       organizationId: v.id("organizations"),
       plan: v.union(v.literal("free"), v.literal("plus"), v.literal("pro"), v.literal("enterprise")),
-      customStandardQuotaLimit: v.optional(v.number()),
-      customPremiumQuotaLimit: v.optional(v.number()),
-      seatQuantity: v.optional(v.number()),
     },
     returns: v.null(),
     handler: async (ctx, args) => {
@@ -70,27 +43,9 @@ import {
       if (!organization) {
         throw new Error(`Organization not found: ${args.organizationId}`);
       }
-  
-      let standardQuotaLimit: number;
-      let premiumQuotaLimit: number;
-
-      if (args.plan === "enterprise") {
-        if (args.customStandardQuotaLimit === undefined || args.customPremiumQuotaLimit === undefined) {
-             throw new Error("Custom quotas required for enterprise plan");
-        }
-        standardQuotaLimit = args.customStandardQuotaLimit;
-        premiumQuotaLimit = args.customPremiumQuotaLimit;
-      } else {
-        const planConfig = ADMIN_PLAN_CONFIGS[args.plan];
-        standardQuotaLimit = planConfig.standardQuotaLimit;
-        premiumQuotaLimit = planConfig.premiumQuotaLimit;
-      }
 
       await ctx.db.patch(args.organizationId, {
         plan: args.plan,
-        standardQuotaLimit,
-        premiumQuotaLimit,
-        seatQuantity: args.seatQuantity,
         productStatus: "active",
       });
     },
@@ -99,7 +54,7 @@ import {
   
   /**
    * Clear legacy organization fields so they can be removed from the schema.
-   * Run via: bun run scripts/clear-org-legacy-fields.ts
+   * Run via: bun run scripts/clear-legacy-fields.ts
    */
   export const clearOrganizationsLegacyFields = mutation({
     args: { ...serverSecretArg },
@@ -108,6 +63,8 @@ import {
       ensureServerSecret(args.secret);
       const orgs = await ctx.db.query("organizations").collect();
       const legacyPatch = {
+        seatQuantity: undefined,
+        productId: undefined,
         billingCycleStart: undefined,
         billingCycleEnd: undefined,
         stripeCustomerId: undefined,
@@ -116,6 +73,12 @@ import {
         priceId: undefined,
         paymentMethodBrand: undefined,
         paymentMethodLast4: undefined,
+        currentPeriodStart: undefined,
+        currentPeriodEnd: undefined,
+        subscriptionIds: undefined,
+        cancelAtPeriodEnd: undefined,
+        standardQuotaLimit: undefined,
+        premiumQuotaLimit: undefined,
       };
       for (const org of orgs) {
         await ctx.db.patch(org._id, legacyPatch);
@@ -138,15 +101,7 @@ import {
         workos_id: v.string(),
         name: v.string(),
         plan: v.optional(v.union(v.literal("free"), v.literal("plus"), v.literal("pro"), v.literal("enterprise"))),
-        standardQuotaLimit: v.optional(v.number()),
-        premiumQuotaLimit: v.optional(v.number()),
-        seatQuantity: v.optional(v.number()),
-        productId: v.optional(v.string()),
         productStatus: v.optional(productStatusValidator),
-        currentPeriodStart: v.optional(v.number()),
-        currentPeriodEnd: v.optional(v.number()),
-        subscriptionIds: v.optional(v.array(v.string())),
-        cancelAtPeriodEnd: v.optional(v.boolean()),
       }),
       v.null(),
     ),
@@ -183,13 +138,6 @@ import {
       await ctx.db.patch(args.organizationId, {
         productStatus: args.subscriptionStatus,
         plan: undefined,
-        standardQuotaLimit: undefined,
-        premiumQuotaLimit: undefined,
-        currentPeriodStart: undefined,
-        currentPeriodEnd: undefined,
-        subscriptionIds: undefined,
-        productId: undefined,
-        cancelAtPeriodEnd: undefined,
       });
     },
   });
@@ -219,12 +167,8 @@ import {
         throw new Error(`Organization not found: ${args.organizationId}`);
       }
 
-      if (!organization.currentPeriodEnd) {
-        throw new Error(`Organization has no billing cycle end date: ${args.organizationId}`);
-      }
-
       await ctx.db.patch(args.organizationId, {
-        cancelAtPeriodEnd: true,
+        productStatus: args.subscriptionStatus,
       });
     },
   });

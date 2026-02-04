@@ -36,6 +36,7 @@ export default defineSchema({
     firstName: v.optional(v.string()),
     lastName: v.optional(v.string()),
     profilePictureUrl: v.optional(v.string()),
+    //Legacy fields (allow existing docs to validate; remove after migration)
     standardQuotaUsage: v.optional(v.number()),
     premiumQuotaUsage: v.optional(v.number()),
     lastQuotaResetAt: v.optional(v.number()),
@@ -43,17 +44,11 @@ export default defineSchema({
   organizations: defineTable({
     workos_id: v.string(),
     name: v.string(),
-    standardQuotaLimit: v.optional(v.number()),
-    premiumQuotaLimit: v.optional(v.number()),
     plan: v.optional(v.union(v.literal("free"), v.literal("plus"), v.literal("pro"), v.literal("enterprise"))),
+    productStatus: v.optional(productStatusValidator),
+    // Legacy fields (allow existing docs to validate; remove after migration)
     seatQuantity: v.optional(v.number()),
     productId: v.optional(v.string()),
-    productStatus: v.optional(productStatusValidator),
-    currentPeriodStart: v.optional(v.number()),
-    currentPeriodEnd: v.optional(v.number()),
-    subscriptionIds: v.optional(v.array(v.string())),
-    cancelAtPeriodEnd: v.optional(v.boolean()),
-    // Legacy fields (allow existing docs to validate; remove after migration)
     billingCycleStart: v.optional(v.number()),
     billingCycleEnd: v.optional(v.number()),
     stripeCustomerId: v.optional(v.string()),
@@ -62,6 +57,12 @@ export default defineSchema({
     priceId: v.optional(v.string()),
     paymentMethodBrand: v.optional(v.string()),
     paymentMethodLast4: v.optional(v.string()),
+    standardQuotaLimit: v.optional(v.number()),
+    premiumQuotaLimit: v.optional(v.number()),
+    currentPeriodStart: v.optional(v.number()),
+    currentPeriodEnd: v.optional(v.number()),
+    subscriptionIds: v.optional(v.array(v.string())),
+    cancelAtPeriodEnd: v.optional(v.boolean()),
   }).index("by_workos_id", ["workos_id"]),
   threads: defineTable({
     threadId: v.string(), // User client Defined

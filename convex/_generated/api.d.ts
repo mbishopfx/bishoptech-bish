@@ -9,6 +9,7 @@
  */
 
 import type * as admin_organizations from "../admin/organizations.js";
+import type * as admin_users from "../admin/users.js";
 import type * as autumn from "../autumn.js";
 import type * as bugs from "../bugs.js";
 import type * as customInstructions from "../customInstructions.js";
@@ -33,6 +34,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   "admin/organizations": typeof admin_organizations;
+  "admin/users": typeof admin_users;
   autumn: typeof autumn;
   bugs: typeof bugs;
   customInstructions: typeof customInstructions;

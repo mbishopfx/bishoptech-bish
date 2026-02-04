@@ -309,7 +309,7 @@ http.route({
 
     try {
       const body = await request.json();
-      const { organizationId, plan, customStandardQuotaLimit, customPremiumQuotaLimit, seatQuantity } = body ?? {};
+      const { organizationId, plan } = body ?? {};
       
       if (!organizationId || !plan) {
         return new Response(JSON.stringify({ error: "Missing organizationId or plan" }), {
@@ -328,9 +328,6 @@ http.route({
       await ctx.runMutation(internal.admin.organizations.setOrganizationPlan, {
         organizationId,
         plan,
-        customStandardQuotaLimit,
-        customPremiumQuotaLimit,
-        seatQuantity,
       });
 
       return new Response(JSON.stringify({ status: "success" }), {

@@ -43,15 +43,6 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-function formatDate(timestamp?: number): string {
-  if (!timestamp) return "-";
-  return new Date(timestamp).toLocaleDateString("es-MX", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-}
-
 function formatPrice(amount: number): string {
   return new Intl.NumberFormat("es-MX", {
     style: "currency",
@@ -89,7 +80,7 @@ export function BillingContent() {
   }
 
   const planKey = (billingInfo.plan as keyof typeof PLAN_PRICES_MXN) || "plus";
-  const seatQuantity = billingInfo.seatQuantity ?? 1;
+  const seatQuantity = 1;
   const unitPrice = PLAN_PRICES_MXN[planKey] || 0;
   const totalPrice = unitPrice * seatQuantity;
 
@@ -112,26 +103,11 @@ export function BillingContent() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-gray-100 dark:border-border/50">
-          <div>
-            <p className="text-sm font-medium text-gray-500 dark:text-text-muted mb-2">
-              Inicio ciclo de facturación
-            </p>
-            <div className="flex flex-col space-y-1 text-gray-900 dark:text-white text-sm">
-              <div className="flex items-center">
-                <span>{formatDate(billingInfo.currentPeriodStart)}</span>
-              </div>
-              <p className="text-sm font-medium text-gray-500 dark:text-text-muted mb-2">Vence el</p>
-              <div className="flex items-center">
-                <span>{formatDate(billingInfo.currentPeriodEnd)}</span>
-              </div>
+          {billingInfo.plan !== "enterprise" && (
+            <div>
+              <BillingButton workosId={billingInfo.workosId} />
             </div>
-            {billingInfo.plan !== "enterprise" && (
-              <div className="mt-4">
-                <BillingButton workosId={billingInfo.workosId} />
-              </div>
-            )}
-          </div>
-          
+          )}
           {billingInfo.plan !== "enterprise" && (
             <div>
               <p className="text-sm font-medium text-gray-500 dark:text-text-muted mb-2">

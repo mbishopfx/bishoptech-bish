@@ -50,14 +50,7 @@ export const updateOrganization = internalMutation({
       workos_id: v.optional(v.string()),
       name: v.optional(v.string()),
       plan: v.optional(v.union(v.literal("free"), v.literal("plus"), v.literal("pro"), v.literal("enterprise"))),
-      standardQuotaLimit: v.optional(v.number()),
-      premiumQuotaLimit: v.optional(v.number()),
-      seatQuantity: v.optional(v.number()),
-      productId: v.optional(v.string()),
       productStatus: v.optional(productStatusValidator),
-      currentPeriodStart: v.optional(v.number()),
-      currentPeriodEnd: v.optional(v.number()),
-      subscriptionIds: v.optional(v.array(v.string())),
     }),
   },
   handler: async (ctx, args) => {
@@ -80,7 +73,7 @@ export const getOrganizationSeats = query({
       .query("organizations")
       .withIndex("by_workos_id", (q) => q.eq("workos_id", args.workos_id))
       .first();
-    return organization?.seatQuantity ?? null;
+    return null;
   },
 });
 
@@ -105,7 +98,7 @@ export const getOrganizationSeatsAndPlan = query({
       .withIndex("by_workos_id", (q) => q.eq("workos_id", args.workos_id))
       .first();
     return {
-      seatQuantity: organization?.seatQuantity ?? null,
+      seatQuantity: null,
       plan: organization?.plan ?? null,
     };
   },
@@ -150,25 +143,14 @@ export const getOrganizationInfo = internalQuery({
       workos_id: organization.workos_id,
       name: organization.name,
       plan: organization.plan,
-      standardQuotaLimit: organization.standardQuotaLimit,
-      premiumQuotaLimit: organization.premiumQuotaLimit,
-      seatQuantity: organization.seatQuantity,
-      currentPeriodStart: organization.currentPeriodStart,
-      currentPeriodEnd: organization.currentPeriodEnd,
-      hasBillingCycle: !!(
-        organization.currentPeriodStart && organization.currentPeriodEnd
-      ),
     };
   },
 });
 
+// Product shape from webhook (customer.products[] / updated_product)
 const productDataValidator = v.object({
   productId: v.optional(v.union(v.string(), v.null())),
   status: v.optional(productStatusValidator),
-  currentPeriodStart: v.optional(v.union(v.number(), v.null())),
-  currentPeriodEnd: v.optional(v.union(v.number(), v.null())),
-  subscriptionIds: v.optional(v.union(v.array(v.string()), v.null())),
-  seatQuantity: v.optional(v.union(v.number(), v.null())),
 });
 
 export const syncAutumnSubscriptionData = internalMutation({
@@ -191,14 +173,7 @@ export const syncAutumnSubscriptionData = internalMutation({
     const shouldUpdatePlan = !organization.plan || organization.plan !== newPlan;
 
     await ctx.db.patch(organization._id, {
-      productId: args.product.productId ?? undefined,
       productStatus: args.product.status ?? undefined,
-      currentPeriodStart: args.product.currentPeriodStart ?? undefined,
-      currentPeriodEnd: args.product.currentPeriodEnd ?? undefined,
-      subscriptionIds: args.product.subscriptionIds ?? undefined,
-      ...(args.product.seatQuantity !== undefined && args.product.seatQuantity !== null
-        ? { seatQuantity: args.product.seatQuantity }
-        : {}),
       ...(shouldUpdatePlan && newPlan ? { plan: newPlan } : {}),
     });
     return organization._id;
@@ -219,14 +194,7 @@ export const getSubscriptionData = internalQuery({
 
     return {
       plan: organization.plan,
-      standardQuotaLimit: organization.standardQuotaLimit,
-      premiumQuotaLimit: organization.premiumQuotaLimit,
-      seatQuantity: organization.seatQuantity,
-      productId: organization.productId,
       productStatus: organization.productStatus ?? "none",
-      currentPeriodStart: organization.currentPeriodStart,
-      currentPeriodEnd: organization.currentPeriodEnd,
-      subscriptionIds: organization.subscriptionIds,
     };
   },
 });
@@ -297,14 +265,7 @@ export const getOrganizationBillingInfo = PermissionQuery({
     return {
       name: organization.name,
       plan: organization.plan,
-      standardQuotaLimit: organization.standardQuotaLimit,
-      premiumQuotaLimit: organization.premiumQuotaLimit,
-      seatQuantity: organization.seatQuantity,
-      productId: organization.productId,
       productStatus: organization.productStatus ?? "none",
-      currentPeriodStart: organization.currentPeriodStart,
-      currentPeriodEnd: organization.currentPeriodEnd,
-      subscriptionIds: organization.subscriptionIds,
       workosId: organization.workos_id,
     };
   },
