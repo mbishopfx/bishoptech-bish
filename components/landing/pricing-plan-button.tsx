@@ -158,7 +158,7 @@ export function PricingPlanButton({ plan, slug }: PricingPlanButtonProps) {
           disabled={isPortalLoading}
           aria-busy={isPortalLoading}
         >
-          {isPortalLoading ? "…" : cta.label}
+          {cta.label}
         </Button>
       ) : isUpgradeFlow ? (
         <Button
@@ -167,7 +167,7 @@ export function PricingPlanButton({ plan, slug }: PricingPlanButtonProps) {
           disabled={isCheckoutLoading}
           aria-busy={isCheckoutLoading}
         >
-          {isCheckoutLoading ? "…" : cta.label}
+          {cta.label}
         </Button>
       ) : (
         <Button className={CTA_BUTTON_CLASS} asChild>

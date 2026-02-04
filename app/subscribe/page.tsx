@@ -1,6 +1,6 @@
 "use client";
 
-import { useCustomer } from "autumn-js/react";
+import type React from "react";
 import { useAuth } from "@workos-inc/authkit-nextjs/components";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Authenticated, Unauthenticated, AuthLoading } from "convex/react";
@@ -10,9 +10,10 @@ import { LoadingIcon } from "@/components/ui/icons/svg-icons";
 import { Button } from "@/components/ai/ui/button";
 import { landingPlans } from "@/components/landing/data/pricing";
 import { ensureWorkosOrganization } from "@/actions/ensureWorkosOrganization";
+import { getSubscribeCheckoutUrl } from "@/actions/getSubscribeCheckoutUrl";
+import { useHasPermission } from "@/lib/permissions-client";
 
-function GradientBackground({ id }: { id: string }) {
-  const gradients = {
+const GRADIENTS: Record<string, React.ReactNode> = {
     "1": (
       <>
         <rect width="300" height="300" fill="url(#paint0_radial_262_665)" />
@@ -94,26 +95,36 @@ function GradientBackground({ id }: { id: string }) {
         </radialGradient>
       </>
     ),
-  };
+};
 
+function GradientBackground({ id }: { id: string }) {
   return (
     <svg viewBox="0 0 300 300" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" className="pointer-events-none absolute inset-0 inline-block h-full w-full will-change-transform z-[-1]">
-      {gradients[id as keyof typeof gradients]}
+      {GRADIENTS[id]}
     </svg>
   );
 }
 
-const PAID_PLANS = ["plus", "pro"] as const;
-type PaidPlan = (typeof PAID_PLANS)[number];
+const VALID_PLANS = ["plus", "pro"] as const;
+type Plan = (typeof VALID_PLANS)[number];
+
+const isValidPlan = (p: string | null): p is Plan =>
+  p === "plus" || p === "pro";
+
+const PLAN_BY_NAME = new Map(
+  landingPlans.map((p) => [p.name.toLowerCase(), p])
+);
 
 function getSuccessUrl(): string {
   return new URL("/chat", window.location.origin).toString();
 }
 
+const BILLING_PERMISSION_MESSAGE =
+  "Solo los miembros con permiso de facturación pueden suscribirse. Contacta al administrador de tu organización.";
+
 function SubscribePageContent() {
   const { user, organizationId, switchToOrganization } = useAuth();
-  const { attach } = useCustomer();
-  console.log("Autumn customer:", useCustomer())
+  const canManageBilling = useHasPermission("MANAGE_BILLING");
   const searchParams = useSearchParams();
   const planParam = searchParams.get("plan")?.toLowerCase() ?? null;
   const router = useRouter();
@@ -123,20 +134,27 @@ function SubscribePageContent() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const selectedPlan = landingPlans.find(
-    (p) => p.name.toLowerCase() === planParam?.toLowerCase()
-  );
+  const selectedPlan = planParam ? PLAN_BY_NAME.get(planParam) : null;
+  const gradientId = selectedPlan?.gradientId ?? "1";
+  const planName = selectedPlan?.name ?? planParam;
 
-  const gradientId = selectedPlan?.gradientId || "1";
-  const planName = selectedPlan?.name || planParam;
-
-  const isPaidPlan = (value: string | null): value is PaidPlan =>
-    value === "plus" || value === "pro";
-
-  // When user has org: free → /chat ; plus/pro → Autumn checkout (per docs)
+  // Invalid or missing plan → chat
   useEffect(() => {
-    if (!user || !organizationId || !planParam) return;
+    if (!planParam || !isValidPlan(planParam)) {
+      router.replace("/chat");
+    }
+  }, [planParam, router]);
+
+  // Has org + valid plan: run checkout (requires MANAGE_BILLING)
+  const userId = user?.id ?? null;
+  const orgId = organizationId ?? null;
+  useEffect(() => {
+    if (!userId || !orgId || !isValidPlan(planParam)) return;
     if (startedRef.current) return;
+    if (!canManageBilling) {
+      setError(BILLING_PERMISSION_MESSAGE);
+      return;
+    }
 
     startedRef.current = true;
     setLoading(true);
@@ -144,21 +162,24 @@ function SubscribePageContent() {
 
     (async () => {
       try {
-        if (planParam === "free") {
+        const result = await getSubscribeCheckoutUrl(
+          planParam,
+          getSuccessUrl(),
+        );
+        if ("url" in result) {
+          window.location.href = result.url;
+          return;
+        }
+        if ("attached" in result) {
           router.replace("/chat");
           return;
         }
-
-        if (isPaidPlan(planParam)) {
-          await attach({
-            productId: planParam,
-            successUrl: getSuccessUrl(),
-          });
-          router.replace("/chat");
-          return;
-        }
-
-        throw new Error("Invalid plan selected");
+        setError(
+          result.error === "Forbidden"
+            ? BILLING_PERMISSION_MESSAGE
+            : result.error ?? "Error al iniciar suscripción",
+        );
+        startedRef.current = false;
       } catch (err) {
         startedRef.current = false;
         setError(
@@ -170,35 +191,31 @@ function SubscribePageContent() {
         setLoading(false);
       }
     })();
-  }, [user, organizationId, planParam, router, attach]);
+  }, [userId, orgId, planParam, canManageBilling, router]);
 
-  if (!planParam) {
-     return <div>Error: No plan selected.</div>;
-  }
-  
-  if (!user) {
-      return null; 
-  }
+  if (!user || !planParam || !isValidPlan(planParam)) return null;
 
-  // Show loading state while auto-redirecting
+  // Show loading state while auto-redirecting, or billing permission error
   if (organizationId) {
       return (
         <div className="flex items-center justify-center min-h-screen">
             <div className="flex flex-col items-center space-y-4">
-                {loading && !error && <LoadingIcon className="size-8 animate-spin" />}
-                {!error && (
+                {loading && !error ? (
+                  <LoadingIcon className="size-8 animate-spin" />
+                ) : null}
+                {!error ? (
                   <p className="text-sm text-muted-foreground">
-                    {planParam === "free" ? "Entrando al chat…" : "Abriendo checkout…"}
+                    Abriendo checkout…
                   </p>
-                )}
-                {error && (
-                    <>
-                        <p className="text-red-500 text-sm text-center max-w-md">{error}</p>
-                        <Button onClick={() => router.replace("/")} className="mt-4">
-                          Volver
-                        </Button>
-                    </>
-                )}
+                ) : null}
+                {error ? (
+                  <>
+                    <p className="text-red-500 text-sm text-center max-w-md">{error}</p>
+                    <Button onClick={() => router.replace("/")} className="mt-4">
+                      Volver
+                    </Button>
+                  </>
+                ) : null}
             </div>
         </div>
       );
@@ -221,28 +238,25 @@ function SubscribePageContent() {
     }
 
     try {
-        const { organizationId: newOrgId } = await ensureWorkosOrganization({ orgName });
-        await switchToOrganization(newOrgId);
+      const { organizationId: newOrgId } = await ensureWorkosOrganization({ orgName });
+      await switchToOrganization(newOrgId);
 
-        // Continue flow immediately (avoid extra routing state).
-        startedRef.current = true;
-        if (planParam === "free") {
-          router.replace("/chat");
-          return;
-        }
-        if (isPaidPlan(planParam)) {
-          await attach({
-            productId: planParam,
-            successUrl: getSuccessUrl(),
-          });
-          router.replace("/chat");
-          setLoading(false);
-          return;
-        }
-
-        setError("Invalid plan selected");
+      const result = await getSubscribeCheckoutUrl(planParam, getSuccessUrl());
+      if ("url" in result) {
+        window.location.href = result.url;
+        return;
+      }
+      if ("attached" in result) {
+        router.replace("/chat");
+        return;
+      }
+      setError(
+        result.error === "Forbidden"
+          ? BILLING_PERMISSION_MESSAGE
+          : result.error ?? "Error al iniciar suscripción",
+      );
     } catch (err) {
-        setError(err instanceof Error ? err.message : "Error de conexión");
+      setError(err instanceof Error ? err.message : "Error de conexión");
     }
     setLoading(false);
   };
@@ -276,14 +290,14 @@ function SubscribePageContent() {
                   />
                 </div>
 
-                {error && (
-                    <div className="rounded-lg border border-red-200 bg-red-50 p-3">
-                      <div className="flex items-center">
-                        <InfoCircledIcon className="w-4 h-4 text-red-600 mr-2 flex-shrink-0" />
-                        <span className="text-sm text-red-700 ml-2">{error}</span>
-                      </div>
+                {error ? (
+                  <div className="rounded-lg border border-red-200 bg-red-50 p-3">
+                    <div className="flex items-center">
+                      <InfoCircledIcon className="w-4 h-4 text-red-600 mr-2 flex-shrink-0" />
+                      <span className="text-sm text-red-700 ml-2">{error}</span>
                     </div>
-                )}
+                  </div>
+                ) : null}
 
                 <Button
                     onClick={handleCreateOrgAndContinue}
