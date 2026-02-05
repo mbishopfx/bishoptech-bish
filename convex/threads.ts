@@ -1067,6 +1067,99 @@ export const updateUserMessageContent = AuthMutation({
 });
 
 /**
+ * Create an attachment record from a server-side generated file.
+ */
+export const serverCreateAttachment = mutation({
+  args: {
+    secret: v.string(),
+    userId: v.string(),
+    dataUrl: v.string(),
+    fileName: v.string(),
+    mimeType: v.string(),
+    fileSize: v.string(),
+  },
+  returns: v.id("attachments"),
+  handler: async (ctx, args) => {
+    ensureServerSecret(args.secret);
+
+    const url = new URL(args.dataUrl);
+    const fileKey = url.pathname.startsWith("/") ? url.pathname.slice(1) : url.pathname;
+    if (!fileKey) {
+      throw new Error(`Failed to extract fileKey from dataUrl: ${args.dataUrl}`);
+    }
+
+    const attachmentId = await ctx.db.insert("attachments", {
+      publicMessageIds: [],
+      userId: args.userId,
+      attachmentType: args.mimeType.startsWith("image/")
+        ? ("image" as const)
+        : args.mimeType === "application/pdf"
+          ? ("pdf" as const)
+          : ("file" as const),
+      attachmentUrl: args.dataUrl,
+      fileName: args.fileName,
+      mimeType: args.mimeType,
+      fileSize: args.fileSize,
+      fileKey,
+      status: "uploaded",
+    });
+
+    return attachmentId;
+  },
+});
+
+/**
+ * Attach existing attachments to a message and mark them as public.
+ */
+export const serverAttachAttachmentsToMessage = mutation({
+  args: {
+    secret: v.string(),
+    userId: v.string(),
+    messageId: v.string(),
+    attachmentIds: v.array(v.id("attachments")),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    ensureServerSecret(args.secret);
+
+    const message = await ctx.db
+      .query("messages")
+      .withIndex("by_messageId_and_userId", (q) =>
+        q.eq("messageId", args.messageId).eq("userId", args.userId),
+      )
+      .unique();
+
+    if (!message) {
+      throw new Error("Message not found or access denied");
+    }
+
+    const existingIds = new Set(message.attachmentsIds ?? []);
+    const uniqueIds = args.attachmentIds.filter((id) => !existingIds.has(id));
+
+    if (uniqueIds.length > 0) {
+      await ctx.db.patch(message._id, {
+        attachmentsIds: [...(message.attachmentsIds ?? []), ...uniqueIds],
+        updated_at: Date.now(),
+      });
+
+      for (const attachmentId of uniqueIds) {
+        const attachment = await ctx.db.get(attachmentId);
+        if (attachment && attachment.userId === args.userId) {
+          const existingPublicIds = new Set(attachment.publicMessageIds ?? []);
+          if (!existingPublicIds.has(message._id)) {
+            await ctx.db.patch(attachmentId, {
+              publicMessageIds: [...attachment.publicMessageIds, message._id],
+            });
+          }
+        }
+      }
+    }
+
+    return null;
+  },
+});
+
+/**
  * Create an attachment record for an uploaded file with data URL.
  */
 export const createAttachment = AuthMutation({

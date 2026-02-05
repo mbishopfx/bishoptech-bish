@@ -2,6 +2,7 @@ import { Cause, Duration, Effect, Fiber, Ref, Scope } from "effect";
 // import { checkBotId } from "botid/server";
 import {
   streamText,
+  generateText,
   convertToModelMessages,
   UIMessage,
   smoothStream,
@@ -65,6 +66,8 @@ import {
   appendMessageDelta,
   finalizeAssistantMessage,
   addSourcesToMessage,
+  createAssistantAttachment,
+  attachAttachmentsToMessage,
   UserQuota,
   setThreadFailedToFailed,
   databaseRetrySchedule,
@@ -77,6 +80,7 @@ import {
 } from "./services";
 import { buildSystemPrompt } from "./system-prompt";
 import { createDatabaseQueue } from "./database-queue";
+import { generateR2FileKey, uploadObjectToR2 } from "@/lib/r2-upload";
 
 // ============================================================================
 // Request ID Generation
@@ -86,6 +90,21 @@ const generateRequestId = (): string => {
   const timestamp = Date.now().toString(36);
   const random = Math.random().toString(36).substring(2, 8);
   return `req_${timestamp}_${random}`;
+};
+
+const getImageExtension = (mediaType: string): string => {
+  if (mediaType.includes("png")) return "png";
+  if (mediaType.includes("jpeg") || mediaType.includes("jpg")) return "jpg";
+  if (mediaType.includes("webp")) return "webp";
+  if (mediaType.includes("gif")) return "gif";
+  return "png";
+};
+
+const getMessageCost = (modelId: string): number => {
+  if (modelId === "google/gemini-3-pro-image") {
+    return 2;
+  }
+  return 1;
 };
 
 // ============================================================================
@@ -434,6 +453,15 @@ const handleChatRequest = (
     const lastUser = messages.filter((m) => m.role === "user").pop();
     const userText = lastUser?.parts?.find((part) => part.type === "text")?.text;
     const userFiles = lastUser?.parts?.filter((part) => part.type === "file") || [];
+    const modelConfig = getModel(modelId);
+    const supportsImageOutput = modelConfig?.capabilities.supportsImageOutput ?? false;
+
+    if (supportsImageOutput && (!userText || userText.trim().length === 0)) {
+      return yield* new ValidationError({
+        message: "Image generation requires a prompt",
+        field: "messages",
+      });
+    }
 
     const quotaType = isPremium(modelId) ? "premium" : "standard";
     const newMessageId = crypto.randomUUID();
@@ -450,18 +478,21 @@ const handleChatRequest = (
       });
 
     // Initialize model
-    const baseModel = yield* Effect.try({
-      try: () => getLanguageModel(modelId),
-      catch: (error) =>
-        new ModelError({
-          message: `Failed to initialize model: ${modelId}`,
-          modelId,
-          cause: error,
-        }),
-    });
+    const baseModel = supportsImageOutput
+      ? null
+      : yield* Effect.try({
+          try: () => getLanguageModel(modelId),
+          catch: (error) =>
+            new ModelError({
+              message: `Failed to initialize model: ${modelId}`,
+              modelId,
+              cause: error,
+            }),
+        });
 
-    const baseModelProvider =
-      typeof baseModel !== "string" && (baseModel as any).provider
+    const baseModelProvider = supportsImageOutput
+      ? modelId.split("/")[0]
+      : typeof baseModel !== "string" && (baseModel as any).provider
         ? (baseModel as any).provider
         : (() => {
             const fallbackProvider = modelId.split("/")[0];
@@ -489,22 +520,24 @@ const handleChatRequest = (
 
     // Determine if supermemory should be enabled
     const supermemoryEnabled = Boolean(process.env.SUPERMEMORY_API_KEY) && userConfig.supermemoryEnabled;
-    const modelWithMemory = yield* Effect.try({
-      try: () =>
-        supermemoryEnabled
-          ? withSupermemory(baseModel, auth.userId, {
-              mode: "profile",
-              verbose: process.env.NODE_ENV !== "production",
-              conversationId: threadId,
-            })
-          : baseModel,
-      catch: (error) =>
-        new ModelError({
-          message: "Failed to initialize Supermemory integration",
-          modelId,
-          cause: error,
-        }),
-    });
+    const modelWithMemory = supportsImageOutput
+      ? null
+      : yield* Effect.try({
+          try: () =>
+            supermemoryEnabled
+              ? withSupermemory(baseModel as LanguageModel, auth.userId, {
+                  mode: "profile",
+                  verbose: process.env.NODE_ENV !== "production",
+                  conversationId: threadId,
+                })
+              : (baseModel as LanguageModel),
+          catch: (error) =>
+            new ModelError({
+              message: "Failed to initialize Supermemory integration",
+              modelId,
+              cause: error,
+            }),
+        });
 
     // PostHog client - handle gracefully
     const phClient = yield* Effect.try({
@@ -520,46 +553,53 @@ const handleChatRequest = (
 
     yield* Effect.addFinalizer(() => shutdownPostHog(phClient));
 
-    const modelWithProvider = supermemoryEnabled
-      ? new Proxy(modelWithMemory as object, {
-          get(target, prop) {
-            if (prop === "provider") {
-              return baseModelProvider;
-            }
-            return (target as any)[prop];
-          },
-        }) as LanguageModel
-      : modelWithMemory;
-
-    const model = yield* Effect.try({
-      try: () => {
-        if (phClient) {
-          return withTracing(modelWithProvider as any as Parameters<typeof withTracing>[0], phClient, {
-            posthogDistinctId: auth.userId,
-            posthogTraceId: newMessageId,
-            posthogProperties: {
-              threadId,
-              modelId,
-              quotaType,
-              orgId: auth.orgId || null,
-              trigger: trigger || "submit-message",
-              requestId,
+    const modelWithProvider = supportsImageOutput
+      ? null
+      : supermemoryEnabled
+        ? new Proxy(modelWithMemory as object, {
+            get(target, prop) {
+              if (prop === "provider") {
+                return baseModelProvider;
+              }
+              return (target as any)[prop];
             },
-            posthogPrivacyMode: false,
-            posthogGroups: auth.orgId ? { organization: auth.orgId } : undefined,
-          }) as unknown as LanguageModel;
-        }
-        return modelWithProvider as unknown as LanguageModel;
-      },
-      catch: (error) =>
-        new ModelError({
-          message: "Failed to setup model tracing",
-          modelId,
-          cause: error,
-        }),
-    });
+          }) as LanguageModel
+        : modelWithMemory;
 
-    const modelConfig = getModel(modelId);
+    const model = supportsImageOutput
+      ? null
+      : yield* Effect.try({
+          try: () => {
+            if (phClient) {
+              return withTracing(
+                modelWithProvider as any as Parameters<typeof withTracing>[0],
+                phClient,
+                {
+                  posthogDistinctId: auth.userId,
+                  posthogTraceId: newMessageId,
+                  posthogProperties: {
+                    threadId,
+                    modelId,
+                    quotaType,
+                    orgId: auth.orgId || null,
+                    trigger: trigger || "submit-message",
+                    requestId,
+                  },
+                  posthogPrivacyMode: false,
+                  posthogGroups: auth.orgId ? { organization: auth.orgId } : undefined,
+                }
+              ) as unknown as LanguageModel;
+            }
+            return modelWithProvider as unknown as LanguageModel;
+          },
+          catch: (error) =>
+            new ModelError({
+              message: "Failed to setup model tracing",
+              modelId,
+              cause: error,
+            }),
+        });
+
     const fallbackProviderId = modelId.includes("/")
       ? modelId.split("/")[0]
       : undefined;
@@ -854,6 +894,155 @@ const handleChatRequest = (
 
         logger.debug("Starting AI stream", logContext, { timeMs: Date.now() - start });
 
+        if (supportsImageOutput) {
+          try {
+            await Effect.runPromise(
+              UserQuota.track({
+                customer_id: auth.orgId,
+                feature_id: quotaType,
+                ...(isEnterprise ? { entity_id: auth.userId } : {}),
+                value: getMessageCost(modelId),
+              })
+            );
+
+            const imageModel = phClient
+              ? (withTracing(
+                  getLanguageModel(modelId) as any as Parameters<typeof withTracing>[0],
+                  phClient,
+                  {
+                    posthogDistinctId: auth.userId,
+                    posthogTraceId: newMessageId,
+                    posthogProperties: {
+                      threadId,
+                      modelId,
+                      quotaType,
+                      orgId: auth.orgId || null,
+                      trigger: trigger || "submit-message",
+                      requestId,
+                    },
+                    posthogPrivacyMode: false,
+                    posthogGroups: auth.orgId ? { organization: auth.orgId } : undefined,
+                  }
+                ) as unknown as LanguageModel)
+              : (getLanguageModel(modelId) as LanguageModel);
+
+            const imageResult = await generateText({
+              model: imageModel,
+              messages: await convertToModelMessages(
+                filterMessagesForModel(messages as UIMessage[], modelId)
+              ),
+              system: systemPrompt,
+              headers: getAttributionHeaders(),
+              providerOptions,
+              abortSignal: req.signal,
+            });
+            const generatedImage = imageResult.files.find((file) =>
+              file.mediaType?.startsWith("image/")
+            );
+            if (!generatedImage) {
+              throw new Error("No image generated");
+            }
+
+            const mediaType = generatedImage.mediaType || "image/png";
+            const imageBytes =
+              generatedImage.uint8Array ??
+              (generatedImage.base64
+                ? Buffer.from(
+                    generatedImage.base64.includes("base64,")
+                      ? generatedImage.base64.split("base64,")[1]
+                      : generatedImage.base64,
+                    "base64"
+                  )
+                : null);
+            if (!imageBytes) {
+              throw new Error("Generated image data missing");
+            }
+
+            const fileName = `image-${Date.now()}.${getImageExtension(mediaType)}`;
+            const fileKey = generateR2FileKey({
+              userId: auth.userId,
+              fileName,
+              prefix: "generated",
+            });
+
+            const publicUrl = await uploadObjectToR2({
+              fileKey,
+              body: imageBytes,
+              contentType: mediaType,
+              contentDisposition: `inline; filename="${fileName}"`,
+            });
+
+            const attachmentId = await Effect.runPromise(
+              createAssistantAttachment({
+                userId: auth.userId,
+                dataUrl: publicUrl,
+                fileName,
+                mimeType: mediaType,
+                fileSize: imageBytes.length.toString(),
+              })
+            );
+
+            await Effect.runPromise(
+              attachAttachmentsToMessage({
+                userId: auth.userId,
+                messageId: newMessageId,
+                attachmentIds: [attachmentId],
+              })
+            );
+
+            writer.write({
+              type: "file",
+              url: publicUrl,
+              mediaType,
+            });
+            writer.write({ type: "finish" });
+
+            await Effect.runPromise(
+              finalize({
+                ok: true,
+              })
+            );
+            cleanup();
+            await Effect.runPromise(shutdownQueue("image-finish"));
+          } catch (error) {
+            cleanup();
+            const errorObj = error instanceof Error ? error : new Error(String(error));
+            const classifiedError = classifyProviderError(errorObj);
+
+            logger.error("Image generation error", logContext, {
+              errorType: classifiedError.errorType,
+              retryable: classifiedError.retryable,
+              originalError: errorObj.message,
+            });
+
+            await Effect.runPromise(
+              finalize({
+                ok: false,
+                error: {
+                  type: classifiedError.errorType,
+                  message: classifiedError.message,
+                },
+              })
+            ).catch((finalizeErr) =>
+              logger.error("Failed to finalize image error", logContext, finalizeErr)
+            );
+
+            try {
+              writer.write({
+                type: "error",
+                errorText: classifiedError.retryable
+                  ? "Generation failed. Please try again."
+                  : classifiedError.message,
+              });
+            } catch {
+              // Stream might be closed
+            }
+
+            await Effect.runPromise(shutdownQueue("image-error"));
+          }
+          return;
+        }
+
         try {
           // Track message usage (+1) whenever generation starts.
           await Effect.runPromise(
@@ -861,12 +1050,12 @@ const handleChatRequest = (
               customer_id: auth.orgId,
               feature_id: quotaType,
               ...(isEnterprise ? { entity_id: auth.userId } : {}),
-              value: 1,
+              value: getMessageCost(modelId),
             })
           );
 
           const result = streamText({
-            model,
+            model: model as LanguageModel,
             messages: await convertToModelMessages(
               filterMessagesForModel(messages as UIMessage[], modelId)
             ),

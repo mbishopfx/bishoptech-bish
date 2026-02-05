@@ -1043,6 +1043,52 @@ export const addSourcesToMessage = (params: {
       }),
   }).pipe(Effect.retry({ schedule: databaseRetrySchedule, while: isRetryableDatabaseError }));
 
+/**
+ * Create an attachment record for assistant-generated files.
+ */
+export const createAssistantAttachment = (params: {
+  userId: string;
+  dataUrl: string;
+  fileName: string;
+  mimeType: string;
+  fileSize: string;
+}): Effect.Effect<Id<"attachments">, DatabaseError> =>
+  Effect.tryPromise({
+    try: () =>
+      fetchMutation(api.threads.serverCreateAttachment, {
+        secret: process.env.CONVEX_SECRET_TOKEN!,
+        ...params,
+      }),
+    catch: (error) =>
+      new DatabaseError({
+        message: "Failed to create assistant attachment",
+        operation: "serverCreateAttachment",
+        cause: error,
+      }),
+  }).pipe(Effect.retry({ schedule: databaseRetrySchedule, while: isRetryableDatabaseError }));
+
+/**
+ * Attach existing attachments to an assistant message.
+ */
+export const attachAttachmentsToMessage = (params: {
+  userId: string;
+  messageId: string;
+  attachmentIds: Id<"attachments">[];
+}): Effect.Effect<void, DatabaseError> =>
+  Effect.tryPromise({
+    try: () =>
+      fetchMutation(api.threads.serverAttachAttachmentsToMessage, {
+        secret: process.env.CONVEX_SECRET_TOKEN!,
+        ...params,
+      }),
+    catch: (error) =>
+      new DatabaseError({
+        message: "Failed to attach attachments to message",
+        operation: "serverAttachAttachmentsToMessage",
+        cause: error,
+      }),
+  }).pipe(Effect.retry({ schedule: databaseRetrySchedule, while: isRetryableDatabaseError }));
+
 // ============================================================================
 // Abort Handling
 // ============================================================================
