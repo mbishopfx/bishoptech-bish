@@ -92,9 +92,13 @@ export default function PricingSection({ dict, lang }: PricingSectionProps) {
             const description = translated?.description ?? plan.description;
             const features = translated?.features ?? plan.features;
             const buttonText = translated?.buttonText ?? plan.buttonText;
+            const useUsd = lang === "en" && plan.usdPriceAmount != null;
+            const amount = useUsd ? plan.usdPriceAmount! : plan.priceAmount;
+            const currency = useUsd ? "USD" : plan.currency;
+            const periodLabel = useUsd && plan.billingPeriodLabelEn ? plan.billingPeriodLabelEn : plan.billingPeriodLabel;
             const formattedPrice =
-              plan.priceAmount !== null ? formatPrice(plan.priceAmount, plan.currency, lang) : dict.customPrice;
-            const period = plan.billingPeriodLabel ? `/${plan.billingPeriodLabel}` : "";
+              amount !== null ? formatPrice(amount, currency, lang) : dict.customPrice;
+            const period = periodLabel ? `/${periodLabel}` : "";
             const slugForContext = planSlug as PricingContextPlanSlug;
 
             return (
@@ -120,7 +124,7 @@ export default function PricingSection({ dict, lang }: PricingSectionProps) {
                       <span className="text-4xl font-bold tracking-tight">
                         {formattedPrice}
                       </span>
-                      {period && plan.priceAmount !== null && (
+                      {period && amount !== null && (
                         <span className="ml-1 text-sm font-medium opacity-60">
                           {period}
                         </span>
