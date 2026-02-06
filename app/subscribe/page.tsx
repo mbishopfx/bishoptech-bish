@@ -287,10 +287,10 @@ function SubscribePageContent() {
                 </div>
 
                 {error ? (
-                  <div className="rounded-lg border border-red-200 bg-red-50 p-3">
+                  <div className="rounded-lg border border-red-200 bg-red-50 p-3 dark:border-red-900/50 dark:bg-red-950/40">
                     <div className="flex items-center">
-                      <InfoCircledIcon className="w-4 h-4 text-red-600 mr-2 flex-shrink-0" />
-                      <span className="text-sm text-red-700 ml-2">{error}</span>
+                      <InfoCircledIcon className="w-4 h-4 text-red-600 dark:text-red-400 mr-2 flex-shrink-0" />
+                      <span className="text-sm text-red-700 dark:text-red-300 ml-2">{error}</span>
                     </div>
                   </div>
                 ) : null}
