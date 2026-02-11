@@ -13,7 +13,7 @@ import { useRegeneration } from "./hooks/use-regeneration";
 import { ToolType, getDefaultTools } from "@/lib/ai/model-tools";
 import { resolveModel } from "@/lib/ai/ai-providers";
 import { useAuth } from "@workos-inc/authkit-nextjs/components";
-import { useConvex, useConvexAuth, useMutation } from "convex/react";
+import { useConvexAuth, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Loader } from "@/components/ai/loader";
 import { AttachmentsIcon } from "@/components/ui/icons/svg-icons";
@@ -32,7 +32,6 @@ import type { ChatInterfaceProps } from "./types";
 import { ChatStoreProvider, useChatStateInstance } from "@/lib/stores/hooks";
 import { Effect } from "effect";
 import { saveCachedThreadMessages } from "@/lib/local-first/thread-messages-cache";
-import { useStickToBottom } from "@/lib/hooks/use-stick-to-bottom";
 
 import {
   updateMessageContentEffect,
@@ -45,19 +44,11 @@ import {
 } from "./services";
 import { uploadWithStateEffect } from "./services/upload-service";
 import { getErrorMessage } from "./errors";
-import { transformConvexMessages } from "./utils/transformConvexMessages";
-
-const HISTORY_PAGE_SIZE = 20;
-const HISTORY_ROOT_MARGIN = "200px 0px 0px 0px";
-const AUTOFILL_VIEWPORT_THRESHOLD_PX = 32;
-const AUTOFILL_MAX_PAGES_PER_THREAD = 10;
 
 function ChatInterfaceInternal({
   id,
   initialMessages,
   serverMessages,
-  initialHistoryCursor,
-  initialHistoryIsDone,
   disableInput = false,
   onInitialMessage,
   customInstructionId: initialCustomInstructionId,
@@ -65,16 +56,9 @@ function ChatInterfaceInternal({
   const router = useRouter();
   const pathname = usePathname();
   const lang = useLocale();
-  const convex = useConvex();
 
-  const {
-    scrollRef,
-    contentRef,
-    isAtBottom,
-    scrollToBottom,
-    markInitialScrollDone,
-    reset: resetStickToBottom,
-  } = useStickToBottom();
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const contentRef = useRef<HTMLDivElement | null>(null);
 
   const { selectedModel, setSelectedModel } = useModel();
   const { consumeInitialMessage } = useInitialMessage();
@@ -152,22 +136,6 @@ function ChatInterfaceInternal({
   // Server messages come from CachedChatWrapper's one-off fetch (no subscription needed)
   const historicalMessagesFromServer = serverMessages ?? [];
 
-  const topSentinelRef = useRef<HTMLDivElement | null>(null);
-  const requestInFlightRef = useRef(false);
-  const autoFillAttemptsRef = useRef(0);
-
-  const [olderEphemeralMessages, setOlderEphemeralMessages] = useState<UIMessage[]>([]);
-  const [historyCursor, setHistoryCursor] = useState<string | null>(
-    initialHistoryCursor ?? null,
-  );
-  const [historyIsDone, setHistoryIsDone] = useState<boolean>(
-    initialHistoryIsDone ?? true,
-  );
-  const [isLoadingOlder, setIsLoadingOlder] = useState(false);
-  const pendingPrependScrollRef = useRef<null | { scrollTop: number; scrollHeight: number }>(
-    null,
-  );
-
   /**
    * If Convex only returns the most recent N messages (e.g. 5),
    * the local hook store may still contain older cached messages.
@@ -208,178 +176,10 @@ function ChatInterfaceInternal({
     return initialMessages ?? [];
   }, [isThread, historicalMessagesFromServer, initialMessages]);
 
-  // Combine ephemeral older pages (never cached) + base persisted history for UI + AI context.
-  const baseHistory: UIMessage[] = useMemo(() => {
-    if (!isThread) return [];
-    if (!olderEphemeralMessages || olderEphemeralMessages.length === 0) {
-      return historicalMessages;
-    }
-    return [...olderEphemeralMessages, ...historicalMessages];
-  }, [isThread, olderEphemeralMessages, historicalMessages]);
-
   // Keep ref in sync for use in closures (prepareSendMessagesRequest)
   useEffect(() => {
-    historicalMessagesRef.current = baseHistory;
-  }, [baseHistory]);
-
-  // Reset per-thread ephemeral pagination state; also keep cursor/isDone in sync with late-arriving server props.
-  useEffect(() => {
-    autoFillAttemptsRef.current = 0;
-    setOlderEphemeralMessages([]);
-    setHistoryCursor(initialHistoryCursor ?? null);
-    setHistoryIsDone(initialHistoryIsDone ?? true);
-  }, [id]);
-
-  useEffect(() => {
-    if (!isThread) return;
-    if (olderEphemeralMessages.length > 0) return;
-    setHistoryCursor(initialHistoryCursor ?? null);
-    setHistoryIsDone(initialHistoryIsDone ?? true);
-  }, [isThread, initialHistoryCursor, initialHistoryIsDone, olderEphemeralMessages.length]);
-
-  const loadOlderPage = useCallback(
-    async ({ preserveScroll }: { preserveScroll: boolean }) => {
-      if (!isThread) return;
-      if (historyIsDone) return;
-      if (requestInFlightRef.current) return;
-
-      const cursor = historyCursor && historyCursor.length > 0 ? historyCursor : null;
-      if (!cursor) {
-        setHistoryIsDone(true);
-        return;
-      }
-
-      const requestThreadId = id;
-      requestInFlightRef.current = true;
-      setIsLoadingOlder(true);
-
-      try {
-        if (preserveScroll) {
-          const el = scrollRef.current;
-          if (el) {
-            pendingPrependScrollRef.current = {
-              scrollTop: el.scrollTop,
-              scrollHeight: el.scrollHeight,
-            };
-          }
-        } else {
-          pendingPrependScrollRef.current = null;
-        }
-
-        const result = await convex.query(api.threads.getThreadMessagesPaginatedSafe, {
-          threadId: id,
-          paginationOpts: { numItems: HISTORY_PAGE_SIZE, cursor },
-        });
-
-        // Ignore late results if user navigated to a different thread mid-request.
-        if (activeThreadIdRef.current !== requestThreadId) {
-          pendingPrependScrollRef.current = null;
-          return;
-        }
-
-        const nextCursor =
-          typeof result.continueCursor === "string" && result.continueCursor.length > 0
-            ? result.continueCursor
-            : null;
-        const done = !!result.isDone || nextCursor === null;
-        setHistoryCursor(nextCursor);
-        setHistoryIsDone(done);
-
-        const page = result.page ?? [];
-        if (!page || page.length === 0) {
-          pendingPrependScrollRef.current = null;
-          return;
-        }
-
-        const transformed = transformConvexMessages(page);
-
-        // Dedupe against existing ephemeral + current persisted base history.
-        const baseIds = new Set(historicalMessages.map((m) => m.id));
-
-        setOlderEphemeralMessages((prev) => {
-          const seen = new Set<string>([...baseIds, ...prev.map((m) => m.id)]);
-          const newUnique = transformed.filter((m) => !seen.has(m.id));
-          if (newUnique.length === 0) {
-            pendingPrependScrollRef.current = null;
-            return prev;
-          }
-          return [...newUnique, ...prev];
-        });
-      } catch (error) {
-        console.error("Failed to load older messages:", error);
-      } finally {
-        requestInFlightRef.current = false;
-        setIsLoadingOlder(false);
-      }
-    },
-    [convex, historyCursor, historyIsDone, historicalMessages, id, isThread, scrollRef],
-  );
-
-  useEffect(() => {
-    const container = scrollRef.current;
-    const sentinel = topSentinelRef.current;
-    if (!container || !sentinel) return;
-    if (!isThread) return;
-    if (historyIsDone) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (!entry.isIntersecting) continue;
-          void loadOlderPage({ preserveScroll: !isAtBottom });
-        }
-      },
-      {
-        root: container,
-        rootMargin: HISTORY_ROOT_MARGIN,
-        threshold: 0,
-      },
-    );
-
-    observer.observe(sentinel);
-    return () => observer.disconnect();
-  }, [historyIsDone, isAtBottom, isThread, loadOlderPage, scrollRef]);
-
-  // Auto-fill: if content doesn't overflow, keep loading older pages (bounded) so users can scroll.
-  useEffect(() => {
-    const container = scrollRef.current;
-    if (!container) return;
-    if (!isThread) return;
-    if (historyIsDone) return;
-    if (requestInFlightRef.current || isLoadingOlder) return;
-    if (autoFillAttemptsRef.current >= AUTOFILL_MAX_PAGES_PER_THREAD) return;
-
-    if (container.scrollHeight <= container.clientHeight + AUTOFILL_VIEWPORT_THRESHOLD_PX) {
-      autoFillAttemptsRef.current += 1;
-      void loadOlderPage({ preserveScroll: false });
-    }
-  }, [
-    baseHistory.length,
-    historyIsDone,
-    isLoadingOlder,
-    isThread,
-    loadOlderPage,
-    scrollRef,
-  ]);
-
-  useLayoutEffect(() => {
-    const pending = pendingPrependScrollRef.current;
-    if (!pending) return;
-
-    const el = scrollRef.current;
-    if (!el) {
-      pendingPrependScrollRef.current = null;
-      return;
-    }
-
-    const nextScrollHeight = el.scrollHeight;
-    const delta = nextScrollHeight - pending.scrollHeight;
-    if (delta !== 0) {
-      el.scrollTop = pending.scrollTop + delta;
-    }
-
-    pendingPrependScrollRef.current = null;
-  }, [olderEphemeralMessages.length, scrollRef]);
+    historicalMessagesRef.current = historicalMessages;
+  }, [historicalMessages]);
 
   const chatStateInstance = useChatStateInstance();
 
@@ -566,9 +366,9 @@ function ChatInterfaceInternal({
 
     const regenAnchor = regenerateAnchorRef.current;
     const effectiveBaseHistory =
-      regenAnchor && baseHistory.length > 0
-        ? pruneAt(baseHistory, regenAnchor.id, regenAnchor.role)
-        : baseHistory;
+      regenAnchor && historicalMessages.length > 0
+        ? pruneAt(historicalMessages, regenAnchor.id, regenAnchor.role)
+        : historicalMessages;
 
     // During active generation, use server for history + hook for new/streaming messages
     if (isActivelyGenerating && messages.length > 0) {
@@ -615,12 +415,11 @@ function ChatInterfaceInternal({
       return messages;
     }
 
-    // Fresh navigation (no active session) - use base history (includes ephemeral older when present).
+    // Fresh navigation (no active session) - use server/cache history.
     if (effectiveBaseHistory.length > 0) return effectiveBaseHistory;
     return historicalMessages;
   }, [
     isThread,
-    baseHistory,
     historicalMessages,
     messages,
     initialMessages,
@@ -643,10 +442,6 @@ function ChatInterfaceInternal({
     }
     return renderedMessages;
   }, [renderedMessages, isThread]);
-
-  const olderEphemeralIdSet = useMemo(() => {
-    return new Set(olderEphemeralMessages.map((m) => m.id));
-  }, [olderEphemeralMessages]);
 
   // Track expected AI responses for layout shift prevention.
   // Once the initial display is done, freeze the count so that server data
@@ -733,46 +528,6 @@ function ChatInterfaceInternal({
     frozenExpectedCountRef.current = expectedResponseCount;
   }, [displayMessages.length, hasEverShownMessages, isThread, shouldShowMessages, expectedResponseCount]);
 
-  // Initial scroll to bottom (instant, then switch to smooth after 150ms)
-  const hasInitialScrolledRef = useRef(false);
-  const initialScrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  useLayoutEffect(() => {
-    if (shouldShowMessages && displayMessages.length > 0 && !hasInitialScrolledRef.current) {
-      scrollToBottom("instant");
-      hasInitialScrolledRef.current = true;
-      if (initialScrollTimeoutRef.current) clearTimeout(initialScrollTimeoutRef.current);
-      initialScrollTimeoutRef.current = setTimeout(() => markInitialScrollDone(), 150);
-    }
-  }, [shouldShowMessages, displayMessages.length, scrollToBottom, markInitialScrollDone]);
-
-  // Synchronous scroll correction when displayMessages changes AFTER initial display.
-  // When server data prepends messages to the list, the content height grows but scrollTop
-  // stays the same. Without this, the scroll correction only happens in the ResizeObserver
-  // callback (~55ms later), which can fire AFTER the browser paints — causing a visible
-  // flicker/shift. This useLayoutEffect runs synchronously before paint.
-  const prevDisplayLenRef = useRef(0);
-  useLayoutEffect(() => {
-    const el = scrollRef.current;
-    if (!el || !hasInitialScrolledRef.current || !isThread) {
-      prevDisplayLenRef.current = displayMessages.length;
-      return;
-    }
-    if (displayMessages.length !== prevDisplayLenRef.current && prevDisplayLenRef.current > 0) {
-      // Messages changed after initial render — snap to bottom before paint
-      el.scrollTop = el.scrollHeight - el.clientHeight;
-    }
-    prevDisplayLenRef.current = displayMessages.length;
-  }, [displayMessages, isThread]);
-
-  useEffect(() => {
-    hasInitialScrolledRef.current = false;
-    if (initialScrollTimeoutRef.current) {
-      clearTimeout(initialScrollTimeoutRef.current);
-      initialScrollTimeoutRef.current = null;
-    }
-    resetStickToBottom();
-  }, [id, resetStickToBottom]);
-
   // Persist to cache (debounced, skip while streaming)
   useEffect(() => {
     if (!isThread) return;
@@ -780,14 +535,11 @@ function ChatInterfaceInternal({
     if (status === "streaming") return;
 
     const handle = setTimeout(() => {
-      // Do not persist older pages loaded via infinite scroll (ephemeral by design).
-      const persistable = displayMessages.filter((m) => !olderEphemeralIdSet.has(m.id));
-      if (persistable.length === 0) return;
-      void saveCachedThreadMessages(id, persistable);
+      void saveCachedThreadMessages(id, displayMessages);
     }, 750);
 
     return () => clearTimeout(handle);
-  }, [id, isThread, displayMessages, status, olderEphemeralIdSet]);
+  }, [id, isThread, displayMessages, status]);
 
   useEffect(() => {
     if (prevIdRef.current !== id) {
@@ -1024,10 +776,6 @@ function ChatInterfaceInternal({
   }, [setInput]);
 
 
-  const handleScrollToBottom = useCallback(() => {
-    scrollToBottom("smooth");
-  }, [scrollToBottom]);
-
   // Memoize drag handlers to prevent re-renders
   const handleDragEnter = useCallback((e: React.DragEvent) => {
     const dt = e.dataTransfer;
@@ -1086,16 +834,6 @@ function ChatInterfaceInternal({
                 onSuggestionClick={handleSuggestionClick}
               />
             )}
-            {isThread && (
-              <div className="-mt-2 pb-2">
-                <div ref={topSentinelRef} className="h-[1px] w-full" />
-                {isLoadingOlder && (
-                  <div className="flex items-center justify-center py-2">
-                    <span className="text-xs text-muted-foreground">Cargando mensajes anteriores…</span>
-                  </div>
-                )}
-              </div>
-            )}
             <div
               className={!hasEverShownMessages && !shouldShowMessages ? "opacity-0" : ""}
             >
@@ -1137,9 +875,6 @@ function ChatInterfaceInternal({
         onSubmit={handleSubmit}
         onStop={handleStop}
         threadId={isThread ? id : undefined}
-        isAtBottom={isAtBottom}
-        onScrollToBottom={handleScrollToBottom}
-        showScrollToBottom={!isAtBottom && displayMessages.length > 0}
         status={status}
       />
 
