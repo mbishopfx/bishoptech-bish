@@ -25,6 +25,8 @@ export interface RiftChatThreadProps {
   onEditUserMessage?: (messageId: string, newText: string) => Promise<void> | void;
   onResponseReady?: (messageId: string) => void;
   disableRegenerate?: boolean;
+  /** When false, skip pin-to-last-user-message during initial thread load. Default true for backward compat. */
+  initialLoadComplete?: boolean;
 }
 
 export function RiftChatThread({
@@ -35,6 +37,7 @@ export function RiftChatThread({
   onEditUserMessage,
   onResponseReady,
   disableRegenerate = false,
+  initialLoadComplete = true,
 }: RiftChatThreadProps) {
   const firstMessageAnim = useFirstMessageSendAnimation();
   const bottomRef = useRef<HTMLDivElement | null>(null);
@@ -261,10 +264,12 @@ export function RiftChatThread({
 
   // Only pin to last user message when the user just sent one new message (count went up by 1).
   // When we navigate to a thread and messages load later, count can jump from 0 to N — don't pin then.
+  // Skip during initial load so messages arriving in two batches don't trigger a second smooth scroll.
   useLayoutEffect(() => {
     const prev = prevUserMessageCountRef.current;
     prevUserMessageCountRef.current = userMessageCount;
 
+    if (!initialLoadComplete) return;
     if (userMessageCount <= 1) return;
     if (userMessageCount !== prev + 1) return;
 
@@ -278,7 +283,52 @@ export function RiftChatThread({
     } else {
       scrollToBottom();
     }
-  }, [recalcSpacer, resetManualScroll, scrollToBottom, userMessageCount]);
+  }, [initialLoadComplete, recalcSpacer, resetManualScroll, scrollToBottom, userMessageCount]);
+
+  const pinToLastUserMessage = useCallback(() => {
+    resetManualScroll();
+    recalcSpacer();
+    if (lastUserMessageRef.current) {
+      lastUserMessageRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    } else {
+      scrollToBottom();
+    }
+  }, [recalcSpacer, resetManualScroll, scrollToBottom]);
+
+  const runPinAfterLayout = useCallback(() => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(pinToLastUserMessage);
+    });
+  }, [pinToLastUserMessage]);
+
+  const handleRegenerateAssistantMessage = useCallback(
+    (messageId: string) => {
+      onRegenerateAssistantMessage(messageId);
+      runPinAfterLayout();
+    },
+    [onRegenerateAssistantMessage, runPinAfterLayout],
+  );
+
+  const handleRegenerateAfterUserMessage = useCallback(
+    (messageId: string) => {
+      onRegenerateAfterUserMessage(messageId);
+      runPinAfterLayout();
+    },
+    [onRegenerateAfterUserMessage, runPinAfterLayout],
+  );
+
+  const handleEditUserMessage = useCallback(
+    (messageId: string, newText: string): Promise<void> | void => {
+      if (!onEditUserMessage) return;
+      const result = onEditUserMessage(messageId, newText);
+      Promise.resolve(result).then(() => runPinAfterLayout());
+      return result;
+    },
+    [onEditUserMessage, runPinAfterLayout],
+  );
 
   const isStreaming = status === "submitted" || status === "streaming";
 
@@ -353,9 +403,9 @@ export function RiftChatThread({
                   <MessageRenderer
                     message={m}
                     isStreaming={isLastMessage && isStreaming}
-                    onRegenerateAssistantMessage={onRegenerateAssistantMessage}
-                    onRegenerateAfterUserMessage={onRegenerateAfterUserMessage}
-                    onEditUserMessage={onEditUserMessage}
+                    onRegenerateAssistantMessage={handleRegenerateAssistantMessage}
+                    onRegenerateAfterUserMessage={handleRegenerateAfterUserMessage}
+                    onEditUserMessage={handleEditUserMessage}
                     onResponseReady={onResponseReady}
                     disableRegenerate={disableRegenerate}
                     embedInRow

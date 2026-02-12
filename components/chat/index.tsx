@@ -81,6 +81,8 @@ function ChatInterfaceInternal({
   const setCustomInstructionId = useChatUIStore((s) => s.setCustomInstructionId);
   const [isDragActive, setIsDragActive] = useState(false);
   const dragCounterRef = useRef(0);
+  const [scrollDoneForId, setScrollDoneForId] = useState<string | null>(null);
+  const scrollDoneTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleProcessFiles = useCallback(
     async (fileArray: File[]) => {
@@ -547,27 +549,43 @@ function ChatInterfaceInternal({
       setIsSendingMessage(false);
       setQuotaError(null);
       setShowNoSubscriptionDialog(false);
+      setScrollDoneForId(null);
       prevIdRef.current = id;
     }
   }, [id, setInput, setSelectedFiles, setUploadedAttachments, setUploadingFiles, setIsUploading, setIsSendingMessage, setQuotaError, setShowNoSubscriptionDialog]);
 
   // When navigating to a different thread, scroll to bottom instantly (not pinned to last user message).
-  // Only run on id change so we don't override the smooth scroll when the user sends a new message.
+  // Only run once per id when we have content, so we don't override the smooth scroll when the user sends a new message.
   // Skip when the first-message send animation is running so we don't fight the fly-in and cause a teleport.
   useEffect(() => {
     if (!isThread) return;
     if (firstMessageAnim.phase !== "idle") return;
+    if (displayMessages.length === 0) return;
+    if (scrollDoneForId === id) return;
     const el = scrollContainerRef.current;
     if (!el) return;
     const scrollToBottomInstant = () => {
       el.scrollTop = el.scrollHeight - el.clientHeight;
+      // Delay marking initial load complete so a second batch of messages (e.g. server/cache)
+      // arriving within ~500ms does not trigger the pin-to-last-user-message effect.
+      if (scrollDoneTimeoutRef.current) clearTimeout(scrollDoneTimeoutRef.current);
+      scrollDoneTimeoutRef.current = setTimeout(() => {
+        setScrollDoneForId(id);
+        scrollDoneTimeoutRef.current = null;
+      }, 500);
     };
     // Double rAF so layout (including RiftChatThread spacer) is committed before we scroll.
     const raf = requestAnimationFrame(() => {
       requestAnimationFrame(scrollToBottomInstant);
     });
-    return () => cancelAnimationFrame(raf);
-  }, [id, isThread, firstMessageAnim.phase]);
+    return () => {
+      cancelAnimationFrame(raf);
+      if (scrollDoneTimeoutRef.current) {
+        clearTimeout(scrollDoneTimeoutRef.current);
+        scrollDoneTimeoutRef.current = null;
+      }
+    };
+  }, [id, isThread, firstMessageAnim.phase, displayMessages.length, scrollDoneForId]);
 
   // Use refs for callbacks that need access to latest renderedMessages
   // This prevents re-creating callbacks on every stream chunk (5.1 Defer State Reads)
@@ -871,6 +889,7 @@ function ChatInterfaceInternal({
               onEditUserMessage={onEditUserMessage}
               onResponseReady={handleResponseReady}
               disableRegenerate={status === "streaming"}
+              initialLoadComplete={scrollDoneForId === id}
             />
           )}
         </div>
