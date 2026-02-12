@@ -163,6 +163,7 @@ interface MessageRendererProps {
   onEditUserMessage?: (messageId: string, newText: string) => Promise<void> | void;
   disableRegenerate?: boolean;
   onResponseReady?: (messageId: string) => void;
+  embedInRow?: boolean;
 }
 
 export const MessageRenderer = React.memo(function MessageRenderer({
@@ -173,6 +174,7 @@ export const MessageRenderer = React.memo(function MessageRenderer({
   onEditUserMessage,
   disableRegenerate = false,
   onResponseReady,
+  embedInRow,
 }: MessageRendererProps) {
   const [isEditing, setIsEditing] = useState(false);
   const textValue = message.parts

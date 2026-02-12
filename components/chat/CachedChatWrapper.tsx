@@ -51,7 +51,7 @@ export function CachedChatWrapper({ threadId, customInstructionId }: CachedChatW
     let cancelled = false;
     
     void (async () => {
-      try {p
+      try {
         const record = await loadCachedThreadMessages(threadId);
         if (cancelled) return;
         setAsyncLoadedMessages(record?.messages);

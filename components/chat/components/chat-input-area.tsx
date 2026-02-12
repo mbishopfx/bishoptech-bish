@@ -24,7 +24,7 @@ import { ChatErrorAlert } from "./chat-error-alert";
 import { ModelSelectorPanel } from "@/components/ai/model-selector-panel";
 import { InstructionSelector } from "@/components/custom-instructions/InstructionSelector";
 import { SelectedInstructionPill } from "@/components/custom-instructions/SelectedInstructionPill";
-import React from "react";
+import React, { forwardRef } from "react";
 type ChatStatus = "submitted" | "streaming" | "ready" | "error";
 import { useChatUIStore } from "../ui-store";
 import { Effect } from "effect";
@@ -45,15 +45,18 @@ interface ChatInputAreaProps {
   status: ChatStatus;
 }
 
-export const ChatInputArea = React.memo(function ChatInputArea({
-  disableInput,
-  selectedModel,
-  onModelChange,
-  onSubmit,
-  onStop,
-  threadId,
-  status,
-}: ChatInputAreaProps) {
+const ChatInputAreaInner = forwardRef<HTMLDivElement, ChatInputAreaProps>(function ChatInputAreaInner(
+  {
+    disableInput,
+    selectedModel,
+    onModelChange,
+    onSubmit,
+    onStop,
+    threadId,
+    status,
+  },
+  ref,
+) {
   const t = useChatTranslations();
   const input = useChatUIStore((s) => s.input);
   const isSearchEnabled = useChatUIStore((s) => s.isSearchEnabled);
@@ -193,7 +196,7 @@ export const ChatInputArea = React.memo(function ChatInputArea({
   }, [disableInput]);
 
   return (
-    <div className="absolute bottom-0 left-0 right-0 md:pb-0 z-[20]">
+    <div ref={ref} className="absolute bottom-0 left-0 right-0 md:pb-0 z-[20]">
       <div className="mx-auto w-full max-w-full md:max-w-3xl px-0 md:px-2 pb-0 md:pb-0 relative">
         {/* No Subscription Dialog */}
         <NoSubscriptionDialog
@@ -343,3 +346,5 @@ export const ChatInputArea = React.memo(function ChatInputArea({
     </div>
   );
 });
+
+export const ChatInputArea = React.memo(ChatInputAreaInner);

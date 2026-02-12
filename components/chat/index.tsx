@@ -4,6 +4,7 @@ import { useChat } from "@ai-sdk/react";
 import type { UIMessage } from "ai";
 import { DefaultChatTransport } from "ai";
 import { usePathname, useRouter } from "next/navigation";
+import { flushSync } from "react-dom";
 import { generateUUID } from "@/lib/utils";
 import { useModel } from "@/contexts/model-context";
 import { useLocale } from "@/contexts/locale-context";
@@ -15,19 +16,14 @@ import { resolveModel } from "@/lib/ai/ai-providers";
 import { useAuth } from "@workos-inc/authkit-nextjs/components";
 import { useConvexAuth, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Loader } from "@/components/ai/loader";
 import { AttachmentsIcon } from "@/components/ui/icons/svg-icons";
-import {
-  Conversation,
-  ConversationContent,
-} from "@/components/ai/conversation";
-import { Message, MessageContent } from "@/components/ai/message";
 import { TooltipProvider } from "@/components/ai/ui/tooltip";
 
 import { useChatUIStore } from "./ui-store";
 import { WelcomeScreen } from "./components/welcome-screen";
-import { MessageRenderer } from "./components/message-renderer";
 import { ChatInputArea } from "./components/chat-input-area";
+import { useFirstMessageSendAnimation } from "./first-message-send-animation";
+import { RiftChatThread } from "./chat-thread";
 import type { ChatInterfaceProps } from "./types";
 import { ChatStoreProvider, useChatStateInstance } from "@/lib/stores/hooks";
 import { Effect } from "effect";
@@ -56,9 +52,9 @@ function ChatInterfaceInternal({
   const router = useRouter();
   const pathname = usePathname();
   const lang = useLocale();
-
-  const scrollRef = useRef<HTMLDivElement | null>(null);
-  const contentRef = useRef<HTMLDivElement | null>(null);
+  const firstMessageAnim = useFirstMessageSendAnimation();
+  const promptAnchorRef = useRef<HTMLDivElement | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
   const { selectedModel, setSelectedModel } = useModel();
   const { consumeInitialMessage } = useInitialMessage();
@@ -555,6 +551,24 @@ function ChatInterfaceInternal({
     }
   }, [id, setInput, setSelectedFiles, setUploadedAttachments, setUploadingFiles, setIsUploading, setIsSendingMessage, setQuotaError, setShowNoSubscriptionDialog]);
 
+  // When navigating to a different thread, scroll to bottom instantly (not pinned to last user message).
+  // Only run on id change so we don't override the smooth scroll when the user sends a new message.
+  // Skip when the first-message send animation is running so we don't fight the fly-in and cause a teleport.
+  useEffect(() => {
+    if (!isThread) return;
+    if (firstMessageAnim.phase !== "idle") return;
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    const scrollToBottomInstant = () => {
+      el.scrollTop = el.scrollHeight - el.clientHeight;
+    };
+    // Double rAF so layout (including RiftChatThread spacer) is committed before we scroll.
+    const raf = requestAnimationFrame(() => {
+      requestAnimationFrame(scrollToBottomInstant);
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [id, isThread, firstMessageAnim.phase]);
+
   // Use refs for callbacks that need access to latest renderedMessages
   // This prevents re-creating callbacks on every stream chunk (5.1 Defer State Reads)
   const renderedMessagesRef = useRef(renderedMessages);
@@ -626,11 +640,6 @@ function ChatInterfaceInternal({
   sendMessageRef.current = sendMessage;
 
 
-  const hasAssistantMessage = useMemo(
-    () => renderedMessages.some((m) => m.role === "assistant"),
-    [renderedMessages],
-  );
-
   useEffect(() => {
     if (isThread && isAuthenticated && !autoStartTriggeredRef.current) {
       const initialMessage = consumeInitialMessage(id);
@@ -688,6 +697,17 @@ function ChatInterfaceInternal({
 
       const messageContent = input.trim();
       const messageId = generateUUID();
+
+      // First-message send animation: when sending from welcome, capture source point so the
+      // thread view can animate the first user message flying in from the prompt.
+      if (id === "welcome" && displayMessages.length === 0) {
+        const anchor = promptAnchorRef.current;
+        if (anchor && typeof window !== "undefined") {
+          const r = anchor.getBoundingClientRect();
+          const sourcePoint = { x: r.left + 16, y: r.top + 18 };
+          flushSync(() => firstMessageAnim.begin(sourcePoint));
+        }
+      }
 
       // Do NOT clear regenerateAnchorRef here.
       // The base history can remain stale for a while (local-first, no live subscription),
@@ -762,6 +782,8 @@ function ChatInterfaceInternal({
       setIsUploading,
       triggerError,
       regenerateAnchorRef,
+      firstMessageAnim,
+      displayMessages.length,
     ]
   );
 
@@ -824,51 +846,38 @@ function ChatInterfaceInternal({
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      <div className="flex-1 min-h-0">
-        <Conversation ref={scrollRef as React.RefObject<HTMLDivElement>}>
-          <ConversationContent ref={contentRef as React.RefObject<HTMLDivElement>} className="mx-auto w-full max-w-full md:max-w-3xl p-4 pb-[140px] md:pb-35">
-            
-            {!isThread && renderedMessages.length === 0 && (
-              <WelcomeScreen 
-                user={user} 
-                onSuggestionClick={handleSuggestionClick}
-              />
-            )}
-            <div
-              className={!hasEverShownMessages && !shouldShowMessages ? "opacity-0" : ""}
-            >
-              {displayMessages.map((message, index) => {
-              const isLast = index === displayMessages.length - 1;
-              const isMessageStreaming = isLast && (status === "streaming");
-              return (
-                <MessageRenderer
-                  key={message.id}
-                  message={message}
-                  isStreaming={isMessageStreaming}
-                  disableRegenerate={status === "streaming"}
-                  onRegenerateAssistantMessage={onRegenerateAssistant}
-                  onRegenerateAfterUserMessage={onRegenerateAfterUser}
-                  onResponseReady={handleResponseReady}
-                  onEditUserMessage={onEditUserMessage}
-                />
-              );
-            })}
-            </div>
-            {(status === "submitted" || status === "streaming") &&
-              !hasAssistantMessage && (
-                <Message from={"assistant"}>
-                  <MessageContent from={"assistant"}>
-                    <div className="py-1">
-                      <Loader />
-                    </div>
-                  </MessageContent>
-                </Message>
-              )}
-          </ConversationContent>
-        </Conversation>
+      <div
+        ref={scrollContainerRef}
+        className="flex-1 min-h-0 overflow-y-auto"
+        style={{ scrollbarGutter: "stable" }}
+      >
+        <div
+          className={[
+            "mx-auto w-full max-w-full md:max-w-3xl px-0 pl-9 pr-5 pb-0 md:pl-9 md:pr-5",
+            !hasEverShownMessages && !shouldShowMessages ? "opacity-0" : "",
+          ].join(" ")}
+        >
+          {!isThread && displayMessages.length === 0 ? (
+            <WelcomeScreen
+              user={user}
+              onSuggestionClick={handleSuggestionClick}
+            />
+          ) : (
+            <RiftChatThread
+              messages={displayMessages}
+              status={status}
+              onRegenerateAssistantMessage={onRegenerateAssistant}
+              onRegenerateAfterUserMessage={onRegenerateAfterUser}
+              onEditUserMessage={onEditUserMessage}
+              onResponseReady={handleResponseReady}
+              disableRegenerate={status === "streaming"}
+            />
+          )}
+        </div>
       </div>
 
       <ChatInputArea
+        ref={promptAnchorRef}
         disableInput={promptDisabled}
         selectedModel={selectedModel}
         onModelChange={setSelectedModel}
