@@ -1,0 +1,58 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "globalPassThroughEnv": [
+    "CONVEX_DEPLOYMENT",
+    "KV_REST_API_READ_ONLY_TOKEN",
+    "KV_REST_API_TOKEN",
+    "KV_REST_API_URL",
+    "KV_URL",
+    "PUBLIC_CONVEX_SITE_URL",
+    "PUBLIC_CONVEX_URL",
+    "PUBLIC_SENTRY_DSN",
+    "REDIS_URL",
+    "SENTRY_AUTH_TOKEN",
+    "SENTRY_DSN",
+    "SENTRY_ORG",
+    "SENTRY_PROJECT",
+    "WORKOS_API_KEY",
+    "WORKOS_CLIENT_ID",
+    "WORKOS_COOKIE_PASSWORD",
+    "WORKOS_REDIRECT_URI"
+  ],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", ".next/**"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "lint": {
+      "dependsOn": ["^build"]
+    },
+    "lint:fix": {},
+    "format": {},
+    "format:check": {},
+    "check": {
+      "dependsOn": ["^build"]
+    },
+    "check:watch": {
+      "cache": false,
+      "persistent": true
+    },
+    "test": {},
+    "test:watch": {
+      "cache": false,
+      "persistent": true
+    },
+    "clean": {},
+    "prepare": {
+      "cache": false
+    },
+    "convex": {
+      "cache": false,
+      "persistent": true
+    }
+  }
+}
