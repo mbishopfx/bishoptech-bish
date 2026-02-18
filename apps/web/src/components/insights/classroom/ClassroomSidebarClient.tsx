@@ -13,6 +13,7 @@ import {
   HelpCircle,
 } from "lucide-react";
 import { AppLogo } from "@/components/ui/icons/svg-icons";
+import { Button } from "@rift/ui/button";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -184,10 +185,10 @@ export function ClassroomSidebarClient() {
 
         {/* Bottom Actions */}
         <div className="border-t flex-shrink-0 px-3 py-2">
-          <button className="flex w-full items-center gap-2 p-2.5 mb-1 rounded-lg text-sm text-muted-foreground transition-colors hover:bg-hover hover:text-accent-foreground">
+          <Button variant="ghost" className="w-full justify-start gap-2 p-2.5 mb-1 text-sm text-muted-foreground">
             <HelpCircle className="h-4 w-4" />
             <span className="font-medium">Help center</span>
-          </button>
+          </Button>
         </div>
       </div>
     </>

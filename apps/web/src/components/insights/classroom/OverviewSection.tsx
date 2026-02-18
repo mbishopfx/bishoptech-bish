@@ -1,3 +1,5 @@
+import { Button } from "@rift/ui/button";
+
 type Segment = {
   label: string;
   from: string;
@@ -29,9 +31,9 @@ export function OverviewSection({ keyPoints }: OverviewSectionProps) {
                 <span className="font-medium">
                   {index + 1}. {point.label}
                 </span>{" "}
-                <button className="text-base text-blue-600 hover:underline dark:text-blue-400">
+                <Button variant="link" className="text-base p-0 h-auto font-normal">
                   [{point.from}]
-                </button>
+                </Button>
               </div>
               {index === 0 && (
                 <ul className="ml-4 space-y-1 text-sm text-muted-foreground">

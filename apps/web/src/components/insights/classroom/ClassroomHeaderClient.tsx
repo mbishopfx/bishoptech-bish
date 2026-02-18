@@ -76,12 +76,12 @@ export function ClassroomHeaderClient({ onSectionChange, activeSection }: Classr
         >
           Geography
         </Button>
-        <button className="flex h-8 w-8 items-center justify-center rounded hover:bg-muted">
+        <Button variant="ghost" size="icon">
           <Settings className="h-4 w-4" />
-        </button>
-        <button className="flex h-8 w-8 items-center justify-center rounded hover:bg-muted">
+        </Button>
+        <Button variant="ghost" size="icon">
           <MoreVertical className="h-4 w-4" />
-        </button>
+        </Button>
       </div>
     </div>
   );

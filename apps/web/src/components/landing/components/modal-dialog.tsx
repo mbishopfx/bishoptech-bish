@@ -5,7 +5,8 @@ import { Dialog } from "@radix-ui/themes";
 import { InfoCircledIcon } from "@radix-ui/react-icons";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@workos-inc/authkit-nextjs/components";
-import { SettingsInput } from "@/components/ui/SettingsInput";
+import { Button } from "@rift/ui/button";
+import { Input } from "@rift/ui/input";
 import { ensureWorkosOrganization } from "@/actions/ensureWorkosOrganization";
 
 export function ModalDialog({
@@ -71,12 +72,12 @@ export function ModalDialog({
         {trigger ? (
           trigger
         ) : (
-        <button
+        <Button
           onClick={() => setError("")}
-          className="w-full mt-6 px-4 py-2 bg-accent text-white text-sm font-medium rounded-lg hover:bg-accent/90 transition-colors duration-200"
+          className="w-full mt-6"
         >
           {buttonText}
-        </button>
+        </Button>
         )}
       </Dialog.Trigger>
       <Dialog.Content className="max-w-sm p-6">
@@ -90,11 +91,11 @@ export function ModalDialog({
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Nombre de la organización
             </label>
-            <SettingsInput
+            <Input
               placeholder="Ingresa el nombre de tu organización"
               value={orgName}
               onChange={(e) => setOrgName(e.target.value)}
-              width="w-full"
+              className="w-full"
             />
           </div>
           )}
@@ -116,18 +117,17 @@ export function ModalDialog({
 
           <div className="flex justify-end gap-3">
             <Dialog.Close>
-              <button className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors duration-200">
+              <Button variant="secondary">
                 Cancelar
-              </button>
+              </Button>
             </Dialog.Close>
             <Dialog.Close>
-              <button
+              <Button
                 onClick={handleSubscribe}
                 disabled={loading}
-                className="px-4 py-2 bg-accent text-white text-sm font-medium rounded-lg hover:bg-accent/90 transition-colors duration-200 disabled:opacity-50"
               >
                 {loading ? "Procesando..." : "Suscribir"}
-              </button>
+              </Button>
             </Dialog.Close>
           </div>
         </div>

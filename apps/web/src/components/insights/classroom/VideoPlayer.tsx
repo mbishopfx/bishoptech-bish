@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronDown } from "lucide-react";
+import { Button } from "@rift/ui/button";
 
 interface VideoPlayerProps {
   currentTime: string;
@@ -59,7 +60,10 @@ export function VideoPlayer({
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <button className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-black hover:bg-white/90">
+                  <Button
+                    size="icon"
+                    className="h-8 w-8 rounded-full bg-white text-black hover:bg-white/90"
+                  >
                     <svg
                       className="h-4 w-4"
                       fill="currentColor"
@@ -67,16 +71,16 @@ export function VideoPlayer({
                     >
                       <path d="M8 5v14l11-7z" />
                     </svg>
-                  </button>
+                  </Button>
                   <span className="text-xs text-white">
                     {currentTime} / {totalTime}
                   </span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <button className="text-xs text-white hover:text-white/80">
+                  <Button variant="ghost" size="sm" className="text-xs text-white hover:text-white/80 hover:bg-white/10">
                     1x
-                  </button>
-                  <button className="text-white hover:text-white/80">
+                  </Button>
+                  <Button variant="ghost" size="icon" className="text-white hover:text-white/80 hover:bg-white/10">
                     <svg
                       className="h-4 w-4"
                       fill="none"
@@ -90,8 +94,8 @@ export function VideoPlayer({
                         d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
                       />
                     </svg>
-                  </button>
-                  <button className="text-white hover:text-white/80">
+                  </Button>
+                  <Button variant="ghost" size="icon" className="text-white hover:text-white/80 hover:bg-white/10">
                     <svg
                       className="h-4 w-4"
                       fill="none"
@@ -102,10 +106,10 @@ export function VideoPlayer({
                         strokeLinecap="round"
                         strokeLinejoin="round"
                         strokeWidth={2}
-                        d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"
+                        d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5m11 5l-5-5m5 5v-4m0 4h-4"
                       />
                     </svg>
-                  </button>
+                  </Button>
                 </div>
               </div>
             </div>

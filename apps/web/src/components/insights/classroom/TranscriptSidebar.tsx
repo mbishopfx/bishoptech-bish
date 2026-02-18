@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { Button } from "@rift/ui/button";
 import { ScrollArea } from "@rift/ui/scroll-area";
 import { MessageSquare, FileText } from "lucide-react";
 import {
@@ -104,9 +105,9 @@ export function TranscriptSidebar({ messages }: TranscriptSidebarProps) {
                     </span>
                   </div>
                   <span className="text-sm font-medium">{message.speaker}</span>
-                  <button className="text-sm text-blue-600 hover:underline dark:text-blue-400">
+                  <Button variant="link" className="text-sm p-0 h-auto font-normal">
                     [{message.timestamp}]
-                  </button>
+                  </Button>
                 </div>
                 <div
                   className={cn(

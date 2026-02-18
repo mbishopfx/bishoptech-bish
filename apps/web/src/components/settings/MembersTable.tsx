@@ -2,6 +2,7 @@ import React from 'react';
 import Image from "next/image";
 import { StatusBadge } from './StatusBadge';
 import { MoreVerticalIcon } from 'lucide-react';
+import { Button } from '@rift/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -116,9 +117,9 @@ export function MembersTable({ members, onEditMember, onRemoveMember }: MembersT
               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-center">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className="p-1 hover:bg-gray-100 rounded-md transition-colors">
-                      <MoreVerticalIcon className="h-4 w-4 text-gray-500" />
-                    </button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <MoreVerticalIcon className="h-4 w-4 text-muted-foreground" />
+                    </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     {onEditMember && (

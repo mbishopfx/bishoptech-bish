@@ -9,6 +9,11 @@
     "build": "tsup"
   },
   "exports": {
+    "./accordion": {
+      "types": "./src/components/accordion.tsx",
+      "import": "./src/components/accordion.tsx",
+      "default": "./src/components/accordion.tsx"
+    },
     "./alert-dialog": {
       "types": "./src/components/alert-dialog.tsx",
       "import": "./src/components/alert-dialog.tsx",

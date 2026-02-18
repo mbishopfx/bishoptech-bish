@@ -1,5 +1,4 @@
 "use client";
-import * as AccordionPrimitive from "@radix-ui/react-accordion";
 import type { CheckoutParams, CheckoutResult, ProductItem } from "autumn-js";
 import { ArrowRight, Check, ChevronDown, Loader2 } from "lucide-react";
 import type React from "react";
@@ -8,7 +7,8 @@ import {
 	Accordion,
 	AccordionContent,
 	AccordionItem,
-} from "@/components/ui/accordion";
+	AccordionTrigger,
+} from "@rift/ui/accordion";
 import { Button } from "@rift/ui/button";
 import {
 	Dialog,
@@ -443,9 +443,9 @@ function CheckoutLines({ checkoutResult }: { checkoutResult: CheckoutResult }) {
 	const lines = checkoutResult?.lines.filter((line) => line.amount !== 0) ?? [];
 
 	return (
-		<Accordion type="single" collapsible>
+		<Accordion>
 			<AccordionItem value="total" className="border-none">
-				<CustomAccordionTrigger className="justify-end w-full my-0 py-0 border-none min-h-0 [&[data-state=open]_svg]:rotate-180">
+				<AccordionTrigger className="justify-end w-full my-0 py-0 border-none min-h-0 [&[aria-expanded=true]_svg]:rotate-180">
 					<div className="cursor-pointer flex items-center gap-1.5 w-full justify-end">
 						<span className={cn("text-sm font-medium", TEXT_MUTED)}>
 							Ver desglose
@@ -456,7 +456,7 @@ function CheckoutLines({ checkoutResult }: { checkoutResult: CheckoutResult }) {
 							aria-hidden
 						/>
 					</div>
-				</CustomAccordionTrigger>
+				</AccordionTrigger>
 				<AccordionContent className="mt-2 pt-2 flex flex-col gap-2">
 					{lines.map((line, index) => (
 						<div
@@ -475,27 +475,6 @@ function CheckoutLines({ checkoutResult }: { checkoutResult: CheckoutResult }) {
 				</AccordionContent>
 			</AccordionItem>
 		</Accordion>
-	);
-}
-
-function CustomAccordionTrigger({
-	className,
-	children,
-	...props
-}: React.ComponentProps<typeof AccordionPrimitive.Trigger>) {
-	return (
-		<AccordionPrimitive.Header className="flex">
-			<AccordionPrimitive.Trigger
-				data-slot="accordion-trigger"
-				className={cn(
-					"flex flex-1 items-center justify-between gap-2 rounded-lg py-2 text-sm transition-all outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
-					className,
-				)}
-				{...props}
-			>
-				{children}
-			</AccordionPrimitive.Trigger>
-		</AccordionPrimitive.Header>
 	);
 }
 
