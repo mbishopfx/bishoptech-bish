@@ -11,6 +11,13 @@
 /* Scan UI package source so Tailwind includes all component class names */
 @source "../../../../packages/ui/src/**/*.tsx";
 
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
 @layer utilities {
   .scrollbar-hide {
     -ms-overflow-style: none; /* IE and Edge */
