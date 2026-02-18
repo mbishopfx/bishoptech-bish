@@ -45,7 +45,7 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  transpilePackages: ["@rift/utils", "@rift/ui", "shiki"],
+  transpilePackages: ["@rift/utils", "shiki"],
   serverExternalPackages: ["langium", "@mermaid-js/parser"],
   images: {
     remotePatterns: [

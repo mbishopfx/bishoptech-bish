@@ -12,7 +12,7 @@ import {
   DialogHeader, 
   DialogTitle, 
   DialogTrigger 
-} from "../ai/ui/dialog";
+} from "@rift/ui/dialog";
 import { MessageSquarePlus, PlusIcon } from "lucide-react";
 import { InstructionForm } from "./InstructionForm";
 import { InstructionCard } from "./InstructionCard";

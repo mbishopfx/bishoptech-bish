@@ -8,6 +8,8 @@
 @source "../../node_modules/@streamdown/code/dist/index.js";
 @source "../../node_modules/@streamdown/mermaid/dist/index.js";
 @source "../../node_modules/@streamdown/math/dist/index.js";
+/* Scan UI package source so Tailwind includes all component class names */
+@source "../../../packages/ui/src/**/*.tsx";
 
 @layer utilities {
   .scrollbar-hide {
