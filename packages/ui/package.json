@@ -94,6 +94,11 @@
       "import": "./src/components/input.tsx",
       "default": "./src/components/input.tsx"
     },
+    "./input-group": {
+      "types": "./src/components/input-group.tsx",
+      "import": "./src/components/input-group.tsx",
+      "default": "./src/components/input-group.tsx"
+    },
     "./input-otp": {
       "types": "./src/components/input-otp.tsx",
       "import": "./src/components/input-otp.tsx",
@@ -184,7 +189,8 @@
     "input-otp": "^1.4.2",
     "lucide-react": "^0.542.0",
     "react-day-picker": "^9.13.0",
-    "sonner": "^2.0.7"
+    "sonner": "^2.0.7",
+    "vaul": "^1.1.2"
   },
   "devDependencies": {
     "react": "^19.2.3",
