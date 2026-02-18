@@ -3,176 +3,176 @@
   "version": "0.0.1",
   "private": true,
   "sideEffects": false,
-  "files": ["dist"],
+  "files": ["src", "dist"],
   "scripts": {
     "check-types": "tsc --noEmit",
     "build": "tsup"
   },
   "exports": {
     "./alert-dialog": {
-      "types": "./dist/alert-dialog.d.mts",
-      "import": "./dist/components/alert-dialog.js",
-      "default": "./dist/components/alert-dialog.js"
+      "types": "./src/components/alert-dialog.tsx",
+      "import": "./src/components/alert-dialog.tsx",
+      "default": "./src/components/alert-dialog.tsx"
     },
     "./avatar": {
-      "types": "./dist/avatar.d.mts",
-      "import": "./dist/components/avatar.js",
-      "default": "./dist/components/avatar.js"
+      "types": "./src/components/avatar.tsx",
+      "import": "./src/components/avatar.tsx",
+      "default": "./src/components/avatar.tsx"
     },
     "./badge": {
-      "types": "./dist/badge.d.mts",
-      "import": "./dist/components/badge.js",
-      "default": "./dist/components/badge.js"
+      "types": "./src/components/badge.tsx",
+      "import": "./src/components/badge.tsx",
+      "default": "./src/components/badge.tsx"
     },
     "./breadcrumb": {
-      "types": "./dist/breadcrumb.d.mts",
-      "import": "./dist/components/breadcrumb.js",
-      "default": "./dist/components/breadcrumb.js"
+      "types": "./src/components/breadcrumb.tsx",
+      "import": "./src/components/breadcrumb.tsx",
+      "default": "./src/components/breadcrumb.tsx"
     },
     "./button": {
-      "types": "./dist/button.d.mts",
-      "import": "./dist/components/button.js",
-      "default": "./dist/components/button.js"
+      "types": "./src/components/button.tsx",
+      "import": "./src/components/button.tsx",
+      "default": "./src/components/button.tsx"
     },
     "./calendar": {
-      "types": "./dist/calendar.d.mts",
-      "import": "./dist/components/calendar.js",
-      "default": "./dist/components/calendar.js"
+      "types": "./src/components/calendar.tsx",
+      "import": "./src/components/calendar.tsx",
+      "default": "./src/components/calendar.tsx"
     },
     "./card": {
-      "types": "./dist/card.d.mts",
-      "import": "./dist/components/card.js",
-      "default": "./dist/components/card.js"
+      "types": "./src/components/card.tsx",
+      "import": "./src/components/card.tsx",
+      "default": "./src/components/card.tsx"
     },
     "./checkbox": {
-      "types": "./dist/checkbox.d.mts",
-      "import": "./dist/components/checkbox.js",
-      "default": "./dist/components/checkbox.js"
+      "types": "./src/components/checkbox.tsx",
+      "import": "./src/components/checkbox.tsx",
+      "default": "./src/components/checkbox.tsx"
     },
     "./collapsible": {
-      "types": "./dist/collapsible.d.mts",
-      "import": "./dist/components/collapsible.js",
-      "default": "./dist/components/collapsible.js"
+      "types": "./src/components/collapsible.tsx",
+      "import": "./src/components/collapsible.tsx",
+      "default": "./src/components/collapsible.tsx"
     },
     "./command": {
-      "types": "./dist/command.d.mts",
-      "import": "./dist/components/command.js",
-      "default": "./dist/components/command.js"
+      "types": "./src/components/command.tsx",
+      "import": "./src/components/command.tsx",
+      "default": "./src/components/command.tsx"
     },
     "./context-menu": {
-      "types": "./dist/context-menu.d.mts",
-      "import": "./dist/components/context-menu.js",
-      "default": "./dist/components/context-menu.js"
+      "types": "./src/components/context-menu.tsx",
+      "import": "./src/components/context-menu.tsx",
+      "default": "./src/components/context-menu.tsx"
     },
     "./data-table": {
-      "types": "./dist/data-table.d.mts",
-      "import": "./dist/components/data-table.js",
-      "default": "./dist/components/data-table.js"
+      "types": "./src/components/data-table.tsx",
+      "import": "./src/components/data-table.tsx",
+      "default": "./src/components/data-table.tsx"
     },
     "./dialog": {
-      "types": "./dist/dialog.d.mts",
-      "import": "./dist/components/dialog.js",
-      "default": "./dist/components/dialog.js"
+      "types": "./src/components/dialog.tsx",
+      "import": "./src/components/dialog.tsx",
+      "default": "./src/components/dialog.tsx"
     },
     "./drawer": {
-      "types": "./dist/drawer.d.mts",
-      "import": "./dist/components/drawer.js",
-      "default": "./dist/components/drawer.js"
+      "types": "./src/components/drawer.tsx",
+      "import": "./src/components/drawer.tsx",
+      "default": "./src/components/drawer.tsx"
     },
     "./dropdown-menu": {
-      "types": "./dist/dropdown-menu.d.mts",
-      "import": "./dist/components/dropdown-menu.js",
-      "default": "./dist/components/dropdown-menu.js"
+      "types": "./src/components/dropdown-menu.tsx",
+      "import": "./src/components/dropdown-menu.tsx",
+      "default": "./src/components/dropdown-menu.tsx"
     },
     "./field": {
-      "types": "./dist/field.d.mts",
-      "import": "./dist/components/field.js",
-      "default": "./dist/components/field.js"
+      "types": "./src/components/field.tsx",
+      "import": "./src/components/field.tsx",
+      "default": "./src/components/field.tsx"
     },
     "./input": {
-      "types": "./dist/input.d.mts",
-      "import": "./dist/components/input.js",
-      "default": "./dist/components/input.js"
+      "types": "./src/components/input.tsx",
+      "import": "./src/components/input.tsx",
+      "default": "./src/components/input.tsx"
     },
     "./input-otp": {
-      "types": "./dist/input-otp.d.mts",
-      "import": "./dist/components/input-otp.js",
-      "default": "./dist/components/input-otp.js"
+      "types": "./src/components/input-otp.tsx",
+      "import": "./src/components/input-otp.tsx",
+      "default": "./src/components/input-otp.tsx"
     },
     "./label": {
-      "types": "./dist/label.d.mts",
-      "import": "./dist/components/label.js",
-      "default": "./dist/components/label.js"
+      "types": "./src/components/label.tsx",
+      "import": "./src/components/label.tsx",
+      "default": "./src/components/label.tsx"
     },
     "./popover": {
-      "types": "./dist/popover.d.mts",
-      "import": "./dist/components/popover.js",
-      "default": "./dist/components/popover.js"
+      "types": "./src/components/popover.tsx",
+      "import": "./src/components/popover.tsx",
+      "default": "./src/components/popover.tsx"
     },
     "./progress": {
-      "types": "./dist/progress.d.mts",
-      "import": "./dist/components/progress.js",
-      "default": "./dist/components/progress.js"
+      "types": "./src/components/progress.tsx",
+      "import": "./src/components/progress.tsx",
+      "default": "./src/components/progress.tsx"
     },
     "./scroll-area": {
-      "types": "./dist/scroll-area.d.mts",
-      "import": "./dist/components/scroll-area.js",
-      "default": "./dist/components/scroll-area.js"
+      "types": "./src/components/scroll-area.tsx",
+      "import": "./src/components/scroll-area.tsx",
+      "default": "./src/components/scroll-area.tsx"
     },
     "./select": {
-      "types": "./dist/select.d.mts",
-      "import": "./dist/components/select.js",
-      "default": "./dist/components/select.js"
+      "types": "./src/components/select.tsx",
+      "import": "./src/components/select.tsx",
+      "default": "./src/components/select.tsx"
     },
     "./separator": {
-      "types": "./dist/separator.d.mts",
-      "import": "./dist/components/separator.js",
-      "default": "./dist/components/separator.js"
+      "types": "./src/components/separator.tsx",
+      "import": "./src/components/separator.tsx",
+      "default": "./src/components/separator.tsx"
     },
     "./skeleton": {
-      "types": "./dist/skeleton.d.mts",
-      "import": "./dist/components/skeleton.js",
-      "default": "./dist/components/skeleton.js"
+      "types": "./src/components/skeleton.tsx",
+      "import": "./src/components/skeleton.tsx",
+      "default": "./src/components/skeleton.tsx"
     },
     "./spinner": {
-      "types": "./dist/spinner.d.mts",
-      "import": "./dist/components/spinner.js",
-      "default": "./dist/components/spinner.js"
+      "types": "./src/components/spinner.tsx",
+      "import": "./src/components/spinner.tsx",
+      "default": "./src/components/spinner.tsx"
     },
     "./slider": {
-      "types": "./dist/slider.d.mts",
-      "import": "./dist/components/slider.js",
-      "default": "./dist/components/slider.js"
+      "types": "./src/components/slider.tsx",
+      "import": "./src/components/slider.tsx",
+      "default": "./src/components/slider.tsx"
     },
     "./sonner": {
-      "types": "./dist/sonner.d.mts",
-      "import": "./dist/components/sonner.js",
-      "default": "./dist/components/sonner.js"
+      "types": "./src/components/sonner.tsx",
+      "import": "./src/components/sonner.tsx",
+      "default": "./src/components/sonner.tsx"
     },
     "./switch": {
-      "types": "./dist/switch.d.mts",
-      "import": "./dist/components/switch.js",
-      "default": "./dist/components/switch.js"
+      "types": "./src/components/switch.tsx",
+      "import": "./src/components/switch.tsx",
+      "default": "./src/components/switch.tsx"
     },
     "./table": {
-      "types": "./dist/table.d.mts",
-      "import": "./dist/components/table.js",
-      "default": "./dist/components/table.js"
+      "types": "./src/components/table.tsx",
+      "import": "./src/components/table.tsx",
+      "default": "./src/components/table.tsx"
     },
     "./tabs": {
-      "types": "./dist/tabs.d.mts",
-      "import": "./dist/components/tabs.js",
-      "default": "./dist/components/tabs.js"
+      "types": "./src/components/tabs.tsx",
+      "import": "./src/components/tabs.tsx",
+      "default": "./src/components/tabs.tsx"
     },
     "./textarea": {
-      "types": "./dist/textarea.d.mts",
-      "import": "./dist/components/textarea.js",
-      "default": "./dist/components/textarea.js"
+      "types": "./src/components/textarea.tsx",
+      "import": "./src/components/textarea.tsx",
+      "default": "./src/components/textarea.tsx"
     },
     "./tooltip": {
-      "types": "./dist/tooltip.d.mts",
-      "import": "./dist/components/tooltip.js",
-      "default": "./dist/components/tooltip.js"
+      "types": "./src/components/tooltip.tsx",
+      "import": "./src/components/tooltip.tsx",
+      "default": "./src/components/tooltip.tsx"
     }
   },
   "dependencies": {

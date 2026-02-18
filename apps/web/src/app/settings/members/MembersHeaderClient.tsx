@@ -156,10 +156,10 @@ export function MembersHeaderClient({
                   </DialogDescription>
                 </div>
                 <div className="flex items-center gap-4 pt-4">
-                  <Button onClick={resetInviteState} className="cursor-pointer rounded-lg font-medium">
+                  <Button onClick={resetInviteState}>
                     Invitar a más
                   </Button>
-                  <Button onClick={closeInviteDialog} className="cursor-pointer rounded-lg font-medium min-w-[100px]">
+                  <Button onClick={closeInviteDialog} className="min-w-[100px]">
                     Cerrar
                   </Button>
                 </div>

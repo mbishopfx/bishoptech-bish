@@ -50,6 +50,7 @@ const authkit = authkitMiddleware({
       "/es/models",
       "/relay-7ls5/:path*",
       "/relay-7ls5/static/:path*",
+      "/monitoring", // Sentry tunnel
     ],
   },
 });
@@ -86,13 +87,14 @@ export default function proxy(request: NextRequest, event: NextFetchEvent) {
 export const config = {
   matcher: [
     // All routes except Next.js internals and static files
-    // Note: settings routes are included because server actions called from settings pages require withAuth()
     '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
-    // Always run for API routes (no prefetch for API routes)
+    // Explicit API route matchers so proxy (and AuthKit) definitely runs for every withAuth caller
     '/api/chat',
+    '/api/chat/:path*',
     '/api/generate-title',
     '/api/upload',
-    // Catch-all for any other API routes
+    '/api/autumn',
+    '/api/autumn/:path*',
     '/api/:path*',
   ],
 };

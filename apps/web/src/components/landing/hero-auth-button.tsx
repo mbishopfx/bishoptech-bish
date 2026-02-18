@@ -20,19 +20,19 @@ export default function HeroAuthButton({
   return (
     <>
       <AuthLoading>
-        <Button variant="accent" size="lg" className="font-semibold text-white pointer-events-none" disabled>
+        <Button variant="accent" size="lg" className="pointer-events-none" disabled>
           <span className="invisible">{ctaLoading}</span>
         </Button>
       </AuthLoading>
 
       <Authenticated>
-        <Button asChild variant="accent" size="lg" className="font-semibold text-white">
+        <Button asChild variant="accent" size="lg">
           <Link href={`/${lang}/chat`}>{ctaChat}</Link>
         </Button>
       </Authenticated>
 
       <Unauthenticated>
-        <Button asChild variant="accent" size="lg" className="font-semibold text-white">
+        <Button asChild variant="accent" size="lg">
           <Link href={`/${lang}#pricing`}>{ctaSubscribe}</Link>
         </Button>
       </Unauthenticated>

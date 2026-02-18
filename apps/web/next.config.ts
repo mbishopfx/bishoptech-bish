@@ -1,28 +1,6 @@
 import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 import { withBotId } from "botid/next/config";
-import { existsSync, readFileSync } from "fs";
-import { join } from "path";
-
-// Monorepo: load root .env.local so the app build (run from apps/web) has access to CONVEX_URL, etc.
-const rootEnvLocal = join(__dirname, "../../.env.local");
-if (existsSync(rootEnvLocal)) {
-  const content = readFileSync(rootEnvLocal, "utf-8");
-  for (const line of content.split("\n")) {
-    const trimmed = line.trim();
-    if (trimmed && !trimmed.startsWith("#")) {
-      const eq = trimmed.indexOf("=");
-      if (eq > 0) {
-        const key = trimmed.slice(0, eq).trim();
-        let value = trimmed.slice(eq + 1).trim();
-        if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
-          value = value.slice(1, -1);
-        }
-        if (!(key in process.env)) process.env[key] = value;
-      }
-    }
-  }
-}
 
 const isCI = Boolean(process.env.CI);
 const isVercel = Boolean(process.env.VERCEL);
@@ -39,13 +17,13 @@ const nextConfig: NextConfig = {
   reactCompiler: true,
   experimental: {
     optimizePackageImports: ["lucide-react"],
-    turbopackFileSystemCacheForDev: true,
+    turbopackFileSystemCacheForDev: false,
   },
   devIndicators: false,
   typescript: {
     ignoreBuildErrors: true,
   },
-  transpilePackages: ["@rift/utils", "shiki"],
+  transpilePackages: ["@rift/ui", "@rift/utils", "shiki"],
   serverExternalPackages: ["langium", "@mermaid-js/parser"],
   images: {
     remotePatterns: [

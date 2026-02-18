@@ -327,13 +327,13 @@ export function MembersListWithShell({
               )}
               
               <div className="flex justify-end pt-2 gap-2">
-                <Button type="button" onClick={() => setIsUpdateRoleOpen(false)} className="cursor-pointer rounded-lg">
+                <Button type="button" onClick={() => setIsUpdateRoleOpen(false)}>
                   Cancelar
                 </Button>
                 <Button 
                   type="submit" 
                   disabled={isUpdating}
-                  className="cursor-pointer rounded-lg font-medium gap-2 min-w-[120px]"
+                  className="gap-2 min-w-[120px]"
                 >
                   {isUpdating ? "Actualizando" : "Actualizar"}
                 </Button>
@@ -364,14 +364,14 @@ export function MembersListWithShell({
             )}
 
             <div className="flex justify-end pt-4 gap-2">
-              <Button type="button" onClick={() => setIsRemoveOpen(false)} className="cursor-pointer rounded-lg">
+              <Button type="button" onClick={() => setIsRemoveOpen(false)}>
                 Cancelar
               </Button>
               <Button 
                 variant="destructive"
                 onClick={handleRemoveMember}
                 disabled={isRemoving}
-                className="cursor-pointer rounded-lg font-medium gap-2 min-w-[120px]"
+                className="gap-2 min-w-[120px]"
               >
                 {isRemoving ? "Eliminando" : "Eliminar"}
               </Button>
@@ -401,14 +401,14 @@ export function MembersListWithShell({
             )}
 
             <div className="flex justify-end pt-4 gap-2">
-              <Button type="button" onClick={() => setIsRevokeOpen(false)} className="cursor-pointer rounded-lg">
+              <Button type="button" onClick={() => setIsRevokeOpen(false)}>
                 Cancelar
               </Button>
               <Button 
                 variant="destructive"
                 onClick={handleRevokeInvitation}
                 disabled={isRevoking}
-                className="cursor-pointer rounded-lg font-medium gap-2 min-w-[120px]"
+                className="gap-2 min-w-[120px]"
               >
                 {isRevoking ? "Revocando" : "Revocar"}
               </Button>

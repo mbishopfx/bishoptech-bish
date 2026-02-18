@@ -11,9 +11,6 @@ import { PlanSlug, PricingContext, SubscriptionPlan } from "@/lib/pricing-contex
 import { usePricingContext } from "@/lib/use-pricing-context";
 import { getAutumnBillingPortalUrl } from "@/actions/getAutumnBillingPortalUrl";
 
-const CTA_BUTTON_CLASS =
-  "hover:bg-white hover:text-[color(display-p3_0.1725490196_0.1764705882_0.1882352941/1)] hover:shadow-[rgba(0,0,0,0.1)_0px_0px_0px_1px] relative flex w-full cursor-pointer select-none items-center justify-center whitespace-nowrap bg-white text-sm leading-4 tracking-normal duration-[0.17s] text-[color(display-p3_0.1725490196_0.1764705882_0.1882352941/1)] dark:bg-zinc-900 dark:text-white dark:hover:bg-zinc-800 shadow-[rgba(0,0,0,0.05)_0px_0px_0px_1px] rounded-[50px] h-10 border-none disabled:opacity-50 disabled:cursor-not-allowed";
-
 type PlanButtonConfig = {
   label: string;
   href?: string;
@@ -90,7 +87,7 @@ export function PricingPlanButton({
   if (resolvedContext.isLoading) {
     return (
       <div className="flex w-full flex-col gap-3">
-        <Button className={CTA_BUTTON_CLASS} disabled aria-busy="true" aria-live="polite">
+        <Button variant="secondary" size="lg" className="w-full" disabled aria-busy="true" aria-live="polite">
           {labels.loading}
         </Button>
       </div>
@@ -104,7 +101,7 @@ export function PricingPlanButton({
   if (!linkHref && !isManageBillingFlow) {
     return (
       <div className="flex w-full flex-col gap-3">
-        <Button className={CTA_BUTTON_CLASS} disabled>
+        <Button variant="secondary" size="lg" className="w-full" disabled>
           {cta.label}
         </Button>
       </div>
@@ -152,7 +149,9 @@ export function PricingPlanButton({
     <div className="flex w-full flex-col gap-3">
       {isManageBillingFlow ? (
         <Button
-          className={CTA_BUTTON_CLASS}
+          variant="secondary"
+          size="lg"
+          className="w-full"
           onClick={handleOpenBillingPortal}
           disabled={isPortalLoading}
           aria-busy={isPortalLoading}
@@ -161,7 +160,9 @@ export function PricingPlanButton({
         </Button>
       ) : isUpgradeFlow ? (
         <Button
-          className={CTA_BUTTON_CLASS}
+          variant="secondary"
+          size="lg"
+          className="w-full"
           onClick={handleUpgradeClick}
           disabled={isCheckoutLoading}
           aria-busy={isCheckoutLoading}
@@ -169,7 +170,7 @@ export function PricingPlanButton({
           {cta.label}
         </Button>
       ) : (
-        <Button className={CTA_BUTTON_CLASS} asChild>
+        <Button variant="secondary" size="lg" className="w-full" asChild>
           {cta.external ? (
             <a href={linkHref!}>{cta.label}</a>
           ) : (

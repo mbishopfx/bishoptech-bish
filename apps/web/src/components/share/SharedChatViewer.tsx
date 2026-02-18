@@ -267,10 +267,10 @@ export default function SharedChatViewer({
             <div className="absolute right-6 top-1/2 transform -translate-y-1/2 z-10">
               <div className="flex items-center space-x-4">
                 <Unauthenticated>
-                  <Button {...NAV_TEXT_BUTTON_PROPS} asChild className="cursor-pointer">
+                  <Button {...NAV_TEXT_BUTTON_PROPS} asChild>
                     <Link href="/sign-in" onMouseEnter={handleSignInHover}>Iniciar sesión</Link>
                   </Button>
-                  <Button {...NAV_CTA_BUTTON_PROPS} asChild className="cursor-pointer">
+                  <Button {...NAV_CTA_BUTTON_PROPS} asChild>
                     <Link href="/sign-up" onMouseEnter={handleSignUpHover}>Registrarse</Link>
                   </Button>
                 </Unauthenticated>
@@ -300,7 +300,6 @@ export default function SharedChatViewer({
                   title="Más opciones"
                   aria-label="Más opciones"
                   aria-expanded={isMobileMenuOpen}
-                  className="cursor-pointer"
                 >
                   <MoreVertical className="h-4 w-4" />
                 </Button>
@@ -314,7 +313,7 @@ export default function SharedChatViewer({
                   <Button
                     {...NAV_TEXT_BUTTON_PROPS}
                     onClick={handleCopy}
-                    className="w-full justify-start gap-2 cursor-pointer"
+                    className="w-full justify-start gap-2"
                   >
                     {isCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                     {isCopied ? "Copiado" : "Copiar conversación"}
@@ -323,7 +322,7 @@ export default function SharedChatViewer({
                   <Button
                     {...NAV_TEXT_BUTTON_PROPS}
                     onClick={handlePrint}
-                    className="w-full justify-start gap-2 cursor-pointer"
+                    className="w-full justify-start gap-2"
                   >
                     <Printer className="h-4 w-4" />
                     Imprimir
@@ -333,7 +332,7 @@ export default function SharedChatViewer({
                     {...NAV_TEXT_BUTTON_PROPS}
                     onClick={() => handleClone()}
                     disabled={isCloning}
-                    className="w-full justify-start gap-2 cursor-pointer"
+                    className="w-full justify-start gap-2"
                   >
                     <GitFork className="h-4 w-4" />
                     {isCloning ? "Clonando..." : "Clonar chat"}
@@ -344,14 +343,14 @@ export default function SharedChatViewer({
                       <Button
                         {...NAV_TEXT_BUTTON_PROPS}
                         asChild
-                        className="w-full justify-start cursor-pointer"
+                        className="w-full justify-start"
                       >
                         <Link href="/sign-in" onMouseEnter={handleSignInHover}>Iniciar sesión</Link>
                       </Button>
                       <Button
                         {...NAV_CTA_BUTTON_PROPS}
                         asChild
-                        className="w-full justify-start cursor-pointer"
+                        className="w-full justify-start"
                       >
                         <Link href="/sign-up" onMouseEnter={handleSignUpHover}>Registrarse</Link>
                       </Button>

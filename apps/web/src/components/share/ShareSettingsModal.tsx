@@ -327,7 +327,7 @@ export function ShareSettingsModal({
         </div>
 
         <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={onClose} className="cursor-pointer">
+          <Button variant="outline" onClick={onClose}>
             Cerrar
           </Button>
         </DialogFooter>

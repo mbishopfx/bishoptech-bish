@@ -165,7 +165,7 @@ export default function PerformanceSection({ dict, lang }: PerformanceSectionPro
                   <div className="w-full overflow-hidden">
                     <ModelsMarquee modelDescriptions={dict.modelDescriptions} />
                   </div>
-                  <Button asChild variant="accent" size="lg" className="font-semibold text-white">
+                  <Button asChild variant="accent" size="lg">
                     <Link href="/models" className="inline-flex items-center gap-2" aria-label={dict.viewAllModelsAria}>
                       {dict.viewAllModels}
                       <ArrowRightIcon className="size-4" />

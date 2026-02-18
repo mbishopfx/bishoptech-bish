@@ -102,14 +102,13 @@ export function InstructionCard({
 
       {isOwner && (
         <div className="absolute right-4 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 dark:bg-popover-main/90 backdrop-blur-sm p-1 rounded-lg border shadow-sm">
-          <Button variant="ghost" size="icon" onClick={onEdit} className="h-7 w-7 rounded-md hover:bg-muted hover:text-foreground dark:hover:text-popover-text">
+          <Button variant="ghost" size="iconSm" onClick={onEdit}>
             <Edit2 className="h-3.5 w-3.5" />
           </Button>
           <Button
             variant="ghost"
-            size="icon"
+            size="iconSm"
             onClick={() => setDeleteDialogOpen(true)}
-            className="h-7 w-7 rounded-md text-destructive hover:text-destructive hover:bg-destructive/10"
           >
             <Trash2 className="h-3.5 w-3.5" />
           </Button>

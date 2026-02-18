@@ -215,7 +215,7 @@ export default function AdminDashboardClient() {
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-popover-secondary/40">
+              <Button variant="ghost" size="icon">
                 <span className="sr-only">Open menu</span>
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
@@ -267,7 +267,7 @@ export default function AdminDashboardClient() {
         <CardContent className="py-8">
           <div className="text-center">
             <p className="text-destructive mb-4">{error}</p>
-            <Button onClick={fetchOrganizations} variant="outline" className="dark:border-border/60 dark:text-popover-text">
+            <Button onClick={fetchOrganizations} variant="outline">
               <RefreshCw className="h-4 w-4 mr-2" />
               Retry
             </Button>
@@ -283,7 +283,7 @@ export default function AdminDashboardClient() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Organizations</CardTitle>
-            <Button onClick={fetchOrganizations} variant="outline" size="sm" className="dark:border-border/60 dark:text-popover-text">
+            <Button onClick={fetchOrganizations} variant="outline" size="sm">
               <RefreshCw className="h-4 w-4 mr-2" />
               Refresh
             </Button>

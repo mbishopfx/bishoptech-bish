@@ -417,10 +417,10 @@ export function MembersList({ initialData, currentUserId, seatQuantity, totalMem
                       </DialogDescription>
                     </div>
                     <div className="flex items-center gap-4 pt-4">
-                      <Button onClick={resetInviteState} className="cursor-pointer rounded-lg font-medium">
+                      <Button onClick={resetInviteState}>
                         Invitar a más
                       </Button>
-                      <Button onClick={closeInviteDialog} className="cursor-pointer rounded-lg font-medium min-w-[100px]">
+                      <Button onClick={closeInviteDialog} className="min-w-[100px]">
                         Cerrar
                       </Button>
                     </div>
@@ -483,7 +483,7 @@ export function MembersList({ initialData, currentUserId, seatQuantity, totalMem
                           invitationForms.length >= 10 || 
                           (typeof seatQuantity === 'number' && (totalMemberCount + invitationForms.length) >= seatQuantity)
                       }
-                      className="cursor-pointer rounded-lg font-medium gap-2 min-w-[150px]"
+                      className="gap-2 min-w-[150px]"
                     >
                       <PlusIcon className="size-4" />
                       Añadir más
@@ -501,7 +501,7 @@ export function MembersList({ initialData, currentUserId, seatQuantity, totalMem
                       <Button 
                         type="submit" 
                         disabled={isInviting}
-                        className="cursor-pointer rounded-lg font-medium gap-2 min-w-[150px]"
+                        className="gap-2 min-w-[150px]"
                       >
                         {isInviting ? "Enviando" : "Enviar Invitaciones"}
                       </Button>
@@ -556,13 +556,13 @@ export function MembersList({ initialData, currentUserId, seatQuantity, totalMem
               )}
               
               <div className="flex justify-end pt-2 gap-2">
-                <Button type="button" onClick={() => setIsUpdateRoleOpen(false)} className="cursor-pointer rounded-lg">
+                <Button type="button" onClick={() => setIsUpdateRoleOpen(false)}>
                   Cancelar
                 </Button>
                 <Button 
                   type="submit" 
                   disabled={isUpdating}
-                  className="cursor-pointer rounded-lg font-medium gap-2 min-w-[120px]"
+                  className="gap-2 min-w-[120px]"
                 >
                   {isUpdating ? "Actualizando" : "Actualizar"}
                 </Button>
@@ -593,14 +593,14 @@ export function MembersList({ initialData, currentUserId, seatQuantity, totalMem
             )}
 
             <div className="flex justify-end pt-4 gap-2">
-              <Button type="button" onClick={() => setIsRemoveOpen(false)} className="cursor-pointer rounded-lg">
+              <Button type="button" onClick={() => setIsRemoveOpen(false)}>
                 Cancelar
               </Button>
               <Button 
                 variant="destructive"
                 onClick={handleRemoveMember}
                 disabled={isRemoving}
-                className="cursor-pointer rounded-lg font-medium gap-2 min-w-[120px]"
+                className="gap-2 min-w-[120px]"
               >
                 {isRemoving ? "Eliminando" : "Eliminar"}
               </Button>
@@ -630,15 +630,15 @@ export function MembersList({ initialData, currentUserId, seatQuantity, totalMem
             )}
 
             <div className="flex justify-end pt-4 gap-2">
-              <Button type="button" onClick={() => setIsRevokeOpen(false)} className="cursor-pointer rounded-lg">
-                Cancelar
-              </Button>
-              <Button 
-                variant="destructive"
-                onClick={handleRevokeInvitation}
-                disabled={isRevoking}
-                className="cursor-pointer rounded-lg font-medium gap-2 min-w-[120px]"
-              >
+<Button type="button" onClick={() => setIsRevokeOpen(false)}>
+              Cancelar
+            </Button>
+            <Button 
+              variant="destructive"
+              onClick={handleRevokeInvitation}
+              disabled={isRevoking}
+              className="gap-2 min-w-[120px]"
+            >
                 {isRevoking ? "Revocando" : "Revocar"}
               </Button>
             </div>

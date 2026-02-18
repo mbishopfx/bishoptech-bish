@@ -187,7 +187,7 @@ export function PasswordChangeModal({ hasPassword, isPending: parentIsPending }:
         onOpenChange={setIsPasswordPreDialogOpen}
       >
         <DialogTrigger asChild>
-          <Button type="button" variant="accent" className="gap-2 border border-border/60 shadow-sm shadow-black/5 dark:shadow-black/30 text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed">
+          <Button type="button" variant="accent" className="gap-2">
             Cambiar contraseña
           </Button>
         </DialogTrigger>
@@ -215,7 +215,6 @@ export function PasswordChangeModal({ hasPassword, isPending: parentIsPending }:
                   variant="outline"
                   onClick={() => setIsPasswordPreDialogOpen(false)}
                   disabled={isLoading}
-                  className="cursor-pointer rounded-lg font-medium"
                 >
                   Cancelar
                 </Button>
@@ -279,8 +278,8 @@ export function PasswordChangeModal({ hasPassword, isPending: parentIsPending }:
               <div className="flex items-center gap-4 pt-4">
                 <Button
                   onClick={handleClosePasswordDialog}
-                  className="gap-2 border border-border/60 shadow-sm shadow-black/5 dark:shadow-black/30 text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-medium min-w-[100px]"
                   variant="accent"
+                  className="gap-2 min-w-[100px]"
                 >
                   Cerrar
                 </Button>
@@ -336,15 +335,15 @@ export function PasswordChangeModal({ hasPassword, isPending: parentIsPending }:
                         variant="outline"
                         onClick={handleClosePasswordDialog}
                         disabled={isLoading}
-                        className="cursor-pointer rounded-lg font-medium mr-2"
+                        className="mr-2"
                       >
                         Cancelar
                       </Button>
                       <Button
                         type="button"
-                        disabled={isLoading || passwordStepUpCode.length !== 6}
-                        className="gap-2 border border-border/60 shadow-sm shadow-black/5 dark:shadow-black/30 text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-medium min-w-[150px]"
                         variant="accent"
+                        disabled={isLoading || passwordStepUpCode.length !== 6}
+                        className="gap-2 min-w-[150px]"
                         onClick={verifyPasswordStepUp}
                       >
                         {isLoading ? "Verificando..." : "Verificar"}
@@ -506,15 +505,15 @@ export function PasswordChangeModal({ hasPassword, isPending: parentIsPending }:
                       variant="outline"
                       onClick={handleClosePasswordDialog}
                       disabled={isLoading}
-                      className="cursor-pointer rounded-lg font-medium mr-2"
+                      className="mr-2"
                     >
                       Cancelar
                     </Button>
                     <Button
                       type="submit"
-                      disabled={isLoading || !isPasswordValid || !isConfirmValid}
-                      className="gap-2 border border-border/60 shadow-sm shadow-black/5 dark:shadow-black/30 text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-medium min-w-[150px]"
                       variant="accent"
+                      disabled={isLoading || !isPasswordValid || !isConfirmValid}
+                      className="gap-2 min-w-[150px]"
                     >
                       {isLoading ? "Guardando..." : "Guardar cambios"}
                     </Button>
