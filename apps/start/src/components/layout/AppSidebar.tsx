@@ -1,9 +1,9 @@
+import { ThemeToggle } from '@/components/theme/ThemeToggle'
 import { Avatar, AvatarFallback } from '@rift/ui/avatar'
 import { Button } from '@rift/ui/button'
 import { Link, useLocation } from '@tanstack/react-router'
-import { Compass, Moon, Network, Sun } from 'lucide-react'
+import { Compass, Network } from 'lucide-react'
 import type { ComponentType } from 'react'
-import { useTheme } from '@rift/ui/hooks/useTheme'
 
 const SIDEBAR_GROUPS_WIDTH = 64
 const SIDEBAR_AREAS_WIDTH = 240
@@ -17,10 +17,8 @@ const SIDEBAR_STYLE: React.CSSProperties = {
 
 export const AppSidebar: ComponentType = () => {
   const { pathname } = useLocation()
-  const { resolvedTheme, setTheme, mounted } = useTheme()
   const shortLinksActive = pathname === '/' || pathname.startsWith('/links')
   const partnerProgramActive = pathname.startsWith('/program')
-  const isDark = mounted && resolvedTheme === 'dark'
 
   return (
     <div
@@ -55,25 +53,15 @@ export const AppSidebar: ComponentType = () => {
               <Network className="size-5 text-content-default" />
             </Link>
           </Button>
-          <Button
-            variant="sidebarIcon"
-            size="iconSidebar"
-            aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-            title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-            onClick={() => setTheme(isDark ? 'light' : 'dark')}
-          >
-            {isDark ? (
-              <Sun className="size-5 text-content-default" />
-            ) : (
-              <Moon className="size-5 text-content-default" />
-            )}
+        </div>
+        <div className="flex flex-col items-center gap-3">
+          <ThemeToggle />
+          <Button variant="sidebarIcon" size="iconSidebar" aria-label="User menu">
+            <Avatar size="xs">
+              <AvatarFallback />
+            </Avatar>
           </Button>
         </div>
-        <Button variant="sidebarIcon" size="iconSidebar" aria-label="User menu">
-          <Avatar size="xs">
-            <AvatarFallback />
-          </Avatar>
-        </Button>
       </nav>
       <div className="size-full overflow-hidden py-2 pr-2">
         <div className="scrollbar-hide relative flex h-full w-[calc(var(--sidebar-areas-width)-0.5rem)] flex-col overflow-y-auto overflow-x-hidden rounded-xl bg-bg-subtle">
