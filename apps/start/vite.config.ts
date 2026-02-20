@@ -8,6 +8,9 @@ import viteReact from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
 const config = defineConfig({
+  server: {
+    allowedHosts: ['omarchy-1.echo-tailor.ts.net'],
+  },
   plugins: [
     devtools(),
     tsconfigPaths({ projects: ['./tsconfig.json'] }),

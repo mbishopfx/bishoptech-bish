@@ -1,7 +1,8 @@
 {
   "mcpServers": {
-    "packrun": {
-      "url": "https://mcp.packrun.dev/mcp"
+    "Railway": {
+      "command": "npx",
+      "args": ["-y", "@railway/mcp-server"]
     }
   }
 }
