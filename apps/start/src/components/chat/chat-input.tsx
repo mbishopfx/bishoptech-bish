@@ -1,17 +1,16 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { Mic, Plus } from 'lucide-react'
 import { useChat } from './chat-context'
 import {
   PromptInputRoot,
   PromptInputTextarea,
   PromptInputToolbar,
-  PromptInputSubmit,
   PromptInputThinking,
   PromptInputError,
+  PromptInputAttachments,
 } from './prompt-input'
-import { cn } from '@rift/utils'
+import { useFileAttachments } from '../../hooks/chat/upload'
 
 const PLACEHOLDER = 'Outline your product, flow, or idea…'
 
@@ -19,6 +18,14 @@ export function ChatInput() {
   const { sendMessage, status, stop, error } = useChat()
   const [input, setInput] = useState('')
   const [errorDismissed, setErrorDismissed] = useState(false)
+
+  // File upload: images and PDF, max 10 files.
+  const {
+    files,
+    handleFileSelect,
+    handleRemoveFile,
+    canAddMore,
+  } = useFileAttachments({ maxFiles: 10 })
 
   const isBusy = status === 'submitted' || status === 'streaming'
   const isEmpty = !input.trim()
@@ -31,6 +38,7 @@ export function ChatInput() {
   }, [error])
 
   const handleDismissError = useCallback(() => setErrorDismissed(true), [])
+
   const handleSubmit = useCallback(
     (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault()
@@ -42,20 +50,27 @@ export function ChatInput() {
     [input, isBusy, sendMessage]
   )
 
+  const topSlot = (
+    <>
+      {files.length > 0 && (
+        <PromptInputAttachments files={files} onRemove={handleRemoveFile} />
+      )}
+      {showError ? (
+        <PromptInputError
+          error={errorMessage}
+          onDismiss={handleDismissError}
+        />
+      ) : (
+        <PromptInputThinking isVisible={isBusy} onCancel={stop} />
+      )}
+    </>
+  )
+
   return (
     <PromptInputRoot
       onSubmit={handleSubmit}
       className="w-full"
-      slots={{
-        top: showError ? (
-          <PromptInputError
-            error={errorMessage}
-            onDismiss={handleDismissError}
-          />
-        ) : (
-          <PromptInputThinking isVisible={isBusy} onCancel={stop} />
-        ),
-      }}
+      slots={{ top: topSlot }}
     >
       <PromptInputTextarea
         value={input}
@@ -65,33 +80,14 @@ export function ChatInput() {
         aria-label="Message"
       />
 
-      <PromptInputToolbar>
-        <button
-          type="button"
-          className="flex size-9 shrink-0 items-center justify-center rounded-lg text-content-muted outline-none transition-colors hover:bg-bg-subtle hover:text-content-default focus-visible:ring-2 focus-visible:ring-border-emphasis"
-          aria-label="Attach file"
-        >
-          <Plus className="size-4" aria-hidden />
-        </button>
-        <div className="flex-1" />
-        <button
-          type="button"
-          className="flex size-9 shrink-0 items-center justify-center rounded-lg text-content-muted outline-none transition-colors hover:bg-bg-subtle hover:text-content-default focus-visible:ring-2 focus-visible:ring-border-emphasis"
-          aria-label="Voice input"
-        >
-          <Mic className="size-4 stroke-2 text-content-muted" aria-hidden />
-        </button>
-        <PromptInputSubmit
-          status={status}
-          onStop={stop}
-          disabled={isEmpty || isBusy}
-          className={cn(
-            'size-9 shrink-0 rounded-lg border-0 !bg-bg-muted !text-content-emphasis',
-            'shadow-sm hover:!bg-bg-muted/90 focus-visible:ring-2 focus-visible:ring-border-emphasis',
-            '[&_svg]:size-4'
-          )}
-        />
-      </PromptInputToolbar>
+      <PromptInputToolbar
+        canAddMore={canAddMore}
+        onFileSelect={handleFileSelect}
+        status={status}
+        onStop={stop}
+        isEmpty={isEmpty}
+        isBusy={isBusy}
+      />
     </PromptInputRoot>
   )
 }
