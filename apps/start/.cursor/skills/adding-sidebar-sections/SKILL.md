@@ -22,9 +22,9 @@ Example: Chat lives in `components/chat/` (chat-sidebar.tsx, chat-context.tsx, c
 ## Sidebar structure (how it works)
 
 - **NAV_AREAS** in `components/layout/sidebar/app-sidebar-nav.config.tsx` maps an area key to a function `(data) => SidebarNavAreaConfig`.
-- Each config has: **title**, **href**, **icon**, **description**, **content** (array of sections), and optionally **ContentComponent**.
+- Each config has: **title**, **href**, **icon**, **description**, optional **content** (array of sections; required for static areas, optional when **ContentComponent** is set), and optionally **ContentComponent**.
 - **Static-only areas** (e.g. Writer, Settings): no `ContentComponent`; the panel renders `content` via `SidebarAreaLayout`.
-- **Dynamic areas** (e.g. Chat): provide **ContentComponent**. The panel renders that component instead of `content`; the component uses `SidebarAreaLayout` and builds sections from static data + dynamic data (e.g. Zero `useQuery`).
+- **Dynamic areas** (e.g. Chat): provide **ContentComponent**. The panel renders it with `pathname` only. The component lives in the same file as the config and uses the module-scope **staticSections** (same source of truth as `chatNavStaticConfig().content`) plus dynamic data (e.g. Zero `useQuery`), then renders `SidebarAreaLayout`. No prop drilling: static sections stay colocated.
 
 A **section** is `{ name?: string, items: NavItemType[] }`. Each **item** is `{ name, href, icon, exact?, isActive? }`. Icons come from `lucide-react`.
 
@@ -75,8 +75,8 @@ export function dmsNavArea() {
 - Define **HREF**, **AREA_KEY**, **isXPath**.
 - Define **staticSections** (array of `NavSection`) and optional **sidebar title** as constants.
 - Export **xNavStaticConfig()** returning `{ title, href, icon, description, content: staticSections }`.
-- Export **XSidebarContent({ pathname })** (client component): run `useQuery` (or fetch), map to `NavItemType[]`, build one dynamic section (e.g. "Conversations"), then `sections = [...staticSections, dynamicSection]`. Render `<SidebarAreaLayout title={...} sections={sections} pathname={pathname} />`. Treat query results as immutable.
-- Export **xNavArea()** returning `{ ...xNavStaticConfig(), content: staticSections, ContentComponent: XSidebarContent }`.
+- Export **XSidebarContent({ pathname })** (client component): use the module-scope **staticSections** (same constant as in xNavStaticConfig). Run `useQuery` (or fetch), map to `NavItemType[]`, build one dynamic section (e.g. "Conversations"), then `sections = [...staticSections, dynamicSection]`. Render `<SidebarAreaLayout title={...} sections={sections} pathname={pathname} />`. Treat query results as immutable. Single source of truth: one `staticSections` constant in the file.
+- Export **xNavArea()** returning `{ ...xNavStaticConfig(), ContentComponent: XSidebarContent }` (the spread already includes `content`).
 
 ### 2. Export from the section index
 
@@ -110,7 +110,7 @@ Use the same param name in the route and in sidebar item hrefs (e.g. `threadId`,
 - [ ] Exports: **AREA_KEY**, **HREF**, **isXPath**, **xNavArea** (and **xNavStaticConfig** + **XSidebarContent** if dynamic).
 - [ ] **components/{section}/index.ts** re-exports the public API.
 - [ ] **app-sidebar-nav.config.tsx**: area in NAV_AREAS and in getCurrentArea.
-- [ ] If dynamic: ContentComponent uses **SidebarAreaLayout**, same **staticSections** as source of truth, and one dynamic section; Zero results not mutated.
+- [ ] If dynamic: ContentComponent accepts **{ pathname }**, uses module-scope **staticSections** and **SidebarAreaLayout** with `[...staticSections, dynamicSection]`, one dynamic section; Zero results not mutated.
 - [ ] If list/detail: layout route + index route + `$param` route under **routes/(app)/_layout/{section}/**.
 
 ## Reference files

@@ -72,7 +72,6 @@ export function ChatSidebarContent({ pathname }: { pathname: string }) {
 export function chatNavArea() {
   return {
     ...chatNavStaticConfig(),
-    content: staticSections,
     ContentComponent: ChatSidebarContent,
   }
 }

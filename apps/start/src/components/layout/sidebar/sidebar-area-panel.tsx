@@ -63,7 +63,7 @@ function Area({
       ) : (
         <SidebarAreaLayout
           title={title}
-          sections={content}
+          sections={content ?? []}
           pathname={data.pathname}
         />
       )}
