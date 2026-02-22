@@ -50,6 +50,48 @@ function toUIMessageFromStoredMessage(message: {
   }
 }
 
+function textFromUIMessage(message: ChatUIMessage): string {
+  return message.parts
+    .filter(
+      (
+        part,
+      ): part is Extract<typeof part, { type: 'text'; text: string }> =>
+        part.type === 'text' && typeof (part as { text?: unknown }).text === 'string',
+    )
+    .map((part) => part.text)
+    .join('')
+}
+
+function fingerprintMessages(messages: readonly ChatUIMessage[]): string {
+  return messages
+    .map((message) => `${message.id}:${message.role}:${textFromUIMessage(message)}`)
+    .join('\u0001')
+}
+
+function mergeStoredMessagesWithLocal(
+  localMessages: readonly ChatUIMessage[],
+  storedMessages: readonly ChatUIMessage[],
+): ChatUIMessage[] {
+  const localById = new Map(localMessages.map((message) => [message.id, message]))
+
+  return storedMessages.map((storedMessage) => {
+    const localMessage = localById.get(storedMessage.id)
+    if (!localMessage) return storedMessage
+    if (localMessage.role !== storedMessage.role) return storedMessage
+
+    const storedText = textFromUIMessage(storedMessage)
+    const localText = textFromUIMessage(localMessage)
+
+    // Keep whichever assistant payload is more complete to avoid text regressions
+    // when Zero snapshots momentarily lag behind streamed UI state.
+    if (storedMessage.role === 'assistant' && localText.length > storedText.length) {
+      return localMessage
+    }
+
+    return storedMessage
+  })
+}
+
 const DEFAULT_THREAD_TITLE = 'Nuevo Chat'
 const OPTIMISTIC_THREAD_CREATED_EVENT = 'chat:thread-created'
 
@@ -76,12 +118,11 @@ export function ChatProvider({
   const navigate = useNavigate()
   // Mutable refs avoid stale values inside async callbacks owned by the transport hook.
   const threadIdRef = useRef<string | undefined>(threadId)
+  const previousThreadIdRef = useRef<string | undefined>(threadId)
   // Prevents duplicate thread creation during quick repeated submissions.
   const inFlightThreadRef = useRef<Promise<string> | null>(null)
   // First send after optimistic creation can ask server to create-if-missing.
   const createIfMissingRef = useRef(false)
-  // Tracks which thread history has already been copied into useChat state.
-  const hydratedThreadRef = useRef<string | undefined>(undefined)
   const [localError, setLocalError] = useState<Error | null>(null)
   const [storedMessages, storedMessagesResult] = useQuery(
     queries.messages.byThread({ threadId: threadId ?? '' }),
@@ -114,30 +155,52 @@ export function ChatProvider({
 
   useEffect(() => {
     threadIdRef.current = threadId
+    const previousThreadId = previousThreadIdRef.current
 
     // Reset ephemeral UI state when the route switches to a different thread.
-    if (threadId !== hydratedThreadRef.current) {
+    if (threadId !== previousThreadId) {
       setMessages([])
+      setLocalError(null)
     }
 
     if (!threadId) {
       createIfMissingRef.current = false
-      hydratedThreadRef.current = undefined
-      setMessages([])
     }
-    setLocalError(null)
+
+    previousThreadIdRef.current = threadId
   }, [threadId, setMessages])
 
   useEffect(() => {
     if (!threadId) return
-    if (hydratedThreadRef.current === threadId) return
     if (storedMessagesResult.type !== 'complete') return
     // Never clobber messages while a new answer is actively streaming.
     if (status === 'submitted' || status === 'streaming') return
 
-    setMessages(storedMessages.map(toUIMessageFromStoredMessage))
-    hydratedThreadRef.current = threadId
-  }, [threadId, storedMessages, storedMessagesResult.type, status, setMessages])
+    const nextMessages = mergeStoredMessagesWithLocal(
+      messages,
+      storedMessages.map(toUIMessageFromStoredMessage),
+    )
+
+    // Zero may return a completed but stale snapshot (for example, empty) while
+    // optimistic/streaming messages are still only in local useChat state.
+    if (messages.length > 0 && nextMessages.length < messages.length) return
+
+    if (
+      nextMessages.length === messages.length &&
+      fingerprintMessages(nextMessages) === fingerprintMessages(messages)
+    ) {
+      return
+    }
+
+    setMessages(nextMessages)
+  }, [
+    threadId,
+    storedMessages,
+    storedMessagesResult.type,
+    status,
+    messages,
+    setMessages,
+  ])
 
   const sendMessage = useCallback<ChatContextValue['sendMessage']>(
     async (message, options) => {

@@ -91,9 +91,7 @@ export const ChatOrchestratorLive = Layer.effect(
         // This ID is generated server-side so start/finalize writes are deterministic
         // and idempotent even when transport retries happen.
         const assistantMessageId = crypto.randomUUID()
-        let assistantStarted = false
         let assistantFinalized = false
-        let firstTextChunkSeen = false
         let bufferedAssistantText = ''
 
         const finalizeAssistant = (input: { ok: boolean; errorMessage?: string }) => {
@@ -139,16 +137,9 @@ export const ChatOrchestratorLive = Layer.effect(
           requestId,
           tools: toolRegistry.tools,
           onChunk: (chunk: unknown) => {
+            if (!chunk || typeof chunk !== 'object') return
             const candidate = chunk as { type?: unknown; text?: unknown }
-            if (
-              typeof candidate === 'object' &&
-              candidate !== null &&
-              candidate.type === 'text-delta' &&
-              typeof candidate.text === 'string'
-            ) {
-              if (!firstTextChunkSeen) {
-                firstTextChunkSeen = true
-              }
+            if (candidate.type === 'text-delta' && typeof candidate.text === 'string') {
               bufferedAssistantText += candidate.text
             }
           },
@@ -183,40 +174,6 @@ export const ChatOrchestratorLive = Layer.effect(
           },
           messageMetadata: ({ part }: { part: any }) => {
             if (part.type === 'start') {
-              // Persist assistant row exactly when streaming begins so the DB
-              // reflects generation state even if the stream later fails.
-              if (!assistantStarted) {
-                assistantStarted = true
-                void Effect.runPromise(
-                  messageStore
-                    .startAssistantMessage({
-                      threadDbId: threadAccess.dbId,
-                      threadId,
-                      userId,
-                      assistantMessageId,
-                      model: toolRegistry.model,
-                      requestId,
-                    })
-                    .pipe(
-                      Effect.catch((error) =>
-                        emitWideErrorEvent({
-                          eventName: 'chat.stream.persist.failed',
-                          route,
-                          requestId,
-                          userId,
-                          threadId,
-                          model: toolRegistry.model,
-                          errorCode: chatErrorCodeFromTag(error._tag),
-                          errorTag: error._tag,
-                          message: error.message,
-                          latencyMs: Date.now() - startedAt,
-                          cause: 'assistant_start',
-                        }),
-                      ),
-                    ),
-                )
-              }
-
               return {
                 threadId,
                 requestId,

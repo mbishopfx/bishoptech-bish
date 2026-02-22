@@ -1,5 +1,4 @@
-import { defineMutatorsWithType, defineMutator } from '@rocicorp/zero'
-import { createBuilder } from '@rocicorp/zero'
+import { createBuilder, defineMutatorsWithType, defineMutator } from '@rocicorp/zero'
 import { z } from 'zod'
 import type { Schema } from './schema'
 import { schema } from './schema'
@@ -37,14 +36,6 @@ const createUserMessageArgs = z.object({
   createdAt: z.number(),
   model: z.string(),
   attachmentsIds: z.array(z.string()).optional(),
-})
-
-const startAssistantArgs = z.object({
-  id: z.string(),
-  messageId: z.string(),
-  threadId: z.string(),
-  model: z.string(),
-  createdAt: z.number(),
 })
 
 const finalizeAssistantArgs = z.object({
@@ -109,42 +100,6 @@ export const mutators = defineMutatorsWithType<Schema>()({
         lastMessageAt: args.createdAt,
       })
     }),
-    startAssistant: defineMutator(startAssistantArgs, async ({ tx, args, ctx }) => {
-      // Security boundary: only allow writes into threads owned by the authenticated user.
-      const thread = await tx.run(zql.thread.where('threadId', args.threadId).one())
-      if (!thread || thread.userId !== ctx.userID) {
-        return
-      }
-
-      const existing = await tx.run(
-        zql.message.where('messageId', args.messageId).where('userId', ctx.userID).one(),
-      )
-      if (existing) {
-        return
-      }
-
-      await tx.mutate.message.insert({
-        id: args.id,
-        messageId: args.messageId,
-        threadId: args.threadId,
-        userId: ctx.userID,
-        content: '',
-        status: 'streaming',
-        role: 'assistant',
-        created_at: args.createdAt,
-        updated_at: args.createdAt,
-        model: args.model,
-        attachmentsIds: [],
-      })
-
-      await tx.mutate.thread.update({
-        id: thread.id,
-        generationStatus: 'generation',
-        updatedAt: args.createdAt,
-        lastMessageAt: args.createdAt,
-        model: args.model,
-      })
-    }),
     finalizeAssistant: defineMutator(finalizeAssistantArgs, async ({ tx, args, ctx }) => {
       // Security boundary: the thread must be owned by the authenticated user.
       const thread = await tx.run(zql.thread.where('threadId', args.threadId).one())
@@ -155,22 +110,40 @@ export const mutators = defineMutatorsWithType<Schema>()({
       const existing = await tx.run(
         zql.message.where('messageId', args.messageId).where('userId', ctx.userID).one(),
       )
-      if (!existing || existing.threadId !== args.threadId) {
-        return
+      if (existing && existing.threadId === args.threadId) {
+        await tx.mutate.message.update({
+          id: existing.id,
+          content: args.finalContent,
+          status: args.ok ? 'done' : 'error',
+          updated_at: args.finalizedAt,
+          serverError: args.ok
+            ? undefined
+            : {
+                type: 'stream_error',
+                message: args.errorMessage ?? 'Assistant stream failed',
+              },
+        })
+      } else {
+        await tx.mutate.message.insert({
+          id: args.messageId,
+          messageId: args.messageId,
+          threadId: args.threadId,
+          userId: ctx.userID,
+          content: args.finalContent,
+          status: args.ok ? 'done' : 'error',
+          role: 'assistant',
+          created_at: args.finalizedAt,
+          updated_at: args.finalizedAt,
+          model: thread.model,
+          attachmentsIds: [],
+          serverError: args.ok
+            ? undefined
+            : {
+                type: 'stream_error',
+                message: args.errorMessage ?? 'Assistant stream failed',
+              },
+        })
       }
-
-      await tx.mutate.message.update({
-        id: existing.id,
-        content: args.finalContent,
-        status: args.ok ? 'done' : 'error',
-        updated_at: args.finalizedAt,
-        serverError: args.ok
-          ? undefined
-          : {
-              type: 'stream_error',
-              message: args.errorMessage ?? 'Assistant stream failed',
-            },
-      })
 
       await tx.mutate.thread.update({
         id: thread.id,

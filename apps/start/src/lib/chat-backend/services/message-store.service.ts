@@ -20,14 +20,6 @@ export type MessageStoreServiceShape = {
     readonly model: string
     readonly requestId: string
   }) => Effect.Effect<UIMessage, MessagePersistenceError>
-  readonly startAssistantMessage: (input: {
-    readonly threadDbId: string
-    readonly threadId: string
-    readonly userId: string
-    readonly assistantMessageId: string
-    readonly model: string
-    readonly requestId: string
-  }) => Effect.Effect<void, MessagePersistenceError>
   readonly finalizeAssistantMessage: (input: {
     readonly threadDbId: string
     readonly threadModel: string
@@ -127,53 +119,6 @@ export const MessageStoreZero = Layer.succeed(MessageStoreService, {
       catch: (error) =>
         new MessagePersistenceError({
           message: 'Failed to append user message',
-          requestId,
-          threadId,
-          cause: String(error),
-        }),
-    }),
-  startAssistantMessage: ({ threadDbId, threadId, userId, assistantMessageId, model, requestId }) =>
-    Effect.tryPromise({
-      try: async () => {
-        const db = getZeroDatabase()
-        if (!db) {
-          throw new Error('ZERO_UPSTREAM_DB is not configured')
-        }
-
-        const now = Date.now()
-        await db.transaction(async (tx) => {
-          try {
-          await tx.mutate.message.insert({
-            // Deterministic key makes retries naturally idempotent.
-            id: assistantMessageId,
-            messageId: assistantMessageId,
-            threadId,
-            userId,
-            content: '',
-            status: 'streaming',
-            role: 'assistant',
-            created_at: now,
-            updated_at: now,
-            model,
-            attachmentsIds: [],
-          })
-          } catch {
-            // Duplicate insert on retry; row already exists.
-            return
-          }
-
-          await tx.mutate.thread.update({
-            id: threadDbId,
-            generationStatus: 'generation',
-            updatedAt: now,
-            lastMessageAt: now,
-            model,
-          })
-        })
-      },
-      catch: (error) =>
-        new MessagePersistenceError({
-          message: 'Failed to start assistant message',
           requestId,
           threadId,
           cause: String(error),
@@ -317,32 +262,6 @@ export const MessageStoreMemory = Layer.succeed(MessageStoreService, {
         Effect.fail(
           new MessagePersistenceError({
             message: 'Failed to append user message',
-            requestId,
-            threadId,
-            cause: String(error),
-          }),
-        ),
-      ),
-    ),
-  startAssistantMessage: ({ threadId, assistantMessageId, requestId }) =>
-    Effect.sync(() => {
-      const existing = getMemoryState().messages.get(threadId)
-      if (!existing) {
-        throw new Error('missing thread message store')
-      }
-      const hasAssistant = existing.some((message) => message.id === assistantMessageId)
-      if (!hasAssistant) {
-        existing.push({
-          id: assistantMessageId,
-          role: 'assistant',
-          parts: [{ type: 'text', text: '' }],
-        })
-      }
-    }).pipe(
-      Effect.catch((error) =>
-        Effect.fail(
-          new MessagePersistenceError({
-            message: 'Failed to start assistant message',
             requestId,
             threadId,
             cause: String(error),
