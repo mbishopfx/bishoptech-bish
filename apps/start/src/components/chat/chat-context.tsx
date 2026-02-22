@@ -9,6 +9,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
 } from 'react'
 import type { ReactNode } from 'react'
 import { useNavigate } from '@tanstack/react-router'
@@ -19,12 +20,17 @@ import type { UIMessage } from 'ai'
 import { queries } from '@/integrations/zero'
 import { CACHE_CHAT_NAV } from '@/integrations/zero/query-cache-policy'
 import type { ChatMessageMetadata } from '@/lib/chat-contracts/message-metadata'
+import {
+  getThreadGenerationStatus,
+  getThreadStatusesVersion,
+  subscribeThreadStatuses,
+} from './thread-status-store'
 
 type ChatUIMessage = UIMessage<ChatMessageMetadata>
 
 type ChatContextValue = Pick<
   ReturnType<typeof useAIChat<ChatUIMessage>>,
-  'messages' | 'status' | 'error' | 'stop' | 'setMessages'
+  'messages' | 'status' | 'error' | 'setMessages' | 'resumeStream'
 > & {
   sendMessage: ReturnType<typeof useAIChat<ChatUIMessage>>['sendMessage']
   clear: () => void
@@ -120,6 +126,7 @@ export function ChatProvider({
   // Mutable refs avoid stale values inside async callbacks owned by the transport hook.
   const threadIdRef = useRef<string | undefined>(threadId)
   const previousThreadIdRef = useRef<string | undefined>(threadId)
+  const resumeAttemptedThreadIdRef = useRef<string | undefined>(undefined)
   // Prevents duplicate thread creation during quick repeated submissions.
   const inFlightThreadRef = useRef<Promise<string> | null>(null)
   // First send after optimistic creation can ask server to create-if-missing.
@@ -129,12 +136,24 @@ export function ChatProvider({
     queries.messages.byThread({ threadId: threadId ?? '' }),
     CACHE_CHAT_NAV,
   )
+  const threadStatusesVersion = useSyncExternalStore(
+    subscribeThreadStatuses,
+    getThreadStatusesVersion,
+    getThreadStatusesVersion,
+  )
+  const chatSessionId = threadId ? `chat-ui:${threadId}` : 'chat-ui:composer'
 
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
         api: '/api/chat',
         credentials: 'include',
+        prepareReconnectToStreamRequest: () => ({
+          api: threadIdRef.current
+            ? `/api/chat?threadId=${encodeURIComponent(threadIdRef.current)}`
+            : '/api/chat',
+          credentials: 'include',
+        }),
         prepareSendMessagesRequest: ({ messages }) => ({
           body: {
             threadId: threadIdRef.current,
@@ -151,9 +170,12 @@ export function ChatProvider({
     status,
     error,
     sendMessage: sendAIMessage,
-    stop,
     setMessages,
-  } = useAIChat<ChatUIMessage>({ transport })
+    resumeStream,
+  } = useAIChat<ChatUIMessage>({
+    id: chatSessionId,
+    transport,
+  })
 
   useEffect(() => {
     threadIdRef.current = threadId
@@ -163,14 +185,35 @@ export function ChatProvider({
     if (threadId !== previousThreadId) {
       setMessages([])
       setLocalError(null)
+      resumeAttemptedThreadIdRef.current = undefined
     }
 
     if (!threadId) {
       createIfMissingRef.current = false
+      previousThreadIdRef.current = threadId
+      return
     }
 
     previousThreadIdRef.current = threadId
   }, [threadId, setMessages])
+
+  useEffect(() => {
+    if (!threadId) return
+    if (status === 'submitted' || status === 'streaming') return
+    if (resumeAttemptedThreadIdRef.current === threadId) return
+
+    const generationStatus = getThreadGenerationStatus(threadId)
+    if (!generationStatus) return
+
+    const shouldResume =
+      generationStatus === 'pending' || generationStatus === 'generation'
+    if (!shouldResume) return
+
+    resumeAttemptedThreadIdRef.current = threadId
+    void resumeStream().catch(() => {
+      // Resume is best-effort; fall back to Zero snapshot hydration.
+    })
+  }, [threadId, threadStatusesVersion, status, resumeStream])
 
   useEffect(() => {
     if (!threadId) return
@@ -267,11 +310,11 @@ export function ChatProvider({
       status,
       error: localError ?? error,
       sendMessage,
-      stop,
       setMessages,
+      resumeStream,
       clear,
     }),
-    [messages, status, error, localError, sendMessage, stop, setMessages, clear],
+    [messages, status, error, localError, sendMessage, setMessages, resumeStream, clear],
   )
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>

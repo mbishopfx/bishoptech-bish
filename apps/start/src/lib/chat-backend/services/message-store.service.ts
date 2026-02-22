@@ -109,6 +109,7 @@ export const MessageStoreZero = Layer.succeed(MessageStoreService, {
 
           await tx.mutate.thread.update({
             id: threadDbId,
+            generationStatus: 'generation',
             updatedAt: now,
             lastMessageAt: now,
           })

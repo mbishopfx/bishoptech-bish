@@ -15,7 +15,7 @@ import { useFileAttachments } from '../../hooks/chat/upload'
 import { parseChatApiError } from './chat-error-messages'
 
 export function ChatInput() {
-  const { sendMessage, status, stop, error } = useChat()
+  const { sendMessage, status, error } = useChat()
   const [input, setInput] = useState('')
   const [errorDismissed, setErrorDismissed] = useState(false)
   const [uploadErrorDismissed, setUploadErrorDismissed] = useState(false)
@@ -63,11 +63,10 @@ export function ChatInput() {
       e.preventDefault()
       const text = input.trim()
       if (!text || isBusy) return
+      setInput('')
       void sendMessage({ text })
-        .then(() => {
-          setInput('')
-        })
         .catch(() => {
+          setInput(text)
           // Error is surfaced by chat context.
         })
     },
@@ -87,7 +86,7 @@ export function ChatInput() {
         <PromptInputAttachments files={files} onRemove={handleRemoveFile} />
       )}
       {!activeErrorMessage ? (
-        <PromptInputThinking isVisible={isBusy} onCancel={stop} />
+        <PromptInputThinking isVisible={isBusy} />
       ) : null}
     </>
   )
@@ -110,7 +109,6 @@ export function ChatInput() {
         canAddMore={canAddMore}
         onFileSelect={handleFileSelect}
         status={status}
-        onStop={stop}
         isEmpty={isEmpty}
         isBusy={isBusy}
         onFocusInput={() => inputRef.current?.focus()}

@@ -1,7 +1,7 @@
 'use client'
 
 import { Mic, Plus } from 'lucide-react'
-// Toolbar controls: file picker, stop button, and submit state.
+// Toolbar controls: file picker, voice placeholder, and submit state.
 import type { ChatStatus } from 'ai'
 import { cn } from '@rift/utils'
 import type { HTMLAttributes } from 'react'
@@ -14,7 +14,6 @@ export type PromptInputToolbarProps = HTMLAttributes<HTMLDivElement> & {
   canAddMore: boolean
   onFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void
   status: ChatStatus
-  onStop: () => void
   isEmpty: boolean
   isBusy: boolean
   /** When the user clicks empty space in the toolbar (not a button), focus the prompt input. */
@@ -29,7 +28,6 @@ export function PromptInputToolbar({
   canAddMore,
   onFileSelect,
   status,
-  onStop,
   isEmpty,
   isBusy,
   onFocusInput,
@@ -95,7 +93,6 @@ export function PromptInputToolbar({
       </Button>
       <PromptInputSubmit
         status={status}
-        onStop={onStop}
         disabled={isEmpty || isBusy}
       />
     </div>

@@ -21,6 +21,8 @@ export type NavItemType = {
   icon: ComponentType<SVGProps<SVGSVGElement> & { 'data-hovered'?: boolean }>
   exact?: boolean
   isActive?: (pathname: string, href: string) => boolean
+  /** Optional trailing element (e.g. status indicator) shown after the label */
+  trailing?: React.ReactNode
 }
 
 export type NavSection = {

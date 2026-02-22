@@ -11,6 +11,7 @@ import { MessageStoreMemory } from '@/lib/chat-backend/services/message-store.se
 import type { ModelStreamResult } from '@/lib/chat-backend/services/model-gateway.service'
 import { ModelGatewayService } from '@/lib/chat-backend/services/model-gateway.service'
 import { RateLimitMemory, RateLimitService } from '@/lib/chat-backend/services/rate-limit.service'
+import { StreamResumeMemory } from '@/lib/chat-backend/services/stream-resume.service'
 import { ThreadServiceMemory } from '@/lib/chat-backend/services/thread.service'
 import { ToolRegistryMemory } from '@/lib/chat-backend/services/tool-registry.service'
 
@@ -46,6 +47,7 @@ const TestChatLayer = ChatOrchestratorLive.pipe(
   Layer.provideMerge(RateLimitMemory),
   Layer.provideMerge(ToolRegistryMemory),
   Layer.provideMerge(TestModelGatewayLive),
+  Layer.provideMerge(StreamResumeMemory),
 )
 
 beforeEach(() => {

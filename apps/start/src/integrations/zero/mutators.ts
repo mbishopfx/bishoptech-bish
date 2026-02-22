@@ -96,6 +96,7 @@ export const mutators = defineMutatorsWithType<Schema>()({
 
       await tx.mutate.thread.update({
         id: thread.id,
+        generationStatus: 'generation',
         updatedAt: args.createdAt,
         lastMessageAt: args.createdAt,
       })

@@ -14,7 +14,8 @@ export function SidebarNavItem({
   pathname: string
 }) {
   const [hovered, setHovered] = useState(false)
-  const { name, href, icon: Icon, exact, isActive: customIsActive } = item
+  const { name, href, icon: Icon, exact, isActive: customIsActive, trailing } =
+    item
 
   const isActive = useMemo(
     () =>
@@ -37,14 +38,15 @@ export function SidebarNavItem({
         onPointerLeave={() => setHovered(false)}
         className="group"
       >
-        <span className="flex items-center gap-2.5">
+        <span className="flex w-full items-center gap-2.5">
           {Icon ? (
             <Icon
               className={cn('size-4', isActive ? 'text-content-info' : '')}
               data-hovered={hovered}
             />
           ) : null}
-          {name}
+          <span className="min-w-0 flex-1 truncate">{name}</span>
+          {trailing}
         </span>
       </Link>
     </Button>

@@ -3,7 +3,14 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery, useZero } from '@rocicorp/zero/react'
-import { Compass, Globe, Link2, MessageSquare } from 'lucide-react'
+import {
+  AlertTriangle,
+  Compass,
+  Globe,
+  Link2,
+  Loader2,
+  MessageSquare,
+} from 'lucide-react'
 import { isAreaPath } from '@/utils/nav-utils'
 import { SidebarAreaLayout } from '@/components/layout/sidebar/sidebar-area-layout'
 import type {
@@ -12,6 +19,7 @@ import type {
 } from '@/components/layout/sidebar/app-sidebar-nav.config'
 import { queries } from '@/integrations/zero'
 import { CACHE_CHAT_NAV } from '@/integrations/zero/query-cache-policy'
+import { syncThreadGenerationStatuses } from './thread-status-store'
 
 // --- Single source of truth: constants and static content ---
 
@@ -65,6 +73,20 @@ export function ChatSidebarContent({ pathname }: { pathname: string }) {
   const preloadedThreadIdsRef = useRef(new Set<string>())
 
   useEffect(() => {
+    syncThreadGenerationStatuses(
+      threads.map((thread) => ({
+        threadId: thread.threadId,
+        generationStatus: thread.generationStatus as
+          | 'pending'
+          | 'generation'
+          | 'completed'
+          | 'failed'
+          | undefined,
+      })),
+    )
+  }, [threads])
+
+  useEffect(() => {
     for (const thread of threads.slice(0, MAX_PRELOADED_THREADS)) {
       if (preloadedThreadIdsRef.current.has(thread.threadId)) continue
       z.preload(
@@ -103,6 +125,13 @@ export function ChatSidebarContent({ pathname }: { pathname: string }) {
       )
   }, [])
 
+  type GenerationStatus =
+    | 'pending'
+    | 'generation'
+    | 'completed'
+    | 'failed'
+    | undefined
+
   const mergedThreads = useMemo(() => {
     const persisted = new Set(threads.map((thread) => thread.threadId))
     const pending = optimisticThreads
@@ -110,6 +139,7 @@ export function ChatSidebarContent({ pathname }: { pathname: string }) {
       .map((thread) => ({
         threadId: thread.threadId,
         title: thread.title,
+        generationStatus: undefined as GenerationStatus,
       }))
 
     return [
@@ -117,15 +147,35 @@ export function ChatSidebarContent({ pathname }: { pathname: string }) {
       ...threads.map((thread) => ({
         threadId: thread.threadId,
         title: thread.title || 'Untitled',
+        generationStatus: thread.generationStatus as GenerationStatus,
       })),
     ]
   }, [threads, optimisticThreads])
 
-  const threadItems: NavItemType[] = mergedThreads.map((thread) => ({
-    name: thread.title || 'Untitled',
-    href: `${CHAT_HREF}/${thread.threadId}`,
-    icon: MessageSquare,
-  }))
+  const threadItems: NavItemType[] = mergedThreads.map((thread) => {
+    const status = thread.generationStatus
+    const showSpinner =
+      status === 'pending' || status === 'generation' || status === undefined
+    const showError = status === 'failed'
+    const trailing = showSpinner ? (
+      <Loader2
+        className="size-4 shrink-0 animate-spin text-content-muted"
+        aria-label="Generating"
+      />
+    ) : showError ? (
+      <AlertTriangle
+        className="size-4 shrink-0 text-content-error"
+        aria-label="Error"
+      />
+    ) : undefined
+
+    return {
+      name: thread.title || 'Untitled',
+      href: `${CHAT_HREF}/${thread.threadId}`,
+      icon: MessageSquare,
+      trailing,
+    }
+  })
 
   const historySection: NavSection = {
     name: CHAT_HISTORY_SECTION_NAME,

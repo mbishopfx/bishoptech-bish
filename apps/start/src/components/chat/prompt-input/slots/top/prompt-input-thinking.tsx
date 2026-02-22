@@ -7,7 +7,6 @@ import type { HTMLAttributes } from 'react'
 export type PromptInputThinkingProps = HTMLAttributes<HTMLDivElement> & {
   /** When true, the slot expands to show the thinking state */
   isVisible?: boolean
-  onCancel?: () => void
 }
 
 /**
@@ -16,7 +15,6 @@ export type PromptInputThinkingProps = HTMLAttributes<HTMLDivElement> & {
 export function PromptInputThinking({
   className,
   isVisible = false,
-  onCancel,
   ...props
 }: PromptInputThinkingProps) {
   return (
@@ -43,18 +41,7 @@ export function PromptInputThinking({
             />
             <span className="text-sm">Thinking…</span>
           </div>
-          {isVisible ? (
-            <button
-              type="button"
-              onClick={onCancel}
-              className="rounded-xl px-1.5 py-1 text-sm text-content-muted outline-none transition-colors hover:bg-bg-subtle hover:text-content-default focus-visible:ring-2 focus-visible:ring-border-emphasis"
-              aria-label="Cancel"
-            >
-              Cancel
-            </button>
-          ) : (
-            <div className="h-7 shrink-0" aria-hidden />
-          )}
+          <div className="h-7 shrink-0" aria-hidden />
         </div>
       </div>
     </div>

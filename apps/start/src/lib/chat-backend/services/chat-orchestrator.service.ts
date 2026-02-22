@@ -11,6 +11,7 @@ import {
 import { MessageStoreService } from './message-store.service'
 import { ModelGatewayService } from './model-gateway.service'
 import { RateLimitService } from './rate-limit.service'
+import { StreamResumeService } from './stream-resume.service'
 import { ThreadService } from './thread.service'
 import { ToolRegistryService } from './tool-registry.service'
 
@@ -43,6 +44,7 @@ export const ChatOrchestratorLive = Layer.effect(
     const messageStore = yield* MessageStoreService
     const rateLimit = yield* RateLimitService
     const modelGateway = yield* ModelGatewayService
+    const streamResume = yield* StreamResumeService
     const tools = yield* ToolRegistryService
 
     const createThread: ChatOrchestratorServiceShape['createThread'] = ({
@@ -62,6 +64,7 @@ export const ChatOrchestratorLive = Layer.effect(
       route,
     }) => {
       const startedAt = Date.now()
+      let currentStreamId: string | undefined
       return Effect.gen(function* () {
         yield* rateLimit.assertAllowed({ userId, requestId })
 
@@ -109,6 +112,35 @@ export const ChatOrchestratorLive = Layer.effect(
           requestId,
         })
 
+        const existingStreamId = yield* streamResume.getActiveStreamId({
+          userId,
+          threadId,
+          requestId,
+        })
+        if (existingStreamId) {
+          yield* streamResume.stopStream({
+            streamId: existingStreamId,
+            requestId,
+          })
+          yield* streamResume.clearActiveStream({
+            userId,
+            threadId,
+            requestId,
+            expectedStreamId: existingStreamId,
+          })
+        }
+
+        const streamId = crypto.randomUUID()
+        currentStreamId = streamId
+        const streamAbortController = new AbortController()
+        yield* streamResume.registerActiveStream({
+          userId,
+          threadId,
+          requestId,
+          streamId,
+          abortController: streamAbortController,
+        })
+
         yield* messageStore.appendUserMessage({
           threadDbId: threadAccess.dbId,
           threadId,
@@ -124,7 +156,43 @@ export const ChatOrchestratorLive = Layer.effect(
         // and idempotent even when transport retries happen.
         const assistantMessageId = crypto.randomUUID()
         let assistantFinalized = false
+        let streamCleanedUp = false
         let bufferedAssistantText = ''
+
+        const cleanupActiveStream = () => {
+          if (streamCleanedUp) return
+          streamCleanedUp = true
+
+          void Effect.runPromise(
+            Effect.gen(function* () {
+              yield* streamResume.clearActiveStream({
+                userId,
+                threadId,
+                requestId,
+                expectedStreamId: streamId,
+              })
+              yield* streamResume.releaseLocalStream({
+                streamId,
+                requestId,
+              })
+            }).pipe(
+              Effect.catch((error) =>
+                emitWideErrorEvent({
+                  eventName: 'chat.stream.cleanup.failed',
+                  route,
+                  requestId,
+                  userId,
+                  threadId,
+                  model: toolRegistry.model,
+                  errorCode: chatErrorCodeFromTag(error._tag),
+                  errorTag: error._tag,
+                  message: error.message,
+                  latencyMs: Date.now() - startedAt,
+                }),
+              ),
+            ),
+          )
+        }
 
         const finalizeAssistant = (input: { ok: boolean; errorMessage?: string }) => {
           if (assistantFinalized) return
@@ -168,6 +236,7 @@ export const ChatOrchestratorLive = Layer.effect(
           model: toolRegistry.model,
           requestId,
           tools: toolRegistry.tools,
+          abortSignal: streamAbortController.signal,
           onChunk: (chunk: unknown) => {
             if (!chunk || typeof chunk !== 'object') return
             const candidate = chunk as { type?: unknown; text?: unknown }
@@ -179,11 +248,38 @@ export const ChatOrchestratorLive = Layer.effect(
 
         return result.toUIMessageStreamResponse({
           originalMessages: messages,
+          consumeSseStream: ({ stream }) => {
+            void Effect.runPromise(
+              streamResume
+                .persistSseStream({
+                  streamId,
+                  requestId,
+                  stream,
+                })
+                .pipe(
+                  Effect.catch((error) =>
+                    emitWideErrorEvent({
+                      eventName: 'chat.stream.resume.persist.failed',
+                      route,
+                      requestId,
+                      userId,
+                      threadId,
+                      model: toolRegistry.model,
+                      errorCode: chatErrorCodeFromTag(error._tag),
+                      errorTag: error._tag,
+                      message: error.message,
+                      latencyMs: Date.now() - startedAt,
+                    }),
+                  ),
+                ),
+            )
+          },
           onError: (error: unknown) => {
             finalizeAssistant({
               ok: false,
               errorMessage: error instanceof Error ? error.message : String(error),
             })
+            cleanupActiveStream()
 
             // Fire-and-forget observability; do not block the stream response.
             void Effect.runPromise(
@@ -253,23 +349,52 @@ export const ChatOrchestratorLive = Layer.effect(
                   ? undefined
                   : 'No assistant content generated',
             })
+            cleanupActiveStream()
           },
         })
       }).pipe(
-        Effect.tapError((error) =>
-          emitWideErrorEvent({
-            eventName: 'chat.stream.request.failed',
-            route,
-            requestId,
-            userId,
-            threadId,
-            errorCode: chatErrorCodeFromTag(getErrorTag(error)),
-            errorTag: getErrorTag(error),
-            message: error.message,
-            latencyMs: Date.now() - startedAt,
-            retryable: true,
-          }),
-        ),
+        Effect.tapError((error) => {
+          if (!currentStreamId) {
+            return emitWideErrorEvent({
+              eventName: 'chat.stream.request.failed',
+              route,
+              requestId,
+              userId,
+              threadId,
+              errorCode: chatErrorCodeFromTag(getErrorTag(error)),
+              errorTag: getErrorTag(error),
+              message: error.message,
+              latencyMs: Date.now() - startedAt,
+              retryable: true,
+            })
+          }
+          const failedStreamId = currentStreamId
+
+          return Effect.gen(function* () {
+            yield* emitWideErrorEvent({
+              eventName: 'chat.stream.request.failed',
+              route,
+              requestId,
+              userId,
+              threadId,
+              errorCode: chatErrorCodeFromTag(getErrorTag(error)),
+              errorTag: getErrorTag(error),
+              message: error.message,
+              latencyMs: Date.now() - startedAt,
+              retryable: true,
+            })
+            yield* streamResume.clearActiveStream({
+              userId,
+              threadId,
+              requestId,
+              expectedStreamId: failedStreamId,
+            })
+            yield* streamResume.releaseLocalStream({
+              streamId: failedStreamId,
+              requestId,
+            })
+          })
+        }),
         Effect.catch((error) => Effect.fail(error)),
       )
     }

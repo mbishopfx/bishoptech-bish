@@ -10,6 +10,9 @@ export type ModelStreamResult = {
   readonly toUIMessageStreamResponse: (options?: {
     readonly originalMessages?: UIMessage[]
     readonly onError?: (error: unknown) => string
+    readonly consumeSseStream?: (options: {
+      readonly stream: ReadableStream<string>
+    }) => PromiseLike<void> | void
     readonly messageMetadata?: (options: { part: unknown }) => unknown
     readonly onFinish?: (event: {
       readonly messages: UIMessage[]
@@ -27,6 +30,7 @@ export type ModelGatewayServiceShape = {
     readonly requestId: string
     readonly tools: Record<string, never>
     readonly onChunk?: (chunk: unknown) => void
+    readonly abortSignal?: AbortSignal
   }) => Effect.Effect<ModelStreamResult, ModelProviderError>
 }
 
@@ -36,7 +40,7 @@ export class ModelGatewayService extends ServiceMap.Service<
 >()('chat-backend/ModelGatewayService') {}
 
 export const ModelGatewayLive = Layer.succeed(ModelGatewayService, {
-  streamResponse: ({ messages, model, requestId, tools, onChunk }) =>
+  streamResponse: ({ messages, model, requestId, tools, onChunk, abortSignal }) =>
     Effect.tryPromise({
       try: async () => {
         // Dynamic import keeps server-only dependency out of client bundles.
@@ -47,6 +51,7 @@ export const ModelGatewayLive = Layer.succeed(ModelGatewayService, {
           system: SYSTEM_PROMPT,
           messages: modelMessages,
           tools,
+          abortSignal,
           onChunk: onChunk
             ? ({ chunk }) => {
                 onChunk(chunk)
