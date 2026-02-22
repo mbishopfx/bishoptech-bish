@@ -1,4 +1,5 @@
 // Single chat message renderer (user/assistant).
+import { memo } from 'react'
 import type { UIMessage } from 'ai'
 import { Streamdown, type PluginConfig } from 'streamdown'
 import { code } from '@streamdown/code'
@@ -21,13 +22,15 @@ function getMessageText(message: UIMessage): string {
     .trim()
 }
 
-export function ChatMessage({
-  message,
-  isAnimating = false,
-}: {
+type ChatMessageProps = {
   message: UIMessage
   isAnimating?: boolean
-}) {
+}
+
+function ChatMessageComponent({
+  message,
+  isAnimating = false,
+}: ChatMessageProps) {
   const text = getMessageText(message)
   const isUser = message.role === 'user'
   const animated = isAnimating ? streamdownAnimated : false
@@ -40,7 +43,9 @@ export function ChatMessage({
       <div className="flex w-full flex-col gap-3 overflow-hidden text-content-emphasis text-[14px] leading-[21px] group-[.is-user]:text-[18px] group-[.is-user]:leading-[27px]">
         <div className="space-y-4 size-full [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
           {isUser ? (
-            <div className="whitespace-pre-wrap break-words">{text || '\u00a0'}</div>
+            <div className="whitespace-pre-wrap break-words">
+              {text || '\u00a0'}
+            </div>
           ) : (
             <Streamdown
               plugins={streamdownPlugins}
@@ -58,3 +63,11 @@ export function ChatMessage({
     </div>
   )
 }
+
+export const ChatMessage = memo(ChatMessageComponent, (prev, next) => {
+  if (prev.isAnimating !== next.isAnimating) return false
+  if (prev.message === next.message) return true
+  if (prev.message.id !== next.message.id) return false
+  if (prev.message.role !== next.message.role) return false
+  return getMessageText(prev.message) === getMessageText(next.message)
+})

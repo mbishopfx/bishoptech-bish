@@ -17,12 +17,34 @@ function notify() {
 }
 
 export function syncThreadGenerationStatuses(
-  threads: readonly { threadId: string; generationStatus?: ThreadGenerationStatus }[],
+  threads: readonly {
+    threadId: string
+    generationStatus?: ThreadGenerationStatus
+  }[],
 ) {
-  threadStatuses.clear()
+  let changed = false
+  const nextThreadIds = new Set<string>()
+
   for (const thread of threads) {
-    threadStatuses.set(thread.threadId, thread.generationStatus)
+    nextThreadIds.add(thread.threadId)
+    const nextStatus = thread.generationStatus
+    const currentStatus = threadStatuses.get(thread.threadId)
+
+    if (currentStatus === nextStatus) continue
+    threadStatuses.set(thread.threadId, nextStatus)
+    changed = true
   }
+
+  for (const existingThreadId of Array.from(threadStatuses.keys())) {
+    if (nextThreadIds.has(existingThreadId)) continue
+    threadStatuses.delete(existingThreadId)
+    changed = true
+  }
+
+  if (!changed) {
+    return
+  }
+
   notify()
 }
 

@@ -2,7 +2,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useChat } from './chat-context'
+import { useChatActions } from './chat-context'
 import {
   PromptInputRoot,
   PromptInputTextarea,
@@ -15,19 +15,15 @@ import { useFileAttachments } from '../../hooks/chat/upload'
 import { parseChatApiError } from './chat-error-messages'
 
 export function ChatInput() {
-  const { sendMessage, status, error } = useChat()
+  const { sendMessage, status, error } = useChatActions()
   const [input, setInput] = useState('')
   const [errorDismissed, setErrorDismissed] = useState(false)
   const [uploadErrorDismissed, setUploadErrorDismissed] = useState(false)
   const inputRef = useRef<{ focus: () => void }>(null)
 
   // File upload: images and PDF, max 10 files.
-  const {
-    files,
-    handleFileSelect,
-    handleRemoveFile,
-    canAddMore,
-  } = useFileAttachments({ maxFiles: 10 })
+  const { files, handleFileSelect, handleRemoveFile, canAddMore } =
+    useFileAttachments({ maxFiles: 10 })
 
   const isBusy = status === 'submitted' || status === 'streaming'
   const isEmpty = !input.trim()
@@ -55,7 +51,7 @@ export function ChatInput() {
   const handleDismissError = useCallback(() => setErrorDismissed(true), [])
   const handleDismissUploadError = useCallback(
     () => setUploadErrorDismissed(true),
-    []
+    [],
   )
 
   const handleSubmit = useCallback(
@@ -64,13 +60,12 @@ export function ChatInput() {
       const text = input.trim()
       if (!text || isBusy) return
       setInput('')
-      void sendMessage({ text })
-        .catch(() => {
-          setInput(text)
-          // Error is surfaced by chat context.
-        })
+      void sendMessage({ text }).catch(() => {
+        setInput(text)
+        // Error is surfaced by chat context.
+      })
     },
-    [input, isBusy, sendMessage]
+    [input, isBusy, sendMessage],
   )
 
   const topSlot = (
@@ -79,15 +74,15 @@ export function ChatInput() {
         <PromptInputError
           error={activeErrorMessage}
           traceId={showChatError ? chatErrorTraceId : undefined}
-          onDismiss={showChatError ? handleDismissError : handleDismissUploadError}
+          onDismiss={
+            showChatError ? handleDismissError : handleDismissUploadError
+          }
         />
       ) : null}
       {files.length > 0 && (
         <PromptInputAttachments files={files} onRemove={handleRemoveFile} />
       )}
-      {!activeErrorMessage ? (
-        <PromptInputThinking isVisible={isBusy} />
-      ) : null}
+      {!activeErrorMessage ? <PromptInputThinking isVisible={isBusy} /> : null}
     </>
   )
 

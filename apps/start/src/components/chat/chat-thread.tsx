@@ -1,40 +1,37 @@
 // Renders chat messages and keeps scroll pinned to the latest user message.
 import { useMemo } from 'react'
-import { useChat } from './chat-context'
+import { useChatMessages } from './chat-context'
 import { ChatMessage } from './chat-message'
 import { usePinToLastUserMessage } from '@rift/chat-scroll'
 
 export function ChatThread() {
-  const { messages, status, activeThreadId } = useChat()
-  const sorted = useMemo(() => messages.slice(), [messages])
-  const userMessageCount = useMemo(
-    () => sorted.filter((m) => m.role === 'user').length,
-    [sorted]
-  )
-  const lastUserMessageId = useMemo(() => {
-    for (let i = sorted.length - 1; i >= 0; i--) {
-      const message = sorted[i]
-      if (message.role === 'user') return message.id
-    }
-    return null
-  }, [sorted])
+  const { messages, status, activeThreadId } = useChatMessages()
+  const { userMessageCount, lastUserMessageId } = useMemo(() => {
+    let count = 0
+    let lastUserId: string | null = null
 
-  const {
-    lastUserMessageRef,
-    contentEndRef,
-    spacerRef,
-    bottomRef,
-  } = usePinToLastUserMessage({
-    resetKey: activeThreadId,
-    userMessageCount,
-    lastUserMessageId,
-    messages: sorted,
-    status,
-  })
+    for (const message of messages) {
+      if (message.role !== 'user') continue
+      count += 1
+      lastUserId = message.id
+    }
+
+    return { userMessageCount: count, lastUserMessageId: lastUserId }
+  }, [messages])
+
+  const { lastUserMessageRef, contentEndRef, spacerRef, bottomRef } =
+    usePinToLastUserMessage({
+      resetKey: activeThreadId,
+      userMessageCount,
+      lastUserMessageId,
+      messages,
+      status,
+    })
 
   const isStreaming = status === 'submitted' || status === 'streaming'
   const lastMessage = messages.at(-1)
-  const showThinking = isStreaming && (!lastMessage || lastMessage.role === 'user')
+  const showThinking =
+    isStreaming && (!lastMessage || lastMessage.role === 'user')
 
   return (
     <div
@@ -50,7 +47,9 @@ export function ChatThread() {
       )}
       {messages.map((m) => {
         const isLastUserMessage =
-          m.role === 'user' && lastUserMessageId != null && m.id === lastUserMessageId
+          m.role === 'user' &&
+          lastUserMessageId != null &&
+          m.id === lastUserMessageId
         const isAnimatingMessage =
           isStreaming && lastMessage?.id === m.id && m.role === 'assistant'
         return (

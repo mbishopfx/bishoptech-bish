@@ -1,5 +1,6 @@
 import { Outlet, createFileRoute, useLocation } from '@tanstack/react-router'
 import { ChatProvider } from '@/components/chat'
+import { ChatPageShell } from '@/components/chat/chat-page-shell'
 
 export const Route = createFileRoute('/(app)/_layout/chat')({
   component: ChatLayout,
@@ -17,10 +18,13 @@ function ChatLayout() {
     : undefined
 
   const threadId =
-    maybeSegment && !reservedSegments.has(maybeSegment) ? maybeSegment : undefined
+    maybeSegment && !reservedSegments.has(maybeSegment)
+      ? maybeSegment
+      : undefined
 
   return (
     <ChatProvider threadId={threadId}>
+      <ChatPageShell />
       <Outlet />
     </ChatProvider>
   )

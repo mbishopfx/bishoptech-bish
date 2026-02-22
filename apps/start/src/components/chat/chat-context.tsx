@@ -29,16 +29,22 @@ import {
 
 type ChatUIMessage = UIMessage<ChatMessageMetadata>
 
-type ChatContextValue = Pick<
+type ChatActionsContextValue = Pick<
   ReturnType<typeof useAIChat<ChatUIMessage>>,
-  'messages' | 'status' | 'error' | 'setMessages' | 'resumeStream'
+  'status' | 'error' | 'setMessages' | 'resumeStream'
 > & {
-  activeThreadId?: string
   sendMessage: ReturnType<typeof useAIChat<ChatUIMessage>>['sendMessage']
   clear: () => void
 }
 
-const ChatContext = createContext<ChatContextValue | null>(null)
+type ChatMessagesContextValue = {
+  messages: ChatUIMessage[]
+  status: ReturnType<typeof useAIChat<ChatUIMessage>>['status']
+  activeThreadId?: string
+}
+
+const ChatMessagesContext = createContext<ChatMessagesContextValue | null>(null)
+const ChatActionsContext = createContext<ChatActionsContextValue | null>(null)
 
 function toUIMessageFromStoredMessage(message: {
   readonly messageId: string
@@ -62,10 +68,9 @@ function toUIMessageFromStoredMessage(message: {
 function textFromUIMessage(message: ChatUIMessage): string {
   return message.parts
     .filter(
-      (
-        part,
-      ): part is Extract<typeof part, { type: 'text'; text: string }> =>
-        part.type === 'text' && typeof (part as { text?: unknown }).text === 'string',
+      (part): part is Extract<typeof part, { type: 'text'; text: string }> =>
+        part.type === 'text' &&
+        typeof (part as { text?: unknown }).text === 'string',
     )
     .map((part) => part.text)
     .join('')
@@ -73,7 +78,10 @@ function textFromUIMessage(message: ChatUIMessage): string {
 
 function fingerprintMessages(messages: readonly ChatUIMessage[]): string {
   return messages
-    .map((message) => `${message.id}:${message.role}:${textFromUIMessage(message)}`)
+    .map(
+      (message) =>
+        `${message.id}:${message.role}:${textFromUIMessage(message)}`,
+    )
     .join('\u0001')
 }
 
@@ -81,7 +89,9 @@ function mergeStoredMessagesWithLocal(
   localMessages: readonly ChatUIMessage[],
   storedMessages: readonly ChatUIMessage[],
 ): ChatUIMessage[] {
-  const localById = new Map(localMessages.map((message) => [message.id, message]))
+  const localById = new Map(
+    localMessages.map((message) => [message.id, message]),
+  )
 
   return storedMessages.map((storedMessage) => {
     const localMessage = localById.get(storedMessage.id)
@@ -91,9 +101,17 @@ function mergeStoredMessagesWithLocal(
     const storedText = textFromUIMessage(storedMessage)
     const localText = textFromUIMessage(localMessage)
 
+    // Preserve object identity when content is equivalent to avoid unnecessary row rerenders.
+    if (localText === storedText) {
+      return localMessage
+    }
+
     // Keep whichever assistant payload is more complete to avoid text regressions
     // when Zero snapshots momentarily lag behind streamed UI state.
-    if (storedMessage.role === 'assistant' && localText.length > storedText.length) {
+    if (
+      storedMessage.role === 'assistant' &&
+      localText.length > storedText.length
+    ) {
       return localMessage
     }
 
@@ -186,6 +204,7 @@ export function ChatProvider({
   useEffect(() => {
     threadIdRef.current = activeThreadId
     const previousThreadId = previousThreadIdRef.current
+    const hasStoredSnapshot = storedMessagesResult.type === 'complete'
 
     // Reset ephemeral UI state when the route switches to a different thread.
     if (activeThreadId !== previousThreadId) {
@@ -194,7 +213,10 @@ export function ChatProvider({
         !!activeThreadId &&
         (status === 'submitted' || status === 'streaming')
 
-      if (!shouldPreserveDuringFirstSendTransition) {
+      if (
+        !shouldPreserveDuringFirstSendTransition &&
+        (!activeThreadId || !hasStoredSnapshot)
+      ) {
         setMessages([])
       }
       setLocalError(null)
@@ -211,7 +233,14 @@ export function ChatProvider({
     if (threadId && provisionalThreadId === threadId) {
       setProvisionalThreadId(undefined)
     }
-  }, [activeThreadId, provisionalThreadId, setMessages, status, threadId])
+  }, [
+    activeThreadId,
+    provisionalThreadId,
+    setMessages,
+    status,
+    storedMessagesResult.type,
+    threadId,
+  ])
 
   useEffect(() => {
     if (!activeThreadId) return
@@ -263,7 +292,7 @@ export function ChatProvider({
     setMessages,
   ])
 
-  const sendMessage = useCallback<ChatContextValue['sendMessage']>(
+  const sendMessage = useCallback<ChatActionsContextValue['sendMessage']>(
     async (message, options) => {
       let resolvedThreadId = threadIdRef.current
       if (!resolvedThreadId) {
@@ -323,37 +352,55 @@ export function ChatProvider({
 
   const clear = useCallback(() => setMessages([]), [setMessages])
 
-  const value = useMemo<ChatContextValue>(
+  const messagesValue = useMemo<ChatMessagesContextValue>(
     () => ({
       messages,
       status,
-      error: localError ?? error,
       activeThreadId,
+    }),
+    [messages, status, activeThreadId],
+  )
+
+  const actionsValue = useMemo<ChatActionsContextValue>(
+    () => ({
+      status,
+      error: localError ?? error,
       sendMessage,
       setMessages,
       resumeStream,
       clear,
     }),
-    [
-      messages,
-      status,
-      error,
-      localError,
-      activeThreadId,
-      sendMessage,
-      setMessages,
-      resumeStream,
-      clear,
-    ],
+    [status, error, localError, sendMessage, setMessages, resumeStream, clear],
   )
 
-  return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>
+  return (
+    <ChatMessagesContext.Provider value={messagesValue}>
+      <ChatActionsContext.Provider value={actionsValue}>
+        {children}
+      </ChatActionsContext.Provider>
+    </ChatMessagesContext.Provider>
+  )
+}
+
+export function useChatMessages() {
+  const ctx = useContext(ChatMessagesContext)
+  if (!ctx) {
+    throw new Error('useChatMessages must be used within ChatProvider')
+  }
+  return ctx
+}
+
+export function useChatActions() {
+  const ctx = useContext(ChatActionsContext)
+  if (!ctx) {
+    throw new Error('useChatActions must be used within ChatProvider')
+  }
+  return ctx
 }
 
 export function useChat() {
-  const ctx = useContext(ChatContext)
-  if (!ctx) {
-    throw new Error('useChat must be used within ChatProvider')
+  return {
+    ...useChatMessages(),
+    ...useChatActions(),
   }
-  return ctx
 }
