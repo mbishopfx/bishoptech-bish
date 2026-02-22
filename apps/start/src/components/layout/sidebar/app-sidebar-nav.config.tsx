@@ -23,6 +23,12 @@ export type NavItemType = {
   isActive?: (pathname: string, href: string) => boolean
   /** Optional trailing element (e.g. status indicator) shown after the label */
   trailing?: React.ReactNode
+  /** Optional context-menu content shown on right-click for this nav item. */
+  contextMenuContent?: React.ReactNode
+  /** When set, rendered instead of name (e.g. inline edit input). Implies no navigation. */
+  label?: React.ReactNode
+  /** When true, item is not a link (e.g. while editing). */
+  disableLink?: boolean
 }
 
 export type NavSection = {

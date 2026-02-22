@@ -1,4 +1,4 @@
-import type { NavItemType, NavSection } from './app-sidebar-nav.config'
+import type { NavSection } from './app-sidebar-nav.config'
 import { SidebarNavItem } from './sidebar-nav-item'
 
 export type SidebarAreaLayoutProps = {

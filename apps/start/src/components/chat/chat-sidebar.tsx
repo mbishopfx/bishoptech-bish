@@ -1,17 +1,37 @@
 // Chat navigation sidebar with static links + dynamic thread history.
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from 'react'
 import { useQuery, useZero } from '@rocicorp/zero/react'
-import { AlertTriangle, Compass, Globe, Link2, Loader2 } from 'lucide-react'
+import { useNavigate } from '@tanstack/react-router'
+import {
+  AlertTriangle,
+  Compass,
+  Copy,
+  Globe,
+  Link2,
+  Loader2,
+  Pencil,
+  Trash2,
+} from 'lucide-react'
 import { SidebarGroupTooltip } from '@rift/ui/tooltip'
+import { ContextMenuItem, ContextMenuSeparator } from '@rift/ui/context-menu'
+import { copyToClipboard } from '@rift/utils'
+import { toast } from 'sonner'
 import { isAreaPath } from '@/utils/nav-utils'
 import { SidebarAreaLayout } from '@/components/layout/sidebar/sidebar-area-layout'
 import type {
   NavItemType,
   NavSection,
 } from '@/components/layout/sidebar/app-sidebar-nav.config'
-import { queries } from '@/integrations/zero'
+import { mutators, queries } from '@/integrations/zero'
 import { CACHE_CHAT_NAV } from '@/integrations/zero/query-cache-policy'
 import { syncThreadGenerationStatuses } from './thread-status-store'
 
@@ -56,15 +76,80 @@ export function chatNavStaticConfig() {
   }
 }
 
+// Inline rename input
+
+const RENAME_INPUT_CLASS =
+  'min-w-0 flex-1 truncate border-none bg-transparent p-0 text-inherit outline-none focus:ring-0'
+
+type ThreadRenameInputProps = {
+  threadId: string
+  currentTitle: string
+  value: string
+  onChange: (value: string) => void
+  onSubmit: (threadId: string, currentTitle: string) => void
+  onCancel: () => void
+  inputRef: React.RefObject<HTMLInputElement | null>
+}
+
+function ThreadRenameInput({
+  threadId,
+  currentTitle,
+  value,
+  onChange,
+  onSubmit,
+  onCancel,
+  inputRef,
+}: ThreadRenameInputProps) {
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter') {
+        e.preventDefault()
+        void onSubmit(threadId, currentTitle)
+      } else if (e.key === 'Escape') {
+        e.preventDefault()
+        onCancel()
+      } else if (e.key === ' ') {
+        e.stopPropagation()
+      }
+    },
+    [threadId, currentTitle, onSubmit, onCancel],
+  )
+
+  return (
+    <input
+      ref={inputRef}
+      type="text"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      onKeyDown={handleKeyDown}
+      onBlur={onCancel}
+      onClick={(e) => e.stopPropagation()}
+      className={RENAME_INPUT_CLASS}
+      aria-label="Rename thread"
+    />
+  )
+}
+
 // --- Dynamic content component (uses static config + Zero threads) ---
 
 export function ChatSidebarContent({ pathname }: { pathname: string }) {
+  const navigate = useNavigate()
   const z = useZero()
   const [threads] = useQuery(queries.threads.byUser(), CACHE_CHAT_NAV)
   const [optimisticThreads, setOptimisticThreads] = useState<
     readonly OptimisticThread[]
   >([])
+  const [editingThreadId, setEditingThreadId] = useState<string | null>(null)
+  const [editingTitle, setEditingTitle] = useState('')
+  const editingInputRef = useRef<HTMLInputElement>(null)
   const preloadedThreadIdsRef = useRef(new Set<string>())
+
+  useEffect(() => {
+    if (editingThreadId) {
+      editingInputRef.current?.focus()
+      editingInputRef.current?.select()
+    }
+  }, [editingThreadId])
 
   useEffect(() => {
     syncThreadGenerationStatuses(
@@ -134,6 +219,7 @@ export function ChatSidebarContent({ pathname }: { pathname: string }) {
         threadId: thread.threadId,
         title: thread.title,
         generationStatus: undefined as GenerationStatus,
+        isPersisted: false,
       }))
 
     return [
@@ -142,9 +228,78 @@ export function ChatSidebarContent({ pathname }: { pathname: string }) {
         threadId: thread.threadId,
         title: thread.title || 'Untitled',
         generationStatus: thread.generationStatus as GenerationStatus,
+        isPersisted: true,
       })),
     ]
   }, [threads, optimisticThreads])
+
+  const activeThreadId = useMemo(() => {
+    if (!pathname.startsWith(`${CHAT_HREF}/`)) {
+      return null
+    }
+    return pathname.slice(`${CHAT_HREF}/`.length).split('/')[0] ?? null
+  }, [pathname])
+
+  const startEditingThread = useCallback((threadId: string, currentTitle: string) => {
+    setEditingThreadId(threadId)
+    setEditingTitle(currentTitle || 'Untitled')
+  }, [])
+
+  const cancelEditingThread = useCallback(() => {
+    setEditingThreadId(null)
+    setEditingTitle('')
+  }, [])
+
+  const submitRenameThread = useCallback(
+    async (threadId: string, currentTitle: string) => {
+      const trimmed = editingTitle.trim()
+      if (!trimmed) {
+        toast.error('Thread title cannot be empty')
+        return
+      }
+
+      if (trimmed === currentTitle) {
+        cancelEditingThread()
+        return
+      }
+
+      try {
+        await z.mutate(mutators.threads.rename({ threadId, title: trimmed })).client
+        toast.success('Thread renamed')
+        cancelEditingThread()
+      } catch (error) {
+        console.error('Failed to rename thread:', error)
+        toast.error('Failed to rename thread')
+      }
+    },
+    [editingTitle, cancelEditingThread, z],
+  )
+
+  const handleDeleteThread = useCallback(
+    async (threadId: string) => {
+      try {
+        const write = z.mutate(mutators.threads.delete({ threadId }))
+        await write.client
+        toast.success('Thread deleted')
+        if (activeThreadId === threadId) {
+          navigate({ to: '/chat' })
+        }
+        const serverRes = await write.server
+        if (serverRes.type === 'error') {
+          toast.error('Failed to delete thread')
+        }
+      } catch (error) {
+        console.error('Failed to delete thread:', error)
+        toast.error('Failed to delete thread')
+      }
+    },
+    [activeThreadId, navigate, z],
+  )
+
+  const handleCopyThreadLink = useCallback(async (threadId: string) => {
+    const origin = window.location.origin
+    await copyToClipboard(`${origin}${CHAT_HREF}/${threadId}`)
+  }, [])
 
   const threadItems: NavItemType[] = mergedThreads.map((thread) => {
     const status = thread.generationStatus
@@ -181,12 +336,67 @@ export function ChatSidebarContent({ pathname }: { pathname: string }) {
       </SidebarGroupTooltip>
     ) : undefined
 
+    const isEditing = editingThreadId === thread.threadId
+    const currentTitle = thread.title || 'Untitled'
+
     return {
-      name: thread.title || 'Untitled',
+      name: currentTitle,
       href: `${CHAT_HREF}/${thread.threadId}`,
-      trailing,
+      trailing: isEditing ? undefined : trailing,
+      disableLink: isEditing,
+      ...(isEditing && {
+        label: (
+          <ThreadRenameInput
+            threadId={thread.threadId}
+            currentTitle={currentTitle}
+            value={editingTitle}
+            onChange={setEditingTitle}
+            onSubmit={submitRenameThread}
+            onCancel={cancelEditingThread}
+            inputRef={editingInputRef}
+          />
+        ),
+      }),
+      contextMenuContent: thread.isPersisted && !isEditing ? (
+        <>
+          <ContextMenuItem
+            onClick={() => {
+              startEditingThread(thread.threadId, currentTitle)
+            }}
+          >
+            <Pencil />
+            Rename
+          </ContextMenuItem>
+          <ContextMenuItem
+            onClick={() => {
+              void handleCopyThreadLink(thread.threadId)
+            }}
+          >
+            <Copy />
+            Copy link
+          </ContextMenuItem>
+          <ContextMenuSeparator />
+          <ContextMenuItem
+            variant="destructive"
+            onClick={() => {
+              void handleDeleteThread(thread.threadId)
+            }}
+          >
+            <Trash2 />
+            Delete
+          </ContextMenuItem>
+        </>
+      ) : undefined,
     }
-  })
+  }, [
+    editingThreadId,
+    editingTitle,
+    handleCopyThreadLink,
+    handleDeleteThread,
+    startEditingThread,
+    submitRenameThread,
+    cancelEditingThread,
+  ])
 
   const historySection: NavSection = {
     name: CHAT_HISTORY_SECTION_NAME,

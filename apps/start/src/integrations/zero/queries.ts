@@ -14,7 +14,10 @@ export const queries = defineQueriesWithType<Schema>()({
   threads: {
     /** Threads for the current user (ctx.userID). Enforced on server. */
     byUser: defineQuery(({ ctx }) =>
-      zql.thread.where('userId', ctx.userID).orderBy('updatedAt', 'desc'),
+      zql.thread
+        .where('userId', ctx.userID)
+        .where('visibility', 'visible')
+        .orderBy('updatedAt', 'desc'),
     ),
   },
   messages: {

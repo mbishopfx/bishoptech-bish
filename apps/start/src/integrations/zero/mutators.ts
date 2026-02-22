@@ -47,6 +47,19 @@ const finalizeAssistantArgs = z.object({
   finalizedAt: z.number(),
 })
 
+const renameThreadArgs = z.object({
+  threadId: z.string(),
+  title: z.string().trim().min(1).max(160),
+})
+
+const archiveThreadArgs = z.object({
+  threadId: z.string(),
+})
+
+const deleteThreadArgs = z.object({
+  threadId: z.string(),
+})
+
 export const mutators = defineMutatorsWithType<Schema>()({
   threads: {
     create: defineMutator(createThreadArgs, async ({ tx, args, ctx }) => {
@@ -63,6 +76,48 @@ export const mutators = defineMutatorsWithType<Schema>()({
         model: args.model,
         pinned: args.pinned,
       })
+    }),
+    rename: defineMutator(renameThreadArgs, async ({ tx, args, ctx }) => {
+      const thread = await tx.run(zql.thread.where('threadId', args.threadId).one())
+      if (!thread || thread.userId !== ctx.userID) {
+        return
+      }
+
+      await tx.mutate.thread.update({
+        id: thread.id,
+        title: args.title,
+        userSetTitle: true,
+        updatedAt: Date.now(),
+      })
+    }),
+    archive: defineMutator(archiveThreadArgs, async ({ tx, args, ctx }) => {
+      const thread = await tx.run(zql.thread.where('threadId', args.threadId).one())
+      if (!thread || thread.userId !== ctx.userID) {
+        return
+      }
+
+      await tx.mutate.thread.update({
+        id: thread.id,
+        visibility: 'archived',
+        updatedAt: Date.now(),
+      })
+    }),
+    /** Permanently delete thread and all its messages. */
+    delete: defineMutator(deleteThreadArgs, async ({ tx, args, ctx }) => {
+      const thread = await tx.run(zql.thread.where('threadId', args.threadId).one())
+      if (!thread || thread.userId !== ctx.userID) {
+        return
+      }
+
+      const messages = await tx.run(
+        zql.message
+          .where('threadId', args.threadId)
+          .where('userId', ctx.userID),
+      )
+      for (const message of messages) {
+        await tx.mutate.message.delete({ id: message.id })
+      }
+      await tx.mutate.thread.delete({ id: thread.id })
     }),
   },
   messages: {
