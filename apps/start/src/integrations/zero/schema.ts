@@ -45,7 +45,6 @@ const orgAiPolicy = table('orgAiPolicy')
       .from('disabled_provider_ids'),
     disabledModelIds: json<readonly string[]>().from('disabled_model_ids'),
     complianceFlags: json<Record<string, boolean>>().from('compliance_flags'),
-    version: number(),
     updatedAt: number().from('updated_at'),
   })
   .primaryKey('id')
@@ -165,8 +164,15 @@ export const schema = createSchema({
 
 export type Schema = typeof schema
 
-/** Context passed by ZeroProvider; used in queries/mutators for auth (e.g. restrict by userID). */
-export type ZeroContext = { userID: string }
+/**
+ * Auth context passed through Zero query/mutate endpoints.
+ * `orgWorkosId` is optional because users can browse without an active org,
+ * but org-scoped queries/mutators must explicitly guard against that case.
+ */
+export type ZeroContext = {
+  userID: string
+  orgWorkosId?: string
+}
 
 declare module '@rocicorp/zero' {
   interface DefaultTypes {

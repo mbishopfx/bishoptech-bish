@@ -20,14 +20,15 @@ import { Route as ApiFilesUploadRouteRouteImport } from './routes/api/files/uplo
 import { Route as ApiAuthCallbackRouteRouteImport } from './routes/api/auth/callback/route'
 import { Route as appLayoutWriterRouteRouteImport } from './routes/(app)/_layout/writer/route'
 import { Route as appLayoutSettingsRouteRouteImport } from './routes/(app)/_layout/settings/route'
-import { Route as appLayoutOrgSettingsRouteRouteImport } from './routes/(app)/_layout/org-settings/route'
+import { Route as appLayoutOrganizationRouteRouteImport } from './routes/(app)/_layout/organization/route'
 import { Route as appLayoutChatRouteRouteImport } from './routes/(app)/_layout/chat/route'
 import { Route as appLayoutSettingsIndexRouteImport } from './routes/(app)/_layout/settings/index'
-import { Route as appLayoutOrgSettingsIndexRouteImport } from './routes/(app)/_layout/org-settings/index'
 import { Route as appLayoutChatIndexRouteImport } from './routes/(app)/_layout/chat/index'
 import { Route as appLayoutSettingsDebugAuthRouteRouteImport } from './routes/(app)/_layout/settings/debug-auth/route'
-import { Route as appLayoutOrgSettingsModelPolicyRouteRouteImport } from './routes/(app)/_layout/org-settings/model-policy/route'
+import { Route as appLayoutOrganizationSettingsRouteRouteImport } from './routes/(app)/_layout/organization/settings/route'
 import { Route as appLayoutChatThreadIdRouteRouteImport } from './routes/(app)/_layout/chat/$threadId/route'
+import { Route as appLayoutOrganizationSettingsIndexRouteImport } from './routes/(app)/_layout/organization/settings/index'
+import { Route as appLayoutOrganizationSettingsProviderPolicyRouteRouteImport } from './routes/(app)/_layout/organization/settings/provider-policy/route'
 
 const ApiChatRouteRoute = ApiChatRouteRouteImport.update({
   id: '/api/chat',
@@ -83,10 +84,10 @@ const appLayoutSettingsRouteRoute = appLayoutSettingsRouteRouteImport.update({
   path: '/settings',
   getParentRoute: () => appLayoutRouteRoute,
 } as any)
-const appLayoutOrgSettingsRouteRoute =
-  appLayoutOrgSettingsRouteRouteImport.update({
-    id: '/org-settings',
-    path: '/org-settings',
+const appLayoutOrganizationRouteRoute =
+  appLayoutOrganizationRouteRouteImport.update({
+    id: '/organization',
+    path: '/organization',
     getParentRoute: () => appLayoutRouteRoute,
   } as any)
 const appLayoutChatRouteRoute = appLayoutChatRouteRouteImport.update({
@@ -99,12 +100,6 @@ const appLayoutSettingsIndexRoute = appLayoutSettingsIndexRouteImport.update({
   path: '/',
   getParentRoute: () => appLayoutSettingsRouteRoute,
 } as any)
-const appLayoutOrgSettingsIndexRoute =
-  appLayoutOrgSettingsIndexRouteImport.update({
-    id: '/',
-    path: '/',
-    getParentRoute: () => appLayoutOrgSettingsRouteRoute,
-  } as any)
 const appLayoutChatIndexRoute = appLayoutChatIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -116,11 +111,11 @@ const appLayoutSettingsDebugAuthRouteRoute =
     path: '/debug-auth',
     getParentRoute: () => appLayoutSettingsRouteRoute,
   } as any)
-const appLayoutOrgSettingsModelPolicyRouteRoute =
-  appLayoutOrgSettingsModelPolicyRouteRouteImport.update({
-    id: '/model-policy',
-    path: '/model-policy',
-    getParentRoute: () => appLayoutOrgSettingsRouteRoute,
+const appLayoutOrganizationSettingsRouteRoute =
+  appLayoutOrganizationSettingsRouteRouteImport.update({
+    id: '/settings',
+    path: '/settings',
+    getParentRoute: () => appLayoutOrganizationRouteRoute,
   } as any)
 const appLayoutChatThreadIdRouteRoute =
   appLayoutChatThreadIdRouteRouteImport.update({
@@ -128,11 +123,23 @@ const appLayoutChatThreadIdRouteRoute =
     path: '/$threadId',
     getParentRoute: () => appLayoutChatRouteRoute,
   } as any)
+const appLayoutOrganizationSettingsIndexRoute =
+  appLayoutOrganizationSettingsIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => appLayoutOrganizationSettingsRouteRoute,
+  } as any)
+const appLayoutOrganizationSettingsProviderPolicyRouteRoute =
+  appLayoutOrganizationSettingsProviderPolicyRouteRouteImport.update({
+    id: '/provider-policy',
+    path: '/provider-policy',
+    getParentRoute: () => appLayoutOrganizationSettingsRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/api/chat': typeof ApiChatRouteRoute
   '/chat': typeof appLayoutChatRouteRouteWithChildren
-  '/org-settings': typeof appLayoutOrgSettingsRouteRouteWithChildren
+  '/organization': typeof appLayoutOrganizationRouteRouteWithChildren
   '/settings': typeof appLayoutSettingsRouteRouteWithChildren
   '/writer': typeof appLayoutWriterRouteRoute
   '/api/auth/callback': typeof ApiAuthCallbackRouteRoute
@@ -143,14 +150,16 @@ export interface FileRoutesByFullPath {
   '/$': typeof appLayoutSplatRoute
   '/': typeof appLayoutIndexRoute
   '/chat/$threadId': typeof appLayoutChatThreadIdRouteRoute
-  '/org-settings/model-policy': typeof appLayoutOrgSettingsModelPolicyRouteRoute
+  '/organization/settings': typeof appLayoutOrganizationSettingsRouteRouteWithChildren
   '/settings/debug-auth': typeof appLayoutSettingsDebugAuthRouteRoute
   '/chat/': typeof appLayoutChatIndexRoute
-  '/org-settings/': typeof appLayoutOrgSettingsIndexRoute
   '/settings/': typeof appLayoutSettingsIndexRoute
+  '/organization/settings/provider-policy': typeof appLayoutOrganizationSettingsProviderPolicyRouteRoute
+  '/organization/settings/': typeof appLayoutOrganizationSettingsIndexRoute
 }
 export interface FileRoutesByTo {
   '/api/chat': typeof ApiChatRouteRoute
+  '/organization': typeof appLayoutOrganizationRouteRouteWithChildren
   '/writer': typeof appLayoutWriterRouteRoute
   '/api/auth/callback': typeof ApiAuthCallbackRouteRoute
   '/api/files/upload': typeof ApiFilesUploadRouteRoute
@@ -160,18 +169,18 @@ export interface FileRoutesByTo {
   '/$': typeof appLayoutSplatRoute
   '/': typeof appLayoutIndexRoute
   '/chat/$threadId': typeof appLayoutChatThreadIdRouteRoute
-  '/org-settings/model-policy': typeof appLayoutOrgSettingsModelPolicyRouteRoute
   '/settings/debug-auth': typeof appLayoutSettingsDebugAuthRouteRoute
   '/chat': typeof appLayoutChatIndexRoute
-  '/org-settings': typeof appLayoutOrgSettingsIndexRoute
   '/settings': typeof appLayoutSettingsIndexRoute
+  '/organization/settings/provider-policy': typeof appLayoutOrganizationSettingsProviderPolicyRouteRoute
+  '/organization/settings': typeof appLayoutOrganizationSettingsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/(app)/_layout': typeof appLayoutRouteRouteWithChildren
   '/api/chat': typeof ApiChatRouteRoute
   '/(app)/_layout/chat': typeof appLayoutChatRouteRouteWithChildren
-  '/(app)/_layout/org-settings': typeof appLayoutOrgSettingsRouteRouteWithChildren
+  '/(app)/_layout/organization': typeof appLayoutOrganizationRouteRouteWithChildren
   '/(app)/_layout/settings': typeof appLayoutSettingsRouteRouteWithChildren
   '/(app)/_layout/writer': typeof appLayoutWriterRouteRoute
   '/api/auth/callback': typeof ApiAuthCallbackRouteRoute
@@ -182,18 +191,19 @@ export interface FileRoutesById {
   '/(app)/_layout/$': typeof appLayoutSplatRoute
   '/(app)/_layout/': typeof appLayoutIndexRoute
   '/(app)/_layout/chat/$threadId': typeof appLayoutChatThreadIdRouteRoute
-  '/(app)/_layout/org-settings/model-policy': typeof appLayoutOrgSettingsModelPolicyRouteRoute
+  '/(app)/_layout/organization/settings': typeof appLayoutOrganizationSettingsRouteRouteWithChildren
   '/(app)/_layout/settings/debug-auth': typeof appLayoutSettingsDebugAuthRouteRoute
   '/(app)/_layout/chat/': typeof appLayoutChatIndexRoute
-  '/(app)/_layout/org-settings/': typeof appLayoutOrgSettingsIndexRoute
   '/(app)/_layout/settings/': typeof appLayoutSettingsIndexRoute
+  '/(app)/_layout/organization/settings/provider-policy': typeof appLayoutOrganizationSettingsProviderPolicyRouteRoute
+  '/(app)/_layout/organization/settings/': typeof appLayoutOrganizationSettingsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/api/chat'
     | '/chat'
-    | '/org-settings'
+    | '/organization'
     | '/settings'
     | '/writer'
     | '/api/auth/callback'
@@ -204,14 +214,16 @@ export interface FileRouteTypes {
     | '/$'
     | '/'
     | '/chat/$threadId'
-    | '/org-settings/model-policy'
+    | '/organization/settings'
     | '/settings/debug-auth'
     | '/chat/'
-    | '/org-settings/'
     | '/settings/'
+    | '/organization/settings/provider-policy'
+    | '/organization/settings/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/api/chat'
+    | '/organization'
     | '/writer'
     | '/api/auth/callback'
     | '/api/files/upload'
@@ -221,17 +233,17 @@ export interface FileRouteTypes {
     | '/$'
     | '/'
     | '/chat/$threadId'
-    | '/org-settings/model-policy'
     | '/settings/debug-auth'
     | '/chat'
-    | '/org-settings'
     | '/settings'
+    | '/organization/settings/provider-policy'
+    | '/organization/settings'
   id:
     | '__root__'
     | '/(app)/_layout'
     | '/api/chat'
     | '/(app)/_layout/chat'
-    | '/(app)/_layout/org-settings'
+    | '/(app)/_layout/organization'
     | '/(app)/_layout/settings'
     | '/(app)/_layout/writer'
     | '/api/auth/callback'
@@ -242,11 +254,12 @@ export interface FileRouteTypes {
     | '/(app)/_layout/$'
     | '/(app)/_layout/'
     | '/(app)/_layout/chat/$threadId'
-    | '/(app)/_layout/org-settings/model-policy'
+    | '/(app)/_layout/organization/settings'
     | '/(app)/_layout/settings/debug-auth'
     | '/(app)/_layout/chat/'
-    | '/(app)/_layout/org-settings/'
     | '/(app)/_layout/settings/'
+    | '/(app)/_layout/organization/settings/provider-policy'
+    | '/(app)/_layout/organization/settings/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -338,11 +351,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof appLayoutSettingsRouteRouteImport
       parentRoute: typeof appLayoutRouteRoute
     }
-    '/(app)/_layout/org-settings': {
-      id: '/(app)/_layout/org-settings'
-      path: '/org-settings'
-      fullPath: '/org-settings'
-      preLoaderRoute: typeof appLayoutOrgSettingsRouteRouteImport
+    '/(app)/_layout/organization': {
+      id: '/(app)/_layout/organization'
+      path: '/organization'
+      fullPath: '/organization'
+      preLoaderRoute: typeof appLayoutOrganizationRouteRouteImport
       parentRoute: typeof appLayoutRouteRoute
     }
     '/(app)/_layout/chat': {
@@ -359,13 +372,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof appLayoutSettingsIndexRouteImport
       parentRoute: typeof appLayoutSettingsRouteRoute
     }
-    '/(app)/_layout/org-settings/': {
-      id: '/(app)/_layout/org-settings/'
-      path: '/'
-      fullPath: '/org-settings/'
-      preLoaderRoute: typeof appLayoutOrgSettingsIndexRouteImport
-      parentRoute: typeof appLayoutOrgSettingsRouteRoute
-    }
     '/(app)/_layout/chat/': {
       id: '/(app)/_layout/chat/'
       path: '/'
@@ -380,12 +386,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof appLayoutSettingsDebugAuthRouteRouteImport
       parentRoute: typeof appLayoutSettingsRouteRoute
     }
-    '/(app)/_layout/org-settings/model-policy': {
-      id: '/(app)/_layout/org-settings/model-policy'
-      path: '/model-policy'
-      fullPath: '/org-settings/model-policy'
-      preLoaderRoute: typeof appLayoutOrgSettingsModelPolicyRouteRouteImport
-      parentRoute: typeof appLayoutOrgSettingsRouteRoute
+    '/(app)/_layout/organization/settings': {
+      id: '/(app)/_layout/organization/settings'
+      path: '/settings'
+      fullPath: '/organization/settings'
+      preLoaderRoute: typeof appLayoutOrganizationSettingsRouteRouteImport
+      parentRoute: typeof appLayoutOrganizationRouteRoute
     }
     '/(app)/_layout/chat/$threadId': {
       id: '/(app)/_layout/chat/$threadId'
@@ -393,6 +399,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/chat/$threadId'
       preLoaderRoute: typeof appLayoutChatThreadIdRouteRouteImport
       parentRoute: typeof appLayoutChatRouteRoute
+    }
+    '/(app)/_layout/organization/settings/': {
+      id: '/(app)/_layout/organization/settings/'
+      path: '/'
+      fullPath: '/organization/settings/'
+      preLoaderRoute: typeof appLayoutOrganizationSettingsIndexRouteImport
+      parentRoute: typeof appLayoutOrganizationSettingsRouteRoute
+    }
+    '/(app)/_layout/organization/settings/provider-policy': {
+      id: '/(app)/_layout/organization/settings/provider-policy'
+      path: '/provider-policy'
+      fullPath: '/organization/settings/provider-policy'
+      preLoaderRoute: typeof appLayoutOrganizationSettingsProviderPolicyRouteRouteImport
+      parentRoute: typeof appLayoutOrganizationSettingsRouteRoute
     }
   }
 }
@@ -410,21 +430,37 @@ const appLayoutChatRouteRouteChildren: appLayoutChatRouteRouteChildren = {
 const appLayoutChatRouteRouteWithChildren =
   appLayoutChatRouteRoute._addFileChildren(appLayoutChatRouteRouteChildren)
 
-interface appLayoutOrgSettingsRouteRouteChildren {
-  appLayoutOrgSettingsModelPolicyRouteRoute: typeof appLayoutOrgSettingsModelPolicyRouteRoute
-  appLayoutOrgSettingsIndexRoute: typeof appLayoutOrgSettingsIndexRoute
+interface appLayoutOrganizationSettingsRouteRouteChildren {
+  appLayoutOrganizationSettingsProviderPolicyRouteRoute: typeof appLayoutOrganizationSettingsProviderPolicyRouteRoute
+  appLayoutOrganizationSettingsIndexRoute: typeof appLayoutOrganizationSettingsIndexRoute
 }
 
-const appLayoutOrgSettingsRouteRouteChildren: appLayoutOrgSettingsRouteRouteChildren =
+const appLayoutOrganizationSettingsRouteRouteChildren: appLayoutOrganizationSettingsRouteRouteChildren =
   {
-    appLayoutOrgSettingsModelPolicyRouteRoute:
-      appLayoutOrgSettingsModelPolicyRouteRoute,
-    appLayoutOrgSettingsIndexRoute: appLayoutOrgSettingsIndexRoute,
+    appLayoutOrganizationSettingsProviderPolicyRouteRoute:
+      appLayoutOrganizationSettingsProviderPolicyRouteRoute,
+    appLayoutOrganizationSettingsIndexRoute:
+      appLayoutOrganizationSettingsIndexRoute,
   }
 
-const appLayoutOrgSettingsRouteRouteWithChildren =
-  appLayoutOrgSettingsRouteRoute._addFileChildren(
-    appLayoutOrgSettingsRouteRouteChildren,
+const appLayoutOrganizationSettingsRouteRouteWithChildren =
+  appLayoutOrganizationSettingsRouteRoute._addFileChildren(
+    appLayoutOrganizationSettingsRouteRouteChildren,
+  )
+
+interface appLayoutOrganizationRouteRouteChildren {
+  appLayoutOrganizationSettingsRouteRoute: typeof appLayoutOrganizationSettingsRouteRouteWithChildren
+}
+
+const appLayoutOrganizationRouteRouteChildren: appLayoutOrganizationRouteRouteChildren =
+  {
+    appLayoutOrganizationSettingsRouteRoute:
+      appLayoutOrganizationSettingsRouteRouteWithChildren,
+  }
+
+const appLayoutOrganizationRouteRouteWithChildren =
+  appLayoutOrganizationRouteRoute._addFileChildren(
+    appLayoutOrganizationRouteRouteChildren,
   )
 
 interface appLayoutSettingsRouteRouteChildren {
@@ -445,7 +481,7 @@ const appLayoutSettingsRouteRouteWithChildren =
 
 interface appLayoutRouteRouteChildren {
   appLayoutChatRouteRoute: typeof appLayoutChatRouteRouteWithChildren
-  appLayoutOrgSettingsRouteRoute: typeof appLayoutOrgSettingsRouteRouteWithChildren
+  appLayoutOrganizationRouteRoute: typeof appLayoutOrganizationRouteRouteWithChildren
   appLayoutSettingsRouteRoute: typeof appLayoutSettingsRouteRouteWithChildren
   appLayoutWriterRouteRoute: typeof appLayoutWriterRouteRoute
   appLayoutSplatRoute: typeof appLayoutSplatRoute
@@ -454,7 +490,7 @@ interface appLayoutRouteRouteChildren {
 
 const appLayoutRouteRouteChildren: appLayoutRouteRouteChildren = {
   appLayoutChatRouteRoute: appLayoutChatRouteRouteWithChildren,
-  appLayoutOrgSettingsRouteRoute: appLayoutOrgSettingsRouteRouteWithChildren,
+  appLayoutOrganizationRouteRoute: appLayoutOrganizationRouteRouteWithChildren,
   appLayoutSettingsRouteRoute: appLayoutSettingsRouteRouteWithChildren,
   appLayoutWriterRouteRoute: appLayoutWriterRouteRoute,
   appLayoutSplatRoute: appLayoutSplatRoute,

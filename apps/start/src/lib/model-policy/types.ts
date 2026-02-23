@@ -9,7 +9,6 @@ export type OrgAiPolicy = {
   readonly disabledProviderIds: readonly string[]
   readonly disabledModelIds: readonly string[]
   readonly complianceFlags: OrgComplianceFlags
-  readonly version: number
   readonly updatedAt: number
 }
 

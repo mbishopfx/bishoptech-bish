@@ -7,6 +7,7 @@ import { DebugAuth } from '@/components/settings/debug-auth'
 
 const DEBUG_LABEL_STORAGE_KEY = 'rift-debug-auth-label'
 const DEBUG_WEBSITE_STORAGE_KEY = 'rift-debug-auth-website'
+const DEBUG_SIZE_KEY = 'rift-debug-auth-size'
 const WEBSITE_PREFIX = 'https://www.'
 
 export const Route = createFileRoute('/(app)/_layout/settings/debug-auth')({
@@ -22,6 +23,9 @@ function DebugAuthPage() {
   const { signInUrl, signUpUrl } = Route.useLoaderData()
   const [defaultLabel, setDefaultLabel] = useState('')
   const [defaultWebsite, setDefaultWebsite] = useState('')
+  const [defaultSize, setDefaultSize] = useState('medium')
+  const [speedInsightsOn, setSpeedInsightsOn] = useState(false)
+  const [observabilityOn, setObservabilityOn] = useState(false)
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -30,6 +34,7 @@ function DebugAuthPage() {
     setDefaultWebsite(
       full.startsWith(WEBSITE_PREFIX) ? full.slice(WEBSITE_PREFIX.length) : full,
     )
+    setDefaultSize(localStorage.getItem(DEBUG_SIZE_KEY) ?? 'medium')
   }, [])
 
   return (
@@ -45,9 +50,10 @@ function DebugAuthPage() {
         inputAttrs={{
           name: 'debugLabel',
           type: 'text',
-          defaultValue: defaultLabel,
           placeholder: 'e.g. My test session',
         }}
+        value={defaultLabel}
+        onValueChange={setDefaultLabel}
         helpText="Value is saved in your browser only."
         buttonText="Save"
         handleSubmit={async (data) => {
@@ -65,10 +71,11 @@ function DebugAuthPage() {
         inputAttrs={{
           name: 'website',
           type: 'text',
-          defaultValue: defaultWebsite,
           placeholder: 'example.com',
         }}
         inputPrefix={WEBSITE_PREFIX}
+        value={defaultWebsite}
+        onValueChange={setDefaultWebsite}
         helpText="Full URL is saved in your browser only."
         buttonText="Save"
         handleSubmit={async (data) => {
@@ -82,6 +89,61 @@ function DebugAuthPage() {
             )
           }
         }}
+      />
+
+      <Form
+        title="Demo select"
+        description="Example of a form that uses the Select component. Value is saved in localStorage."
+        selectConfig={{
+          name: 'size',
+          options: [
+            { value: 'small', label: 'Small' },
+            { value: 'medium', label: 'Medium' },
+            { value: 'large', label: 'Large' },
+          ],
+        }}
+        value={defaultSize}
+        onValueChange={setDefaultSize}
+        helpText="Saved in your browser only."
+        buttonText="Save"
+        handleSubmit={async (data) => {
+          const value = data.size ?? 'medium'
+          if (typeof window !== 'undefined') {
+            localStorage.setItem(DEBUG_SIZE_KEY, value)
+            setDefaultSize(value)
+          }
+        }}
+      />
+
+      <Form
+        title="Demo form with toggle section"
+        description="Example of a form card with only a toggle section (Add-Ons style): left-aligned text, optional pricing, toggle on the right."
+        toggleSection={{
+          sectionTitle: 'Add-Ons',
+          items: [
+            {
+              id: 'speed-insights',
+              title: 'Speed Insights',
+              description:
+                "Detailed view of your website's performance metrics, facilitating informed decisions for its optimization.",
+              learnMoreHref: 'https://example.com/docs/speed-insights',
+              checked: speedInsightsOn,
+              onCheckedChange: setSpeedInsightsOn,
+            },
+            {
+              id: 'observability-plus',
+              title: 'Observability Plus',
+              description:
+                "Gain comprehensive visibility into your application's health and performance.",
+              learnMoreHref: 'https://example.com/docs/observability',
+              price: '$10 / month',
+              priceSub: '+ $1.20/1M events',
+              checked: observabilityOn,
+              onCheckedChange: setObservabilityOn,
+            },
+          ],
+        }}
+        helpText="Toggles are for demo only; state is not persisted."
       />
     </ContentPage>
   )

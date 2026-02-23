@@ -12,7 +12,8 @@ const cacheURL = import.meta.env.VITE_ZERO_CACHE_URL
  * Uses WorkOS user id (user.id) so it matches workos_id in Convex/Postgres.
  */
 function useZeroAuth(): { userID: string; context: ZeroContext } {
-  const { user, loading } = useAuth()
+  const auth = useAuth()
+  const { user, loading } = auth
   const lastAuthenticatedUserIDRef = useRef<string | null>(null)
 
   /**
@@ -34,11 +35,21 @@ function useZeroAuth(): { userID: string; context: ZeroContext } {
     return 'anonymous'
   }, [loading, user?.id])
 
+  const organizationId =
+    'organizationId' in auth && typeof auth.organizationId === 'string'
+      ? auth.organizationId
+      : undefined
   /**
    * ZeroProvider compares non-auth props by identity. A stable context object
    * prevents accidental Zero client recreation across route renders.
    */
-  const context = useMemo<ZeroContext>(() => ({ userID }), [userID])
+  const context = useMemo<ZeroContext>(
+    () => ({
+      userID,
+      orgWorkosId: organizationId?.trim() || undefined,
+    }),
+    [organizationId, userID],
+  )
 
   return { userID, context }
 }

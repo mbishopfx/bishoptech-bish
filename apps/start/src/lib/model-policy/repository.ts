@@ -15,7 +15,6 @@ function fromRow(row: {
   readonly disabledProviderIds?: readonly string[]
   readonly disabledModelIds?: readonly string[]
   readonly complianceFlags?: Record<string, boolean>
-  readonly version?: number
   readonly updatedAt?: number
 }): OrgAiPolicy {
   return {
@@ -23,7 +22,6 @@ function fromRow(row: {
     disabledProviderIds: row.disabledProviderIds ?? [],
     disabledModelIds: row.disabledModelIds ?? [],
     complianceFlags: row.complianceFlags ?? {},
-    version: row.version ?? 1,
     updatedAt: row.updatedAt ?? now(),
   }
 }
@@ -46,8 +44,7 @@ export async function getOrgAiPolicy(
 }
 
 /**
- * Inserts or updates org policy with optimistic version bump semantics.
- * Version increments only on updates to support audit/event correlation.
+ * Inserts or updates org policy. No versioning; policy is overwritten on each update.
  */
 export async function upsertOrgAiPolicy(input: {
   readonly orgWorkosId: string
@@ -75,7 +72,6 @@ export async function upsertOrgAiPolicy(input: {
         disabledProviderIds: [...input.disabledProviderIds],
         disabledModelIds: [...input.disabledModelIds],
         complianceFlags: input.complianceFlags,
-        version: 1,
         updatedAt,
       })
     })
@@ -85,12 +81,9 @@ export async function upsertOrgAiPolicy(input: {
       disabledProviderIds: [...input.disabledProviderIds],
       disabledModelIds: [...input.disabledModelIds],
       complianceFlags: input.complianceFlags,
-      version: 1,
       updatedAt,
     }
   }
-
-  const nextVersion = (existing.version ?? 1) + 1
 
   await db.transaction(async (tx) => {
     await tx.mutate.orgAiPolicy.update({
@@ -98,7 +91,6 @@ export async function upsertOrgAiPolicy(input: {
       disabledProviderIds: [...input.disabledProviderIds],
       disabledModelIds: [...input.disabledModelIds],
       complianceFlags: input.complianceFlags,
-      version: nextVersion,
       updatedAt,
     })
   })
@@ -108,7 +100,6 @@ export async function upsertOrgAiPolicy(input: {
     disabledProviderIds: [...input.disabledProviderIds],
     disabledModelIds: [...input.disabledModelIds],
     complianceFlags: input.complianceFlags,
-    version: nextVersion,
     updatedAt,
   }
 }

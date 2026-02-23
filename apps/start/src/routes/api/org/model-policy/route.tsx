@@ -134,7 +134,6 @@ async function buildResponsePayload(orgWorkosId: string) {
       disabledProviderIds: policy?.disabledProviderIds ?? [],
       disabledModelIds: policy?.disabledModelIds ?? [],
       complianceFlags: policy?.complianceFlags ?? {},
-      version: policy?.version ?? 0,
       updatedAt: policy?.updatedAt,
     },
     providers,

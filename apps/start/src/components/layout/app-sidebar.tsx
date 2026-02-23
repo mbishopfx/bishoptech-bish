@@ -8,7 +8,7 @@ import { SETTINGS_AREA_KEY } from '@/components/layout/sidebar/app-sidebar-nav.c
 import {
   ORG_SETTINGS_AREA_KEY,
   ORG_SETTINGS_HREF,
-} from '@/routes/(app)/_layout/org-settings/-org-settings-nav'
+} from '@/routes/(app)/_layout/organization/settings/-organization-settings-nav'
 import { UserProfileAvatar } from '@/components/layout/user-profile-avatar'
 import { Avatar, AvatarFallback } from '@rift/ui/avatar'
 import { Button } from '@rift/ui/button'

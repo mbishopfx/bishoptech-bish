@@ -30,14 +30,22 @@ export const Route = createFileRoute('/api/zero/mutate')({
             { status: 503, headers: { 'Content-Type': 'application/json' } },
           )
         }
-        const { user } = await getAuth()
+        const auth = await getAuth()
+        const { user } = auth
         if (!user) {
           return new Response(
             JSON.stringify({ error: 'Unauthorized' }),
             { status: 401, headers: { 'Content-Type': 'application/json' } },
           )
         }
-        const context: ZeroContext = { userID: user.id }
+        const organizationId =
+          'organizationId' in auth && typeof auth.organizationId === 'string'
+            ? auth.organizationId
+            : undefined
+        const context: ZeroContext = {
+          userID: user.id,
+          orgWorkosId: organizationId?.trim() || undefined,
+        }
         const processor = new PushProcessor(dbProvider, context, 'error')
         const result = await processor.process(mutators, request)
         const failed =

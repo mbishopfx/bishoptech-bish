@@ -3,7 +3,7 @@ import {
   isOrgSettingsPath,
   orgSettingsNavArea,
   ORG_SETTINGS_AREA_KEY,
-} from '@/routes/(app)/_layout/org-settings/-org-settings-nav'
+} from '@/routes/(app)/_layout/organization/settings/-organization-settings-nav'
 import {
   isSettingsPath,
   settingsNavArea,
