@@ -104,6 +104,11 @@
       "import": "./src/components/field.tsx",
       "default": "./src/components/field.tsx"
     },
+    "./form": {
+      "types": "./src/components/form.tsx",
+      "import": "./src/components/form.tsx",
+      "default": "./src/components/form.tsx"
+    },
     "./input": {
       "types": "./src/components/input.tsx",
       "import": "./src/components/input.tsx",

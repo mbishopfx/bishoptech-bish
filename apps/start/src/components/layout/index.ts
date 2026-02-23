@@ -1,4 +1,5 @@
 export { AppSidebar } from './app-sidebar'
+export { ContentPage } from './content-page'
 export { DashboardLayout } from './dashboard-layout'
 export { MainNav, SideNavContext } from './main-nav'
 export { UserProfileAvatar } from './user-profile-avatar'

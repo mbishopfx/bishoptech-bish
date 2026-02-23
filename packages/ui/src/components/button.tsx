@@ -27,6 +27,8 @@ const buttonVariants = cva(
       size: {
         default:
           "h-8 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
+        large:
+          "h-10 px-4.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
         icon:
           "aspect-square h-10 w-10 rounded-lg",
         iconSmall: 

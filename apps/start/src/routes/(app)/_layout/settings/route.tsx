@@ -6,7 +6,7 @@ export const Route = createFileRoute('/(app)/_layout/settings')({
 
 function SettingsLayout() {
   return (
-    <div className="min-h-full flex flex-col p-8">
+    <div className="min-h-full flex flex-col">
       <Outlet />
     </div>
   )
