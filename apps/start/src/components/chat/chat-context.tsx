@@ -20,7 +20,15 @@ import type { UIMessage } from 'ai'
 import { flushSync } from 'react-dom'
 import { queries } from '@/integrations/zero'
 import { CACHE_CHAT_NAV } from '@/integrations/zero/query-cache-policy'
+import { AI_CATALOG } from '@/lib/ai-catalog'
+import { getProviderToolDefinition } from '@/lib/ai-catalog/provider-tools'
+import {
+  canUseAdvancedProviderTools,
+  canUseReasoningControls,
+} from '@/lib/ai-feature-flags'
+import { evaluateModelAvailability } from '@/lib/model-policy/policy-engine'
 import type { ChatMessageMetadata } from '@/lib/chat-contracts/message-metadata'
+import type { AiReasoningEffort } from '@/lib/ai-catalog/types'
 import {
   getThreadGenerationStatus,
   getThreadStatusesVersion,
@@ -29,11 +37,24 @@ import {
 
 type ChatUIMessage = UIMessage<ChatMessageMetadata>
 
+type ChatModelOption = {
+  readonly id: string
+  readonly name: string
+  readonly reasoningEfforts: readonly AiReasoningEffort[]
+  readonly defaultReasoningEffort?: AiReasoningEffort
+  readonly visibleTools: readonly string[]
+}
+
 type ChatActionsContextValue = Pick<
   ReturnType<typeof useAIChat<ChatUIMessage>>,
   'status' | 'error' | 'setMessages' | 'resumeStream'
 > & {
   sendMessage: ReturnType<typeof useAIChat<ChatUIMessage>>['sendMessage']
+  selectedModelId: string
+  selectedReasoningEffort?: AiReasoningEffort
+  selectableModels: readonly ChatModelOption[]
+  setSelectedModelId: (modelId: string) => void
+  setSelectedReasoningEffort: (reasoningEffort?: AiReasoningEffort) => void
   clear: () => void
 }
 
@@ -156,10 +177,84 @@ export function ChatProvider({
   >(undefined)
   const [localError, setLocalError] = useState<Error | null>(null)
   const activeThreadId = threadId ?? provisionalThreadId
+  const [orgPolicyRow] = useQuery(queries.orgPolicy.current())
+  const [threadRow] = useQuery(
+    queries.threads.byId({ threadId: activeThreadId ?? '' }),
+    CACHE_CHAT_NAV,
+  )
   const [storedMessages, storedMessagesResult] = useQuery(
     queries.messages.byThread({ threadId: activeThreadId ?? '' }),
     CACHE_CHAT_NAV,
   )
+  const selectableModels = useMemo<readonly ChatModelOption[]>(() => {
+    const hasPolicyRow =
+      !!orgPolicyRow &&
+      typeof orgPolicyRow === 'object' &&
+      'orgWorkosId' in orgPolicyRow &&
+      typeof orgPolicyRow.orgWorkosId === 'string'
+    const policy = hasPolicyRow
+      ? {
+          orgWorkosId: orgPolicyRow.orgWorkosId,
+          disabledProviderIds:
+            'disabledProviderIds' in orgPolicyRow &&
+            Array.isArray(orgPolicyRow.disabledProviderIds)
+              ? orgPolicyRow.disabledProviderIds
+              : [],
+          disabledModelIds:
+            'disabledModelIds' in orgPolicyRow &&
+            Array.isArray(orgPolicyRow.disabledModelIds)
+              ? orgPolicyRow.disabledModelIds
+              : [],
+          complianceFlags:
+            'complianceFlags' in orgPolicyRow &&
+            typeof orgPolicyRow.complianceFlags === 'object' &&
+            orgPolicyRow.complianceFlags
+              ? (orgPolicyRow.complianceFlags as Record<string, boolean>)
+              : {},
+          updatedAt:
+            'updatedAt' in orgPolicyRow &&
+            typeof orgPolicyRow.updatedAt === 'number'
+              ? orgPolicyRow.updatedAt
+              : Date.now(),
+        }
+      : undefined
+
+    return AI_CATALOG
+      .filter((model) =>
+        evaluateModelAvailability({
+          model,
+          policy,
+        }).allowed,
+      )
+      .map((model) => ({
+        id: model.id,
+        name: model.name,
+        reasoningEfforts: canUseReasoningControls()
+          ? model.reasoningEfforts
+          : [],
+        defaultReasoningEffort: canUseReasoningControls()
+          ? model.defaultReasoningEffort
+          : undefined,
+        visibleTools: model.providerToolIds
+          .map((toolId) => getProviderToolDefinition(model.providerId, toolId))
+          .filter((tool) =>
+            tool
+              ? canUseAdvancedProviderTools() || !tool.advanced
+              : false,
+          )
+          .map((tool) => tool!.name),
+      }))
+  }, [orgPolicyRow])
+  const [selectedModelId, setSelectedModelId] = useState(
+    selectableModels[0]?.id ?? AI_CATALOG[0]?.id ?? 'openai/gpt-4o-mini',
+  )
+  const [selectedReasoningEffort, setSelectedReasoningEffort] = useState<
+    AiReasoningEffort | undefined
+  >(undefined)
+  const selectedModelIdRef = useRef(selectedModelId)
+  const selectedReasoningEffortRef = useRef(selectedReasoningEffort)
+  selectedModelIdRef.current = selectedModelId
+  selectedReasoningEffortRef.current = selectedReasoningEffort
   const threadStatusesVersion = useSyncExternalStore(
     subscribeThreadStatuses,
     getThreadStatusesVersion,
@@ -181,6 +276,8 @@ export function ChatProvider({
             threadId: threadIdRef.current,
             message: messages[messages.length - 1],
             createIfMissing: createIfMissingRef.current,
+            modelId: selectedModelIdRef.current,
+            reasoningEffort: selectedReasoningEffortRef.current,
           },
         }),
       }),
@@ -200,6 +297,34 @@ export function ChatProvider({
   })
   const sendAIMessageRef = useRef(sendAIMessage)
   sendAIMessageRef.current = sendAIMessage
+
+  useEffect(() => {
+    if (selectableModels.length === 0) return
+    if (!selectableModels.some((model) => model.id === selectedModelId)) {
+      setSelectedModelId(selectableModels[0].id)
+      setSelectedReasoningEffort(selectableModels[0].defaultReasoningEffort)
+    }
+  }, [selectableModels, selectedModelId])
+
+  useEffect(() => {
+    if (
+      !threadRow ||
+      typeof threadRow !== 'object' ||
+      !('model' in threadRow) ||
+      typeof threadRow.model !== 'string'
+    ) {
+      return
+    }
+    if (!selectableModels.some((model) => model.id === threadRow.model)) return
+
+    setSelectedModelId(threadRow.model)
+    setSelectedReasoningEffort(
+      'reasoningEffort' in threadRow &&
+        typeof threadRow.reasoningEffort === 'string'
+        ? (threadRow.reasoningEffort as AiReasoningEffort)
+        : undefined,
+    )
+  }, [threadRow, selectableModels])
 
   useEffect(() => {
     threadIdRef.current = activeThreadId
@@ -351,6 +476,22 @@ export function ChatProvider({
   )
 
   const clear = useCallback(() => setMessages([]), [setMessages])
+  const setModelSelection = useCallback((modelId: string) => {
+    const nextModel = selectableModels.find((model) => model.id === modelId)
+    if (!nextModel) return
+    setSelectedModelId(nextModel.id)
+    setSelectedReasoningEffort(nextModel.defaultReasoningEffort)
+  }, [selectableModels])
+  const setReasoningSelection = useCallback((reasoningEffort?: AiReasoningEffort) => {
+    const model = selectableModels.find((entry) => entry.id === selectedModelId)
+    if (!model) return
+    if (!reasoningEffort) {
+      setSelectedReasoningEffort(undefined)
+      return
+    }
+    if (!model.reasoningEfforts.includes(reasoningEffort)) return
+    setSelectedReasoningEffort(reasoningEffort)
+  }, [selectableModels, selectedModelId])
 
   const messagesValue = useMemo<ChatMessagesContextValue>(
     () => ({
@@ -366,11 +507,29 @@ export function ChatProvider({
       status,
       error: localError ?? error,
       sendMessage,
+      selectedModelId,
+      selectedReasoningEffort,
+      selectableModels,
+      setSelectedModelId: setModelSelection,
+      setSelectedReasoningEffort: setReasoningSelection,
       setMessages,
       resumeStream,
       clear,
     }),
-    [status, error, localError, sendMessage, setMessages, resumeStream, clear],
+    [
+      status,
+      error,
+      localError,
+      sendMessage,
+      selectedModelId,
+      selectedReasoningEffort,
+      selectableModels,
+      setModelSelection,
+      setReasoningSelection,
+      setMessages,
+      resumeStream,
+      clear,
+    ],
   )
 
   return (

@@ -1,5 +1,6 @@
 import type { UIMessage } from 'ai'
 import { Effect, Layer, ServiceMap } from 'effect'
+import type { AiReasoningEffort } from '@/lib/ai-catalog/types'
 import { MessagePersistenceError } from '../domain/errors'
 import type { IncomingUserMessage } from '../domain/schemas'
 import { getUserMessageText } from '../domain/schemas'
@@ -21,6 +22,10 @@ export type MessageStoreServiceShape = {
     readonly message: IncomingUserMessage
     readonly userId: string
     readonly model: string
+    readonly reasoningEffort?: AiReasoningEffort
+    readonly modelParams?: {
+      readonly reasoningEffort?: AiReasoningEffort
+    }
     readonly requestId: string
   }) => Effect.Effect<UIMessage, MessagePersistenceError>
   readonly finalizeAssistantMessage: (input: {
@@ -32,6 +37,9 @@ export type MessageStoreServiceShape = {
     readonly ok: boolean
     readonly finalContent: string
     readonly errorMessage?: string
+    readonly modelParams?: {
+      readonly reasoningEffort?: AiReasoningEffort
+    }
     readonly requestId: string
   }) => Effect.Effect<void, MessagePersistenceError>
 }
@@ -82,7 +90,16 @@ export const MessageStoreZero = Layer.succeed(MessageStoreService, {
           cause: String(error),
         }),
     }),
-  appendUserMessage: ({ threadDbId, threadId, message, userId, model, requestId }) =>
+  appendUserMessage: ({
+    threadDbId,
+    threadId,
+    message,
+    userId,
+    model,
+    reasoningEffort,
+    modelParams,
+    requestId,
+  }) =>
     Effect.tryPromise({
       try: async () => {
         const db = getZeroDatabase()
@@ -105,6 +122,7 @@ export const MessageStoreZero = Layer.succeed(MessageStoreService, {
               created_at: now,
               updated_at: now,
               model,
+              modelParams,
               attachmentsIds: [],
             })
           } catch {
@@ -114,6 +132,8 @@ export const MessageStoreZero = Layer.succeed(MessageStoreService, {
 
           await tx.mutate.thread.update({
             id: threadDbId,
+            model,
+            reasoningEffort,
             generationStatus: 'generation',
             updatedAt: now,
             lastMessageAt: now,
@@ -139,6 +159,7 @@ export const MessageStoreZero = Layer.succeed(MessageStoreService, {
     ok,
     finalContent,
     errorMessage,
+    modelParams,
     requestId,
   }) =>
     Effect.tryPromise({
@@ -164,12 +185,14 @@ export const MessageStoreZero = Layer.succeed(MessageStoreService, {
               content: string
               status: 'done' | 'error'
               updated_at: number
+              modelParams?: { readonly reasoningEffort?: AiReasoningEffort }
               serverError?: { type: string; message: string }
             } = {
               id: existing.id,
               content: finalContent,
               status: ok ? 'done' : 'error',
               updated_at: now,
+              modelParams,
             }
 
             if (!ok) {
@@ -193,6 +216,7 @@ export const MessageStoreZero = Layer.succeed(MessageStoreService, {
               created_at: number
               updated_at: number
               model: string
+              modelParams?: { readonly reasoningEffort?: AiReasoningEffort }
               attachmentsIds: readonly string[]
               serverError?: { type: string; message: string }
             } = {
@@ -206,6 +230,7 @@ export const MessageStoreZero = Layer.succeed(MessageStoreService, {
               created_at: now,
               updated_at: now,
               model: threadModel,
+              modelParams,
               attachmentsIds: [],
             }
             if (!ok) {

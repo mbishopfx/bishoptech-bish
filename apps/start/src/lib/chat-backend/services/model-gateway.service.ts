@@ -34,6 +34,9 @@ export type ModelGatewayServiceShape = {
     readonly model: string
     readonly requestId: string
     readonly tools: Record<string, never>
+    readonly activeTools?: readonly string[]
+    readonly providerOptions?: Record<string, unknown>
+    readonly reasoningEffort?: 'none' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh'
     readonly onChunk?: (chunk: unknown) => void
     readonly abortSignal?: AbortSignal
   }) => Effect.Effect<ModelStreamResult, ModelProviderError>
@@ -47,21 +50,30 @@ export class ModelGatewayService extends ServiceMap.Service<
 
 /** Live OpenAI-backed gateway implementation. */
 export const ModelGatewayLive = Layer.succeed(ModelGatewayService, {
-  streamResponse: ({ messages, model, requestId, tools, onChunk, abortSignal }) =>
+  streamResponse: ({
+    messages,
+    model,
+    requestId,
+    tools,
+    activeTools,
+    providerOptions,
+    reasoningEffort,
+    onChunk,
+    abortSignal,
+  }) =>
     Effect.tryPromise({
       try: async () => {
-        // Dynamic import keeps server-only dependency out of client bundles.
-        const { openai } = await import('@ai-sdk/openai')
         const modelMessages = await convertToModelMessages(messages)
-        // Catalog IDs use provider prefix (`openai/...`), SDK expects provider-local ID.
-        const runtimeModel = model.startsWith('openai/')
-          ? model.slice('openai/'.length)
-          : model
         return streamText({
-          model: openai(runtimeModel),
+          model,
           system: SYSTEM_PROMPT,
           messages: modelMessages,
           tools,
+          activeTools: activeTools ? [...activeTools] : undefined,
+          providerOptions: providerOptions as any,
+          maxOutputTokens: reasoningEffort === 'high' || reasoningEffort === 'xhigh'
+            ? 12_000
+            : 8_000,
           abortSignal,
           onChunk: onChunk
             ? ({ chunk }) => {

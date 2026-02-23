@@ -17,6 +17,14 @@ export const chatQueryDefinitions = {
         .where('visibility', 'visible')
         .orderBy('updatedAt', 'desc'),
     ),
+    byId: defineQuery(
+      z.object({ threadId: z.string() }),
+      ({ args, ctx }) =>
+        zql.thread
+          .where('threadId', args.threadId)
+          .where('userId', ctx.userID)
+          .one(),
+    ),
   },
   messages: {
     /** Messages in a thread, always scoped to the authenticated user context. */

@@ -8,6 +8,7 @@ import {
   emitWideErrorEvent,
   getErrorTag,
 } from '../observability/wide-event'
+import { canUseReasoningControls } from '@/lib/ai-feature-flags'
 import { MessageStoreService } from './message-store.service'
 import { ModelGatewayService } from './model-gateway.service'
 import { ModelPolicyService } from './model-policy.service'
@@ -33,6 +34,8 @@ export type ChatOrchestratorServiceShape = {
     readonly orgWorkosId?: string
     readonly requestId: string
     readonly message: IncomingUserMessage
+    readonly modelId?: string
+    readonly reasoningEffort?: string
     readonly createIfMissing?: boolean
     readonly route: string
   }) => Effect.Effect<Response, ChatDomainError>
@@ -69,6 +72,8 @@ export const ChatOrchestratorLive = Layer.effect(
       orgWorkosId,
       requestId,
       message,
+      modelId,
+      reasoningEffort,
       createIfMissing,
       route,
     }) => {
@@ -119,11 +124,18 @@ export const ChatOrchestratorLive = Layer.effect(
           threadId,
           userId,
           requestId,
+          modelId: modelId ?? threadAccess.model,
         })
         // Model is resolved once per request and reused for persistence + stream metadata.
         const modelResolution = yield* modelPolicy.resolveThreadModel({
           threadId,
           orgWorkosId,
+          threadModel: threadAccess.model,
+          threadReasoningEffort: threadAccess.reasoningEffort,
+          requestedModelId: modelId,
+          requestedReasoningEffort: canUseReasoningControls()
+            ? reasoningEffort
+            : undefined,
           requestId,
         })
 
@@ -163,6 +175,10 @@ export const ChatOrchestratorLive = Layer.effect(
           message,
           userId,
           model: modelResolution.modelId,
+          reasoningEffort: modelResolution.reasoningEffort,
+          modelParams: {
+            reasoningEffort: modelResolution.reasoningEffort,
+          },
           requestId,
         })
 
@@ -225,6 +241,9 @@ export const ChatOrchestratorLive = Layer.effect(
                 ok: input.ok,
                 finalContent: bufferedAssistantText,
                 errorMessage: input.errorMessage,
+                modelParams: {
+                  reasoningEffort: modelResolution.reasoningEffort,
+                },
                 requestId,
               })
               .pipe(
@@ -252,6 +271,14 @@ export const ChatOrchestratorLive = Layer.effect(
           model: modelResolution.modelId,
           requestId,
           tools: toolRegistry.tools,
+          activeTools: toolRegistry.activeTools,
+          providerOptions:
+            modelResolution.reasoningEffort
+              ? toolRegistry.providerOptionsByReasoning[
+                  modelResolution.reasoningEffort
+                ]
+              : toolRegistry.defaultProviderOptions,
+          reasoningEffort: modelResolution.reasoningEffort,
           abortSignal: streamAbortController.signal,
           onChunk: (chunk: unknown) => {
             if (!chunk || typeof chunk !== 'object') return

@@ -15,7 +15,16 @@ import { useFileAttachments } from '../../hooks/chat/upload'
 import { parseChatApiError } from './chat-error-messages'
 
 export function ChatInput() {
-  const { sendMessage, status, error } = useChatActions()
+  const {
+    sendMessage,
+    status,
+    error,
+    selectableModels,
+    selectedModelId,
+    selectedReasoningEffort,
+    setSelectedModelId,
+    setSelectedReasoningEffort,
+  } = useChatActions()
   const [input, setInput] = useState('')
   const [errorDismissed, setErrorDismissed] = useState(false)
   const [uploadErrorDismissed, setUploadErrorDismissed] = useState(false)
@@ -70,6 +79,57 @@ export function ChatInput() {
 
   const topSlot = (
     <>
+      <div className="flex flex-wrap items-center gap-2 pb-1">
+        <select
+          className="h-8 rounded-md border border-border bg-background px-2 text-xs"
+          value={selectedModelId}
+          onChange={(e) => setSelectedModelId(e.target.value)}
+          disabled={isBusy}
+          aria-label="Model"
+        >
+          {selectableModels.map((model) => (
+            <option key={model.id} value={model.id}>
+              {model.name}
+            </option>
+          ))}
+        </select>
+        <select
+          className="h-8 rounded-md border border-border bg-background px-2 text-xs"
+          value={selectedReasoningEffort ?? ''}
+          onChange={(e) =>
+            setSelectedReasoningEffort(
+              e.target.value
+                ? (e.target.value as
+                    | 'none'
+                    | 'minimal'
+                    | 'low'
+                    | 'medium'
+                    | 'high'
+                    | 'xhigh')
+                : undefined,
+            )
+          }
+          disabled={isBusy}
+          aria-label="Reasoning"
+        >
+          <option value="">Default reasoning</option>
+          {(
+            selectableModels.find((model) => model.id === selectedModelId)
+              ?.reasoningEfforts ?? []
+          ).map((effort) => (
+            <option key={effort} value={effort}>
+              {effort}
+            </option>
+          ))}
+        </select>
+        <div className="text-xs text-content-muted">
+          Tools:{' '}
+          {(
+            selectableModels.find((model) => model.id === selectedModelId)
+              ?.visibleTools ?? []
+          ).join(', ') || 'None'}
+        </div>
+      </div>
       {activeErrorMessage ? (
         <PromptInputError
           error={activeErrorMessage}

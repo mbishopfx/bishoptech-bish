@@ -122,6 +122,8 @@ export const Route = createFileRoute('/api/chat')({
             orgWorkosId,
             requestId,
             message: body.message,
+            modelId: body.modelId,
+            reasoningEffort: body.reasoningEffort,
             createIfMissing: body.createIfMissing,
             route: '/api/chat',
           })

@@ -1,6 +1,7 @@
 import { Effect, Layer, ServiceMap } from 'effect'
 import { generateText } from 'ai'
-import { CHAT_FIXED_MODEL_ID } from '@/lib/ai-catalog'
+import { CHAT_DEFAULT_MODEL_ID } from '@/lib/ai-catalog'
+import type { AiReasoningEffort } from '@/lib/ai-catalog/types'
 import {
   MessagePersistenceError,
   ThreadForbiddenError,
@@ -32,6 +33,7 @@ export type ThreadServiceShape = {
       readonly threadId: string
       readonly userId: string
       readonly model: string
+      readonly reasoningEffort?: AiReasoningEffort
     },
     ThreadNotFoundError | ThreadForbiddenError | MessagePersistenceError
   >
@@ -49,7 +51,7 @@ export class ThreadService extends ServiceMap.Service<
 >()('chat-backend/ThreadService') {}
 
 /** Fixed thread model stored for traceability; runtime selection is enforced elsewhere. */
-const DEFAULT_THREAD_MODEL = CHAT_FIXED_MODEL_ID
+const DEFAULT_THREAD_MODEL = CHAT_DEFAULT_MODEL_ID
 const DEFAULT_THREAD_TITLE = 'Nuevo Chat'
 const MAX_USER_MESSAGE_LENGTH = 200
 const MAX_TITLE_WORDS = 8
@@ -103,6 +105,7 @@ export const ThreadServiceZero = Layer.succeed(ThreadService, {
             userSetTitle: false,
             userId,
             model: DEFAULT_THREAD_MODEL,
+            reasoningEffort: undefined,
             pinned: false,
             allowAttachments: true,
           })
@@ -152,6 +155,7 @@ export const ThreadServiceZero = Layer.succeed(ThreadService, {
                 userSetTitle: false,
                 userId,
                 model: DEFAULT_THREAD_MODEL,
+                reasoningEffort: undefined,
                 pinned: false,
                 allowAttachments: true,
               })
@@ -180,6 +184,7 @@ export const ThreadServiceZero = Layer.succeed(ThreadService, {
           threadId: thread.threadId,
           userId: thread.userId,
           model: thread.model,
+          reasoningEffort: thread.reasoningEffort ?? undefined,
         }
       },
       catch: (error) => {
@@ -303,6 +308,7 @@ export const ThreadServiceMemory = Layer.succeed(ThreadService, {
         threadId: thread.threadId,
         userId: thread.userId,
         model: DEFAULT_THREAD_MODEL,
+        reasoningEffort: undefined,
       }
     }),
   autoGenerateTitle: () => Effect.void,

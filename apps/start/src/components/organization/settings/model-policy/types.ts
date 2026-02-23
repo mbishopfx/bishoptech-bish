@@ -15,9 +15,9 @@ export type PolicyPayload = {
     name: string
     providerId: string
     description: string
-    tags: string[]
+    collectsData: boolean
     disabled: boolean
-    deniedBy: Array<'provider' | 'model' | 'tag'>
+    deniedBy: Array<'provider' | 'model' | 'compliance'>
   }>
 }
 

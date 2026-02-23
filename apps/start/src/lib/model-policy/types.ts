@@ -1,3 +1,4 @@
+import type { AiReasoningEffort } from '@/lib/ai-catalog/types'
 import type { OrgComplianceFlags } from '@/lib/ai-catalog/compliance-map'
 
 /**
@@ -15,7 +16,7 @@ export type OrgAiPolicy = {
 /** Result of policy evaluation for one model candidate. */
 export type ModelAvailabilityDecision = {
   readonly allowed: boolean
-  readonly deniedBy: readonly ('provider' | 'model' | 'tag')[]
+  readonly deniedBy: readonly ('provider' | 'model' | 'compliance')[]
 }
 
 /**
@@ -24,5 +25,6 @@ export type ModelAvailabilityDecision = {
  */
 export type EffectiveModelResolution = {
   readonly modelId: string
-  readonly source: 'fixed'
+  readonly reasoningEffort?: AiReasoningEffort
+  readonly source: 'thread' | 'request'
 }

@@ -1,5 +1,6 @@
 import { Effect, Layer, ServiceMap } from 'effect'
-import { CHAT_FIXED_MODEL_ID } from '@/lib/ai-catalog'
+import { CHAT_DEFAULT_MODEL_ID } from '@/lib/ai-catalog'
+import type { AiReasoningEffort } from '@/lib/ai-catalog/types'
 import {
   evaluateModelAvailability,
   getCatalogModelById,
@@ -10,14 +11,6 @@ import type {
   OrgAiPolicy,
 } from '@/lib/model-policy/types'
 import { MessagePersistenceError, ModelPolicyDeniedError } from '../domain/errors'
-
-/**
- * Runtime currently supports only OpenAI IDs on the chat execution path.
- * This guard prevents selecting catalog models that the gateway cannot execute.
- */
-function isRuntimeSupportedModel(modelId: string): boolean {
-  return modelId.startsWith('openai/')
-}
 
 /** Maps policy/runtime selection failures into a chat-domain denied error. */
 function toPolicyDenied(input: {
@@ -47,6 +40,10 @@ export type ModelPolicyServiceShape = {
   readonly resolveThreadModel: (input: {
     readonly threadId: string
     readonly orgWorkosId?: string
+    readonly threadModel?: string
+    readonly threadReasoningEffort?: AiReasoningEffort
+    readonly requestedModelId?: string
+    readonly requestedReasoningEffort?: string
     readonly requestId: string
   }) => Effect.Effect<EffectiveModelResolution, ModelPolicyDeniedError | MessagePersistenceError>
 }
@@ -60,9 +57,9 @@ export class ModelPolicyService extends ServiceMap.Service<
 /**
  * Production implementation:
  * 1) load org policy,
- * 2) resolve fixed model,
- * 3) verify runtime support,
- * 4) enforce org deny rules.
+ * 2) resolve requested or thread-default model,
+ * 3) enforce org deny rules,
+ * 4) resolve effective reasoning setting.
  */
 export const ModelPolicyLive = Layer.succeed(ModelPolicyService, {
   getOrgPolicy: ({ orgWorkosId, requestId }) =>
@@ -82,6 +79,10 @@ export const ModelPolicyLive = Layer.succeed(ModelPolicyService, {
   resolveThreadModel: ({
     threadId,
     orgWorkosId,
+    threadModel,
+    threadReasoningEffort,
+    requestedModelId,
+    requestedReasoningEffort,
     requestId,
   }) =>
     Effect.gen(function* () {
@@ -99,11 +100,13 @@ export const ModelPolicyLive = Layer.succeed(ModelPolicyService, {
           }),
       })
 
-      const requestedModel = getCatalogModelById(CHAT_FIXED_MODEL_ID)
-      if (!requestedModel) {
+      const candidateModelId =
+        requestedModelId?.trim() || threadModel?.trim() || CHAT_DEFAULT_MODEL_ID
+      const selectedModel = getCatalogModelById(candidateModelId)
+      if (!selectedModel) {
         return yield* Effect.fail(
           toPolicyDenied({
-            modelId: CHAT_FIXED_MODEL_ID,
+            modelId: candidateModelId,
             threadId,
             requestId,
             reason: 'unknown_model',
@@ -111,26 +114,15 @@ export const ModelPolicyLive = Layer.succeed(ModelPolicyService, {
         )
       }
 
-      if (!isRuntimeSupportedModel(requestedModel.id)) {
-        return yield* Effect.fail(
-          toPolicyDenied({
-            modelId: requestedModel.id,
-            threadId,
-            requestId,
-            reason: 'runtime_unsupported',
-          }),
-        )
-      }
-
       const availability = evaluateModelAvailability({
-        model: requestedModel,
+        model: selectedModel,
         policy,
       })
 
       if (!availability.allowed) {
         return yield* Effect.fail(
           toPolicyDenied({
-            modelId: requestedModel.id,
+            modelId: selectedModel.id,
             threadId,
             requestId,
             reason: `policy_denied:${availability.deniedBy.join(',')}`,
@@ -138,19 +130,31 @@ export const ModelPolicyLive = Layer.succeed(ModelPolicyService, {
         )
       }
 
+      const requestedEffort =
+        requestedReasoningEffort ?? threadReasoningEffort ?? selectedModel.defaultReasoningEffort
+      const reasoningEffort =
+        requestedEffort === 'none'
+          ? undefined
+          : (requestedEffort as AiReasoningEffort | undefined)
+
       return {
-        modelId: requestedModel.id,
-        source: 'fixed',
+        modelId: selectedModel.id,
+        reasoningEffort,
+        source: requestedModelId || requestedReasoningEffort ? 'request' : 'thread',
       } satisfies EffectiveModelResolution
     }),
 })
 
-/** Test/local implementation with policy bypass and fixed model resolution. */
+/** Test/local implementation with policy bypass. */
 export const ModelPolicyMemory = Layer.succeed(ModelPolicyService, {
   getOrgPolicy: () => Effect.succeed(undefined),
-  resolveThreadModel: () =>
+  resolveThreadModel: ({ requestedModelId, requestedReasoningEffort }) =>
     Effect.succeed({
-      modelId: CHAT_FIXED_MODEL_ID,
-      source: 'fixed',
+      modelId: requestedModelId?.trim() || CHAT_DEFAULT_MODEL_ID,
+      reasoningEffort:
+        requestedReasoningEffort && requestedReasoningEffort !== 'none'
+          ? (requestedReasoningEffort as AiReasoningEffort)
+          : undefined,
+      source: requestedModelId || requestedReasoningEffort ? 'request' : 'thread',
     } satisfies EffectiveModelResolution),
 })

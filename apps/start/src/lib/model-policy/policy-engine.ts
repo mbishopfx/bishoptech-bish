@@ -2,7 +2,7 @@ import {
   AI_CATALOG,
   AI_CATALOG_BY_ID,
 } from '@/lib/ai-catalog'
-import { deniedTagsFromComplianceFlags } from '@/lib/ai-catalog/compliance-map'
+import { isDeniedByComplianceFlags } from '@/lib/ai-catalog/compliance-map'
 import type { AiModelCatalogEntry } from '@/lib/ai-catalog/types'
 import type {
   ModelAvailabilityDecision,
@@ -25,7 +25,7 @@ export function evaluateModelAvailability(input: {
   const { model, policy } = input
   if (!policy) return emptyDecision()
 
-  const deniedBy: Array<'provider' | 'model' | 'tag'> = []
+  const deniedBy: Array<'provider' | 'model' | 'compliance'> = []
 
   if (policy.disabledProviderIds.includes(model.providerId)) {
     deniedBy.push('provider')
@@ -34,9 +34,8 @@ export function evaluateModelAvailability(input: {
     deniedBy.push('model')
   }
 
-  const deniedTags = deniedTagsFromComplianceFlags(policy.complianceFlags)
-  if (model.tags.some((tag) => deniedTags.has(tag))) {
-    deniedBy.push('tag')
+  if (isDeniedByComplianceFlags(model, policy.complianceFlags)) {
+    deniedBy.push('compliance')
   }
 
   return {

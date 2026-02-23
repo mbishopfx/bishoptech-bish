@@ -1,4 +1,5 @@
 import { Schema } from 'effect'
+import type { AiReasoningEffort } from '@/lib/ai-catalog/types'
 import type { ChatMessageMetadata } from '@/lib/chat-contracts/message-metadata'
 
 /**
@@ -24,9 +25,12 @@ export const ChatStreamRequest = Schema.Struct({
   threadId: Schema.String,
   message: IncomingUserMessage,
   createIfMissing: Schema.optional(Schema.Boolean),
+  modelId: Schema.optional(Schema.String),
+  reasoningEffort: Schema.optional(Schema.String),
 })
 
 export type ChatStreamRequest = Schema.Schema.Type<typeof ChatStreamRequest>
+export type ChatReasoningEffort = AiReasoningEffort
 
 /** Response shape for thread bootstrap endpoint(s). */
 export const ChatThreadCreateResponse = Schema.Struct({

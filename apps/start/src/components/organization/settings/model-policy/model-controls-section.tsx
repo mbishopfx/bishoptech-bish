@@ -12,7 +12,7 @@ type ModelControlsSectionProps = {
 
 /**
  * Model controls section: Form card with toggleSection for each model.
- * Toggling disables or enables the model; shows denial reason (provider/model/tag) when disabled elsewhere.
+ * Toggling disables or enables the model; shows denial reason when disabled elsewhere.
  */
 export function ModelControlsSection({
   payload,
@@ -22,8 +22,8 @@ export function ModelControlsSection({
   return (
     <Form
       title="Model Controls"
-      description="Override model availability per model. Disabled by provider or tag is shown in the description."
-      helpText="Changes apply immediately. You can override a provider-level or tag-level denial per model here."
+      description="Override model availability per model. Disabled by provider or compliance policy is shown in the description."
+      helpText="Changes apply immediately. You can override a provider-level denial per model here."
       toggleSection={{
         sectionTitle: 'Models',
         items: payload.models.map((model) => ({

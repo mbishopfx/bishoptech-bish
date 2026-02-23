@@ -1,13 +1,14 @@
-/**
- * Tags used by policy/compliance rules to deny groups of models without listing
- * every model ID explicitly.
- */
-export type AiModelTag =
-  | 'collects_data'
-  | 'reasoning'
-  | 'multimodal'
-  | 'fast'
-  | 'economical'
+/** Normalized reasoning levels exposed to UI and accepted by chat requests. */
+export type AiReasoningEffort =
+  | 'none'
+  | 'minimal'
+  | 'low'
+  | 'medium'
+  | 'high'
+  | 'xhigh'
+
+/** Provider-local tool id that can be attached to specific models. */
+export type AiProviderToolId = string
 
 /**
  * Runtime capabilities exposed to UI/policy consumers so behavior can be gated
@@ -18,6 +19,7 @@ export type AiModelCapabilities = {
   readonly supportsStreaming: boolean
   readonly supportsReasoning: boolean
   readonly supportsImageInput: boolean
+  readonly supportsPdfInput: boolean
 }
 
 /**
@@ -39,7 +41,24 @@ export type AiModelCatalogEntry = {
   readonly name: string
   readonly description: string
   readonly contextWindow: number
-  readonly tags: readonly AiModelTag[]
+  readonly collectsData: boolean
   readonly capabilities: AiModelCapabilities
+  /** Provider-specific tools explicitly enabled for this model. */
+  readonly providerToolIds: readonly AiProviderToolId[]
+  /**
+   * Reasoning settings are model-specific to prevent invalid combinations.
+   * An empty list means the model should be treated as non-reasoning.
+   */
+  readonly reasoningEfforts: readonly AiReasoningEffort[]
+  readonly defaultReasoningEffort?: AiReasoningEffort
+  /**
+   * Provider options keyed by reasoning effort allow per-model tuning while
+   * keeping execution logic provider-agnostic.
+   */
+  readonly providerOptionsByReasoning?: Partial<
+    Record<AiReasoningEffort, Record<string, unknown>>
+  >
+  readonly defaultProviderOptions?: Record<string, unknown>
+  readonly defaultMaxOutputTokens?: number
   readonly requirements?: readonly AiModelRequirement[]
 }

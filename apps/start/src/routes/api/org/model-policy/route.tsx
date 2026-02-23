@@ -91,16 +91,16 @@ function toModelPayload(input: {
   readonly name: string
   readonly providerId: string
   readonly description: string
-  readonly tags: readonly string[]
+  readonly collectsData: boolean
   readonly disabled: boolean
-  readonly deniedBy: readonly ('provider' | 'model' | 'tag')[]
+  readonly deniedBy: readonly ('provider' | 'model' | 'compliance')[]
 }) {
   return {
     id: input.id,
     name: input.name,
     providerId: input.providerId,
     description: input.description,
-    tags: input.tags,
+    collectsData: input.collectsData,
     disabled: input.disabled,
     deniedBy: input.deniedBy,
   }
@@ -117,7 +117,7 @@ async function buildResponsePayload(orgWorkosId: string) {
       name: model.name,
       providerId: model.providerId,
       description: model.description,
-      tags: model.tags,
+      collectsData: model.collectsData,
       disabled: !decision.allowed,
       deniedBy: decision.deniedBy,
     })

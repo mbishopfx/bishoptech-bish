@@ -30,7 +30,7 @@ export function ComplianceFlagsSection({
           {
             id: 'block_data_collection',
             title: 'Block data-collection models',
-            description: 'Denies catalog models tagged with collects_data.',
+            description: 'Denies catalog models with collectsData enabled.',
             checked: Boolean(payload.policy.complianceFlags.block_data_collection),
             onCheckedChange: (enabled) =>
               void update({

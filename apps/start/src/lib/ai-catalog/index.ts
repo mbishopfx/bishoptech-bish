@@ -31,10 +31,10 @@ export const AI_MODELS_BY_PROVIDER = AI_CATALOG.reduce(
 )
 
 /**
- * Fixed chat model until request-time user model selection is re-enabled.
- * Keeping this centralized avoids drift between backend and UI defaults.
+ * Default chat model used as fallback when a thread has no stored model
+ * and a request does not provide an explicit override.
  */
-export const CHAT_FIXED_MODEL_ID = 'openai/gpt-4o-mini'
+export const CHAT_DEFAULT_MODEL_ID = 'openai/gpt-4o-mini'
 
 /** Returns a catalog row by ID, or undefined when the ID is unknown. */
 export function getCatalogModel(modelId: string): AiModelCatalogEntry | undefined {
