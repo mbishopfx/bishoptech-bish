@@ -45,6 +45,13 @@
 :root,
 .light {
   --radius: 0.5rem;
+  /* Streamdown/shadcn-style tokens */
+  --primary: 217 91% 60%;
+  --primary-foreground: 0 0% 100%;
+  --muted: 0 0% 98%;
+  --muted-foreground: 0 0% 64%;
+  --border: 0 0% 83%;
+  --ring: 217 91% 60%;
   --bg-default: rgb(255 255 255);
   --bg-muted: rgb(250 250 250);
   --bg-subtle: rgb(245 245 245);
@@ -76,6 +83,12 @@
 }
 
 .dark {
+  --primary: 217 91% 60%;
+  --primary-foreground: 0 0% 100%;
+  --muted: 0 0% 9%;
+  --muted-foreground: 0 0% 64%;
+  --border: 0 0% 32%;
+  --ring: 217 91% 60%;
   --bg-default: rgb(22 22 22);
   --bg-muted: rgb(23 23 23);
   --bg-subtle: rgb(22 22 22);

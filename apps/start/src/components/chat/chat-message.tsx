@@ -52,7 +52,7 @@ export function ChatMessage({
               animated={animated}
               isAnimating={isAnimating}
               mode={isAnimating ? 'streaming' : 'static'}
-              className="min-w-0 max-w-full break-words"
+              className="chat-streamdown min-w-0 max-w-full break-words [&>*:first-child]:mt-0 [&>*:last-child]:mb-0"
             >
               {text || '\u00a0'}
             </Streamdown>
