@@ -10,8 +10,15 @@ export type {
   PromptInputTextareaProps,
   PromptInputTextareaRef,
 } from './prompt-input-textarea'
-export { PromptInputToolbar } from './prompt-input-toolbar'
-export type { PromptInputToolbarProps } from './prompt-input-toolbar'
+export {
+  PromptInputToolbar,
+  ToolbarSelect,
+} from './prompt-input-toolbar'
+export type {
+  PromptInputToolbarProps,
+  ToolbarSelectOption,
+  ToolbarSelectProps,
+} from './prompt-input-toolbar'
 export { PromptInputSubmit } from './prompt-input-submit'
 export type { PromptInputSubmitProps } from './prompt-input-submit'
 

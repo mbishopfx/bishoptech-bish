@@ -56,3 +56,6 @@ export const CHAT_DEFAULT_MODEL_ID = 'openai/gpt-4o-mini'
 export function getCatalogModel(modelId: string): AiModelCatalogEntry | undefined {
   return AI_CATALOG_BY_ID.get(modelId)
 }
+
+export { getProviderIcon, PROVIDER_ICONS } from './provider-icons'
+export type { ProviderIconComponent } from './provider-icons'

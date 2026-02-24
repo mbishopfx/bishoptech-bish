@@ -10,7 +10,10 @@ import {
   PromptInputThinking,
   PromptInputError,
   PromptInputAttachments,
+  ToolbarSelect,
 } from './prompt-input'
+import { ModelSelectorPanel } from './model-selector-panel'
+import type { AiReasoningEffort } from '@/lib/ai-catalog/types'
 import { useFileAttachments } from '../../hooks/chat/upload'
 import { parseChatApiError } from './chat-error-messages'
 
@@ -77,57 +80,51 @@ export function ChatInput() {
     [input, isBusy, sendMessage],
   )
 
+  const selectedModel = selectableModels.find((m) => m.id === selectedModelId)
+  const reasoningOptions = selectedModel?.reasoningEfforts ?? []
+
+  const hasReasoningOptions = reasoningOptions.length > 0
+
+  const modelAndReasoningSelectors = (
+    <div className="flex items-center gap-1">
+      <ModelSelectorPanel
+        value={selectedModelId}
+        onValueChange={setSelectedModelId}
+        options={selectableModels.map((m) => ({ id: m.id, name: m.name }))}
+        disabled={isBusy}
+      />
+      {hasReasoningOptions && (
+        <ToolbarSelect
+          value={selectedReasoningEffort ?? ''}
+          onChange={(v) =>
+            setSelectedReasoningEffort(
+              v ? (v as AiReasoningEffort) : undefined,
+            )
+          }
+          options={[
+            {
+              value: '',
+              label:
+                selectedModel?.defaultReasoningEffort ?? 'Default reasoning',
+            },
+            ...reasoningOptions.map((effort) => ({
+              value: effort,
+              label: effort,
+            })),
+          ]}
+          aria-label="Reasoning"
+          disabled={isBusy}
+        />
+      )}
+    </div>
+  )
+
   const topSlot = (
     <>
       <div className="flex flex-wrap items-center gap-2 pb-1">
-        <select
-          className="h-8 rounded-md border border-border bg-background px-2 text-xs"
-          value={selectedModelId}
-          onChange={(e) => setSelectedModelId(e.target.value)}
-          disabled={isBusy}
-          aria-label="Model"
-        >
-          {selectableModels.map((model) => (
-            <option key={model.id} value={model.id}>
-              {model.name}
-            </option>
-          ))}
-        </select>
-        <select
-          className="h-8 rounded-md border border-border bg-background px-2 text-xs"
-          value={selectedReasoningEffort ?? ''}
-          onChange={(e) =>
-            setSelectedReasoningEffort(
-              e.target.value
-                ? (e.target.value as
-                    | 'none'
-                    | 'minimal'
-                    | 'low'
-                    | 'medium'
-                    | 'high'
-                    | 'xhigh')
-                : undefined,
-            )
-          }
-          disabled={isBusy}
-          aria-label="Reasoning"
-        >
-          <option value="">Default reasoning</option>
-          {(
-            selectableModels.find((model) => model.id === selectedModelId)
-              ?.reasoningEfforts ?? []
-          ).map((effort) => (
-            <option key={effort} value={effort}>
-              {effort}
-            </option>
-          ))}
-        </select>
         <div className="text-xs text-content-muted">
           Tools:{' '}
-          {(
-            selectableModels.find((model) => model.id === selectedModelId)
-              ?.visibleTools ?? []
-          ).join(', ') || 'None'}
+          {(selectedModel?.visibleTools ?? []).join(', ') || 'None'}
         </div>
       </div>
       {activeErrorMessage ? (
@@ -167,6 +164,7 @@ export function ChatInput() {
         isEmpty={isEmpty}
         isBusy={isBusy}
         onFocusInput={() => inputRef.current?.focus()}
+        afterAttach={modelAndReasoningSelectors}
       />
     </PromptInputRoot>
   )

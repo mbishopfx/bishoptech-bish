@@ -23,8 +23,22 @@ function Tooltip({ ...props }: TooltipPrimitive.Root.Props) {
   return <TooltipPrimitive.Root data-slot="tooltip" {...props} />
 }
 
-function TooltipTrigger({ ...props }: TooltipPrimitive.Trigger.Props) {
-  return <TooltipPrimitive.Trigger data-slot="tooltip-trigger" {...props} />
+function TooltipTrigger({
+  tabIndex = -1,
+  className,
+  ...props
+}: TooltipPrimitive.Trigger.Props) {
+  return (
+    <TooltipPrimitive.Trigger
+      data-slot="tooltip-trigger"
+      tabIndex={tabIndex}
+      className={cn(
+        "outline-none focus:!outline-none focus-visible:!outline-none",
+        className
+      )}
+      {...props}
+    />
+  )
 }
 
 function TooltipContent({
@@ -34,13 +48,15 @@ function TooltipContent({
   align = "center",
   alignOffset = 0,
   hideArrow = false,
+  /** When true, disables pointer events so the tooltip does not capture hover/click. */
+  pointerEventsNone = false,
   children,
   ...props
 }: TooltipPrimitive.Popup.Props &
   Pick<
     TooltipPrimitive.Positioner.Props,
     "align" | "alignOffset" | "side" | "sideOffset"
-  > & { hideArrow?: boolean }) {
+  > & { hideArrow?: boolean; pointerEventsNone?: boolean }) {
   return (
     <TooltipPrimitive.Portal>
       <TooltipPrimitive.Positioner
@@ -54,6 +70,7 @@ function TooltipContent({
           data-slot="tooltip-content"
           className={cn(
             "data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-[state=delayed-open]:animate-in data-[state=delayed-open]:fade-in-0 data-[state=delayed-open]:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 rounded-md px-3 py-1.5 text-xs data-[side=inline-start]:slide-in-from-right-2 data-[side=inline-end]:slide-in-from-left-2 bg-black text-content-inverted z-50 w-fit max-w-xs origin-(--transform-origin)",
+            pointerEventsNone && "pointer-events-none",
             className
           )}
           {...props}
