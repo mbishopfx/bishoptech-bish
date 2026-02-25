@@ -1,16 +1,6 @@
 // Single chat message renderer (user/assistant).
 import type { UIMessage } from 'ai'
-import { Streamdown, type PluginConfig } from 'streamdown'
-import { code } from '@streamdown/code'
-import { mermaid } from '@streamdown/mermaid'
-import { math } from '@streamdown/math'
-
-const streamdownPlugins = { code, mermaid, math } as PluginConfig
-const streamdownAnimated = {
-  animation: 'fadeIn',
-  duration: 160,
-  easing: 'ease-out',
-} as const
+import { AssistantMessageParts } from './message-parts/assistant-message-parts'
 
 function getMessageText(message: UIMessage): string {
   if (message.parts.length === 0) return ''
@@ -32,7 +22,6 @@ export function ChatMessage({
 }: ChatMessageProps) {
   const text = getMessageText(message)
   const isUser = message.role === 'user'
-  const animated = isAnimating ? streamdownAnimated : false
 
   return (
     <div
@@ -53,16 +42,10 @@ export function ChatMessage({
               {text || '\u00a0'}
             </div>
           ) : (
-            <Streamdown
-              plugins={streamdownPlugins}
-              controls={false}
-              animated={animated}
-              isAnimating={isAnimating}
-              mode={isAnimating ? 'streaming' : 'static'}
-              className="chat-streamdown min-w-0 max-w-full break-words [&>*:first-child]:mt-0 [&>*:last-child]:mb-0"
-            >
-              {text || '\u00a0'}
-            </Streamdown>
+            <AssistantMessageParts
+              parts={message.parts}
+              isMessageStreaming={isAnimating}
+            />
           )}
         </div>
       </div>

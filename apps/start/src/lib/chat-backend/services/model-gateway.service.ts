@@ -1,4 +1,4 @@
-import { convertToModelMessages, streamText } from 'ai'
+import { convertToModelMessages, smoothStream, streamText } from 'ai'
 import type { UIMessage } from 'ai'
 import type { ToolSet } from 'ai'
 import { Effect, Layer, ServiceMap } from 'effect'
@@ -78,6 +78,10 @@ export const ModelGatewayLive = Layer.succeed(ModelGatewayService, {
             ? 12_000
             : 8_000,
           abortSignal,
+          experimental_transform: smoothStream({
+            delayInMs: 15,
+            chunking: 'word',
+          }),
           onChunk: onChunk
             ? ({ chunk }) => {
                 onChunk(chunk)

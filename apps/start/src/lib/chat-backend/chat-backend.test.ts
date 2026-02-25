@@ -25,7 +25,10 @@ const TestModelGatewayLive = Layer.succeed(ModelGatewayService, {
         const assistantMessage: UIMessage = {
           id: 'assistant-1',
           role: 'assistant',
-          parts: [{ type: 'text', text: 'Mocked assistant response' }],
+          parts: [
+            { type: 'reasoning', text: 'Mocked reasoning trace', state: 'done' },
+            { type: 'text', text: 'Mocked assistant response' },
+          ],
           metadata: { totalTokens: 8 },
         }
 
@@ -109,6 +112,10 @@ describe('chat-backend scaffold', () => {
     expect(messages?.length).toBe(2)
     expect(messages?.[0]?.role).toBe('user')
     expect(messages?.[1]?.role).toBe('assistant')
+    expect(messages?.[1]?.parts).toEqual([
+      { type: 'reasoning', text: 'Mocked reasoning trace', state: 'done' },
+      { type: 'text', text: 'Mocked assistant response' },
+    ])
   })
 
   it('maps tagged errors to user-facing response envelope', async () => {

@@ -191,6 +191,7 @@ export const ChatOrchestratorLive = Layer.effect(
         let assistantFinalized = false
         let streamCleanedUp = false
         let bufferedAssistantText = ''
+        let bufferedAssistantReasoning = ''
         let transportErrorHandled = false
         const defaultStreamFailureMessage =
           'The assistant response failed while streaming. Please retry.'
@@ -244,6 +245,10 @@ export const ChatOrchestratorLive = Layer.effect(
                 assistantMessageId,
                 ok: input.ok,
                 finalContent: bufferedAssistantText,
+                reasoning:
+                  bufferedAssistantReasoning.trim().length > 0
+                    ? bufferedAssistantReasoning
+                    : undefined,
                 errorMessage: input.errorMessage,
                 modelParams: {
                   reasoningEffort: modelResolution.reasoningEffort,
@@ -290,6 +295,14 @@ export const ChatOrchestratorLive = Layer.effect(
             // Persisted assistant content is reconstructed from deltas as they arrive.
             if (candidate.type === 'text-delta' && typeof candidate.text === 'string') {
               bufferedAssistantText += candidate.text
+              return
+            }
+            // Reasoning deltas are streamed independently from text deltas by AI SDK.
+            if (
+              candidate.type === 'reasoning-delta' &&
+              typeof candidate.text === 'string'
+            ) {
+              bufferedAssistantReasoning += candidate.text
             }
           },
         })
@@ -404,6 +417,20 @@ export const ChatOrchestratorLive = Layer.effect(
                 )
                 .map((part) => part.text)
                 .join('')
+            }
+
+            // Fallback to finalized response payload if chunk-level reasoning events were missed.
+            if (!bufferedAssistantReasoning) {
+              bufferedAssistantReasoning = responseMessage.parts
+                .filter(
+                  (
+                    part,
+                  ): part is Extract<typeof part, { type: 'reasoning'; text: string }> =>
+                    part.type === 'reasoning' &&
+                    typeof (part as { text?: unknown }).text === 'string',
+                )
+                .map((part) => part.text)
+                .join('\n\n')
             }
 
             const ok = bufferedAssistantText.length > 0

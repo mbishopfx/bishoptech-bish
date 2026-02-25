@@ -71,12 +71,23 @@ function toUIMessageFromStoredMessage(message: {
   readonly messageId: string
   readonly role: 'user' | 'assistant' | 'system'
   readonly content: string
+  readonly reasoning?: string | null
   readonly model: string
 }): ChatUIMessage {
+  const parts: ChatUIMessage['parts'] = []
+  if (
+    message.role === 'assistant' &&
+    typeof message.reasoning === 'string' &&
+    message.reasoning.trim().length > 0
+  ) {
+    parts.push({ type: 'reasoning', text: message.reasoning, state: 'done' })
+  }
+  parts.push({ type: 'text', text: message.content })
+
   return {
     id: message.messageId,
     role: message.role,
-    parts: [{ type: 'text', text: message.content }],
+    parts,
     metadata:
       message.role === 'assistant'
         ? {

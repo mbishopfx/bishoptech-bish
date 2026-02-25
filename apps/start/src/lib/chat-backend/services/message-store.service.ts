@@ -36,6 +36,7 @@ export type MessageStoreServiceShape = {
     readonly assistantMessageId: string
     readonly ok: boolean
     readonly finalContent: string
+    readonly reasoning?: string
     readonly errorMessage?: string
     readonly modelParams?: {
       readonly reasoningEffort?: AiReasoningEffort
@@ -158,6 +159,7 @@ export const MessageStoreZero = Layer.succeed(MessageStoreService, {
     assistantMessageId,
     ok,
     finalContent,
+    reasoning,
     errorMessage,
     modelParams,
     requestId,
@@ -183,6 +185,7 @@ export const MessageStoreZero = Layer.succeed(MessageStoreService, {
             const update: {
               id: string
               content: string
+              reasoning?: string
               status: 'done' | 'error'
               updated_at: number
               modelParams?: { readonly reasoningEffort?: AiReasoningEffort }
@@ -190,6 +193,7 @@ export const MessageStoreZero = Layer.succeed(MessageStoreService, {
             } = {
               id: existing.id,
               content: finalContent,
+              reasoning,
               status: ok ? 'done' : 'error',
               updated_at: now,
               modelParams,
@@ -211,6 +215,7 @@ export const MessageStoreZero = Layer.succeed(MessageStoreService, {
               threadId: string
               userId: string
               content: string
+              reasoning?: string
               status: 'done' | 'error'
               role: 'assistant'
               created_at: number
@@ -225,6 +230,7 @@ export const MessageStoreZero = Layer.succeed(MessageStoreService, {
               threadId,
               userId,
               content: finalContent,
+              reasoning,
               status: ok ? 'done' : 'error',
               role: 'assistant',
               created_at: now,
@@ -306,6 +312,7 @@ export const MessageStoreMemory = Layer.succeed(MessageStoreService, {
     threadId,
     assistantMessageId,
     finalContent,
+    reasoning,
     requestId,
   }) =>
     Effect.sync(() => {
@@ -315,14 +322,24 @@ export const MessageStoreMemory = Layer.succeed(MessageStoreService, {
       }
       const target = existing.find((message) => message.id === assistantMessageId)
       if (!target) {
+        const parts: UIMessage['parts'] = []
+        if (reasoning && reasoning.trim().length > 0) {
+          parts.push({ type: 'reasoning', text: reasoning, state: 'done' })
+        }
+        parts.push({ type: 'text', text: finalContent })
         existing.push({
           id: assistantMessageId,
           role: 'assistant',
-          parts: [{ type: 'text', text: finalContent }],
+          parts,
         })
         return
       }
-      target.parts = [{ type: 'text', text: finalContent }]
+      const parts: UIMessage['parts'] = []
+      if (reasoning && reasoning.trim().length > 0) {
+        parts.push({ type: 'reasoning', text: reasoning, state: 'done' })
+      }
+      parts.push({ type: 'text', text: finalContent })
+      target.parts = parts
     }).pipe(
       Effect.catch((error) =>
         Effect.fail(
