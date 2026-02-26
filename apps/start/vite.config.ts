@@ -12,6 +12,12 @@ const config = defineConfig({
   server: {
     allowedHosts: ['omarchy-1.echo-tailor.ts.net'],
   },
+  optimizeDeps: {
+    exclude: ['streamdown', '@streamdown/code', '@streamdown/math', '@streamdown/mermaid'],
+  },
+  ssr: {
+    noExternal: ['streamdown', '@streamdown/code', '@streamdown/math', '@streamdown/mermaid'],
+  },
   plugins: [
     devtools(),
     tsconfigPaths({ projects: ['./tsconfig.json'] }),

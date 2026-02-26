@@ -9,6 +9,7 @@ import { Toaster } from '@rift/ui/sonner'
 import { TooltipProvider } from '@rift/ui/tooltip'
 
 import appCss from '../styles.css?url'
+import { NavigationTimerOverlay } from '@/components/navigation-timer-overlay'
 
 export const Route = createRootRoute({
   head: () => ({
@@ -43,24 +44,25 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       <body>
         <AuthKitProvider>
           <ZeroProvider>
-              <ThemeProvider>
-                <TooltipProvider delay={100}>
-                  {children}
-                  <Toaster />
-                  <TanStackDevtools
-                    config={{
-                      position: 'bottom-right',
-                    }}
-                    plugins={[
-                      {
-                        name: 'Tanstack Router',
-                        render: <TanStackRouterDevtoolsPanel />,
-                      },
-                    ]}
-                  />
-                </TooltipProvider>
+            <ThemeProvider>
+              <TooltipProvider delay={100}>
+                <NavigationTimerOverlay />
+                {children}
+                <Toaster />
+                <TanStackDevtools
+                  config={{
+                    position: 'bottom-right',
+                  }}
+                  plugins={[
+                    {
+                      name: 'Tanstack Router',
+                      render: <TanStackRouterDevtoolsPanel />,
+                    },
+                  ]}
+                />
+              </TooltipProvider>
             </ThemeProvider>
-            </ZeroProvider>
+          </ZeroProvider>
         </AuthKitProvider>
         <Scripts />
       </body>
