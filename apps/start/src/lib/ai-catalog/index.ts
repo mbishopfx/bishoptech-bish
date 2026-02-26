@@ -57,5 +57,27 @@ export function getCatalogModel(modelId: string): AiModelCatalogEntry | undefine
   return AI_CATALOG_BY_ID.get(modelId)
 }
 
+export function getCatalogModelProviderRoute(input: {
+  readonly modelId: string
+  readonly providerId: string
+}): { providerId: string; modelId: string } | undefined {
+  const model = AI_CATALOG_BY_ID.get(input.modelId)
+  if (!model?.providers?.includes(input.providerId)) return undefined
+
+  const overriddenModelId = model.providerModelIds?.[input.providerId]
+  if (overriddenModelId) {
+    return {
+      providerId: input.providerId,
+      modelId: overriddenModelId,
+    }
+  }
+
+  const isGatewayLike = input.providerId === 'gateway' || input.providerId === 'openrouter'
+  return {
+    providerId: input.providerId,
+    modelId: isGatewayLike ? input.modelId : input.modelId.replace(/^[^/]+\//, ''),
+  }
+}
+
 export { getProviderIcon, PROVIDER_ICONS } from './provider-icons'
 export type { ProviderIconComponent } from './provider-icons'

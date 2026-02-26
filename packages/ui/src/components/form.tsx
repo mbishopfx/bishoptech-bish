@@ -244,8 +244,7 @@ export function Form({
             </SelectContent>
           </Select>
         ) : hasInput ? (
-          typeof inputAttrs!.defaultValue === 'string' || inputPrefix != null ? (
-            inputPrefix != null ? (
+          inputPrefix != null ? (
             <div className="flex w-full max-w-md overflow-visible rounded-md border border-border-default bg-bg-default text-content-emphasis sm:text-sm">
               <span
                 className="flex shrink-0 items-center border-r border-border-default bg-bg-subtle px-3 py-2 text-content-muted"
@@ -275,12 +274,6 @@ export function Form({
               className="max-w-md rounded-md border-border-default text-content-emphasis placeholder:text-content-muted focus-visible:border-content-subtle focus-visible:ring-content-subtle/50 sm:text-sm"
             />
           )
-        ) : (
-          <div
-            className="h-[2.35rem] w-full max-w-md animate-pulse rounded-md bg-bg-emphasis"
-            aria-hidden
-          />
-        )
         ) : null}
 
         {toggleSection != null && toggleSection.items.length > 0 && (

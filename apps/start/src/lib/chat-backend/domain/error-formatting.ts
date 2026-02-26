@@ -121,6 +121,10 @@ function normalizeCandidate(raw: string): string | undefined {
     return 'The request was rejected because an unsupported Anthropic beta flag was sent.'
   }
 
+  if (/^model:\s*[A-Za-z0-9._-]+$/i.test(message)) {
+    return 'The selected model is currently unavailable. Please choose another model and try again.'
+  }
+
   const providerReasonPrefix = /the model returned the following errors:\s*/i
   if (providerReasonPrefix.test(message)) {
     const reason = message.replace(providerReasonPrefix, '').trim()

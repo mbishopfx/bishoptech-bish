@@ -27,6 +27,44 @@ export function parseChatApiError(input: unknown): ParsedChatApiError | null {
         ? input.message
         : null
 
+  if (typeof input === 'object' && input !== null && !raw) {
+    const record = input as Record<string, unknown>
+    const inlineEnvelope =
+      'error' in record && typeof record.error === 'object' && record.error !== null
+        ? (record as Partial<ChatApiErrorEnvelope>)
+        : null
+
+    if (inlineEnvelope?.error) {
+      const codeRaw = inlineEnvelope.error.code
+      const code = typeof codeRaw === 'string' && isChatErrorCode(codeRaw)
+        ? codeRaw
+        : ChatErrorCode.Unknown
+
+      return {
+        code,
+        message:
+          typeof inlineEnvelope.error.message === 'string'
+            ? inlineEnvelope.error.message
+            : getChatErrorMessage(code),
+        traceId:
+          typeof inlineEnvelope.requestId === 'string'
+            ? inlineEnvelope.requestId
+            : undefined,
+      }
+    }
+
+    if (typeof record.responseBody === 'string') {
+      return parseChatApiError(record.responseBody)
+    }
+
+    if (typeof record.message === 'string' && record.message.trim().length > 0) {
+      return {
+        ...fallback,
+        message: record.message,
+      }
+    }
+  }
+
   if (!raw) {
     return null
   }

@@ -42,6 +42,7 @@ export const OPENAI_MODELS: readonly AiModelCatalogEntry<'openai'>[] = [
   {
     id: 'openai/gpt-5.2-chat',
     providerId: 'openai',
+    providers: ['openai', 'azure', 'gateway', 'openrouter'],
     name: 'GPT-5.2',
     description:
       'The model powering ChatGPT is gpt-5.2-chat-latest: this is OpenAI\'s best general-purpose model, part of the GPT-5 flagship model family.',
@@ -76,6 +77,7 @@ export const OPENAI_MODELS: readonly AiModelCatalogEntry<'openai'>[] = [
   {
     id: 'openai/gpt-5.2-codex',
     providerId: 'openai',
+    providers: ['openai', 'azure', 'gateway', 'openrouter'],
     name: 'GPT-5.2-Codex',
     description:
       'GPT‑5.2-Codex is a version of GPT‑5.2⁠ further optimized for agentic coding in Codex, including improvements on long-horizon work through context compaction, stronger performance on large code changes like refactors and migrations, improved performance in Windows environments, and significantly stronger cybersecurity capabilities.',
@@ -112,6 +114,7 @@ export const OPENAI_MODELS: readonly AiModelCatalogEntry<'openai'>[] = [
   {
     id: 'openai/o4-mini',
     providerId: 'openai',
+    providers: ['openai', 'azure', 'gateway', 'openrouter'],
     name: 'o4-mini',
     description:
       'OpenAI\'s o4-mini delivers fast, cost-efficient reasoning with exceptional performance for its size, particularly excelling in math (best-performing on AIME benchmarks), coding, and visual tasks.',
@@ -146,6 +149,7 @@ export const OPENAI_MODELS: readonly AiModelCatalogEntry<'openai'>[] = [
   {
     id: 'openai/gpt-5.1-instant',
     providerId: 'openai',
+    providers: ['openai', 'azure', 'gateway', 'openrouter'],
     name: 'GPT-5.1 Instant',
     description:
       'GPT-5.1 Instant (or GPT-5.1 chat) is a warmer and more conversational version of GPT-5-chat, with improved instruction following and adaptive reasoning for deciding when to think before responding.',
@@ -180,6 +184,7 @@ export const OPENAI_MODELS: readonly AiModelCatalogEntry<'openai'>[] = [
   {
     id: 'openai/gpt-5.1-thinking',
     providerId: 'openai',
+    providers: ['openai', 'azure', 'gateway', 'openrouter'],
     name: 'GPT 5.1 Thinking',
     description:
       'An upgraded version of GPT-5 that adapts thinking time more precisely to the question to spend more time on complex questions and respond more quickly to simpler tasks.',
@@ -215,6 +220,7 @@ export const OPENAI_MODELS: readonly AiModelCatalogEntry<'openai'>[] = [
   {
     id: 'openai/gpt-5-chat',
     providerId: 'openai',
+    providers: ['openai', 'azure', 'gateway', 'openrouter'],
     name: 'GPT-5',
     description: 'GPT-5 Chat points to the GPT-5 snapshot currently used in ChatGPT.',
     contextWindow: 128000,
@@ -248,6 +254,7 @@ export const OPENAI_MODELS: readonly AiModelCatalogEntry<'openai'>[] = [
   {
     id: 'openai/gpt-5-mini',
     providerId: 'openai',
+    providers: ['openai', 'azure', 'gateway', 'openrouter'],
     name: 'GPT-5 mini',
     description:
       'GPT-5 mini is a cost optimized model that excels at reasoning/chat tasks. It offers an optimal balance between speed, cost, and capability.',
@@ -281,6 +288,7 @@ export const OPENAI_MODELS: readonly AiModelCatalogEntry<'openai'>[] = [
   {
     id: 'openai/gpt-5-nano',
     providerId: 'openai',
+    providers: ['openai', 'azure', 'gateway', 'openrouter'],
     name: 'GPT-5 nano',
     description:
       'GPT-5 nano is a high throughput model that excels at simple instruction or classification tasks.',
@@ -315,6 +323,7 @@ export const OPENAI_MODELS: readonly AiModelCatalogEntry<'openai'>[] = [
   {
     id: 'openai/gpt-4.1',
     providerId: 'openai',
+    providers: ['openai', 'azure', 'gateway', 'openrouter'],
     name: 'GPT-4.1',
     description:
       "GPT 4.1 is OpenAI's flagship model for complex tasks. It is well suited for problem solving across domains.",
@@ -342,6 +351,7 @@ export const OPENAI_MODELS: readonly AiModelCatalogEntry<'openai'>[] = [
   {
     id: 'openai/o1',
     providerId: 'openai',
+    providers: ['openai', 'azure', 'gateway', 'openrouter'],
     name: 'o1',
     description:
       'o1 is OpenAI\'s flagship reasoning model, designed for complex problems that require deep thinking. It provides strong reasoning capabilities with improved accuracy for complex multi-step tasks.',
@@ -375,6 +385,7 @@ export const OPENAI_MODELS: readonly AiModelCatalogEntry<'openai'>[] = [
   {
     id: 'openai/o3',
     providerId: 'openai',
+    providers: ['openai', 'azure', 'gateway', 'openrouter'],
     name: 'o3',
     description:
       'OpenAI\'s o3 is their most powerful reasoning model, setting new state-of-the-art benchmarks in coding, math, science, and visual perception. It excels at complex queries requiring multi-faceted analysis, with particular strength in analyzing images, charts, and graphics.',
@@ -408,6 +419,7 @@ export const OPENAI_MODELS: readonly AiModelCatalogEntry<'openai'>[] = [
   {
     id: 'openai/o3-mini',
     providerId: 'openai',
+    providers: ['openai', 'azure', 'gateway', 'openrouter'],
     name: 'o3-mini',
     description:
       'o3-mini is OpenAI\'s most recent small reasoning model, providing high intelligence at the same cost and latency targets of o1-mini.',
@@ -442,6 +454,7 @@ export const OPENAI_MODELS: readonly AiModelCatalogEntry<'openai'>[] = [
   {
     id: 'openai/gpt-oss-120b',
     providerId: 'openai',
+    providers: ['azure', 'gateway', 'openrouter'],
     name: 'GPT-OSS 120B',
     description:
       'Extremely capable general-purpose LLM with strong, controllable reasoning capabilities. Open-weight model hosted via Vercel AI Gateway.',
@@ -467,6 +480,7 @@ export const OPENAI_MODELS: readonly AiModelCatalogEntry<'openai'>[] = [
   {
     id: 'openai/gpt-oss-20b',
     providerId: 'openai',
+    providers: ['azure', 'gateway', 'openrouter'],
     name: 'GPT-OSS 20B',
     description:
       'A compact, open-weight language model optimized for low-latency and resource-constrained environments, including local and edge deployments. Hosted via Vercel AI Gateway.',

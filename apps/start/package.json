@@ -39,6 +39,7 @@
     "@tanstack/react-router-ssr-query": "^1.131.7",
     "@tanstack/react-start": "^1.132.0",
     "@tanstack/router-plugin": "^1.132.0",
+    "@workos-inc/node": "^8.6.0",
     "@workos/authkit-tanstack-react-start": "^0.5.0",
     "ai": "^6.0.97",
     "effect": "4.0.0-beta.9",

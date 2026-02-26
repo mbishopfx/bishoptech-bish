@@ -42,6 +42,8 @@ export const ANTHROPIC_MODELS: readonly AiModelCatalogEntry<'anthropic'>[] = [
   {
     id: 'anthropic/claude-opus-4.6',
     providerId: 'anthropic',
+    providers: ['anthropic', 'gateway', 'openrouter'],
+    providerModelIds: { anthropic: 'claude-opus-4-6' },
     name: 'Claude Opus 4.6',
     description:
       'Opus 4.6 is the world\'s best model for coding and professional work, built to power agents that take on whole categories of real-world work. It excels across the entire SDLC, breaking through on hard problems, identifying complex bugs, and demonstrating deeper codebase understanding.',
@@ -92,6 +94,8 @@ export const ANTHROPIC_MODELS: readonly AiModelCatalogEntry<'anthropic'>[] = [
   {
     id: 'anthropic/claude-opus-4.5',
     providerId: 'anthropic',
+    providers: ['anthropic', 'gateway', 'openrouter'],
+    providerModelIds: { anthropic: 'claude-opus-4-5' },
     name: 'Claude Opus 4.5',
     description:
       'Claude Opus 4.5 is Anthropic\'s latest model in the Opus series, meant for demanding reasoning tasks and complex problem solving. This model has improvements in general intelligence and vision compared to previous iterations.',
@@ -125,6 +129,8 @@ export const ANTHROPIC_MODELS: readonly AiModelCatalogEntry<'anthropic'>[] = [
   {
     id: 'anthropic/claude-sonnet-4.5',
     providerId: 'anthropic',
+    providers: ['anthropic', 'gateway', 'openrouter'],
+    providerModelIds: { anthropic: 'claude-sonnet-4-5' },
     name: 'Claude Sonnet 4.5',
     description:
       'Claude Sonnet 4.5 is the newest model in the Sonnet series, offering improvements and updates over Sonnet 4.',
@@ -175,6 +181,8 @@ export const ANTHROPIC_MODELS: readonly AiModelCatalogEntry<'anthropic'>[] = [
   {
     id: 'anthropic/claude-sonnet-4',
     providerId: 'anthropic',
+    providers: ['anthropic', 'gateway', 'openrouter'],
+    providerModelIds: { anthropic: 'claude-sonnet-4-0' },
     name: 'Claude Sonnet 4',
     description:
       'Claude Sonnet 4 significantly improves on Sonnet 3.7\'s industry-leading capabilities, excelling in coding with a state-of-the-art 72.7% on SWE-bench. The model balances performance and efficiency for internal and external use cases.',
@@ -217,6 +225,8 @@ export const ANTHROPIC_MODELS: readonly AiModelCatalogEntry<'anthropic'>[] = [
   {
     id: 'anthropic/claude-haiku-4.5',
     providerId: 'anthropic',
+    providers: ['anthropic', 'gateway', 'openrouter'],
+    providerModelIds: { anthropic: 'claude-haiku-4-5' },
     name: 'Claude Haiku 4.5',
     description:
       'Claude Haiku 4.5 matches Sonnet 4\'s performance on coding, computer use, and agent tasks at substantially lower cost and faster speeds. It delivers near-frontier performance at a price point that works for scaled sub-agent deployments and free tier products.',
@@ -251,6 +261,8 @@ export const ANTHROPIC_MODELS: readonly AiModelCatalogEntry<'anthropic'>[] = [
   {
     id: 'anthropic/claude-3.7-sonnet',
     providerId: 'anthropic',
+    providers: ['anthropic', 'gateway', 'openrouter'],
+    providerModelIds: { anthropic: 'claude-3-7-sonnet-latest' },
     name: 'Claude 3.7 Sonnet',
     description:
       'Claude 3.7 Sonnet is Anthropic\'s most intelligent model to date and the first Claude model to offer extended thinking—the ability to solve complex problems with careful, step-by-step reasoning. State-of-the-art for coding, computer use, agentic capabilities, and content generation.',
@@ -284,6 +296,8 @@ export const ANTHROPIC_MODELS: readonly AiModelCatalogEntry<'anthropic'>[] = [
   {
     id: 'anthropic/claude-3.5-sonnet',
     providerId: 'anthropic',
+    providers: ['anthropic', 'gateway', 'openrouter'],
+    providerModelIds: { anthropic: 'claude-3-5-sonnet-latest' },
     name: 'Claude 3.5 Sonnet',
     description:
       'The upgraded Claude 3.5 Sonnet is now state-of-the-art for a variety of tasks including real-world software engineering, agentic capabilities and computer use. Delivers these advancements at the same price and speed as its predecessor.',
@@ -311,6 +325,8 @@ export const ANTHROPIC_MODELS: readonly AiModelCatalogEntry<'anthropic'>[] = [
   {
     id: 'anthropic/claude-3.5-haiku',
     providerId: 'anthropic',
+    providers: ['anthropic', 'gateway', 'openrouter'],
+    providerModelIds: { anthropic: 'claude-3-5-haiku-latest' },
     name: 'Claude 3.5 Haiku',
     description:
       'Claude 3.5 Haiku is Anthropic\'s fastest, most compact model for near-instant responsiveness. It answers simple queries and requests with speed. Claude 3.5 Haiku can process images and return text outputs, and features a 200K context window.',
@@ -338,6 +354,8 @@ export const ANTHROPIC_MODELS: readonly AiModelCatalogEntry<'anthropic'>[] = [
   {
     id: 'anthropic/claude-3-haiku',
     providerId: 'anthropic',
+    providers: ['anthropic', 'gateway', 'openrouter'],
+    providerModelIds: { anthropic: 'claude-3-haiku-20240307' },
     name: 'Claude 3 Haiku',
     description:
       'Claude 3 Haiku is Anthropic\'s fastest model yet, designed for enterprise workloads which often involve longer prompts. Haiku quickly analyzes large volumes of documents, such as quarterly filings, contracts, or legal cases, for half the cost of other models in its performance tier.',

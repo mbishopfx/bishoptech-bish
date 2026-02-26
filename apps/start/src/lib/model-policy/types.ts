@@ -27,4 +27,12 @@ export type EffectiveModelResolution = {
   readonly modelId: string
   readonly reasoningEffort?: AiReasoningEffort
   readonly source: 'thread' | 'request'
+  /**
+   * Optional org-scoped provider auth override. When present, runtime model
+   * execution must use this key and must not fall back to system credentials.
+   */
+  readonly providerApiKeyOverride?: {
+    readonly providerId: 'openai' | 'anthropic'
+    readonly apiKey: string
+  }
 }

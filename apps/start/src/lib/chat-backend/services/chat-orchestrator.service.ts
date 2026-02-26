@@ -286,6 +286,7 @@ export const ChatOrchestratorLive = Layer.effect(
         const result = yield* modelGateway.streamResponse({
           messages,
           model: modelResolution.modelId,
+          providerApiKeyOverride: modelResolution.providerApiKeyOverride,
           requestId,
           tools: toolRegistry.tools,
           activeTools: toolRegistry.activeTools,
@@ -455,24 +456,34 @@ export const ChatOrchestratorLive = Layer.effect(
           },
         })
       }).pipe(
-        Effect.tapError((error) => {
-          if (!currentStreamId) {
-            return emitWideErrorEvent({
-              eventName: 'chat.stream.request.failed',
-              route,
-              requestId,
-              userId,
-              threadId,
-              errorCode: chatErrorCodeFromTag(getErrorTag(error)),
-              errorTag: getErrorTag(error),
-              message: error.message,
-              latencyMs: Date.now() - startedAt,
-              retryable: true,
-            })
-          }
-          const failedStreamId = currentStreamId
+        Effect.tapError((error) =>
+          Effect.gen(function* () {
+            // Ensures threads do not stay in "pending/generation" after early
+            // failures (e.g. model policy denied before stream initialization).
+            yield* threads
+              .markThreadGenerationFailed({
+                userId,
+                threadId,
+                requestId,
+              })
+              .pipe(Effect.catch(() => Effect.void))
 
-          return Effect.gen(function* () {
+            if (!currentStreamId) {
+              return yield* emitWideErrorEvent({
+                eventName: 'chat.stream.request.failed',
+                route,
+                requestId,
+                userId,
+                threadId,
+                errorCode: chatErrorCodeFromTag(getErrorTag(error)),
+                errorTag: getErrorTag(error),
+                message: error.message,
+                latencyMs: Date.now() - startedAt,
+                retryable: true,
+              })
+            }
+            const failedStreamId = currentStreamId
+
             yield* emitWideErrorEvent({
               eventName: 'chat.stream.request.failed',
               route,
@@ -495,8 +506,8 @@ export const ChatOrchestratorLive = Layer.effect(
               streamId: failedStreamId,
               requestId,
             })
-          })
-        }),
+          }),
+        ),
         Effect.catch((error) => Effect.fail(error)),
       )
     }

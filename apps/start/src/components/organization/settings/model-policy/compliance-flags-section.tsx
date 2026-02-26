@@ -40,6 +40,21 @@ export function ComplianceFlagsSection({
               }),
             disabled: updating,
           },
+          {
+            id: 'require_org_provider_key',
+            title: 'Require organization provider key',
+            description:
+              'Only allow models from providers that have an active org API key configured.',
+            checked: Boolean(payload.policy.complianceFlags.require_org_provider_key),
+            onCheckedChange: (enabled) =>
+              void update({
+                action: 'toggle_compliance_flag',
+                flag: 'require_org_provider_key',
+                enabled,
+              }),
+            disabled:
+              updating || !payload.featureFlags.enableOrganizationProviderKeys,
+          },
         ],
       }}
     />

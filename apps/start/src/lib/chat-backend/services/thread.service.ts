@@ -43,6 +43,11 @@ export type ThreadServiceShape = {
     readonly userMessage: string
     readonly requestId: string
   }) => Effect.Effect<void, MessagePersistenceError>
+  readonly markThreadGenerationFailed: (input: {
+    readonly userId: string
+    readonly threadId: string
+    readonly requestId: string
+  }) => Effect.Effect<void, MessagePersistenceError>
 }
 
 export class ThreadService extends ServiceMap.Service<
@@ -256,6 +261,43 @@ User message: ${trimmedMessage}`,
           cause: String(error),
         }),
     }),
+  markThreadGenerationFailed: ({ userId, threadId, requestId }) =>
+    Effect.tryPromise({
+      try: async () => {
+        const db = getZeroDatabase()
+        if (!db) {
+          throw new Error('ZERO_UPSTREAM_DB is not configured')
+        }
+
+        const thread = await db.run(zql.thread.where('threadId', threadId).one())
+        if (!thread) return
+        if (thread.userId !== userId) return
+
+        if (
+          thread.generationStatus !== 'pending' &&
+          thread.generationStatus !== 'generation'
+        ) {
+          return
+        }
+
+        const now = Date.now()
+        await db.transaction(async (tx) => {
+          await tx.mutate.thread.update({
+            id: thread.id,
+            generationStatus: 'failed',
+            updatedAt: now,
+            lastMessageAt: now,
+          })
+        })
+      },
+      catch: (error) =>
+        new MessagePersistenceError({
+          message: 'Failed to mark thread as failed',
+          requestId,
+          threadId,
+          cause: String(error),
+        }),
+    }),
 })
 
 // Test-only adapter retained for deterministic unit tests.
@@ -312,4 +354,5 @@ export const ThreadServiceMemory = Layer.succeed(ThreadService, {
       }
     }),
   autoGenerateTitle: () => Effect.void,
+  markThreadGenerationFailed: () => Effect.void,
 })

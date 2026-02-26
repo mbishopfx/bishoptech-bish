@@ -1,15 +1,21 @@
 import { Effect, Layer, ServiceMap } from 'effect'
 import { CHAT_DEFAULT_MODEL_ID } from '@/lib/ai-catalog'
+import { getCatalogModelProviderRoute } from '@/lib/ai-catalog'
 import type { AiReasoningEffort } from '@/lib/ai-catalog/types'
 import {
   evaluateModelAvailability,
   getCatalogModelById,
 } from '@/lib/model-policy/policy-engine'
+import {
+  isByokSupportedProviderId,
+  readOrgProviderApiKey,
+} from '@/lib/model-policy/provider-keys'
 import { getOrgAiPolicy } from '@/lib/model-policy/repository'
 import type {
   EffectiveModelResolution,
   OrgAiPolicy,
 } from '@/lib/model-policy/types'
+import { canUseOrganizationProviderKeys } from '@/lib/app-feature-flags'
 import { MessagePersistenceError, ModelPolicyDeniedError } from '../domain/errors'
 
 /** Maps policy/runtime selection failures into a chat-domain denied error. */
@@ -136,6 +142,102 @@ export const ModelPolicyLive = Layer.succeed(ModelPolicyService, {
         requestedEffort === 'none'
           ? undefined
           : (requestedEffort as AiReasoningEffort | undefined)
+
+      const strictProviderKeyPolicyEnabled = Boolean(
+        policy?.complianceFlags.require_org_provider_key,
+      )
+
+      if (canUseOrganizationProviderKeys()) {
+        if (!orgWorkosId) {
+          if (strictProviderKeyPolicyEnabled) {
+            return yield* Effect.fail(
+              toPolicyDenied({
+                modelId: selectedModel.id,
+                threadId,
+                requestId,
+                reason: 'policy_denied:missing_org_context_for_provider_key',
+              }),
+            )
+          }
+        } else {
+          /**
+           * Provider-key enforcement is model-route-driven:
+           * - derive candidate providers from model.providers (fallback to providerId for legacy rows),
+           * - keep only providers currently supported by BYOK key storage,
+           * - evaluate keys in declared order so behavior stays deterministic.
+           */
+          const declaredProviders = selectedModel.providers ?? [selectedModel.providerId]
+          const byokCandidateProviders = declaredProviders.filter((providerId) =>
+            isByokSupportedProviderId(providerId),
+          )
+
+          if (byokCandidateProviders.length === 0) {
+            if (strictProviderKeyPolicyEnabled) {
+              return yield* Effect.fail(
+                toPolicyDenied({
+                  modelId: selectedModel.id,
+                  threadId,
+                  requestId,
+                  reason: `policy_denied:provider_not_supported_by_byok:${selectedModel.providerId}`,
+                }),
+              )
+            }
+          } else {
+            let lastRoutableProviderId = byokCandidateProviders[0]
+
+            for (const providerId of byokCandidateProviders) {
+              const providerRoute = getCatalogModelProviderRoute({
+                modelId: selectedModel.id,
+                providerId,
+              })
+
+              // Defensive guard against catalog inconsistencies.
+              if (!providerRoute) continue
+              lastRoutableProviderId = providerId
+
+              const providerApiKey = yield* Effect.tryPromise({
+                try: () =>
+                  readOrgProviderApiKey({
+                    orgWorkosId,
+                    providerId,
+                  }),
+                catch: (error) =>
+                  new MessagePersistenceError({
+                    message: 'Failed to resolve organization provider API key',
+                    requestId,
+                    threadId,
+                    cause: String(error),
+                  }),
+              })
+
+              if (!providerApiKey) {
+                continue
+              }
+
+              return {
+                modelId: selectedModel.id,
+                reasoningEffort,
+                source: requestedModelId || requestedReasoningEffort ? 'request' : 'thread',
+                providerApiKeyOverride: {
+                  providerId,
+                  apiKey: providerApiKey,
+                },
+              } satisfies EffectiveModelResolution
+            }
+
+            if (strictProviderKeyPolicyEnabled) {
+              return yield* Effect.fail(
+                toPolicyDenied({
+                  modelId: selectedModel.id,
+                  threadId,
+                  requestId,
+                  reason: `policy_denied:missing_provider_api_key:${lastRoutableProviderId}`,
+                }),
+              )
+            }
+          }
+        }
+      }
 
       return {
         modelId: selectedModel.id,

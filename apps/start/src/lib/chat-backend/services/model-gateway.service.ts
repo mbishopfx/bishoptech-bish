@@ -1,7 +1,10 @@
 import { convertToModelMessages, smoothStream, streamText } from 'ai'
 import type { UIMessage } from 'ai'
 import type { ToolSet } from 'ai'
+import { createAnthropic } from '@ai-sdk/anthropic'
+import { createOpenAI } from '@ai-sdk/openai'
 import { Effect, Layer, ServiceMap } from 'effect'
+import { getCatalogModelProviderRoute } from '@/lib/ai-catalog'
 import { toReadableErrorCause, toReadableErrorMessage } from '../domain/error-formatting'
 import { ModelProviderError } from '../domain/errors'
 
@@ -10,6 +13,41 @@ import { ModelProviderError } from '../domain/errors'
  * logic is provider-agnostic.
  */
 const SYSTEM_PROMPT = 'You are a helpful assistant.'
+
+type ProviderApiKeyOverride = {
+  readonly providerId: 'openai' | 'anthropic'
+  readonly apiKey: string
+}
+
+/**
+ * Resolves the model object passed to AI SDK. By default we use gateway model
+ * IDs as plain strings. When org BYOK override is active we switch to a
+ * provider instance bound to the organization API key to prevent fallback.
+ */
+function resolveRuntimeModel(input: {
+  readonly modelId: string
+  readonly providerApiKeyOverride?: ProviderApiKeyOverride
+}) {
+  const { modelId, providerApiKeyOverride } = input
+  if (!providerApiKeyOverride) return modelId
+  const providerRoute = getCatalogModelProviderRoute({
+    modelId,
+    providerId: providerApiKeyOverride.providerId,
+  })
+  if (!providerRoute) {
+    throw new Error(
+      `Selected model does not support organization provider routing: ${modelId}`,
+    )
+  }
+
+  if (providerApiKeyOverride.providerId === 'openai') {
+    const openai = createOpenAI({ apiKey: providerApiKeyOverride.apiKey })
+    return openai(providerRoute.modelId)
+  }
+
+  const anthropic = createAnthropic({ apiKey: providerApiKeyOverride.apiKey })
+  return anthropic(providerRoute.modelId)
+}
 
 /** Minimal stream contract consumed by chat orchestration. */
 export type ModelStreamResult = {
@@ -35,6 +73,7 @@ export type ModelGatewayServiceShape = {
   readonly streamResponse: (input: {
     readonly messages: UIMessage[]
     readonly model: string
+    readonly providerApiKeyOverride?: ProviderApiKeyOverride
     readonly requestId: string
     readonly tools: ToolSet
     readonly activeTools?: readonly string[]
@@ -56,6 +95,7 @@ export const ModelGatewayLive = Layer.succeed(ModelGatewayService, {
   streamResponse: ({
     messages,
     model,
+    providerApiKeyOverride,
     requestId,
     tools,
     activeTools,
@@ -67,8 +107,13 @@ export const ModelGatewayLive = Layer.succeed(ModelGatewayService, {
     Effect.tryPromise({
       try: async () => {
         const modelMessages = await convertToModelMessages(messages)
+        const runtimeModel = resolveRuntimeModel({
+          modelId: model,
+          providerApiKeyOverride,
+        })
+
         return streamText({
-          model,
+          model: runtimeModel,
           system: SYSTEM_PROMPT,
           messages: modelMessages,
           tools,

@@ -9,6 +9,13 @@ export type PolicyPayload = {
     complianceFlags: Record<string, boolean>
     updatedAt?: number
   }
+  featureFlags: {
+    enableOrganizationProviderKeys: boolean
+  }
+  providerApiKeys: {
+    openai: boolean
+    anthropic: boolean
+  }
   providers: Array<{ id: string; disabled: boolean }>
   models: Array<{
     id: string
@@ -32,8 +39,17 @@ export type ProviderPolicyUpdateAction =
       modelId: string
       disabled: boolean
     }
-  | {
+    | {
       action: 'toggle_compliance_flag'
       flag: string
       enabled: boolean
+    }
+  | {
+      action: 'set_provider_api_key'
+      providerId: 'openai' | 'anthropic'
+      apiKey: string
+    }
+  | {
+      action: 'remove_provider_api_key'
+      providerId: 'openai' | 'anthropic'
     }

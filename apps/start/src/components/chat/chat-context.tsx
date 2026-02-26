@@ -32,6 +32,8 @@ import type {
   ChatAttachmentInput,
 } from '@/lib/chat-contracts/attachments'
 import type { ChatMessageMetadata } from '@/lib/chat-contracts/message-metadata'
+import { getChatErrorMessage } from '@/lib/chat-contracts/error-messages'
+import { ChatErrorCode } from '@/lib/chat-contracts/error-codes'
 import type { AiReasoningEffort } from '@/lib/ai-catalog/types'
 import {
   getThreadGenerationStatus,
@@ -529,6 +531,48 @@ export function ChatProvider({
     status,
     messages,
     setMessages,
+  ])
+
+  useEffect(() => {
+    if (!activeThreadId) return
+    if (storedMessagesResult.type !== 'complete') return
+    if (status === 'submitted' || status === 'streaming') return
+    if (localError || error) return
+    if (!threadRow || threadRow.generationStatus !== 'failed') return
+
+    const latestAssistantFailure = [...storedMessages]
+      .reverse()
+      .find(
+        (message) =>
+          message.role === 'assistant' &&
+          message.status === 'error' &&
+          !!message.serverError &&
+          typeof message.serverError === 'object',
+      )
+
+    const serverErrorMessage =
+      latestAssistantFailure &&
+      typeof latestAssistantFailure.serverError === 'object' &&
+      latestAssistantFailure.serverError !== null &&
+      'message' in latestAssistantFailure.serverError &&
+      typeof latestAssistantFailure.serverError.message === 'string'
+        ? latestAssistantFailure.serverError.message
+        : undefined
+
+    setLocalError(
+      new Error(
+        serverErrorMessage ??
+          getChatErrorMessage(ChatErrorCode.ModelNotAllowed),
+      ),
+    )
+  }, [
+    activeThreadId,
+    error,
+    localError,
+    status,
+    storedMessages,
+    storedMessagesResult.type,
+    threadRow,
   ])
 
   const sendMessage = useCallback<ChatActionsContextValue['sendMessage']>(

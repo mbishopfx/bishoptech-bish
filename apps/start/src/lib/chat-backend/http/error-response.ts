@@ -3,6 +3,17 @@ import { ChatErrorCode, chatErrorCodeFromTag } from '../domain/error-codes'
 import { getChatErrorMessage } from '../domain/error-messages'
 import type { ChatApiErrorEnvelope } from '@/lib/chat-contracts/error-envelope'
 
+function getModelPolicyDeniedMessage(tagged: ChatDomainError): string | undefined {
+  if (tagged._tag !== 'ModelPolicyDeniedError') return undefined
+  if (tagged.reason.includes('model_not_supported_for_provider_key')) {
+    return 'This model cannot be used with your organization provider API key. Choose another model from that provider or remove the provider key.'
+  }
+  if (tagged.reason.includes('missing_provider_api_key')) {
+    return 'This provider requires an organization API key, but no key is configured.'
+  }
+  return undefined
+}
+
 /**
  * Converts backend failures into the normalized error envelope consumed by
  * chat clients.
@@ -17,7 +28,8 @@ export function toErrorResponse(error: unknown, fallbackRequestId: string): Resp
     const tagged = error as ChatDomainError
     const status = statusForTag(tagged._tag)
     const errorCode = chatErrorCodeFromTag(tagged._tag)
-    const userMessage = getChatErrorMessage(errorCode)
+    const userMessage =
+      getModelPolicyDeniedMessage(tagged) ?? getChatErrorMessage(errorCode)
     const requestId =
       'requestId' in tagged && typeof tagged.requestId === 'string'
         ? tagged.requestId

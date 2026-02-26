@@ -5,6 +5,7 @@ type AppFeatureFlags = {
   readonly enableEmbedding: boolean
   readonly enableReasoningControls: boolean
   readonly enableAdvancedProviderTools: boolean
+  readonly enableOrganizationProviderKeys: boolean
 }
 
 function readBooleanEnv(
@@ -22,6 +23,10 @@ const APP_FEATURE_FLAGS: AppFeatureFlags = Object.freeze({
   enableEmbedding: readBooleanEnv('ENABLE_EMBEDDING', true),
   enableReasoningControls: true,
   enableAdvancedProviderTools: true,
+  enableOrganizationProviderKeys: readBooleanEnv(
+    'ENABLE_ORGANIZATION_PROVIDER_KEYS',
+    false,
+  ),
 })
 
 export function getAppFeatureFlags(): AppFeatureFlags {
@@ -40,3 +45,6 @@ export function canUseAdvancedProviderTools(): boolean {
   return APP_FEATURE_FLAGS.enableAdvancedProviderTools
 }
 
+export function canUseOrganizationProviderKeys(): boolean {
+  return APP_FEATURE_FLAGS.enableOrganizationProviderKeys
+}

@@ -66,6 +66,14 @@ export type AiModelPricing = {
   readonly inputCacheWriteTiers?: readonly AiPricingTier[]
 }
 
+export type AiModelRouteProviderId =
+  | 'openai'
+  | 'anthropic'
+  | 'azure'
+  | 'gateway'
+  | 'openrouter'
+  | (string & {})
+
 /**
  * Canonical catalog row used across policy evaluation, admin settings, and
  * chat runtime model selection.
@@ -99,6 +107,18 @@ export type AiModelCatalogEntry<
   readonly defaultProviderOptions?: Record<string, unknown>
   readonly defaultMaxOutputTokens?: number
   readonly requirements?: readonly AiModelRequirement[]
+  /**
+   * Providers this model can route through. Keeping this list on each model
+   * makes BYOK compatibility explicit and easy to change.
+   */
+  readonly providers?: readonly AiModelRouteProviderId[]
+  /**
+   * Optional per-provider model-id override.
+   * When omitted, runtime uses provider defaults:
+   * - `gateway` / `openrouter`: full catalog id (e.g. `anthropic/claude-sonnet-4`)
+   * - other providers: id without catalog prefix (e.g. `claude-sonnet-4`)
+   */
+  readonly providerModelIds?: Partial<Record<AiModelRouteProviderId, string>>
   /** Optional pricing from Vercel AI Gateway (or same shape) for display and cost estimation. */
   readonly pricing?: AiModelPricing
 }
