@@ -1,6 +1,6 @@
 'use client'
 
-import { ChevronDown, Mic, Plus } from 'lucide-react'
+import { ChevronDown, Paperclip } from 'lucide-react'
 // Toolbar controls: file picker, voice placeholder, and submit state.
 import type { ChatStatus } from 'ai'
 import { cn } from '@rift/utils'
@@ -68,6 +68,7 @@ export type PromptInputToolbarProps = HTMLAttributes<HTMLDivElement> & {
   status: ChatStatus
   isEmpty: boolean
   isBusy: boolean
+  middle?: React.ReactNode
   /** Content rendered immediately after the attachment button (e.g. model selector). */
   afterAttach?: React.ReactNode
 }
@@ -82,10 +83,12 @@ export function PromptInputToolbar({
   status,
   isEmpty,
   isBusy,
+  middle,
   afterAttach,
   ...props
 }: PromptInputToolbarProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const submitDisabled = isEmpty || isBusy
 
   const handleOpenFilePicker = () => {
     if (!fileInputRef.current) return
@@ -98,8 +101,8 @@ export function PromptInputToolbar({
     <div
       role="presentation"
       className={cn(
-        'flex shrink-0 items-center justify-between gap-2 pt-1',
-        'pb-[max(env(safe-area-inset-bottom),0.25rem)]',
+        'flex shrink-0 items-center gap-2',
+        'pb-[max(env(safe-area-inset-bottom),0.125rem)]',
         className
       )}
       {...props}
@@ -120,23 +123,34 @@ export function PromptInputToolbar({
         aria-label={canAddMore ? 'Upload files' : 'Attach file (max reached)'}
         disabled={!canAddMore}
         onClick={handleOpenFilePicker}
+        className={cn(
+          'self-end',
+          'size-8 rounded-full border border-transparent bg-transparent p-0',
+          'text-content-emphasis hover:bg-bg-inverted/5 active:bg-bg-inverted/10 focus-visible:ring-2 focus-visible:ring-border-emphasis/40'
+        )}
       >
-        <Plus aria-hidden />
+        <Paperclip className="size-[18px]" aria-hidden />
       </Button>
-      {afterAttach}
-      <div className="flex-1" />
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        aria-label="Voice input"
-      >
-        <Mic aria-hidden />
-      </Button>
-      <PromptInputSubmit
-        status={status}
-        disabled={isEmpty || isBusy}
-      />
+
+      <div className="min-w-0 flex-1">
+        {middle}
+      </div>
+
+      <div className="ml-auto flex items-center self-end gap-1.5">
+        {afterAttach}
+        <PromptInputSubmit
+          status={status}
+          disabled={submitDisabled}
+          data-active={!submitDisabled}
+          variant="ghost"
+          className={cn(
+            'size-8 rounded-full border border-transparent p-0 transition-[background-color,color,font-weight] duration-0 active:duration-75',
+            submitDisabled
+              ? 'bg-transparent text-content-muted hover:bg-transparent active:bg-transparent'
+              : 'bg-bg-info/25 text-content-info hover:bg-bg-info/45 active:bg-bg-info/75'
+          )}
+        />
+      </div>
     </div>
   )
 }

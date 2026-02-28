@@ -1,7 +1,7 @@
 // Chat prompt input with error slot and file attachments.
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useChatActions } from './chat-context'
 import {
   PromptInputRoot,
@@ -34,7 +34,6 @@ export function ChatInput() {
   const [input, setInput] = useState('')
   const [errorDismissed, setErrorDismissed] = useState(false)
   const [uploadErrorDismissed, setUploadErrorDismissed] = useState(false)
-  const inputRef = useRef<{ focus: () => void }>(null)
 
   // File upload: worker-supported markdown-convertible files, max 10 files.
   const { files, handleFileSelect, handleRemoveFile, clearFiles, canAddMore } =
@@ -141,6 +140,8 @@ export function ChatInput() {
   const reasoningOptions = selectedModel?.reasoningEfforts ?? []
 
   const hasReasoningOptions = reasoningOptions.length > 0
+  const selectorTriggerClassName =
+    'h-8 rounded-full border border-transparent bg-transparent px-3 pr-7 text-sm leading-[21px] font-medium text-content-emphasis transition-colors hover:bg-bg-inverted/5 active:bg-bg-inverted/10 focus-visible:border-border-emphasis focus-visible:ring-2 focus-visible:ring-border-emphasis/40'
 
   const modelAndReasoningSelectors = (
     <div className="flex items-center gap-1">
@@ -149,6 +150,7 @@ export function ChatInput() {
         onValueChange={setSelectedModelId}
         options={selectableModels.map((m) => ({ id: m.id, name: m.name }))}
         disabled={isBusy}
+        className={selectorTriggerClassName}
       />
       {hasReasoningOptions && (
         <ReasoningSelectorPanel
@@ -157,8 +159,15 @@ export function ChatInput() {
           options={reasoningOptions}
           defaultReasoningEffort={selectedModel?.defaultReasoningEffort}
           disabled={isBusy}
+          className={selectorTriggerClassName}
         />
       )}
+    </div>
+  )
+
+  const bottomSlot = (
+    <div className="flex items-center justify-start px-1 p-1.5">
+      {modelAndReasoningSelectors}
     </div>
   )
 
@@ -184,24 +193,22 @@ export function ChatInput() {
     <PromptInputRoot
       onSubmit={handleSubmit}
       className="w-full"
-      slots={{ top: topSlot }}
-      onFocusInput={() => inputRef.current?.focus()}
+      slots={{ top: topSlot, bottom: bottomSlot }}
     >
-      <PromptInputTextarea
-        ref={inputRef}
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
-        disabled={isBusy}
-        aria-label="Message"
-      />
-
       <PromptInputToolbar
         canAddMore={canAddMore}
         onFileSelect={handleFileSelect}
         status={status}
         isEmpty={isEmpty}
         isBusy={isSendBlocked}
-        afterAttach={modelAndReasoningSelectors}
+        middle={
+          <PromptInputTextarea
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            aria-label="Message"
+            className="placeholder:text-content-default/65"
+          />
+        }
       />
     </PromptInputRoot>
   )

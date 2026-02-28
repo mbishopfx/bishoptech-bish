@@ -70,10 +70,10 @@ export const PromptInputTextarea = forwardRef<
     <Textarea
       ref={textareaRef}
       className={cn(
-        'flex-none min-h-[55px] w-full resize-none rounded-none border-none p-0 shadow-none outline-none ring-0',
+        'flex-none h-6 min-h-0 w-full resize-none rounded-none border-none p-0 shadow-none outline-none ring-0',
         'field-sizing-content bg-transparent',
         'overflow-y-hidden data-[overflow=scroll]:overflow-y-auto',
-        'text-base leading-[1.4] tracking-[-0.01em] proportional-nums whitespace-pre-wrap',
+        'text-base leading-6 tracking-[-0.01em] proportional-nums whitespace-pre-wrap',
         'focus-visible:ring-0 placeholder:text-content-muted text-content-emphasis',
         className
       )}
@@ -87,6 +87,7 @@ export const PromptInputTextarea = forwardRef<
         adjustHeight()
       }}
       onKeyDown={handleKeyDown}
+      rows={1}
       placeholder={placeholder}
       {...props}
     />
