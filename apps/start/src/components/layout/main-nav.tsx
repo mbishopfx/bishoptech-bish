@@ -12,7 +12,10 @@ import {
 import { cn } from '@rift/utils'
 import { useMediaQuery } from '@rift/ui/hooks/useMediaQuery'
 
-import { AppRightSidebar } from '@/components/layout/app-right-sidebar'
+import {
+  AppRightSidebar,
+  RIGHT_SIDEBAR_WIDTH,
+} from '@/components/layout/app-right-sidebar'
 import { useRightSidebar } from '@/components/layout/right-sidebar-context'
 
 type SideNavContextValue = {
@@ -49,12 +52,8 @@ export function MainNav({ children, sidebar: Sidebar }: MainNavProps) {
   }, [pathname])
 
   const showRightSidebar = rightSidebarContent != null
-  const gridCols = showRightSidebar
-    ? 'md:grid-cols-[min-content_minmax(0,1fr)_min-content]'
-    : 'md:grid-cols-[min-content_minmax(0,1fr)]'
-
   return (
-    <div className={cn('min-h-screen md:grid', gridCols)}>
+    <div className="min-h-screen md:grid md:grid-cols-[min-content_minmax(0,1fr)_min-content]">
       <div
         className={cn(
           'fixed left-0 z-50 w-screen transition-[background-color,backdrop-filter] md:sticky md:z-auto md:w-full md:bg-transparent',
@@ -86,11 +85,19 @@ export function MainNav({ children, sidebar: Sidebar }: MainNavProps) {
           </SideNavContext.Provider>
         </div>
       </div>
-      {showRightSidebar ? (
-        <div className="hidden lg:block sticky top-0 h-dvh min-h-0 w-min shrink-0 bg-bg-emphasis pl-0 pr-2 pt-[var(--page-top-margin)] [--page-top-margin:0.5rem]">
-          <AppRightSidebar>{rightSidebarContent}</AppRightSidebar>
-        </div>
-      ) : null}
+      <div
+        className={cn(
+          'sticky top-0 hidden h-dvh min-h-0 shrink-0 overflow-hidden bg-bg-emphasis pl-0 pr-2 pt-[var(--page-top-margin)] [--page-top-margin:0.5rem] lg:block',
+          'transition-[width] duration-220 motion-reduce:transition-none',
+          showRightSidebar ? 'ease-out' : 'ease-in',
+        )}
+        style={{ width: showRightSidebar ? `${RIGHT_SIDEBAR_WIDTH}px` : '0px' }}
+        aria-hidden={!showRightSidebar}
+      >
+        <AppRightSidebar isOpen={showRightSidebar}>
+          {rightSidebarContent}
+        </AppRightSidebar>
+      </div>
     </div>
   )
 }

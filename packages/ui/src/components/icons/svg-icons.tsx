@@ -160,3 +160,129 @@ export function StopIcon({ className, ...props }: IconProps) {
     </svg>
   )
 }
+
+/**
+ * Regenerate/retry icon used by chat message actions.
+ * Geometry matches the icon used in the Next chat implementation.
+ */
+export function RedoIcon({ className, ...props }: IconProps) {
+  return (
+    <svg
+      width="48"
+      height="48"
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+      {...props}
+    >
+      <path
+        d="M15.1667 0.999756L15.7646 2.11753C16.1689 2.87322 16.371 3.25107 16.2374 3.41289C16.1037 3.57471 15.6635 3.44402 14.7831 3.18264C13.9029 2.92131 12.9684 2.78071 12 2.78071C6.75329 2.78071 2.5 6.90822 2.5 11.9998C2.5 13.6789 2.96262 15.2533 3.77093 16.6093"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        opacity="0.4"
+        d="M8.83246 22.9999L8.23448 21.8821C7.8302 21.1264 7.62806 20.7486 7.76173 20.5868C7.89539 20.4249 8.33561 20.5556 9.21601 20.817C10.0962 21.0783 11.0307 21.219 11.9991 21.219C17.2458 21.219 21.4991 17.0914 21.4991 11.9999C21.4991 10.3207 21.0365 8.74638 20.2282 7.39038"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+/**
+ * Copy icon used by chat message actions.
+ * Geometry matches the icon used in the Next chat implementation.
+ */
+export function CopyIcon({ className, ...props }: IconProps) {
+  return (
+    <svg
+      width="44"
+      height="44"
+      viewBox="0 0 44 44"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+      {...props}
+    >
+      <path
+        d="M16 28C16 22.3432 16 19.5148 17.7574 17.7574C19.5148 16 22.3432 16 28 16H30C35.6568 16 38.4852 16 40.2426 17.7574C42 19.5148 42 22.3432 42 28V30C42 35.6568 42 38.4852 40.2426 40.2426C38.4852 42 35.6568 42 30 42H28C22.3432 42 19.5148 42 17.7574 40.2426C16 38.4852 16 35.6568 16 30V28Z"
+        stroke="currentColor"
+        strokeWidth="3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        opacity="0.4"
+        d="M31.9998 16C31.995 10.0858 31.9056 7.02242 30.184 4.92486C29.8516 4.51978 29.4802 4.14836 29.0752 3.81592C26.8624 2 23.575 2 17 2C10.425 2 7.13756 2 4.92486 3.81592C4.51978 4.14834 4.14836 4.51978 3.81592 4.92486C2 7.13756 2 10.425 2 17C2 23.575 2 26.8624 3.81592 29.0752C4.14834 29.4802 4.51978 29.8516 4.92486 30.184C7.02242 31.9056 10.0858 31.995 16 31.9998"
+        stroke="currentColor"
+        strokeWidth="3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+/**
+ * Edit icon used for user message editing action.
+ * Geometry matches the icon used in the Next chat implementation.
+ */
+export function EditIcon({ className, ...props }: IconProps) {
+  return (
+    <svg
+      width="40"
+      height="40"
+      viewBox="0 0 40 40"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+      {...props}
+    >
+      <path
+        d="M28.8498 5.21018L30.8298 3.2302C32.4702 1.58994 35.1296 1.58994 36.7698 3.2302C38.41 4.87048 38.41 7.52986 36.7698 9.17014L34.7898 11.1501M28.8498 5.21018L15.5312 18.5288C14.5161 19.544 13.7961 20.8156 13.4479 22.2082L12 28L17.7918 26.552C19.1844 26.204 20.456 25.4838 21.4712 24.4688L34.7898 11.1501M28.8498 5.21018L34.7898 11.1501"
+        stroke="currentColor"
+        strokeWidth="3"
+        strokeLinejoin="round"
+      />
+      <path
+        opacity="0.4"
+        d="M33.9998 23C33.9998 29.575 33.9998 32.8624 32.184 35.0752C31.8516 35.4802 31.4802 35.8516 31.075 36.184C28.8624 38 25.5748 38 18.9998 38H18C10.4575 38 6.68632 38 4.34318 35.6568C2.00006 33.3138 2 29.5424 2 22V21C2 14.425 2 11.1376 3.81588 8.92488C4.14834 8.5198 4.5198 8.14834 4.92488 7.81588C7.13758 6 10.425 6 17 6"
+        stroke="currentColor"
+        strokeWidth="3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+/**
+ * Lightweight check icon used as copied/saved confirmation glyph.
+ */
+export function CheckIcon({ className, ...props }: IconProps) {
+  return (
+    <svg
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+      {...props}
+    >
+      <path
+        d="M5 13l4 4L19 7"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}

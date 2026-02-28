@@ -1,8 +1,12 @@
 // Single chat message renderer (user/assistant).
 import type { UIMessage } from 'ai'
 import type { ChatMessageMetadata } from '@/lib/chat-contracts/message-metadata'
-import { AssistantMessageParts } from './message-parts/assistant-message-parts'
 import type { ChatAttachment } from '@/lib/chat-contracts/attachments'
+import {
+  AssistantMessageParts,
+  AssistantMessageActions,
+  UserMessageActions,
+} from './message-parts'
 
 function getRawMessageText(message: UIMessage): string {
   if (message.parts.length === 0) return ''
@@ -40,17 +44,20 @@ export function ChatMessage({
       typeof attachment.name === 'string' &&
       typeof attachment.contentType === 'string',
   )
+  const modelName = !isUser && typeof metadata?.model === 'string'
+    ? metadata.model
+    : null
 
   if (isUser) {
     return (
       <div
-        className="group flex w-full items-end justify-end gap-2 pt-8 pb-4 is-user"
+        className="group flex w-full items-end justify-end gap-2 pt-8 pb-1 is-user"
         data-role={message.role}
       >
         <div className="flex max-w-[80%] flex-col items-end gap-2">
           <div
             dir="auto"
-            className="relative flex min-h-7 w-full flex-col gap-3 overflow-hidden rounded-3xl rounded-br-lg border border-border-default bg-bg-subtle px-4 py-1.5 text-md"
+            className="relative flex min-h-7 w-fit max-w-full self-end flex-col gap-3 overflow-hidden rounded-3xl rounded-br-lg border border-border-default bg-bg-subtle px-4 py-1.5 text-md"
           >
             <div className="space-y-4 size-full [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
               <div className="whitespace-pre-wrap break-words text-md leading-7">
@@ -75,6 +82,9 @@ export function ChatMessage({
               ))}
             </div>
           )}
+          <div className="w-full">
+            <UserMessageActions text={text} />
+          </div>
         </div>
       </div>
     )
@@ -82,7 +92,7 @@ export function ChatMessage({
 
   return (
     <div
-      className="group flex w-full items-end gap-2 py-4 is-assistant"
+      className="group flex w-full items-end gap-2 py-1 is-assistant"
       data-role={message.role}
     >
       <div
@@ -95,6 +105,7 @@ export function ChatMessage({
             isMessageStreaming={isAnimating}
           />
         </div>
+        <AssistantMessageActions text={text} modelName={modelName} />
       </div>
     </div>
   )

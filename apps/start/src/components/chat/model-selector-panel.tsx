@@ -213,7 +213,7 @@ export function ModelSelectorPanel({
                   </ProviderButton>
                 }
               />
-              <TooltipContent side="left" sideOffset={8} pointerEventsNone>
+              <TooltipContent side="left" sideOffset={8}>
                 <p className="text-xs">All providers</p>
               </TooltipContent>
             </Tooltip>
@@ -242,7 +242,7 @@ export function ModelSelectorPanel({
                       </ProviderButton>
                     }
                   />
-                  <TooltipContent side="left" sideOffset={8} pointerEventsNone>
+                  <TooltipContent side="left" sideOffset={8}>
                     <p className="text-xs">{label}</p>
                   </TooltipContent>
                 </Tooltip>
@@ -380,7 +380,7 @@ const ModelRow = React.memo(function ModelRow({
                       </span>
                     }
                   />
-                  <TooltipContent side="top" sideOffset={8} pointerEventsNone>
+                  <TooltipContent side="top" sideOffset={8}>
                     <p className="text-xs">{label}</p>
                   </TooltipContent>
                 </Tooltip>
