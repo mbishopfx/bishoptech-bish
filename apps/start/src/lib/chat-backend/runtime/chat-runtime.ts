@@ -16,10 +16,7 @@ import { ToolRegistryService } from '../services/tool-registry.service'
  * Persistence uses Zero/Postgres, stream resume uses Redis, and rate limiting
  * is temporarily in-memory until distributed limiter is introduced.
  */
-const layer = Layer.mergeAll(
-  ZeroDatabaseService.layer,
-  AttachmentRagService.layer,
-  OrgKnowledgeRagService.layerNoop,
+const dependencyLayer = Layer.mergeAll(
   ThreadService.layer,
   MessageStoreService.layer,
   RateLimitService.layerMemory,
@@ -27,7 +24,16 @@ const layer = Layer.mergeAll(
   ToolRegistryService.layer,
   ModelGatewayService.layer,
   StreamResumeService.layer,
-  ChatOrchestratorService.layer,
+).pipe(
+  // Provide shared infra dependencies into service layers that require them.
+  Layer.provideMerge(ZeroDatabaseService.layer),
+  Layer.provideMerge(AttachmentRagService.layer),
+  Layer.provideMerge(OrgKnowledgeRagService.layerNoop),
+)
+
+const layer = ChatOrchestratorService.layer.pipe(
+  // Expose orchestrator plus operational dependencies used directly by routes.
+  Layer.provideMerge(dependencyLayer),
 )
 
 const runtime = makeRuntimeRunner(layer)

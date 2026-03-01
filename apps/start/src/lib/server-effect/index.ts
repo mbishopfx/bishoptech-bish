@@ -1,4 +1,6 @@
 export * from './http/auth-context'
 export * from './runtime/detached'
 export * from './runtime/runtime-runner'
+export * from './runtime/server-observability.layer'
+export * from './runtime/server-runtime'
 export * from './services/zero-database.service'

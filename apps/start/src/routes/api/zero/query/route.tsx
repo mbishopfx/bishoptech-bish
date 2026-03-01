@@ -3,11 +3,27 @@ import { addContextToQuery } from '@rocicorp/zero/bindings'
 import type { QueryOrQueryRequest, ReadonlyJSONValue } from '@rocicorp/zero'
 import { mustGetQuery } from '@rocicorp/zero'
 import { handleQueryRequest } from '@rocicorp/zero/server'
-import { getAuth } from '@workos/authkit-tanstack-react-start'
+import { Effect, Schema } from 'effect'
 import { schema } from '@/integrations/zero/schema'
-import type { Schema } from '@/integrations/zero/schema'
+import type { Schema as ZeroSchema, ZeroContext } from '@/integrations/zero/schema'
 import { queries } from '@/integrations/zero/queries'
-import type { ZeroContext } from '@/integrations/zero/schema'
+import { requireUserAuth } from '@/lib/server-effect/http/server-auth.server'
+import { ServerRuntime } from '@/lib/server-effect'
+
+class ZeroQueryUnauthorizedError extends Schema.TaggedErrorClass<ZeroQueryUnauthorizedError>()(
+  'ZeroQueryUnauthorizedError',
+  {
+    message: Schema.String,
+  },
+) {}
+
+class ZeroQueryProcessingError extends Schema.TaggedErrorClass<ZeroQueryProcessingError>()(
+  'ZeroQueryProcessingError',
+  {
+    message: Schema.String,
+    cause: Schema.optional(Schema.String),
+  },
+) {}
 
 /**
  * Zero query endpoint.
@@ -16,44 +32,69 @@ export const Route = createFileRoute('/api/zero/query')({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const auth = await getAuth()
-        const { user } = auth
-        if (!user) {
-          return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-            status: 401,
+        const program = Effect.gen(function* () {
+          const authContext = yield* requireUserAuth({
+            onUnauthorized: () =>
+              new ZeroQueryUnauthorizedError({ message: 'Unauthorized' }),
+          })
+
+          const context: ZeroContext = {
+            userID: authContext.userId,
+            orgWorkosId: authContext.orgWorkosId,
+          }
+          const transformQuery = (name: string, args: unknown) => {
+            const query = mustGetQuery(queries, name)(
+              args as ReadonlyJSONValue | undefined,
+            ) as QueryOrQueryRequest<
+              keyof ZeroSchema['tables'] & string,
+              ReadonlyJSONValue | undefined,
+              ReadonlyJSONValue | undefined,
+              ZeroSchema,
+              unknown,
+              ZeroContext
+            >
+            return addContextToQuery(query, context)
+          }
+
+          const result = yield* Effect.tryPromise({
+            try: () => handleQueryRequest(transformQuery, schema, request, 'error'),
+            catch: (error) =>
+              new ZeroQueryProcessingError({
+                message: 'Zero query processing failed',
+                cause: String(error),
+              }),
+          })
+
+          const status = result[0] === 'transformFailed' ? 400 : 200
+          return new Response(JSON.stringify(result), {
+            status,
             headers: { 'Content-Type': 'application/json' },
           })
-        }
-        const organizationId =
-          'organizationId' in auth && typeof auth.organizationId === 'string'
-            ? auth.organizationId
-            : undefined
-        const context: ZeroContext = {
-          userID: user.id,
-          orgWorkosId: organizationId?.trim() || undefined,
-        }
-        const transformQuery = (name: string, args: unknown) => {
-          const query = mustGetQuery(queries, name)(args as ReadonlyJSONValue | undefined) as QueryOrQueryRequest<
-            keyof Schema['tables'] & string,
-            ReadonlyJSONValue | undefined,
-            ReadonlyJSONValue | undefined,
-            Schema,
-            unknown,
-            ZeroContext
-          >
-          return addContextToQuery(query, context)
-        }
-        const result = await handleQueryRequest(
-          transformQuery,
-          schema,
-          request,
-          'error',
-        )
-        const status = result[0] === 'transformFailed' ? 400 : 200
-        return new Response(JSON.stringify(result), {
-          status,
-          headers: { 'Content-Type': 'application/json' },
         })
+
+        try {
+          return await ServerRuntime.run(program)
+        } catch (error) {
+          if (error instanceof ZeroQueryUnauthorizedError) {
+            return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+              status: 401,
+              headers: { 'Content-Type': 'application/json' },
+            })
+          }
+          if (error instanceof ZeroQueryProcessingError) {
+            return new Response(
+              JSON.stringify([
+                'transformFailed',
+                {
+                  kind: 'internal',
+                  message: error.message,
+                },
+              ]),
+              { status: 500, headers: { 'Content-Type': 'application/json' } },
+            )
+          }
+          throw error
+        }
       },
     },
   },

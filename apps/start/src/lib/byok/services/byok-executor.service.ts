@@ -37,7 +37,46 @@ export type ByokExecutorServiceShape = {
 export class ByokExecutorService extends ServiceMap.Service<
   ByokExecutorService,
   ByokExecutorServiceShape
->()('byok/ByokExecutorService') {}
+>()('byok/ByokExecutorService') {
+  /**
+   * Live BYOK policy/key mutation implementation.
+   */
+  static readonly layer = Layer.succeed(this, {
+    executeUpdate: Effect.fn('ByokExecutorService.executeUpdate')(
+      (
+        orgWorkosId: string,
+        action: UpdateByokPayload,
+      ): ExecuteUpdateEffect =>
+        pipe(
+          Effect.sync(() => canUseOrganizationProviderKeys()),
+          Effect.flatMap(
+            (
+              enabled,
+            ): Effect.Effect<
+              ExistingPolicy,
+              ByokFeatureDisabledError | ByokPersistenceError
+            > =>
+              enabled
+                ? tryGetPolicy(orgWorkosId)
+                : Effect.fail(
+                    new ByokFeatureDisabledError({
+                      message:
+                        'Organization provider keys feature is disabled.',
+                    }),
+                  ),
+          ),
+          Effect.flatMap((existing: ExistingPolicy) => {
+            switch (action.action) {
+              case 'set_provider_api_key':
+                return runSet(orgWorkosId, existing, action)
+              case 'remove_provider_api_key':
+                return runRemove(orgWorkosId, existing, action)
+            }
+          }),
+        ),
+    ),
+  })
+}
 
 /** Maps unknown failure to ByokPersistenceError. */
 const toPersistenceError = (cause: unknown): ByokPersistenceError =>
@@ -197,36 +236,3 @@ type ExecuteUpdateEffect = Effect.Effect<
   ByokFeatureDisabledError | ByokPersistenceError
 >
 type ExistingPolicy = Awaited<ReturnType<typeof getOrgAiPolicy>>
-
-export const ByokExecutorLive = Layer.succeed(ByokExecutorService, {
-  executeUpdate: (
-    orgWorkosId: string,
-    action: UpdateByokPayload,
-  ): ExecuteUpdateEffect =>
-    pipe(
-      Effect.sync(() => canUseOrganizationProviderKeys()),
-      Effect.flatMap(
-        (
-          enabled,
-        ): Effect.Effect<
-          ExistingPolicy,
-          ByokFeatureDisabledError | ByokPersistenceError
-        > =>
-          enabled
-            ? tryGetPolicy(orgWorkosId)
-            : Effect.fail(
-                new ByokFeatureDisabledError({
-                  message: 'Organization provider keys feature is disabled.',
-                }),
-              ),
-      ),
-      Effect.flatMap((existing: ExistingPolicy) => {
-        switch (action.action) {
-          case 'set_provider_api_key':
-            return runSet(orgWorkosId, existing, action)
-          case 'remove_provider_api_key':
-            return runRemove(orgWorkosId, existing, action)
-        }
-      }),
-    ),
-})

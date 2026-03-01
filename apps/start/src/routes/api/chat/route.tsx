@@ -1,22 +1,21 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { getAuth } from '@workos/authkit-tanstack-react-start'
 import { UI_MESSAGE_STREAM_HEADERS } from 'ai'
 import { Effect, Schema } from 'effect'
 import {
-  extractServerAuthContext,
-  requireAuthenticatedServerAuthContext,
-} from '@/lib/server-effect/http/auth-context'
+  getServerAuthContext,
+  requireUserAuth,
+} from '@/lib/server-effect/http/server-auth.server'
 import { canUseOrganizationProviderKeys } from '@/utils/app-feature-flags'
 import {
   ChatOrchestratorService,
   ChatRuntime,
   ChatStreamRequest,
   InvalidRequestError,
+  ModelPolicyService,
   StreamResumeService,
   UnauthorizedError,
 } from '@/lib/chat-backend'
 import { handleRouteFailure } from '@/lib/chat-backend/http/route-failure'
-import { getOrgAiPolicy } from '@/lib/model-policy/repository'
 
 /** Chat API route handling stream resume (GET) and new turns (POST). */
 export const Route = createFileRoute('/api/chat')({
@@ -24,12 +23,9 @@ export const Route = createFileRoute('/api/chat')({
     handlers: {
       GET: async ({ request }) => {
         const requestId = crypto.randomUUID()
-        const authPromise = getAuth()
 
         const program = Effect.gen(function* () {
-          const auth = yield* Effect.promise(() => authPromise)
-          const authContext = yield* requireAuthenticatedServerAuthContext({
-            auth,
+          const authContext = yield* requireUserAuth({
             onUnauthorized: () =>
               new UnauthorizedError({
                 message: 'Unauthorized',
@@ -68,9 +64,11 @@ export const Route = createFileRoute('/api/chat')({
         try {
           return await ChatRuntime.run(program)
         } catch (error) {
-          const userId = await authPromise
-            .then((auth) => extractServerAuthContext(auth).userId)
-            .catch(() => undefined)
+          const userId = await Effect.runPromise(
+            getServerAuthContext().pipe(
+              Effect.map((context) => context.userId),
+            ),
+          ).catch(() => undefined)
           return handleRouteFailure({
             error,
             requestId,
@@ -83,13 +81,10 @@ export const Route = createFileRoute('/api/chat')({
       },
       POST: async ({ request }) => {
         const requestId = crypto.randomUUID()
-        const authPromise = getAuth()
 
         // Build one Effect program so auth/validation/orchestration share the same error model.
         const program = Effect.gen(function* () {
-          const auth = yield* Effect.promise(() => authPromise)
-          const authContext = yield* requireAuthenticatedServerAuthContext({
-            auth,
+          const authContext = yield* requireUserAuth({
             onUnauthorized: () =>
               new UnauthorizedError({
                 message: 'Unauthorized',
@@ -117,10 +112,14 @@ export const Route = createFileRoute('/api/chat')({
           })
 
           const orchestrator = yield* ChatOrchestratorService
+          const modelPolicy = yield* ModelPolicyService
           // Org is resolved server-side and passed to model policy resolution.
           const orgWorkosId = authContext.orgWorkosId
           const orgPolicy = orgWorkosId
-            ? yield* Effect.promise(() => getOrgAiPolicy(orgWorkosId))
+            ? yield* modelPolicy.getOrgPolicy({
+                orgWorkosId,
+                requestId,
+              })
             : undefined
           const skipProviderKeyResolution = Boolean(
             canUseOrganizationProviderKeys() &&
@@ -153,9 +152,11 @@ export const Route = createFileRoute('/api/chat')({
         try {
           return await ChatRuntime.run(program)
         } catch (error) {
-          const userId = await authPromise
-            .then((auth) => extractServerAuthContext(auth).userId)
-            .catch(() => undefined)
+          const userId = await Effect.runPromise(
+            getServerAuthContext().pipe(
+              Effect.map((context) => context.userId),
+            ),
+          ).catch(() => undefined)
           return handleRouteFailure({
             error,
             requestId,

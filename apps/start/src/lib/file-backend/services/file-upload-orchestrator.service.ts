@@ -17,6 +17,7 @@ import {
   FileUploadStorageError,
 } from '../domain/errors'
 import { requireFilePersistenceDb } from './file-persistence-db'
+import { MarkdownConversionService } from './markdown-conversion.service'
 
 type UploadedFileResult = {
   readonly id: string
@@ -25,108 +26,6 @@ type UploadedFileResult = {
   readonly name: string
   readonly size: number
   readonly contentType: string
-}
-
-function readRequiredEnv(name: string): string | null {
-  const raw = process.env[name]
-  if (!raw) return null
-  const trimmed = raw.trim()
-  return trimmed.length > 0 ? trimmed : null
-}
-
-function resolveWorkerConvertUrl(workerUrl: string): string {
-  const normalized = workerUrl.trim()
-  if (normalized.endsWith('/convert')) return normalized
-  return `${normalized.replace(/\/$/, '')}/convert`
-}
-
-async function convertToMarkdown(input: {
-  fileUrl: string
-  fileName: string
-  requestId: string
-}): Promise<string> {
-  const workerUrl = readRequiredEnv('CF_MARKDOWN_WORKER_URL')
-  const workerToken = readRequiredEnv('CF_MARKDOWN_WORKER_TOKEN')
-  if (!workerUrl || !workerToken) {
-    throw new FileConversionError({
-      message:
-        'Markdown conversion is not configured. Missing CF_MARKDOWN_WORKER_URL or CF_MARKDOWN_WORKER_TOKEN.',
-      requestId: input.requestId,
-      statusCode: 500,
-    })
-  }
-
-  const timeoutMs = Number.parseInt(
-    process.env.CF_MARKDOWN_WORKER_TIMEOUT_MS ?? '',
-    10,
-  )
-  const effectiveTimeoutMs = Number.isFinite(timeoutMs)
-    ? Math.max(1_000, timeoutMs)
-    : 20_000
-  const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), effectiveTimeoutMs)
-
-  let convertResponse: Response
-  try {
-    convertResponse = await fetch(resolveWorkerConvertUrl(workerUrl), {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${workerToken}`,
-      },
-      body: JSON.stringify({
-        fileUrl: input.fileUrl,
-        fileName: input.fileName,
-      }),
-      signal: controller.signal,
-    })
-  } catch (error) {
-    clearTimeout(timeoutId)
-    if (error instanceof Error && error.name === 'AbortError') {
-      throw new FileConversionError({
-        message: 'Markdown conversion timed out',
-        requestId: input.requestId,
-        statusCode: 504,
-      })
-    }
-    throw new FileConversionError({
-      message: 'Failed to convert uploaded file',
-      requestId: input.requestId,
-      statusCode: 502,
-      cause: String(error),
-    })
-  }
-  clearTimeout(timeoutId)
-
-  const workerPayload = (await convertResponse.json().catch(() => null)) as {
-    markdown?: unknown
-    error?: unknown
-  } | null
-
-  if (!convertResponse.ok) {
-    const message =
-      workerPayload && typeof workerPayload.error === 'string'
-        ? workerPayload.error
-        : 'Failed to convert uploaded file'
-    throw new FileConversionError({
-      message,
-      requestId: input.requestId,
-      statusCode: convertResponse.status,
-    })
-  }
-
-  const markdown =
-    workerPayload && typeof workerPayload.markdown === 'string'
-      ? workerPayload.markdown
-      : ''
-  if (!markdown) {
-    throw new FileConversionError({
-      message: 'Conversion response did not include markdown',
-      requestId: input.requestId,
-      statusCode: 502,
-    })
-  }
-  return markdown
 }
 
 export type FileUploadOrchestratorServiceShape = {
@@ -148,26 +47,30 @@ export type FileUploadOrchestratorServiceShape = {
 export class FileUploadOrchestratorService extends ServiceMap.Service<
   FileUploadOrchestratorService,
   FileUploadOrchestratorServiceShape
->()('file-backend/FileUploadOrchestratorService') {}
+>()('file-backend/FileUploadOrchestratorService') {
+  /**
+   * Live file upload orchestration layer (storage, conversion, persistence, vector indexing).
+   */
+  static readonly layer = Layer.effect(
+    FileUploadOrchestratorService,
+    Effect.gen(function* () {
+      const attachmentRag = yield* AttachmentRagService
+      const zeroDatabase = yield* ZeroDatabaseService
+      const markdownConversion = yield* MarkdownConversionService
 
-export const FileUploadOrchestratorLive = Layer.effect(
-  FileUploadOrchestratorService,
-  Effect.gen(function* () {
-    const attachmentRag = yield* AttachmentRagService
-    const zeroDatabase = yield* ZeroDatabaseService
-
-    return {
-      upload: ({
-        userId,
-        ownerOrgId,
-        workspaceId,
-        accessScope,
-        accessGroupIds,
-        file,
-        requestId,
-        route,
-      }) =>
-        Effect.gen(function* () {
+      return {
+        upload: Effect.fn('FileUploadOrchestratorService.upload')(
+          ({
+            userId,
+            ownerOrgId,
+            workspaceId,
+            accessScope,
+            accessGroupIds,
+            file,
+            requestId,
+            route,
+          }) =>
+            Effect.gen(function* () {
           const uploaded = yield* Effect.tryPromise({
             try: () =>
               r2UploadService.upload({
@@ -191,30 +94,12 @@ export const FileUploadOrchestratorLive = Layer.effect(
             },
           })
 
-          const markdownRaw = yield* Effect.tryPromise({
-            try: () =>
-              convertToMarkdown({
-                fileUrl: uploaded.url,
-                fileName: uploaded.name,
-                requestId,
-              }),
-            catch: (error) => {
-              if (
-                typeof error === 'object' &&
-                error !== null &&
-                '_tag' in error &&
-                (error as { _tag?: string })._tag === 'FileConversionError'
-              ) {
-                return error as FileConversionError
-              }
-              return new FileConversionError({
-                message: 'Failed to convert uploaded file',
-                requestId,
-                statusCode: 502,
-                cause: String(error),
-              })
-            },
+          const conversion = yield* markdownConversion.convertFromUrl({
+            fileUrl: uploaded.url,
+            fileName: uploaded.name,
+            requestId,
           })
+          const markdownRaw = conversion.markdown
 
           const markdown = normalizeMarkdownForStorage(markdownRaw)
           const now = Date.now()
@@ -350,15 +235,17 @@ export const FileUploadOrchestratorLive = Layer.effect(
               ),
             )
 
-          return {
-            id: attachmentId,
-            key: uploaded.key,
-            url: uploaded.url,
-            name: uploaded.name,
-            size: uploaded.size,
-            contentType: uploaded.contentType,
-          }
-        }),
-    }
-  }),
-)
+              return {
+                id: attachmentId,
+                key: uploaded.key,
+                url: uploaded.url,
+                name: uploaded.name,
+                size: uploaded.size,
+                contentType: uploaded.contentType,
+              }
+            }),
+        ),
+      }
+    }),
+  )
+}

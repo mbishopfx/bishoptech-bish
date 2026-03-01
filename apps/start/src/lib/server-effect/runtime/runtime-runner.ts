@@ -1,5 +1,9 @@
-import { Cause, Exit, ManagedRuntime, Option } from 'effect'
-import type { Effect, Layer } from 'effect'
+import { Cause, Exit, Layer, ManagedRuntime, Option } from 'effect'
+import type { Effect } from 'effect'
+import {
+  ServerObservabilityLayer,
+  withServerRuntimeObservability,
+} from './server-observability.layer'
 
 /**
  * Shared helper for running Effect programs from framework edges.
@@ -7,22 +11,22 @@ import type { Effect, Layer } from 'effect'
  * The runner provides a single `ManagedRuntime` for a layer and standardizes
  * failure unwrapping so callers receive the first tagged error whenever possible.
  */
-export function makeRuntimeRunner<TServices, TLayerError, TLayerRequirements>(
-  layer: Layer.Layer<TServices, TLayerError, TLayerRequirements>,
+export function makeRuntimeRunner<TServices, TLayerError>(
+  layer: Layer.Layer<TServices, TLayerError, never>,
 ) {
   const runtime = ManagedRuntime.make(
-    layer as Layer.Layer<TServices, TLayerError, never>,
+    Layer.mergeAll(layer, ServerObservabilityLayer),
   )
 
-  const runExit = <TValue, TError, TRequirements>(
-    effect: Effect.Effect<TValue, TError, TRequirements>,
+  const runExit = <TValue, TError>(
+    effect: Effect.Effect<TValue, TError, TServices>,
   ) =>
     runtime.runPromiseExit(
-      effect as never,
+      withServerRuntimeObservability(effect),
     ) as Promise<Exit.Exit<TValue, TError>>
 
-  const run = <TValue, TError, TRequirements>(
-    effect: Effect.Effect<TValue, TError, TRequirements>,
+  const run = <TValue, TError>(
+    effect: Effect.Effect<TValue, TError, TServices>,
   ) =>
     runExit(effect).then((exit) => {
       if (Exit.isSuccess(exit)) {

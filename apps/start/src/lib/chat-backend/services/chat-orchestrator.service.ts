@@ -648,7 +648,6 @@ export class ChatOrchestratorService extends ServiceMap.Service<
               })
             }),
           ),
-          Effect.catch((error) => Effect.fail(error)),
         )
       })
 
