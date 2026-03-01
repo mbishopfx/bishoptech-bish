@@ -17,12 +17,12 @@ import {
   Copy,
   Globe,
   Link2,
-  Loader2,
   Pencil,
   Trash2,
 } from 'lucide-react'
 import { SidebarGroupTooltip } from '@rift/ui/tooltip'
 import { ContextMenuItem, ContextMenuSeparator } from '@rift/ui/context-menu'
+import { Spinner } from '@rift/ui/spinner'
 import { copyToClipboard } from '@rift/utils'
 import { toast } from 'sonner'
 import { isAreaPath } from '@/utils/nav-utils'
@@ -323,10 +323,7 @@ export function ChatSidebarContent({ pathname }: { pathname: string }) {
           }
         >
           <span className="inline-flex shrink-0">
-            <Loader2
-              className="size-4 animate-spin text-content-muted"
-              aria-hidden
-            />
+            <Spinner className="size-4 animate-spin text-content-muted" aria-hidden />
           </span>
         </SidebarGroupTooltip>
       ) : showError ? (

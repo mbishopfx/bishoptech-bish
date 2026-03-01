@@ -9,11 +9,6 @@ import type {
 } from '../types'
 
 const streamdownPlugins = { code, mermaid, math } as PluginConfig
-const streamdownAnimated = {
-  animation: 'fadeIn',
-  duration: 160,
-  easing: 'ease-out',
-} as const
 
 function renderTextPart({
   part,
@@ -25,7 +20,6 @@ function renderTextPart({
     <Streamdown
       plugins={streamdownPlugins}
       controls={false}
-      animated={isMessageStreaming ? streamdownAnimated : false}
       isAnimating={isMessageStreaming}
       mode={isMessageStreaming ? 'streaming' : 'static'}
       components={streamdownComponents}

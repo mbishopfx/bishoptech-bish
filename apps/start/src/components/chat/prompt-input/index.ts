@@ -22,9 +22,8 @@ export type {
 export { PromptInputSubmit } from './prompt-input-submit'
 export type { PromptInputSubmitProps } from './prompt-input-submit'
 
-export { PromptInputThinking, PromptInputError, PromptInputAttachments } from './slots/top'
+export { PromptInputError, PromptInputAttachments } from './slots/top'
 export type {
-  PromptInputThinkingProps,
   PromptInputErrorProps,
   PromptInputAttachmentsProps,
   AttachedFile,

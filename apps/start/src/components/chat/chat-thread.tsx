@@ -1,5 +1,6 @@
 // Renders chat messages and keeps scroll pinned to the latest user message.
 import { useMemo } from 'react'
+import { Spinner } from '@rift/ui/spinner'
 import { useChatMessages } from './chat-context'
 import { ChatMessage } from './chat-message'
 import { usePinToLastUserMessage } from '@rift/chat-scroll'
@@ -29,9 +30,10 @@ export function ChatThread() {
     })
 
   const isStreaming = status === 'submitted' || status === 'streaming'
+  const isAwaitingStreamStart = status === 'submitted'
   const lastMessage = messages.at(-1)
   const showThinking =
-    isStreaming && (!lastMessage || lastMessage.role === 'user')
+    isAwaitingStreamStart && (!lastMessage || lastMessage.role === 'user')
 
   return (
     <div
@@ -70,15 +72,7 @@ export function ChatThread() {
           <div className="flex w-full flex-col gap-3 overflow-hidden text-content-emphasis text-md leading-[21px]">
             <div className="w-full">
               <div className="py-1">
-                <div className="flex items-center gap-2">
-                  <div
-                    className="size-2 shrink-0 rounded-full bg-red-500 animate-pulse-size"
-                    aria-hidden
-                  />
-                  <span className="text-sm leading-[21px] text-content-muted">
-                    Thinking…
-                  </span>
-                </div>
+                <Spinner size={24} className="animate-spin" aria-hidden />
               </div>
             </div>
           </div>

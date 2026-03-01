@@ -7,7 +7,6 @@ import {
   PromptInputRoot,
   PromptInputTextarea,
   PromptInputToolbar,
-  PromptInputThinking,
   PromptInputError,
   PromptInputAttachments,
 } from './prompt-input'
@@ -185,7 +184,6 @@ export function ChatInput() {
       {files.length > 0 && (
         <PromptInputAttachments files={files} onRemove={handleRemoveFile} />
       )}
-      {!activeErrorMessage ? <PromptInputThinking isVisible={isBusy} /> : null}
     </>
   )
 
