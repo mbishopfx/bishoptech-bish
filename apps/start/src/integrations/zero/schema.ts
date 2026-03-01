@@ -85,10 +85,9 @@ const thread = table('thread')
       .from('response_style')
       .optional(),
     pinned: boolean(),
-    branchParentThreadId: string().from('branch_parent_thread_id').optional(),
-    branchParentPublicMessageId: string()
-      .from('branch_parent_public_message_id')
-      .optional(),
+    activeChildByParent: json<Record<string, string>>()
+      .from('active_child_by_parent'),
+    branchVersion: number().from('branch_version'),
     shareId: string().from('share_id').optional(),
     shareStatus: enumeration<'active' | 'revoked'>()
       .from('share_status')
@@ -122,7 +121,14 @@ const message = table('message')
       | 'cancelled'
     >(),
     updated_at: number().optional(),
-    branches: json<readonly string[]>().optional(),
+    parentMessageId: string().from('parent_message_id').optional(),
+    branchIndex: number().from('branch_index'),
+    branchAnchorMessageId: string()
+      .from('branch_anchor_message_id')
+      .optional(),
+    regenSourceMessageId: string()
+      .from('regen_source_message_id')
+      .optional(),
     role: enumeration<'user' | 'assistant' | 'system'>(),
     created_at: number(),
     serverError: json<{ type: string; message: string }>()

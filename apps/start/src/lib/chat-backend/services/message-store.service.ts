@@ -7,11 +7,19 @@ import type {
   ChatAttachment,
   ChatAttachmentInput,
 } from '@/lib/chat-contracts/attachments'
-import { MessagePersistenceError } from '../domain/errors'
+import {
+  BranchVersionConflictError,
+  InvalidRequestError,
+  MessagePersistenceError,
+} from '../domain/errors'
 import type { IncomingUserMessage } from '../domain/schemas'
 import { getUserMessageText } from '../domain/schemas'
 import { getMemoryState } from '../infra/memory/state'
 import { getZeroDatabase, zql } from '../infra/zero/db'
+import {
+  resolveCanonicalBranch,
+  resolveRegenerationAnchor,
+} from '@/lib/chat-branching/branch-resolver'
 import { AttachmentRagService } from './rag'
 import {
   buildQueryEmbedding,
@@ -27,6 +35,7 @@ export type MessageStoreServiceShape = {
   readonly loadThreadMessages: (input: {
     readonly threadId: string
     readonly model: string
+    readonly untilMessageId?: string
     readonly requestId: string
   }) => Effect.Effect<UIMessage[], MessagePersistenceError>
   readonly appendUserMessage: (input: {
@@ -40,14 +49,35 @@ export type MessageStoreServiceShape = {
     readonly modelParams?: {
       readonly reasoningEffort?: AiReasoningEffort
     }
+    readonly expectedBranchVersion: number
     readonly requestId: string
-  }) => Effect.Effect<UIMessage, MessagePersistenceError>
+  }) => Effect.Effect<
+    UIMessage,
+    MessagePersistenceError | BranchVersionConflictError
+  >
+  readonly prepareRegeneration: (input: {
+    readonly threadDbId: string
+    readonly threadId: string
+    readonly userId: string
+    readonly targetMessageId: string
+    readonly expectedBranchVersion: number
+    readonly requestId: string
+  }) => Effect.Effect<
+    {
+      readonly anchorMessageId: string
+      readonly regenSourceMessageId: string
+    },
+    MessagePersistenceError | BranchVersionConflictError | InvalidRequestError
+  >
   readonly finalizeAssistantMessage: (input: {
     readonly threadDbId: string
     readonly threadModel: string
     readonly threadId: string
     readonly userId: string
     readonly assistantMessageId: string
+    readonly parentMessageId?: string
+    readonly branchAnchorMessageId?: string
+    readonly regenSourceMessageId?: string
     readonly ok: boolean
     readonly finalContent: string
     readonly reasoning?: string
@@ -130,6 +160,35 @@ function buildRetrievedChunksContextBlock(
   ].join('\n\n')
 }
 
+function normalizeThreadActiveChildMap(input: unknown): Record<string, string> {
+  if (!input || typeof input !== 'object') return {}
+
+  return Object.fromEntries(
+    Object.entries(input as Record<string, unknown>).filter(
+      ([parentId, childId]) =>
+        parentId.trim().length > 0 &&
+        typeof childId === 'string' &&
+        childId.trim().length > 0,
+    ),
+  ) as Record<string, string>
+}
+
+function nextBranchIndexForParent(input: {
+  readonly messages: readonly {
+    readonly parentMessageId?: string | null
+    readonly branchIndex?: number | null
+  }[]
+  readonly parentMessageId?: string
+}): number {
+  if (!input.parentMessageId) return 1
+
+  const siblingIndexes = input.messages
+    .filter((message) => message.parentMessageId === input.parentMessageId)
+    .map((message) => message.branchIndex ?? 1)
+  const currentMax = siblingIndexes.length > 0 ? Math.max(...siblingIndexes) : 0
+  return currentMax + 1
+}
+
 /** Production message store implementation. */
 export const MessageStoreZero = Layer.effect(
   MessageStoreService,
@@ -137,7 +196,7 @@ export const MessageStoreZero = Layer.effect(
     const attachmentRag = yield* AttachmentRagService
 
     return {
-      loadThreadMessages: ({ threadId, model, requestId }) =>
+      loadThreadMessages: ({ threadId, model, untilMessageId, requestId }) =>
         Effect.gen(function* () {
           const db = getZeroDatabase()
           if (!db) {
@@ -166,6 +225,16 @@ export const MessageStoreZero = Layer.effect(
                 cause: String(error),
               }),
           })
+          const threadRow = yield* Effect.tryPromise({
+            try: () => db.run(zql.thread.where('threadId', threadId).one()),
+            catch: (error) =>
+              new MessagePersistenceError({
+                message: 'Failed to load messages',
+                requestId,
+                threadId,
+                cause: String(error),
+              }),
+          })
           const attachmentRows = yield* Effect.tryPromise({
             try: () =>
               db.run(
@@ -185,8 +254,42 @@ export const MessageStoreZero = Layer.effect(
           const attachmentsById = new Map(
             attachmentRows.map((attachment) => [attachment.id, attachment]),
           )
+          const { canonicalMessages: canonicalMessageRows } =
+            resolveCanonicalBranch(
+              messageRows.map((message) => ({
+                messageId: message.messageId,
+                role: message.role,
+                parentMessageId: message.parentMessageId ?? undefined,
+                branchIndex: message.branchIndex ?? 1,
+                createdAt: message.created_at,
+              })),
+              normalizeThreadActiveChildMap(threadRow?.activeChildByParent),
+            )
+          const canonicalMessageIdSet = new Set(
+            canonicalMessageRows.map((message) => message.messageId),
+          )
+          const messageById = new Map(
+            messageRows.map((message) => [message.messageId, message]),
+          )
+          const canonicalOrderedRows = canonicalMessageRows
+            .map((message) => messageById.get(message.messageId))
+            .filter((message): message is NonNullable<typeof message> => !!message)
+          const canonicalRows =
+            untilMessageId && untilMessageId.trim().length > 0
+              ? (() => {
+                  const endIndex = canonicalOrderedRows.findIndex(
+                    (row) => row.messageId === untilMessageId,
+                  )
+                  return endIndex >= 0
+                    ? canonicalOrderedRows.slice(0, endIndex + 1)
+                    : canonicalOrderedRows
+                })()
+              : canonicalOrderedRows
+          const canonicalRowIdSet = new Set(
+            canonicalRows.map((row) => row.messageId),
+          )
           const modelCapabilities = getCatalogModel(model)?.capabilities
-          const latestUserMessageRow = [...messageRows]
+          const latestUserMessageRow = [...canonicalRows]
             .reverse()
             .find((row) => row.role === 'user')
           const latestUserText = latestUserMessageRow?.content ?? ''
@@ -304,7 +407,7 @@ export const MessageStoreZero = Layer.effect(
             }
           }
 
-          return messageRows.map((message) => {
+          return canonicalRows.map((message) => {
             const attachmentIds = Array.isArray(message.attachmentsIds)
               ? message.attachmentsIds
               : []
@@ -335,6 +438,8 @@ export const MessageStoreZero = Layer.effect(
             const modelText =
               message.role === 'user' &&
               latestUserMessageRow?.messageId === message.messageId &&
+              canonicalMessageIdSet.has(message.messageId) &&
+              canonicalRowIdSet.has(message.messageId) &&
               fallbackContextBlock.length > 0
                 ? `${message.content}\n\n${fallbackContextBlock}`
                 : message.content
@@ -372,6 +477,7 @@ export const MessageStoreZero = Layer.effect(
         model,
         reasoningEffort,
         modelParams,
+        expectedBranchVersion,
         requestId,
       }) =>
         Effect.gen(function* () {
@@ -389,6 +495,7 @@ export const MessageStoreZero = Layer.effect(
 
           const now = Date.now()
           const linkedAttachmentsForReturn: ChatAttachment[] = []
+          let insertedParentMessageId: string | undefined
           const vectorLinks: Array<{
             attachmentId: string
             userId: string
@@ -400,6 +507,22 @@ export const MessageStoreZero = Layer.effect(
           yield* Effect.tryPromise({
             try: () =>
               db.transaction(async (tx) => {
+                const thread = await tx.run(
+                  zql.thread.where('id', threadDbId).where('userId', userId).one(),
+                )
+                if (!thread) {
+                  throw new Error('thread not found')
+                }
+                if (thread.branchVersion !== expectedBranchVersion) {
+                  throw new BranchVersionConflictError({
+                    message: 'Branch version mismatch while appending user message',
+                    requestId,
+                    threadId,
+                    expectedBranchVersion,
+                    actualBranchVersion: thread.branchVersion,
+                  })
+                }
+
                 try {
                   const existing = await tx.run(
                     zql.message
@@ -447,6 +570,32 @@ export const MessageStoreZero = Layer.effect(
                   }
                   linkedAttachmentsForReturn.push(...linkedAttachments)
 
+                  const threadMessages = await tx.run(
+                    zql.message
+                      .where('threadId', threadId)
+                      .where('userId', userId)
+                      .orderBy('created_at', 'asc'),
+                  )
+                  const { canonicalMessages } = resolveCanonicalBranch(
+                    threadMessages.map((row) => ({
+                      messageId: row.messageId,
+                      role: row.role,
+                      parentMessageId: row.parentMessageId ?? undefined,
+                      branchIndex: row.branchIndex ?? 1,
+                      createdAt: row.created_at,
+                    })),
+                    normalizeThreadActiveChildMap(thread.activeChildByParent),
+                  )
+                  const parentMessageId =
+                    canonicalMessages.length > 0
+                      ? canonicalMessages[canonicalMessages.length - 1]!.messageId
+                      : undefined
+                  insertedParentMessageId = parentMessageId
+                  const branchIndex = nextBranchIndexForParent({
+                    messages: threadMessages,
+                    parentMessageId,
+                  })
+
                   await tx.mutate.message.insert({
                     // Deterministic key makes retries naturally idempotent.
                     id: message.id,
@@ -458,6 +607,10 @@ export const MessageStoreZero = Layer.effect(
                     role: 'user',
                     created_at: now,
                     updated_at: now,
+                    parentMessageId,
+                    branchIndex,
+                    branchAnchorMessageId: undefined,
+                    regenSourceMessageId: undefined,
                     model,
                     modelParams,
                     sources: linkedAttachments.map((attachment) => ({
@@ -474,22 +627,34 @@ export const MessageStoreZero = Layer.effect(
                   return
                 }
 
+                const activeChildByParent = normalizeThreadActiveChildMap(
+                  thread.activeChildByParent,
+                )
+                if (insertedParentMessageId) {
+                  activeChildByParent[insertedParentMessageId] = message.id
+                }
                 await tx.mutate.thread.update({
                   id: threadDbId,
                   model,
                   reasoningEffort,
+                  activeChildByParent,
+                  branchVersion: thread.branchVersion + 1,
                   generationStatus: 'generation',
                   updatedAt: now,
                   lastMessageAt: now,
                 })
               }),
-            catch: (error) =>
-              new MessagePersistenceError({
+            catch: (error) => {
+              if (error instanceof BranchVersionConflictError) {
+                return error
+              }
+              return new MessagePersistenceError({
                 message: 'Failed to append user message',
                 requestId,
                 threadId,
                 cause: String(error),
-              }),
+              })
+            },
           })
 
           for (const link of vectorLinks) {
@@ -500,12 +665,109 @@ export const MessageStoreZero = Layer.effect(
 
           return toUserMessage(message, linkedAttachmentsForReturn)
         }),
+      prepareRegeneration: ({
+        threadDbId,
+        threadId,
+        userId,
+        targetMessageId,
+        expectedBranchVersion,
+        requestId,
+      }) =>
+        Effect.tryPromise({
+          try: async () => {
+            const db = getZeroDatabase()
+            if (!db) {
+              throw new Error('ZERO_UPSTREAM_DB is not configured')
+            }
+
+            return await db.transaction(async (tx) => {
+              const thread = await tx.run(
+                zql.thread.where('id', threadDbId).where('userId', userId).one(),
+              )
+              if (!thread) {
+                throw new Error('thread not found')
+              }
+
+              if (thread.branchVersion !== expectedBranchVersion) {
+                throw new BranchVersionConflictError({
+                  message: 'Branch version mismatch while preparing regeneration',
+                  requestId,
+                  threadId,
+                  expectedBranchVersion,
+                  actualBranchVersion: thread.branchVersion,
+                })
+              }
+
+              const threadMessages = await tx.run(
+                zql.message
+                  .where('threadId', threadId)
+                  .where('userId', userId)
+                  .orderBy('created_at', 'asc'),
+              )
+              const anchor = resolveRegenerationAnchor(
+                threadMessages.map((message) => ({
+                  messageId: message.messageId,
+                  role: message.role,
+                  parentMessageId: message.parentMessageId ?? undefined,
+                  branchIndex: message.branchIndex ?? 1,
+                  createdAt: message.created_at,
+                })),
+                targetMessageId,
+              )
+              if (!anchor) {
+                throw new InvalidRequestError({
+                  message: 'Invalid regenerate target',
+                  requestId,
+                  issue: 'target message is not regeneratable',
+                })
+              }
+
+              await tx.mutate.thread.update({
+                id: threadDbId,
+                activeChildByParent: (() => {
+                  const activeChildByParent = normalizeThreadActiveChildMap(
+                    thread.activeChildByParent,
+                  )
+                  // Regenerate must truncate canonical path at the anchor until
+                  // the new assistant branch is finalized.
+                  delete activeChildByParent[anchor.anchorMessageId]
+                  return activeChildByParent
+                })(),
+                branchVersion: thread.branchVersion + 1,
+                generationStatus: 'generation',
+                updatedAt: Date.now(),
+              })
+
+              return {
+                anchorMessageId: anchor.anchorMessageId,
+                regenSourceMessageId: anchor.targetMessageId,
+              }
+            })
+          },
+          catch: (error) => {
+            if (
+              error instanceof BranchVersionConflictError ||
+              error instanceof InvalidRequestError
+            ) {
+              return error
+            }
+            return new MessagePersistenceError({
+              message: 'Failed to prepare regeneration',
+              requestId,
+              threadId,
+              cause: String(error),
+            })
+          },
+        }),
       finalizeAssistantMessage: ({
         threadDbId,
         threadModel,
         threadId,
         userId,
         assistantMessageId,
+        parentMessageId,
+        branchAnchorMessageId,
+        regenSourceMessageId,
         ok,
         finalContent,
         reasoning,
@@ -522,6 +784,13 @@ export const MessageStoreZero = Layer.effect(
 
             const now = Date.now()
             await db.transaction(async (tx) => {
+              const thread = await tx.run(
+                zql.thread.where('id', threadDbId).where('userId', userId).one(),
+              )
+              if (!thread) {
+                throw new Error('thread not found')
+              }
+
               const existing = await tx.run(
                 zql.message
                   .where('id', assistantMessageId)
@@ -557,6 +826,17 @@ export const MessageStoreZero = Layer.effect(
 
                 await tx.mutate.message.update(update)
               } else {
+                const threadMessages = await tx.run(
+                  zql.message
+                    .where('threadId', threadId)
+                    .where('userId', userId)
+                    .orderBy('created_at', 'asc'),
+                )
+                const branchIndex = nextBranchIndexForParent({
+                  messages: threadMessages,
+                  parentMessageId,
+                })
+
                 // Insert path handles first successful finalize for this assistant message.
                 const insert: {
                   id: string
@@ -567,6 +847,10 @@ export const MessageStoreZero = Layer.effect(
                   reasoning?: string
                   status: 'done' | 'error'
                   role: 'assistant'
+                  parentMessageId?: string
+                  branchIndex: number
+                  branchAnchorMessageId?: string
+                  regenSourceMessageId?: string
                   created_at: number
                   updated_at: number
                   model: string
@@ -582,6 +866,10 @@ export const MessageStoreZero = Layer.effect(
                   reasoning,
                   status: ok ? 'done' : 'error',
                   role: 'assistant',
+                  parentMessageId,
+                  branchIndex,
+                  branchAnchorMessageId,
+                  regenSourceMessageId,
                   created_at: now,
                   updated_at: now,
                   model: threadModel,
@@ -597,8 +885,15 @@ export const MessageStoreZero = Layer.effect(
                 await tx.mutate.message.insert(insert)
               }
 
+              const activeChildByParent = normalizeThreadActiveChildMap(
+                thread.activeChildByParent,
+              )
+              if (parentMessageId) {
+                activeChildByParent[parentMessageId] = assistantMessageId
+              }
               await tx.mutate.thread.update({
                 id: threadDbId,
+                activeChildByParent,
                 generationStatus: ok ? 'completed' : 'failed',
                 updatedAt: now,
                 lastMessageAt: now,
@@ -619,13 +914,15 @@ export const MessageStoreZero = Layer.effect(
 
 /** Test-only adapter retained for deterministic unit tests. */
 export const MessageStoreMemory = Layer.succeed(MessageStoreService, {
-  loadThreadMessages: ({ threadId, model: _model, requestId }) =>
+  loadThreadMessages: ({ threadId, model: _model, untilMessageId, requestId }) =>
     Effect.sync(() => {
       const existing = getMemoryState().messages.get(threadId)
       if (!existing) {
         throw new Error('missing thread message store')
       }
-      return existing.slice()
+      if (!untilMessageId) return existing.slice()
+      const endIndex = existing.findIndex((message) => message.id === untilMessageId)
+      return endIndex >= 0 ? existing.slice(0, endIndex + 1) : existing.slice()
     }).pipe(
       Effect.catch((error) =>
         Effect.fail(
@@ -652,6 +949,49 @@ export const MessageStoreMemory = Layer.succeed(MessageStoreService, {
         Effect.fail(
           new MessagePersistenceError({
             message: 'Failed to append user message',
+            requestId,
+            threadId,
+            cause: String(error),
+          }),
+        ),
+      ),
+    ),
+  prepareRegeneration: ({
+    threadId,
+    targetMessageId,
+    requestId,
+  }) =>
+    Effect.sync(() => {
+      const existing = getMemoryState().messages.get(threadId)
+      if (!existing) {
+        throw new Error('missing thread message store')
+      }
+
+      const targetIndex = existing.findIndex((message) => message.id === targetMessageId)
+      if (targetIndex < 0) {
+        throw new Error('target message not found')
+      }
+
+      const target = existing[targetIndex]
+      if (target.role === 'user') {
+        return {
+          anchorMessageId: target.id,
+          regenSourceMessageId: target.id,
+        }
+      }
+      const previous = targetIndex > 0 ? existing[targetIndex - 1] : undefined
+      if (!previous || previous.role !== 'user') {
+        throw new Error('assistant regenerate requires parent user')
+      }
+      return {
+        anchorMessageId: previous.id,
+        regenSourceMessageId: target.id,
+      }
+    }).pipe(
+      Effect.catch((error) =>
+        Effect.fail(
+          new MessagePersistenceError({
+            message: 'Failed to prepare regeneration',
             requestId,
             threadId,
             cause: String(error),

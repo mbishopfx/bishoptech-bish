@@ -38,8 +38,8 @@ CREATE TABLE IF NOT EXISTS threads (
   model TEXT NOT NULL,
   response_style TEXT,
   pinned BOOLEAN NOT NULL,
-  branch_parent_thread_id TEXT,
-  branch_parent_public_message_id TEXT,
+  active_child_by_parent JSONB NOT NULL DEFAULT '{}'::jsonb,
+  branch_version BIGINT NOT NULL DEFAULT 1,
   share_id TEXT,
   share_status TEXT,
   shared_at BIGINT,
@@ -50,6 +50,10 @@ CREATE TABLE IF NOT EXISTS threads (
   custom_instruction_id TEXT,
   reasoning_effort TEXT
 );
+ALTER TABLE threads
+ADD COLUMN IF NOT EXISTS active_child_by_parent JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE threads
+ADD COLUMN IF NOT EXISTS branch_version BIGINT NOT NULL DEFAULT 1;
 CREATE INDEX IF NOT EXISTS threads_user_id ON threads (user_id);
 CREATE INDEX IF NOT EXISTS threads_thread_id ON threads (thread_id);
 CREATE INDEX IF NOT EXISTS threads_user_updated ON threads (user_id, updated_at);
@@ -66,7 +70,10 @@ CREATE TABLE IF NOT EXISTS messages (
   content TEXT NOT NULL,
   status TEXT NOT NULL,
   updated_at BIGINT,
-  branches JSONB,
+  parent_message_id TEXT,
+  branch_index INTEGER NOT NULL DEFAULT 1,
+  branch_anchor_message_id TEXT,
+  regen_source_message_id TEXT,
   role TEXT NOT NULL,
   created_at BIGINT NOT NULL,
   server_error JSONB,
@@ -76,10 +83,19 @@ CREATE TABLE IF NOT EXISTS messages (
   model_params JSONB,
   provider_metadata JSONB
 );
+ALTER TABLE messages
+ADD COLUMN IF NOT EXISTS parent_message_id TEXT;
+ALTER TABLE messages
+ADD COLUMN IF NOT EXISTS branch_index INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE messages
+ADD COLUMN IF NOT EXISTS branch_anchor_message_id TEXT;
+ALTER TABLE messages
+ADD COLUMN IF NOT EXISTS regen_source_message_id TEXT;
 CREATE INDEX IF NOT EXISTS messages_thread_id ON messages (thread_id);
 CREATE INDEX IF NOT EXISTS messages_thread_user ON messages (thread_id, user_id);
 CREATE INDEX IF NOT EXISTS messages_user ON messages (user_id);
 CREATE INDEX IF NOT EXISTS messages_thread_created ON messages (thread_id, created_at);
+CREATE INDEX IF NOT EXISTS messages_thread_parent ON messages (thread_id, parent_message_id);
 
 -- org_ai_policy
 CREATE TABLE IF NOT EXISTS org_ai_policy (

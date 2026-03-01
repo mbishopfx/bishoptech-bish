@@ -42,6 +42,17 @@ export class ThreadForbiddenError extends Schema.TaggedErrorClass<ThreadForbidde
   },
 ) {}
 
+/** Branch selection version check failed due to concurrent thread mutation. */
+export class BranchVersionConflictError extends Schema.TaggedErrorClass<BranchVersionConflictError>()(
+  'BranchVersionConflictError',
+  {
+    ...ErrorFields,
+    threadId: Schema.String,
+    expectedBranchVersion: Schema.Number,
+    actualBranchVersion: Schema.Number,
+  },
+) {}
+
 /** Request exceeds per-user throughput limits. */
 export class RateLimitExceededError extends Schema.TaggedErrorClass<RateLimitExceededError>()(
   'RateLimitExceededError',
@@ -107,6 +118,7 @@ export type ChatDomainError =
   | InvalidRequestError
   | ThreadNotFoundError
   | ThreadForbiddenError
+  | BranchVersionConflictError
   | RateLimitExceededError
   | ModelProviderError
   | ModelPolicyDeniedError

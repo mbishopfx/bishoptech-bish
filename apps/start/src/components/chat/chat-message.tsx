@@ -27,11 +27,22 @@ function getFileTypeIndicator(fileName: string): string {
 type ChatMessageProps = {
   message: UIMessage
   isAnimating?: boolean
+  canRegenerate: boolean
+  onRegenerate: (messageId: string) => void
+  branchSelector?: {
+    optionMessageIds: readonly string[]
+    selectedMessageId: string
+    disabled?: boolean
+    onSelectMessageId: (messageId: string) => void
+  }
 }
 
 export function ChatMessage({
   message,
   isAnimating = false,
+  canRegenerate,
+  onRegenerate,
+  branchSelector,
 }: ChatMessageProps) {
   const text = getRawMessageText(message)
   const isUser = message.role === 'user'
@@ -83,7 +94,13 @@ export function ChatMessage({
             </div>
           )}
           <div className="w-full">
-            <UserMessageActions text={text} />
+            <UserMessageActions
+              messageId={message.id}
+              text={text}
+              canRegenerate={canRegenerate}
+              onRegenerate={onRegenerate}
+              branchSelector={branchSelector}
+            />
           </div>
         </div>
       </div>
@@ -105,7 +122,13 @@ export function ChatMessage({
             isMessageStreaming={isAnimating}
           />
         </div>
-        <AssistantMessageActions text={text} modelName={modelName} />
+        <AssistantMessageActions
+          messageId={message.id}
+          text={text}
+          modelName={modelName}
+          canRegenerate={canRegenerate}
+          onRegenerate={onRegenerate}
+        />
       </div>
     </div>
   )

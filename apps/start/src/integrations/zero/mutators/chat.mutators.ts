@@ -54,6 +54,13 @@ const deleteThreadArgs = z.object({
   threadId: z.string(),
 })
 
+const selectBranchChildArgs = z.object({
+  threadId: z.string(),
+  parentMessageId: z.string(),
+  childMessageId: z.string(),
+  expectedBranchVersion: z.number().int().positive(),
+})
+
 export const chatMutatorDefinitions = {
   threads: {
     create: defineMutator(createThreadArgs, async ({ tx, args, ctx }) => {
@@ -69,6 +76,8 @@ export const chatMutatorDefinitions = {
         userId: ctx.userID,
         model: args.model,
         pinned: args.pinned,
+        activeChildByParent: {},
+        branchVersion: 1,
       })
     }),
 
@@ -114,6 +123,69 @@ export const chatMutatorDefinitions = {
       }
       await tx.mutate.thread.delete({ id: thread.id })
     }),
+
+    /**
+     * Persist canonical branch selection for a parent message.
+     * This mutator is optimistic-concurrency-safe via `expectedBranchVersion`.
+     */
+    selectBranchChild: defineMutator(
+      selectBranchChildArgs,
+      async ({ tx, args, ctx }) => {
+        const thread = await tx.run(zql.thread.where('threadId', args.threadId).one())
+        if (!thread || thread.userId !== ctx.userID) {
+          return
+        }
+
+        if (thread.branchVersion !== args.expectedBranchVersion) {
+          throw new Error('branch_version_conflict')
+        }
+        if (
+          thread.generationStatus === 'pending' ||
+          thread.generationStatus === 'generation'
+        ) {
+          throw new Error('branch_switch_while_generating')
+        }
+
+        const parent = await tx.run(
+          zql.message
+            .where('threadId', args.threadId)
+            .where('messageId', args.parentMessageId)
+            .where('userId', ctx.userID)
+            .one(),
+        )
+        if (!parent) {
+          return
+        }
+
+        const child = await tx.run(
+          zql.message
+            .where('threadId', args.threadId)
+            .where('messageId', args.childMessageId)
+            .where('userId', ctx.userID)
+            .one(),
+        )
+        if (!child || child.parentMessageId !== args.parentMessageId) {
+          return
+        }
+
+        const activeChildByParent =
+          thread.activeChildByParent &&
+          typeof thread.activeChildByParent === 'object'
+            ? { ...thread.activeChildByParent }
+            : {}
+
+        if (activeChildByParent[args.parentMessageId] === args.childMessageId) {
+          return
+        }
+        activeChildByParent[args.parentMessageId] = args.childMessageId
+
+        await tx.mutate.thread.update({
+          id: thread.id,
+          activeChildByParent,
+          branchVersion: thread.branchVersion + 1,
+        })
+      },
+    ),
   },
 
   messages: {
@@ -141,6 +213,10 @@ export const chatMutatorDefinitions = {
         role: 'user',
         created_at: args.createdAt,
         updated_at: args.createdAt,
+        parentMessageId: undefined,
+        branchIndex: 1,
+        branchAnchorMessageId: undefined,
+        regenSourceMessageId: undefined,
         model: args.model,
         attachmentsIds: args.attachmentsIds ?? [],
       })
@@ -189,6 +265,10 @@ export const chatMutatorDefinitions = {
             role: 'assistant',
             created_at: args.finalizedAt,
             updated_at: args.finalizedAt,
+            parentMessageId: undefined,
+            branchIndex: 1,
+            branchAnchorMessageId: undefined,
+            regenSourceMessageId: undefined,
             model: thread.model,
             attachmentsIds: [],
             serverError: args.ok

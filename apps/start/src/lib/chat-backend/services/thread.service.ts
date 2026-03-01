@@ -34,6 +34,8 @@ export type ThreadServiceShape = {
       readonly userId: string
       readonly model: string
       readonly reasoningEffort?: AiReasoningEffort
+      readonly generationStatus: 'pending' | 'generation' | 'completed' | 'failed'
+      readonly branchVersion: number
     },
     ThreadNotFoundError | ThreadForbiddenError | MessagePersistenceError
   >
@@ -113,6 +115,8 @@ export const ThreadServiceZero = Layer.succeed(ThreadService, {
             reasoningEffort: undefined,
             pinned: false,
             allowAttachments: true,
+            activeChildByParent: {},
+            branchVersion: 1,
           })
         })
 
@@ -163,6 +167,8 @@ export const ThreadServiceZero = Layer.succeed(ThreadService, {
                 reasoningEffort: undefined,
                 pinned: false,
                 allowAttachments: true,
+                activeChildByParent: {},
+                branchVersion: 1,
               })
             })
           } catch {
@@ -190,6 +196,8 @@ export const ThreadServiceZero = Layer.succeed(ThreadService, {
           userId: thread.userId,
           model: thread.model,
           reasoningEffort: thread.reasoningEffort ?? undefined,
+          generationStatus: thread.generationStatus,
+          branchVersion: thread.branchVersion,
         }
       },
       catch: (error) => {
@@ -351,6 +359,8 @@ export const ThreadServiceMemory = Layer.succeed(ThreadService, {
         userId: thread.userId,
         model: DEFAULT_THREAD_MODEL,
         reasoningEffort: undefined,
+        generationStatus: 'completed',
+        branchVersion: 1,
       }
     }),
   autoGenerateTitle: () => Effect.void,

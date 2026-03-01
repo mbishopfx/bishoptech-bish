@@ -35,3 +35,6 @@ Run from repo root unless noted.
 - DO NOT spam comments for irelevant code 
 - For complex logic or parts of a service, you can explain the implementation so future devs know why that code is the way it is
 
+### Non-obvious caveats
+
+- **`@rocicorp/zero-sqlite3` native binary**: After `bun install`, the `zero-cache-dev` process needs the native `better_sqlite3.node` binary. Run `cd node_modules/@rocicorp/zero-sqlite3 && npm run install` to download the prebuilt binary via `prebuild-install`. Without this, `zero-cache` will crash with "Could not locate the bindings file."

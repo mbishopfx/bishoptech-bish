@@ -31,7 +31,15 @@ export type IncomingUserMessage = Schema.Schema.Type<typeof IncomingUserMessage>
 /** Request shape used to start a new streamed assistant turn. */
 export const ChatStreamRequest = Schema.Struct({
   threadId: Schema.String,
-  message: IncomingUserMessage,
+  trigger: Schema.optional(
+    Schema.Union([
+      Schema.Literal('submit-message'),
+      Schema.Literal('regenerate-message'),
+    ]),
+  ),
+  messageId: Schema.optional(Schema.String),
+  expectedBranchVersion: Schema.optional(Schema.Number),
+  message: Schema.optional(IncomingUserMessage),
   attachments: Schema.optional(Schema.Array(IncomingAttachmentInput)),
   createIfMissing: Schema.optional(Schema.Boolean),
   modelId: Schema.optional(Schema.String),

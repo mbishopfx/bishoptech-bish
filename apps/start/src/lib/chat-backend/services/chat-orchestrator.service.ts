@@ -1,12 +1,14 @@
 import type { UIMessage } from 'ai'
 import { Effect, Layer, ServiceMap } from 'effect'
 import type { ChatDomainError } from '../domain/errors'
+import { InvalidRequestError } from '../domain/errors'
 import { chatErrorCodeFromTag } from '../domain/error-codes'
 import { toReadableErrorMessage } from '../domain/error-formatting'
 import type { IncomingUserMessage } from '../domain/schemas'
 import type { IncomingAttachment } from '../domain/schemas'
 import { getUserMessageText } from '../domain/schemas'
 import { emitWideErrorEvent, getErrorTag } from '../observability/wide-event'
+import { ChatErrorCode } from '@/lib/chat-contracts/error-codes'
 import { canUseReasoningControls } from '@/utils/app-feature-flags'
 import type { OrgAiPolicy } from '@/lib/model-policy/types'
 import { MessageStoreService } from './message-store.service'
@@ -35,7 +37,10 @@ export type ChatOrchestratorServiceShape = {
     readonly orgPolicy?: OrgAiPolicy
     readonly skipProviderKeyResolution?: boolean
     readonly requestId: string
-    readonly message: IncomingUserMessage
+    readonly trigger?: 'submit-message' | 'regenerate-message'
+    readonly messageId?: string
+    readonly expectedBranchVersion?: number
+    readonly message?: IncomingUserMessage
     readonly attachments?: readonly IncomingAttachment[]
     readonly modelId?: string
     readonly reasoningEffort?: string
@@ -76,6 +81,9 @@ export const ChatOrchestratorLive = Layer.effect(
       orgPolicy,
       skipProviderKeyResolution,
       requestId,
+      trigger,
+      messageId,
+      expectedBranchVersion,
       message,
       attachments,
       modelId,
@@ -85,7 +93,39 @@ export const ChatOrchestratorLive = Layer.effect(
     }) => {
       const startedAt = Date.now()
       let currentStreamId: string | undefined
+      const requestTrigger = trigger ?? 'submit-message'
       return Effect.gen(function* () {
+        if (typeof expectedBranchVersion !== 'number') {
+          return yield* Effect.fail(
+            new InvalidRequestError({
+              message: 'Missing expectedBranchVersion',
+              requestId,
+              issue: 'expectedBranchVersion is required',
+            }),
+          )
+        }
+        if (requestTrigger === 'submit-message' && !message) {
+          return yield* Effect.fail(
+            new InvalidRequestError({
+              message: 'Missing user message',
+              requestId,
+              issue: 'message is required for submit-message',
+            }),
+          )
+        }
+        if (
+          requestTrigger === 'regenerate-message' &&
+          (!messageId || messageId.trim().length === 0)
+        ) {
+          return yield* Effect.fail(
+            new InvalidRequestError({
+              message: 'Missing regenerate target message',
+              requestId,
+              issue: 'messageId is required for regenerate-message',
+            }),
+          )
+        }
+
         yield* rateLimit.assertAllowed({ userId, requestId })
 
         const threadAccess = yield* threads.assertThreadAccess({
@@ -96,7 +136,7 @@ export const ChatOrchestratorLive = Layer.effect(
         })
 
         // Fire-and-forget title generation after the first message bootstrap path.
-        if (createIfMissing) {
+        if (createIfMissing && message) {
           const userMessage = getUserMessageText(message)
           if (userMessage) {
             void Effect.runPromise(
@@ -178,25 +218,65 @@ export const ChatOrchestratorLive = Layer.effect(
           abortController: streamAbortController,
         })
 
-        yield* messageStore.appendUserMessage({
-          threadDbId: threadAccess.dbId,
-          threadId,
-          message,
-          attachments,
-          userId,
-          model: modelResolution.modelId,
-          reasoningEffort: modelResolution.reasoningEffort,
-          modelParams: {
-            reasoningEffort: modelResolution.reasoningEffort,
-          },
-          requestId,
-        })
+        if (
+          requestTrigger === 'regenerate-message' &&
+          (threadAccess.generationStatus === 'pending' ||
+            threadAccess.generationStatus === 'generation')
+        ) {
+          return yield* Effect.fail(
+            new InvalidRequestError({
+              message: 'Cannot regenerate while stream is active',
+              requestId,
+              issue: 'thread is currently generating',
+            }),
+          )
+        }
 
-        const messages = yield* messageStore.loadThreadMessages({
-          threadId,
-          model: modelResolution.modelId,
-          requestId,
-        })
+        let assistantParentMessageId: string | undefined
+        let regenSourceMessageId: string | undefined
+        let messages: UIMessage[]
+
+        if (requestTrigger === 'regenerate-message') {
+          const regeneration = yield* messageStore.prepareRegeneration({
+            threadDbId: threadAccess.dbId,
+            threadId,
+            userId,
+            targetMessageId: messageId!,
+            expectedBranchVersion,
+            requestId,
+          })
+          assistantParentMessageId = regeneration.anchorMessageId
+          regenSourceMessageId = regeneration.regenSourceMessageId
+
+          messages = yield* messageStore.loadThreadMessages({
+            threadId,
+            model: modelResolution.modelId,
+            untilMessageId: regeneration.anchorMessageId,
+            requestId,
+          })
+        } else {
+          yield* messageStore.appendUserMessage({
+            threadDbId: threadAccess.dbId,
+            threadId,
+            message: message!,
+            attachments,
+            userId,
+            model: modelResolution.modelId,
+            reasoningEffort: modelResolution.reasoningEffort,
+            modelParams: {
+              reasoningEffort: modelResolution.reasoningEffort,
+            },
+            expectedBranchVersion,
+            requestId,
+          })
+
+          messages = yield* messageStore.loadThreadMessages({
+            threadId,
+            model: modelResolution.modelId,
+            requestId,
+          })
+          assistantParentMessageId = message!.id
+        }
 
         // This ID is generated server-side so start/finalize writes are deterministic
         // and idempotent even when transport retries happen.
@@ -259,6 +339,9 @@ export const ChatOrchestratorLive = Layer.effect(
                 threadId,
                 userId,
                 assistantMessageId,
+                parentMessageId: assistantParentMessageId,
+                branchAnchorMessageId: assistantParentMessageId,
+                regenSourceMessageId,
                 ok: input.ok,
                 finalContent: bufferedAssistantText,
                 reasoning:
@@ -477,6 +560,55 @@ export const ChatOrchestratorLive = Layer.effect(
       }).pipe(
         Effect.tapError((error) =>
           Effect.gen(function* () {
+            const errorTag = getErrorTag(error)
+            if (errorTag === 'BranchVersionConflictError') {
+              const conflict =
+                typeof error === 'object' && error !== null
+                  ? (error as {
+                      expectedBranchVersion?: number
+                      actualBranchVersion?: number
+                    })
+                  : {}
+              const expected =
+                typeof conflict.expectedBranchVersion === 'number'
+                  ? conflict.expectedBranchVersion
+                  : undefined
+              const actual =
+                typeof conflict.actualBranchVersion === 'number'
+                  ? conflict.actualBranchVersion
+                  : undefined
+              const conflictCause =
+                typeof expected === 'number' && typeof actual === 'number'
+                  ? `expected=${expected},actual=${actual},trigger=${requestTrigger}`
+                  : `trigger=${requestTrigger}`
+
+              yield* Effect.annotateLogs(
+                Effect.logWarning('chat_branch_version_conflict'),
+                {
+                  route,
+                  request_id: requestId,
+                  user_id: userId,
+                  thread_id: threadId,
+                  trigger: requestTrigger,
+                  expected_branch_version: expected,
+                  actual_branch_version: actual,
+                },
+              )
+              yield* emitWideErrorEvent({
+                eventName: 'chat.branch.version.conflict',
+                route,
+                requestId,
+                userId,
+                threadId,
+                model: modelId,
+                errorCode: ChatErrorCode.BranchVersionConflict,
+                errorTag,
+                message: error.message,
+                latencyMs: Date.now() - startedAt,
+                retryable: true,
+                cause: conflictCause,
+              })
+            }
             // Ensures threads do not stay in "pending/generation" after early
             // failures (e.g. model policy denied before stream initialization).
             yield* threads
@@ -494,8 +626,8 @@ export const ChatOrchestratorLive = Layer.effect(
                 requestId,
                 userId,
                 threadId,
-                errorCode: chatErrorCodeFromTag(getErrorTag(error)),
-                errorTag: getErrorTag(error),
+                errorCode: chatErrorCodeFromTag(errorTag),
+                errorTag,
                 message: error.message,
                 latencyMs: Date.now() - startedAt,
                 retryable: true,
@@ -509,8 +641,8 @@ export const ChatOrchestratorLive = Layer.effect(
               requestId,
               userId,
               threadId,
-              errorCode: chatErrorCodeFromTag(getErrorTag(error)),
-              errorTag: getErrorTag(error),
+              errorCode: chatErrorCodeFromTag(errorTag),
+              errorTag,
               message: error.message,
               latencyMs: Date.now() - startedAt,
               retryable: true,

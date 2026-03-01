@@ -15,10 +15,11 @@ import type { ReactNode } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useChat as useAIChat } from '@ai-sdk/react'
 import { useQuery } from '@rocicorp/zero/react'
+import { useZero } from '@rocicorp/zero/react'
 import { DefaultChatTransport } from 'ai'
 import type { UIMessage } from 'ai'
 import { flushSync } from 'react-dom'
-import { queries } from '@/integrations/zero'
+import { mutators, queries } from '@/integrations/zero'
 import { CACHE_CHAT_NAV } from '@/integrations/zero/query-cache-policy'
 import { AI_CATALOG } from '@/lib/ai-catalog'
 import { getProviderToolDefinition } from '@/lib/ai-catalog/provider-tools'
@@ -40,6 +41,7 @@ import {
   getThreadStatusesVersion,
   subscribeThreadStatuses,
 } from './thread-status-store'
+import { resolveCanonicalBranch } from '@/lib/chat-branching/branch-resolver'
 
 type ChatUIMessage = UIMessage<ChatMessageMetadata>
 
@@ -53,7 +55,7 @@ type ChatModelOption = {
 
 type ChatActionsContextValue = Pick<
   ReturnType<typeof useAIChat<ChatUIMessage>>,
-  'status' | 'error' | 'setMessages' | 'resumeStream'
+  'status' | 'error' | 'setMessages' | 'resumeStream' | 'regenerate'
 > & {
   sendMessage: (input: {
     text: string
@@ -65,13 +67,31 @@ type ChatActionsContextValue = Pick<
   selectableModels: readonly ChatModelOption[]
   setSelectedModelId: (modelId: string) => void
   setSelectedReasoningEffort: (reasoningEffort?: AiReasoningEffort) => void
+  regenerateMessage: (messageId: string) => Promise<void>
+  selectBranchVersion: (input: {
+    parentMessageId: string
+    childMessageId: string
+  }) => Promise<void>
   clear: () => void
+}
+
+type BranchSelectorState = {
+  readonly optionMessageIds: readonly string[]
+  readonly selectedMessageId: string
+}
+
+type PendingBranchSelectorState = {
+  readonly anchorMessageId: string
+  readonly placeholderMessageId: string
+  readonly optionMessageIds: readonly string[]
+  readonly expectedOptionCount: number
 }
 
 type ChatMessagesContextValue = {
   messages: ChatUIMessage[]
   status: ReturnType<typeof useAIChat<ChatUIMessage>>['status']
   activeThreadId?: string
+  branchSelectorsByAnchorMessageId: Record<string, BranchSelectorState>
 }
 
 const ChatMessagesContext = createContext<ChatMessagesContextValue | null>(null)
@@ -202,6 +222,7 @@ function mergeStoredMessagesWithLocal(
 
 const DEFAULT_THREAD_TITLE = 'Nuevo Chat'
 const OPTIMISTIC_THREAD_CREATED_EVENT = 'chat:thread-created'
+const PENDING_REGEN_BRANCH_PREFIX = '__pending_regen_branch__'
 
 function emitOptimisticThreadCreated(threadId: string): void {
   if (typeof window === 'undefined') return
@@ -214,6 +235,49 @@ function emitOptimisticThreadCreated(threadId: string): void {
       },
     }),
   )
+}
+
+function findRegenerationAnchorMessageId(input: {
+  readonly messages: readonly ChatUIMessage[]
+  readonly targetMessageId: string
+}): string | null {
+  const { messages, targetMessageId } = input
+  const targetIndex = messages.findIndex((message) => message.id === targetMessageId)
+  if (targetIndex < 0) return null
+  const target = messages[targetIndex]
+  if (target.role === 'user') return target.id
+  if (target.role !== 'assistant') return null
+
+  for (let index = targetIndex - 1; index >= 0; index -= 1) {
+    if (messages[index]?.role === 'user') return messages[index]!.id
+  }
+  return null
+}
+
+function findCurrentAssistantForAnchor(input: {
+  readonly messages: readonly ChatUIMessage[]
+  readonly anchorMessageId: string
+}): string | null {
+  const { messages, anchorMessageId } = input
+  const anchorIndex = messages.findIndex((message) => message.id === anchorMessageId)
+  if (anchorIndex < 0) return null
+  for (let index = anchorIndex + 1; index < messages.length; index += 1) {
+    const message = messages[index]
+    if (message?.role === 'assistant') return message.id
+    if (message?.role === 'user') break
+  }
+  return null
+}
+
+function uniqueMessageIds(ids: readonly string[]): string[] {
+  const seen = new Set<string>()
+  const next: string[] = []
+  for (const id of ids) {
+    if (!id || seen.has(id)) continue
+    seen.add(id)
+    next.push(id)
+  }
+  return next
 }
 
 function hasActiveOrgKeyForModel(input: {
@@ -250,9 +314,12 @@ export function ChatProvider({
   threadId?: string
 }) {
   const navigate = useNavigate()
+  const z = useZero()
   // Mutable refs avoid stale values inside async callbacks owned by the transport hook.
   const threadIdRef = useRef<string | undefined>(threadId)
   const previousThreadIdRef = useRef<string | undefined>(threadId)
+  const lastAppliedBranchVersionRef = useRef<number | undefined>(undefined)
+  const allowShrinkOnNextBranchVersionRef = useRef(false)
   const resumeAttemptedThreadIdRef = useRef<string | undefined>(undefined)
   // Prevents duplicate thread creation during quick repeated submissions.
   const inFlightThreadRef = useRef<Promise<string> | null>(null)
@@ -262,6 +329,8 @@ export function ChatProvider({
     string | undefined
   >(undefined)
   const [localError, setLocalError] = useState<Error | null>(null)
+  const [pendingBranchSelector, setPendingBranchSelector] =
+    useState<PendingBranchSelectorState | null>(null)
   const activeThreadId = threadId ?? provisionalThreadId
   const [orgPolicyRow] = useQuery(queries.orgPolicy.current())
   const [threadRow] = useQuery(
@@ -272,6 +341,70 @@ export function ChatProvider({
     queries.messages.byThread({ threadId: activeThreadId ?? '' }),
     CACHE_CHAT_NAV,
   )
+  const { canonicalStoredMessages, storedBranchSelectorsByAnchorMessageId } =
+    useMemo(() => {
+      const messageById = new Map(
+        storedMessages.map((message) => [message.messageId, message]),
+      )
+      const resolution = resolveCanonicalBranch(
+        storedMessages.map((message) => ({
+          messageId: message.messageId,
+          role: message.role,
+          parentMessageId: message.parentMessageId ?? undefined,
+          branchIndex: message.branchIndex ?? 1,
+          createdAt: message.created_at,
+        })),
+        threadRow?.activeChildByParent,
+      )
+      const canonical = resolution.canonicalMessageIds
+        .map((messageId) => messageById.get(messageId))
+        .filter(
+          (message): message is NonNullable<typeof message> => !!message,
+        )
+      const selectors: Record<string, BranchSelectorState> = {}
+
+      for (const [parentMessageId, optionMessageIds] of Object.entries(
+        resolution.branchOptionsByParent,
+      )) {
+        if (optionMessageIds.length <= 1) continue
+        const parent = messageById.get(parentMessageId)
+        if (!parent || parent.role !== 'user') continue
+
+        const assistantOptionIds = optionMessageIds.filter((optionMessageId) => {
+          const option = messageById.get(optionMessageId)
+          return option?.role === 'assistant'
+        })
+        if (assistantOptionIds.length <= 1) continue
+
+        const selectedMessageId =
+          resolution.selectedChildByParent[parentMessageId] &&
+          assistantOptionIds.includes(
+            resolution.selectedChildByParent[parentMessageId]!,
+          )
+            ? resolution.selectedChildByParent[parentMessageId]!
+            : assistantOptionIds[assistantOptionIds.length - 1]
+
+        selectors[parentMessageId] = {
+          optionMessageIds: assistantOptionIds,
+          selectedMessageId,
+        }
+      }
+
+      return {
+        canonicalStoredMessages: canonical,
+        storedBranchSelectorsByAnchorMessageId: selectors,
+      }
+    }, [storedMessages, threadRow?.activeChildByParent])
+  const branchSelectorsByAnchorMessageId = useMemo(() => {
+    if (!pendingBranchSelector) return storedBranchSelectorsByAnchorMessageId
+    return {
+      ...storedBranchSelectorsByAnchorMessageId,
+      [pendingBranchSelector.anchorMessageId]: {
+        optionMessageIds: pendingBranchSelector.optionMessageIds,
+        selectedMessageId: pendingBranchSelector.placeholderMessageId,
+      },
+    }
+  }, [pendingBranchSelector, storedBranchSelectorsByAnchorMessageId])
   const selectableModels = useMemo<readonly ChatModelOption[]>(() => {
     const hasPolicyRow =
       !!orgPolicyRow &&
@@ -371,6 +504,7 @@ export function ChatProvider({
   >(undefined)
   const selectedModelIdRef = useRef(selectedModelId)
   const selectedReasoningEffortRef = useRef(selectedReasoningEffort)
+  const branchVersionByThreadIdRef = useRef<Record<string, number>>({})
   const pendingAttachmentsRef = useRef<
     readonly ChatAttachmentInput[] | undefined
   >(undefined)
@@ -381,6 +515,20 @@ export function ChatProvider({
   >([])
   selectedModelIdRef.current = selectedModelId
   selectedReasoningEffortRef.current = selectedReasoningEffort
+  if (
+    activeThreadId &&
+    threadRow &&
+    threadRow.threadId === activeThreadId &&
+    typeof threadRow.branchVersion === 'number'
+  ) {
+    // Track CAS versions per thread so navigation never leaks version state
+    // from another thread while still remaining monotonic for this thread.
+    const existing = branchVersionByThreadIdRef.current[activeThreadId]
+    branchVersionByThreadIdRef.current[activeThreadId] =
+      typeof existing === 'number'
+        ? Math.max(existing, threadRow.branchVersion)
+        : threadRow.branchVersion
+  }
   const threadStatusesVersion = useSyncExternalStore(
     subscribeThreadStatuses,
     getThreadStatusesVersion,
@@ -397,16 +545,30 @@ export function ChatProvider({
             : '/api/chat',
           credentials: 'include',
         }),
-        prepareSendMessagesRequest: ({ messages }) => {
+        prepareSendMessagesRequest: ({
+          messages,
+          trigger,
+          messageId,
+        }) => {
           const attachments = pendingAttachmentsRef.current
           // Consume once to avoid leaking metadata into later turns.
           pendingAttachmentsRef.current = undefined
+          const currentThreadId = threadIdRef.current
+          const branchVersion = currentThreadId
+            ? (branchVersionByThreadIdRef.current[currentThreadId] ?? 1)
+            : 1
 
           return {
             body: {
               threadId: threadIdRef.current,
-              message: messages[messages.length - 1],
-              attachments,
+              trigger,
+              messageId,
+              expectedBranchVersion: branchVersion,
+              message:
+                trigger === 'submit-message'
+                  ? messages[messages.length - 1]
+                  : undefined,
+              attachments: trigger === 'submit-message' ? attachments : undefined,
               createIfMissing: createIfMissingRef.current,
               modelId: selectedModelIdRef.current,
               reasoningEffort: selectedReasoningEffortRef.current,
@@ -422,6 +584,7 @@ export function ChatProvider({
     status,
     error,
     sendMessage: sendAIMessage,
+    regenerate,
     setMessages,
     resumeStream,
   } = useAIChat<ChatUIMessage>({
@@ -481,11 +644,15 @@ export function ChatProvider({
         setMessages([])
       }
       setLocalError(null)
+      setPendingBranchSelector(null)
       resumeAttemptedThreadIdRef.current = undefined
+      lastAppliedBranchVersionRef.current = undefined
+      allowShrinkOnNextBranchVersionRef.current = false
     }
 
     if (!activeThreadId) {
       createIfMissingRef.current = false
+      setPendingBranchSelector(null)
       previousThreadIdRef.current = activeThreadId
       return
     }
@@ -502,6 +669,22 @@ export function ChatProvider({
     storedMessagesResult.type,
     threadId,
   ])
+
+  useEffect(() => {
+    if (!pendingBranchSelector) return
+    const persistedSelector =
+      storedBranchSelectorsByAnchorMessageId[pendingBranchSelector.anchorMessageId]
+    if (
+      persistedSelector &&
+      persistedSelector.optionMessageIds.length >=
+        pendingBranchSelector.expectedOptionCount &&
+      !persistedSelector.optionMessageIds.some((optionId) =>
+        optionId.startsWith(PENDING_REGEN_BRANCH_PREFIX),
+      )
+    ) {
+      setPendingBranchSelector(null)
+    }
+  }, [pendingBranchSelector, storedBranchSelectorsByAnchorMessageId])
 
   useEffect(() => {
     if (!activeThreadId) return
@@ -573,27 +756,57 @@ export function ChatProvider({
 
     const nextMessages = mergeStoredMessagesWithLocal(
       messages,
-      storedMessages.map(toUIMessageFromStoredMessage),
+      canonicalStoredMessages.map(toUIMessageFromStoredMessage),
     )
+    const currentBranchVersion =
+      threadRow && typeof threadRow.branchVersion === 'number'
+        ? threadRow.branchVersion
+        : undefined
+    const branchVersionChanged =
+      typeof currentBranchVersion === 'number' &&
+      typeof lastAppliedBranchVersionRef.current === 'number' &&
+      currentBranchVersion !== lastAppliedBranchVersionRef.current
+    const allowShrinkForThisVersion =
+      branchVersionChanged && allowShrinkOnNextBranchVersionRef.current
 
     // Zero may return a completed but stale snapshot (for example, empty) while
     // optimistic/streaming messages are still only in local useChat state.
-    if (messages.length > 0 && nextMessages.length < messages.length) return
+    if (
+      messages.length > 0 &&
+      nextMessages.length < messages.length &&
+      !allowShrinkForThisVersion
+    ) {
+      if (typeof currentBranchVersion === 'number') {
+        lastAppliedBranchVersionRef.current = currentBranchVersion
+      }
+      return
+    }
 
     if (
       nextMessages.length === messages.length &&
       fingerprintMessages(nextMessages) === fingerprintMessages(messages)
     ) {
+      if (typeof currentBranchVersion === 'number') {
+        lastAppliedBranchVersionRef.current = currentBranchVersion
+      }
       return
     }
 
+    if (typeof currentBranchVersion === 'number') {
+      lastAppliedBranchVersionRef.current = currentBranchVersion
+    }
+    if (branchVersionChanged) {
+      allowShrinkOnNextBranchVersionRef.current = false
+    }
     setMessages(nextMessages)
   }, [
     activeThreadId,
-    storedMessages,
+    canonicalStoredMessages,
+    pendingBranchSelector,
     storedMessagesResult.type,
     status,
     messages,
+    threadRow,
     setMessages,
   ])
 
@@ -604,7 +817,7 @@ export function ChatProvider({
     if (localError || error) return
     if (!threadRow || threadRow.generationStatus !== 'failed') return
 
-    const latestAssistantFailure = [...storedMessages]
+    const latestAssistantFailure = [...canonicalStoredMessages]
       .reverse()
       .find(
         (message) =>
@@ -634,13 +847,15 @@ export function ChatProvider({
     error,
     localError,
     status,
-    storedMessages,
+    canonicalStoredMessages,
     storedMessagesResult.type,
     threadRow,
   ])
 
   const sendMessage = useCallback<ChatActionsContextValue['sendMessage']>(
     async ({ text, attachments, attachmentManifest }) => {
+      // Follow-up sends should not permit branch-snapshot shrink handling.
+      allowShrinkOnNextBranchVersionRef.current = false
       let resolvedThreadId = threadIdRef.current
       if (!resolvedThreadId) {
         try {
@@ -649,6 +864,7 @@ export function ChatProvider({
             (async () => {
               const newThreadId = crypto.randomUUID()
               emitOptimisticThreadCreated(newThreadId)
+              branchVersionByThreadIdRef.current[newThreadId] = 1
 
               // Server can still create the same thread during first send if this
               // request has not yet created it in upstream Postgres.
@@ -723,6 +939,145 @@ export function ChatProvider({
     [navigate],
   )
 
+  const regenerateMessage = useCallback<
+    ChatActionsContextValue['regenerateMessage']
+  >(
+    async (messageId) => {
+      if (!messageId || status === 'submitted' || status === 'streaming') return
+      if (!activeThreadId) return
+      const anchorMessageId = findRegenerationAnchorMessageId({
+        messages,
+        targetMessageId: messageId,
+      })
+      if (!anchorMessageId) return
+
+      const targetMessage = messages.find((message) => message.id === messageId)
+      const existingSelector = storedBranchSelectorsByAnchorMessageId[anchorMessageId]
+      const currentAssistantId = findCurrentAssistantForAnchor({
+        messages,
+        anchorMessageId,
+      })
+      const selectedStoredAssistantId =
+        threadRow &&
+        threadRow.activeChildByParent &&
+        typeof threadRow.activeChildByParent === 'object' &&
+        typeof threadRow.activeChildByParent[anchorMessageId] === 'string'
+          ? threadRow.activeChildByParent[anchorMessageId]
+          : undefined
+      const storedAssistantChildren = storedMessages
+        .filter(
+          (message) =>
+            message.role === 'assistant' &&
+            message.parentMessageId === anchorMessageId,
+        )
+        .toSorted((left, right) => {
+          const leftBranch = left.branchIndex ?? 1
+          const rightBranch = right.branchIndex ?? 1
+          if (leftBranch !== rightBranch) return leftBranch - rightBranch
+          return left.messageId.localeCompare(right.messageId)
+        })
+        .map((message) => message.messageId)
+      const baseOptionIds = uniqueMessageIds([
+        ...(existingSelector?.optionMessageIds ?? []),
+        ...storedAssistantChildren,
+        ...(selectedStoredAssistantId ? [selectedStoredAssistantId] : []),
+        ...(targetMessage?.role === 'assistant' ? [targetMessage.id] : []),
+        ...(currentAssistantId ? [currentAssistantId] : []),
+      ])
+      const placeholderMessageId = `${PENDING_REGEN_BRANCH_PREFIX}${anchorMessageId}:${Date.now()}`
+      const pendingOptionIds = uniqueMessageIds([
+        ...baseOptionIds,
+        placeholderMessageId,
+      ])
+
+      const anchorIndex = messages.findIndex(
+        (message) => message.id === anchorMessageId,
+      )
+      const targetIndex = messages.findIndex((message) => message.id === messageId)
+      const truncateInclusiveIndex =
+        targetMessage?.role === 'assistant' && targetIndex >= 0
+          ? targetIndex
+          : anchorIndex
+      if (truncateInclusiveIndex >= 0) {
+        // Regeneration forks from the anchor user, but the target message must
+        // remain present for AI SDK regenerate(messageId) lookup. Keep the
+        // target row (assistant/user) and prune only descendants.
+        setMessages(messages.slice(0, truncateInclusiveIndex + 1))
+      }
+
+      setPendingBranchSelector({
+        anchorMessageId,
+        placeholderMessageId,
+        optionMessageIds: pendingOptionIds,
+        expectedOptionCount: pendingOptionIds.length,
+      })
+      // Regeneration now performs local deterministic truncation above, so we
+      // do not need snapshot-shrink exceptions for this flow.
+      allowShrinkOnNextBranchVersionRef.current = false
+      setLocalError(null)
+      try {
+        await regenerate({ messageId })
+      } catch (regenerateError) {
+        setPendingBranchSelector(null)
+        throw regenerateError
+      }
+    },
+    [
+      activeThreadId,
+      messages,
+      regenerate,
+      status,
+      storedBranchSelectorsByAnchorMessageId,
+      storedMessages,
+      threadRow,
+    ],
+  )
+
+  const selectBranchVersion = useCallback<
+    ChatActionsContextValue['selectBranchVersion']
+  >(
+    async ({ parentMessageId, childMessageId }) => {
+      if (!activeThreadId) return
+      if (status === 'submitted' || status === 'streaming') return
+      if (!parentMessageId || !childMessageId) return
+
+      // Explicit branch selection can legitimately switch to shorter history.
+      allowShrinkOnNextBranchVersionRef.current = true
+      const expectedBranchVersion =
+        branchVersionByThreadIdRef.current[activeThreadId] ?? 1
+      try {
+        await z.mutate(
+          mutators.threads.selectBranchChild({
+            threadId: activeThreadId,
+            parentMessageId,
+            childMessageId,
+            expectedBranchVersion,
+          }),
+        ).client
+        // Keep transport CAS version in sync immediately after local mutation,
+        // even if query propagation to `threadRow` lags one render.
+        branchVersionByThreadIdRef.current[activeThreadId] =
+          expectedBranchVersion + 1
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        if (message.includes('branch_switch_while_generating')) {
+          setLocalError(
+            new Error(
+              'Please wait until the current response finishes before switching branches.',
+            ),
+          )
+          return
+        }
+        setLocalError(
+          new Error(
+            'This chat changed in another tab or session. Refresh and try again.',
+          ),
+        )
+      }
+    },
+    [activeThreadId, status, z],
+  )
+
   const clear = useCallback(() => setMessages([]), [setMessages])
   const setModelSelection = useCallback(
     (modelId: string) => {
@@ -754,8 +1109,9 @@ export function ChatProvider({
       messages,
       status,
       activeThreadId,
+      branchSelectorsByAnchorMessageId,
     }),
-    [messages, status, activeThreadId],
+    [messages, status, activeThreadId, branchSelectorsByAnchorMessageId],
   )
 
   const actionsValue = useMemo<ChatActionsContextValue>(
@@ -768,6 +1124,9 @@ export function ChatProvider({
       selectableModels,
       setSelectedModelId: setModelSelection,
       setSelectedReasoningEffort: setReasoningSelection,
+      regenerate,
+      regenerateMessage,
+      selectBranchVersion,
       setMessages,
       resumeStream,
       clear,
@@ -782,6 +1141,9 @@ export function ChatProvider({
       selectableModels,
       setModelSelection,
       setReasoningSelection,
+      regenerate,
+      regenerateMessage,
+      selectBranchVersion,
       setMessages,
       resumeStream,
       clear,

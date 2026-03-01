@@ -6,23 +6,37 @@ import {
 import { useMessageCopyAction } from './use-message-copy-action'
 
 type AssistantMessageActionsProps = {
+  messageId: string
   text: string
   modelName?: string | null
+  canRegenerate: boolean
+  onRegenerate: (messageId: string) => void
 }
 
 /**
  * Assistant-message action cluster plus optional model caption.
  */
 export function AssistantMessageActions({
+  messageId,
   text,
   modelName,
+  canRegenerate,
+  onRegenerate,
 }: AssistantMessageActionsProps) {
   const { isCopied, copy } = useMessageCopyAction(text)
 
   return (
     <div className="flex items-center gap-2">
       <MessageActions className="mt-1 opacity-0 transition-opacity group-hover:opacity-100">
-        <MessageActionButton tooltip="Regenerate response" label="Regenerate response">
+        <MessageActionButton
+          tooltip="Regenerate response"
+          label="Regenerate response"
+          disabled={!canRegenerate}
+          onClick={() => {
+            if (!canRegenerate) return
+            onRegenerate(messageId)
+          }}
+        >
           <RedoIcon className="size-4" />
         </MessageActionButton>
         <MessageActionButton

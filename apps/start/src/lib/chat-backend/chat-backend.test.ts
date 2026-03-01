@@ -2,7 +2,10 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { UIMessage } from 'ai'
 import { Effect, Layer } from 'effect'
-import { RateLimitExceededError } from '@/lib/chat-backend/domain/errors'
+import {
+  BranchVersionConflictError,
+  RateLimitExceededError,
+} from '@/lib/chat-backend/domain/errors'
 import { ChatErrorCode } from '@/lib/chat-backend/domain/error-codes'
 import { toReadableErrorMessage } from '@/lib/chat-backend/domain/error-formatting'
 import { getMemoryState } from '@/lib/chat-backend/infra/memory/state'
@@ -93,6 +96,7 @@ describe('chat-backend scaffold', () => {
           threadId: created.threadId,
           requestId: 'req-stream',
           route: '/api/chat',
+          expectedBranchVersion: 1,
           message: {
             id: 'user-message-1',
             role: 'user',
@@ -116,6 +120,23 @@ describe('chat-backend scaffold', () => {
       { type: 'reasoning', text: 'Mocked reasoning trace', state: 'done' },
       { type: 'text', text: 'Mocked assistant response' },
     ])
+  })
+
+  it('maps branch version conflicts to deterministic transport envelope', async () => {
+    const response = toErrorResponse(
+      new BranchVersionConflictError({
+        message: 'Branch version mismatch',
+        requestId: 'req-branch',
+        threadId: 'thread-1',
+        expectedBranchVersion: 1,
+        actualBranchVersion: 2,
+      }),
+      'req-fallback',
+    )
+
+    expect(response.status).toBe(409)
+    const payload = await response.json()
+    expect(payload.error.code).toBe(ChatErrorCode.BranchVersionConflict)
   })
 
   it('maps tagged errors to user-facing response envelope', async () => {

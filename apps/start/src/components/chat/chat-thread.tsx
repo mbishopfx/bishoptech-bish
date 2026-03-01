@@ -1,12 +1,14 @@
 // Renders chat messages and keeps scroll pinned to the latest user message.
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import { Spinner } from '@rift/ui/spinner'
-import { useChatMessages } from './chat-context'
+import { useChatActions, useChatMessages } from './chat-context'
 import { ChatMessage } from './chat-message'
 import { usePinToLastUserMessage } from '@rift/chat-scroll'
 
 export function ChatThread() {
-  const { messages, status, activeThreadId } = useChatMessages()
+  const { messages, status, activeThreadId, branchSelectorsByAnchorMessageId } =
+    useChatMessages()
+  const { regenerateMessage, selectBranchVersion } = useChatActions()
   const { userMessageCount, lastUserMessageId } = useMemo(() => {
     let count = 0
     let lastUserId: string | null = null
@@ -35,6 +37,41 @@ export function ChatThread() {
   const showThinking =
     isAwaitingStreamStart && (!lastMessage || lastMessage.role === 'user')
 
+  const canRegenerate = !isStreaming
+
+  const findScrollParent = useCallback((node: HTMLElement | null) => {
+    let current: HTMLElement | null = node?.parentElement ?? null
+    while (current) {
+      const style = window.getComputedStyle(current)
+      const overflowY = style.overflowY
+      const isScrollableOverflow =
+        overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'overlay'
+      if (isScrollableOverflow && current.scrollHeight > current.clientHeight) {
+        return current
+      }
+      current = current.parentElement
+    }
+    return null
+  }, [])
+
+  const regenerateWithoutScrollShift = useCallback(
+    (messageId: string) => {
+      const scrollParent = findScrollParent(contentEndRef.current)
+      const preservedScrollTop = scrollParent?.scrollTop
+
+      void regenerateMessage(messageId)
+
+      if (!scrollParent || preservedScrollTop == null) return
+      requestAnimationFrame(() => {
+        scrollParent.scrollTop = preservedScrollTop
+        requestAnimationFrame(() => {
+          scrollParent.scrollTop = preservedScrollTop
+        })
+      })
+    },
+    [contentEndRef, findScrollParent, regenerateMessage],
+  )
+
   return (
     <div
       className="mx-auto w-full max-w-2xl flex flex-col pt-9"
@@ -59,7 +96,29 @@ export function ChatThread() {
             key={m.id}
             ref={isLastUserMessage ? lastUserMessageRef : undefined}
           >
-            <ChatMessage message={m} isAnimating={isAnimatingMessage} />
+            <ChatMessage
+              message={m}
+              isAnimating={isAnimatingMessage}
+              canRegenerate={canRegenerate}
+              onRegenerate={regenerateWithoutScrollShift}
+              branchSelector={
+                m.role === 'user' ? (() => {
+                  const selector = branchSelectorsByAnchorMessageId[m.id]
+                  if (!selector) return undefined
+                  return {
+                    optionMessageIds: selector.optionMessageIds,
+                    selectedMessageId: selector.selectedMessageId,
+                    disabled: isStreaming,
+                    onSelectMessageId: (childMessageId: string) => {
+                      void selectBranchVersion({
+                        parentMessageId: m.id,
+                        childMessageId,
+                      })
+                    },
+                  }
+                })() : undefined
+              }
+            />
           </div>
         )
       })}
