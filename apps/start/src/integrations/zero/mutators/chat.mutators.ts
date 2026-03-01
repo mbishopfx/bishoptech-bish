@@ -3,6 +3,7 @@ import {
 } from '@rocicorp/zero'
 import { z } from 'zod'
 import { zql } from '../zql'
+import { ROOT_BRANCH_PARENT_KEY } from '@/lib/chat-branching/branch-resolver'
 
 /**
  * Mutators are intentionally server-authoritative for security:
@@ -153,7 +154,7 @@ export const chatMutatorDefinitions = {
             .where('userId', ctx.userID)
             .one(),
         )
-        if (!parent) {
+        if (args.parentMessageId !== ROOT_BRANCH_PARENT_KEY && !parent) {
           return
         }
 
@@ -164,7 +165,11 @@ export const chatMutatorDefinitions = {
             .where('userId', ctx.userID)
             .one(),
         )
-        if (!child || child.parentMessageId !== args.parentMessageId) {
+        const parentMatch =
+          args.parentMessageId === ROOT_BRANCH_PARENT_KEY
+            ? !child?.parentMessageId
+            : child?.parentMessageId === args.parentMessageId
+        if (!child || !parentMatch) {
           return
         }
 

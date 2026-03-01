@@ -37,8 +37,9 @@ export type ChatOrchestratorServiceShape = {
     readonly orgPolicy?: OrgAiPolicy
     readonly skipProviderKeyResolution?: boolean
     readonly requestId: string
-    readonly trigger?: 'submit-message' | 'regenerate-message'
+    readonly trigger?: 'submit-message' | 'regenerate-message' | 'edit-message'
     readonly messageId?: string
+    readonly editedText?: string
     readonly expectedBranchVersion?: number
     readonly message?: IncomingUserMessage
     readonly attachments?: readonly IncomingAttachment[]
@@ -83,6 +84,7 @@ export const ChatOrchestratorLive = Layer.effect(
       requestId,
       trigger,
       messageId,
+      editedText,
       expectedBranchVersion,
       message,
       attachments,
@@ -122,6 +124,30 @@ export const ChatOrchestratorLive = Layer.effect(
               message: 'Missing regenerate target message',
               requestId,
               issue: 'messageId is required for regenerate-message',
+            }),
+          )
+        }
+        if (
+          requestTrigger === 'edit-message' &&
+          (!messageId || messageId.trim().length === 0)
+        ) {
+          return yield* Effect.fail(
+            new InvalidRequestError({
+              message: 'Missing edit target message',
+              requestId,
+              issue: 'messageId is required for edit-message',
+            }),
+          )
+        }
+        if (
+          requestTrigger === 'edit-message' &&
+          (!editedText || editedText.trim().length === 0)
+        ) {
+          return yield* Effect.fail(
+            new InvalidRequestError({
+              message: 'Missing edited text',
+              requestId,
+              issue: 'editedText is required for edit-message',
             }),
           )
         }
@@ -219,13 +245,14 @@ export const ChatOrchestratorLive = Layer.effect(
         })
 
         if (
-          requestTrigger === 'regenerate-message' &&
+          (requestTrigger === 'regenerate-message' ||
+            requestTrigger === 'edit-message') &&
           (threadAccess.generationStatus === 'pending' ||
             threadAccess.generationStatus === 'generation')
         ) {
           return yield* Effect.fail(
             new InvalidRequestError({
-              message: 'Cannot regenerate while stream is active',
+              message: 'Cannot branch while stream is active',
               requestId,
               issue: 'thread is currently generating',
             }),
@@ -253,6 +280,38 @@ export const ChatOrchestratorLive = Layer.effect(
             model: modelResolution.modelId,
             untilMessageId: regeneration.anchorMessageId,
             requestId,
+          })
+        } else if (requestTrigger === 'edit-message') {
+          yield* Effect.annotateLogs(Effect.logInfo('chat_edit_requested'), {
+            request_id: requestId,
+            user_id: userId,
+            thread_id: threadId,
+            target_message_id: messageId,
+          })
+          const edited = yield* messageStore.prepareEdit({
+            threadDbId: threadAccess.dbId,
+            threadId,
+            userId,
+            targetMessageId: messageId!,
+            editedText: editedText!,
+            model: modelResolution.modelId,
+            reasoningEffort: modelResolution.reasoningEffort,
+            expectedBranchVersion,
+            requestId,
+          })
+          assistantParentMessageId = edited.editedMessageId
+          regenSourceMessageId = edited.regenSourceMessageId
+          messages = yield* messageStore.loadThreadMessages({
+            threadId,
+            model: modelResolution.modelId,
+            untilMessageId: edited.editedMessageId,
+            requestId,
+          })
+          yield* Effect.annotateLogs(Effect.logInfo('chat_edit_prepared'), {
+            request_id: requestId,
+            user_id: userId,
+            thread_id: threadId,
+            edited_message_id: edited.editedMessageId,
           })
         } else {
           yield* messageStore.appendUserMessage({
@@ -607,6 +666,26 @@ export const ChatOrchestratorLive = Layer.effect(
                 latencyMs: Date.now() - startedAt,
                 retryable: true,
                 cause: conflictCause,
+              })
+            }
+            if (errorTag === 'InvalidEditTargetError') {
+              const editError =
+                typeof error === 'object' && error !== null
+                  ? (error as { targetMessageId?: string; issue?: string })
+                  : {}
+              yield* emitWideErrorEvent({
+                eventName: 'chat.edit.rejected_invalid_target',
+                route,
+                requestId,
+                userId,
+                threadId,
+                model: modelId,
+                errorCode: ChatErrorCode.InvalidEditTarget,
+                errorTag,
+                message: error.message,
+                latencyMs: Date.now() - startedAt,
+                retryable: false,
+                cause: `target=${editError.targetMessageId ?? 'unknown'}:${editError.issue ?? 'unknown'}`,
               })
             }
             // Ensures threads do not stay in "pending/generation" after early

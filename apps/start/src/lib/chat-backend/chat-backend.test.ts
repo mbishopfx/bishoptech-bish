@@ -122,6 +122,57 @@ describe('chat-backend scaffold', () => {
     ])
   })
 
+  it('creates a new edited user branch and regenerates from it', async () => {
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const orchestrator = yield* ChatOrchestratorService
+        const created = yield* orchestrator.createThread({
+          userId: 'user-edit',
+          requestId: 'req-create-edit',
+        })
+
+        yield* orchestrator.streamChat({
+          userId: 'user-edit',
+          threadId: created.threadId,
+          requestId: 'req-seed',
+          route: '/api/chat',
+          expectedBranchVersion: 1,
+          message: {
+            id: 'user-edit-1',
+            role: 'user',
+            parts: [{ type: 'text', text: 'original question' }],
+          },
+        })
+
+        const response = yield* orchestrator.streamChat({
+          userId: 'user-edit',
+          threadId: created.threadId,
+          requestId: 'req-edit',
+          route: '/api/chat',
+          trigger: 'edit-message',
+          messageId: 'user-edit-1',
+          editedText: 'edited question',
+          expectedBranchVersion: 2,
+        })
+
+        return { created, response }
+      }).pipe(Effect.provide(TestChatLayer)),
+    )
+
+    expect(result.response.status).toBe(200)
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    const messages = getMemoryState().messages.get(result.created.threadId)
+    expect(messages?.length).toBe(2)
+    expect(messages?.[0]?.role).toBe('user')
+    const firstUserText = messages?.[0]?.parts
+      .filter((part): part is { type: 'text'; text: string } => part.type === 'text')
+      .map((part) => part.text)
+      .join('')
+    expect(firstUserText).toBe('edited question')
+    expect(messages?.[1]?.role).toBe('assistant')
+  })
+
   it('maps branch version conflicts to deterministic transport envelope', async () => {
     const response = toErrorResponse(
       new BranchVersionConflictError({

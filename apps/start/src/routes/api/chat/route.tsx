@@ -139,6 +139,7 @@ export const Route = createFileRoute('/api/chat')({
             requestId,
             trigger: body.trigger,
             messageId: body.messageId,
+            editedText: body.editedText,
             expectedBranchVersion: body.expectedBranchVersion,
             message: body.message,
             attachments: body.attachments,

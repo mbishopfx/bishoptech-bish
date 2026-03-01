@@ -8,7 +8,7 @@ import { usePinToLastUserMessage } from '@rift/chat-scroll'
 export function ChatThread() {
   const { messages, status, activeThreadId, branchSelectorsByAnchorMessageId } =
     useChatMessages()
-  const { regenerateMessage, selectBranchVersion } = useChatActions()
+  const { regenerateMessage, editMessage, selectBranchVersion } = useChatActions()
   const { userMessageCount, lastUserMessageId } = useMemo(() => {
     let count = 0
     let lastUserId: string | null = null
@@ -72,6 +72,56 @@ export function ChatThread() {
     [contentEndRef, findScrollParent, regenerateMessage],
   )
 
+  const editWithoutScrollShift = useCallback(
+    async (input: { messageId: string; editedText: string }) => {
+      const scrollParent = findScrollParent(contentEndRef.current)
+      const preservedScrollTop = scrollParent?.scrollTop
+
+      const editPromise = editMessage(input)
+
+      if (!scrollParent || preservedScrollTop == null) {
+        await editPromise
+        return
+      }
+      requestAnimationFrame(() => {
+        scrollParent.scrollTop = preservedScrollTop
+        requestAnimationFrame(() => {
+          scrollParent.scrollTop = preservedScrollTop
+        })
+      })
+      await editPromise
+    },
+    [contentEndRef, editMessage, findScrollParent],
+  )
+
+  const selectBranchVersionWithoutScrollShift = useCallback(
+    async (input: { parentMessageId: string; childMessageId: string }) => {
+      const scrollParent = findScrollParent(contentEndRef.current)
+      const preservedScrollTop = scrollParent?.scrollTop
+
+      if (!scrollParent || preservedScrollTop == null) {
+        await selectBranchVersion(input)
+        return
+      }
+
+      const restoreScroll = () => {
+        requestAnimationFrame(() => {
+          scrollParent.scrollTop = preservedScrollTop
+          requestAnimationFrame(() => {
+            scrollParent.scrollTop = preservedScrollTop
+          })
+        })
+      }
+
+      // Restore immediately to absorb synchronous layout changes.
+      restoreScroll()
+      await selectBranchVersion(input)
+      // Restore again after branch mutation settles to avoid auto-pin jumps.
+      restoreScroll()
+    },
+    [contentEndRef, findScrollParent, selectBranchVersion],
+  )
+
   return (
     <div
       className="mx-auto w-full max-w-2xl flex flex-col pt-9"
@@ -100,18 +150,21 @@ export function ChatThread() {
               message={m}
               isAnimating={isAnimatingMessage}
               canRegenerate={canRegenerate}
+              canEdit={!isStreaming}
               onRegenerate={regenerateWithoutScrollShift}
+              onEdit={editWithoutScrollShift}
               branchSelector={
                 m.role === 'user' ? (() => {
                   const selector = branchSelectorsByAnchorMessageId[m.id]
                   if (!selector) return undefined
                   return {
+                    parentMessageId: selector.parentMessageId,
                     optionMessageIds: selector.optionMessageIds,
                     selectedMessageId: selector.selectedMessageId,
                     disabled: isStreaming,
                     onSelectMessageId: (childMessageId: string) => {
-                      void selectBranchVersion({
-                        parentMessageId: m.id,
+                      void selectBranchVersionWithoutScrollShift({
+                        parentMessageId: selector.parentMessageId,
                         childMessageId,
                       })
                     },

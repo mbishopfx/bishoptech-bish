@@ -53,6 +53,17 @@ export class BranchVersionConflictError extends Schema.TaggedErrorClass<BranchVe
   },
 ) {}
 
+/** Edit target is invalid for deterministic branching rules. */
+export class InvalidEditTargetError extends Schema.TaggedErrorClass<InvalidEditTargetError>()(
+  'InvalidEditTargetError',
+  {
+    ...ErrorFields,
+    threadId: Schema.String,
+    targetMessageId: Schema.String,
+    issue: Schema.String,
+  },
+) {}
+
 /** Request exceeds per-user throughput limits. */
 export class RateLimitExceededError extends Schema.TaggedErrorClass<RateLimitExceededError>()(
   'RateLimitExceededError',
@@ -119,6 +130,7 @@ export type ChatDomainError =
   | ThreadNotFoundError
   | ThreadForbiddenError
   | BranchVersionConflictError
+  | InvalidEditTargetError
   | RateLimitExceededError
   | ModelProviderError
   | ModelPolicyDeniedError

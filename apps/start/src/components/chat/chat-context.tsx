@@ -41,7 +41,10 @@ import {
   getThreadStatusesVersion,
   subscribeThreadStatuses,
 } from './thread-status-store'
-import { resolveCanonicalBranch } from '@/lib/chat-branching/branch-resolver'
+import {
+  ROOT_BRANCH_PARENT_KEY,
+  resolveCanonicalBranch,
+} from '@/lib/chat-branching/branch-resolver'
 
 type ChatUIMessage = UIMessage<ChatMessageMetadata>
 
@@ -68,6 +71,7 @@ type ChatActionsContextValue = Pick<
   setSelectedModelId: (modelId: string) => void
   setSelectedReasoningEffort: (reasoningEffort?: AiReasoningEffort) => void
   regenerateMessage: (messageId: string) => Promise<void>
+  editMessage: (input: { messageId: string; editedText: string }) => Promise<void>
   selectBranchVersion: (input: {
     parentMessageId: string
     childMessageId: string
@@ -76,12 +80,14 @@ type ChatActionsContextValue = Pick<
 }
 
 type BranchSelectorState = {
+  readonly parentMessageId: string
   readonly optionMessageIds: readonly string[]
   readonly selectedMessageId: string
 }
 
 type PendingBranchSelectorState = {
   readonly anchorMessageId: string
+  readonly parentMessageId: string
   readonly placeholderMessageId: string
   readonly optionMessageIds: readonly string[]
   readonly expectedOptionCount: number
@@ -223,6 +229,7 @@ function mergeStoredMessagesWithLocal(
 const DEFAULT_THREAD_TITLE = 'Nuevo Chat'
 const OPTIMISTIC_THREAD_CREATED_EVENT = 'chat:thread-created'
 const PENDING_REGEN_BRANCH_PREFIX = '__pending_regen_branch__'
+const PENDING_EDIT_BRANCH_PREFIX = '__pending_edit_branch__'
 
 function emitOptimisticThreadCreated(threadId: string): void {
   if (typeof window === 'undefined') return
@@ -367,26 +374,45 @@ export function ChatProvider({
         resolution.branchOptionsByParent,
       )) {
         if (optionMessageIds.length <= 1) continue
-        const parent = messageById.get(parentMessageId)
-        if (!parent || parent.role !== 'user') continue
-
         const assistantOptionIds = optionMessageIds.filter((optionMessageId) => {
           const option = messageById.get(optionMessageId)
           return option?.role === 'assistant'
         })
-        if (assistantOptionIds.length <= 1) continue
+        if (assistantOptionIds.length > 1) {
+          const parent = messageById.get(parentMessageId)
+          if (parent && parent.role === 'user') {
+            const selectedMessageId =
+              resolution.selectedChildByParent[parentMessageId] &&
+              assistantOptionIds.includes(
+                resolution.selectedChildByParent[parentMessageId]!,
+              )
+                ? resolution.selectedChildByParent[parentMessageId]!
+                : assistantOptionIds[assistantOptionIds.length - 1]
 
-        const selectedMessageId =
+            selectors[parent.messageId] = {
+              parentMessageId,
+              optionMessageIds: assistantOptionIds,
+              selectedMessageId,
+            }
+          }
+        }
+
+        const userOptionIds = optionMessageIds.filter((optionMessageId) => {
+          const option = messageById.get(optionMessageId)
+          return option?.role === 'user'
+        })
+        if (userOptionIds.length <= 1) continue
+        const selectedUserMessageId =
           resolution.selectedChildByParent[parentMessageId] &&
-          assistantOptionIds.includes(
+          userOptionIds.includes(
             resolution.selectedChildByParent[parentMessageId]!,
           )
             ? resolution.selectedChildByParent[parentMessageId]!
-            : assistantOptionIds[assistantOptionIds.length - 1]
-
-        selectors[parentMessageId] = {
-          optionMessageIds: assistantOptionIds,
-          selectedMessageId,
+            : userOptionIds[userOptionIds.length - 1]
+        selectors[selectedUserMessageId] = {
+          parentMessageId,
+          optionMessageIds: userOptionIds,
+          selectedMessageId: selectedUserMessageId,
         }
       }
 
@@ -400,6 +426,7 @@ export function ChatProvider({
     return {
       ...storedBranchSelectorsByAnchorMessageId,
       [pendingBranchSelector.anchorMessageId]: {
+        parentMessageId: pendingBranchSelector.parentMessageId,
         optionMessageIds: pendingBranchSelector.optionMessageIds,
         selectedMessageId: pendingBranchSelector.placeholderMessageId,
       },
@@ -549,6 +576,7 @@ export function ChatProvider({
           messages,
           trigger,
           messageId,
+          body,
         }) => {
           const attachments = pendingAttachmentsRef.current
           // Consume once to avoid leaking metadata into later turns.
@@ -558,17 +586,36 @@ export function ChatProvider({
             ? (branchVersionByThreadIdRef.current[currentThreadId] ?? 1)
             : 1
 
+          const bodyObject =
+            body && typeof body === 'object'
+              ? (body as Record<string, unknown>)
+              : {}
+          const requestTrigger =
+            typeof bodyObject.trigger === 'string'
+              ? bodyObject.trigger
+              : trigger
+          const requestMessageId =
+            typeof bodyObject.messageId === 'string'
+              ? bodyObject.messageId
+              : messageId
+          const editedText =
+            typeof bodyObject.editedText === 'string'
+              ? bodyObject.editedText
+              : undefined
+
           return {
             body: {
               threadId: threadIdRef.current,
-              trigger,
-              messageId,
+              trigger: requestTrigger,
+              messageId: requestMessageId,
+              editedText,
               expectedBranchVersion: branchVersion,
               message:
-                trigger === 'submit-message'
+                requestTrigger === 'submit-message'
                   ? messages[messages.length - 1]
                   : undefined,
-              attachments: trigger === 'submit-message' ? attachments : undefined,
+              attachments:
+                requestTrigger === 'submit-message' ? attachments : undefined,
               createIfMissing: createIfMissingRef.current,
               modelId: selectedModelIdRef.current,
               reasoningEffort: selectedReasoningEffortRef.current,
@@ -1007,6 +1054,7 @@ export function ChatProvider({
 
       setPendingBranchSelector({
         anchorMessageId,
+        parentMessageId: anchorMessageId,
         placeholderMessageId,
         optionMessageIds: pendingOptionIds,
         expectedOptionCount: pendingOptionIds.length,
@@ -1031,6 +1079,94 @@ export function ChatProvider({
       storedMessages,
       threadRow,
     ],
+  )
+
+  const editMessage = useCallback<ChatActionsContextValue['editMessage']>(
+    async ({ messageId, editedText }) => {
+      if (!messageId || status === 'submitted' || status === 'streaming') return
+      if (!activeThreadId) return
+
+      const normalizedText = editedText.trim()
+      if (normalizedText.length === 0) {
+        setLocalError(new Error('Message text cannot be empty.'))
+        return
+      }
+      const targetMessage = messages.find((message) => message.id === messageId)
+      if (!targetMessage || targetMessage.role !== 'user') return
+
+      const targetStoredRow = storedMessages.find(
+        (message) => message.messageId === messageId,
+      )
+      const parentMessageId =
+        targetStoredRow &&
+        typeof targetStoredRow.parentMessageId === 'string' &&
+        targetStoredRow.parentMessageId.trim().length > 0
+          ? targetStoredRow.parentMessageId
+          : ROOT_BRANCH_PARENT_KEY
+      const siblingUserIds = storedMessages
+        .filter((message) => {
+          if (message.role !== 'user') return false
+          const candidateParentId =
+            typeof message.parentMessageId === 'string' &&
+            message.parentMessageId.trim().length > 0
+              ? message.parentMessageId
+              : ROOT_BRANCH_PARENT_KEY
+          return candidateParentId === parentMessageId
+        })
+        .toSorted((left, right) => {
+          const leftBranch = left.branchIndex ?? 1
+          const rightBranch = right.branchIndex ?? 1
+          if (leftBranch !== rightBranch) return leftBranch - rightBranch
+          return left.messageId.localeCompare(right.messageId)
+        })
+        .map((message) => message.messageId)
+
+      const placeholderMessageId = `${PENDING_EDIT_BRANCH_PREFIX}${messageId}:${Date.now()}`
+      const pendingOptionIds = uniqueMessageIds([
+        ...siblingUserIds,
+        messageId,
+        placeholderMessageId,
+      ])
+      setPendingBranchSelector({
+        anchorMessageId: messageId,
+        parentMessageId,
+        placeholderMessageId,
+        optionMessageIds: pendingOptionIds,
+        expectedOptionCount: pendingOptionIds.length,
+      })
+
+      const targetIndex = messages.findIndex((message) => message.id === messageId)
+      if (targetIndex >= 0) {
+        const truncatedMessages = messages.slice(0, targetIndex + 1)
+        const target = truncatedMessages[targetIndex]
+        if (target && target.role === 'user') {
+          truncatedMessages[targetIndex] = {
+            ...target,
+            parts: target.parts.map((part) =>
+              part.type === 'text' ? { ...part, text: normalizedText } : part,
+            ),
+          }
+        }
+        setMessages(truncatedMessages)
+      }
+
+      allowShrinkOnNextBranchVersionRef.current = false
+      setLocalError(null)
+      try {
+        await regenerate({
+          messageId,
+          body: {
+            trigger: 'edit-message',
+            messageId,
+            editedText: normalizedText,
+          },
+        })
+      } catch (editError) {
+        setPendingBranchSelector(null)
+        throw editError
+      }
+    },
+    [activeThreadId, messages, regenerate, setMessages, status, storedMessages],
   )
 
   const selectBranchVersion = useCallback<
@@ -1126,6 +1262,7 @@ export function ChatProvider({
       setSelectedReasoningEffort: setReasoningSelection,
       regenerate,
       regenerateMessage,
+      editMessage,
       selectBranchVersion,
       setMessages,
       resumeStream,
@@ -1143,6 +1280,7 @@ export function ChatProvider({
       setReasoningSelection,
       regenerate,
       regenerateMessage,
+      editMessage,
       selectBranchVersion,
       setMessages,
       resumeStream,

@@ -12,6 +12,8 @@ export const chatErrorMessages: Record<TChatErrorCode, string> = {
   [ChatErrorCode.ThreadForbidden]: 'You do not have access to this chat thread.',
   [ChatErrorCode.BranchVersionConflict]:
     'This chat changed in another tab or session. Refresh and try again.',
+  [ChatErrorCode.InvalidEditTarget]:
+    'This message can no longer be edited. Refresh and try again.',
   [ChatErrorCode.ModelNotAllowed]: 'The selected AI model is not allowed for your organization.',
   [ChatErrorCode.RateLimited]: 'Too many requests. Please wait a moment and retry.',
   [ChatErrorCode.ProviderUnavailable]: 'The AI provider is currently unavailable. Please retry.',

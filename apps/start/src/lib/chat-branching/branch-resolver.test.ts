@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
+  ROOT_BRANCH_PARENT_KEY,
+  resolveEditableUserTarget,
   resolveCanonicalBranch,
   resolveRegenerationAnchor,
 } from './branch-resolver'
@@ -117,5 +119,52 @@ describe('branch-resolver', () => {
       anchorRole: 'user',
       targetMessageId: 'a1',
     })
+  })
+
+  it('supports deterministic root branch selection', () => {
+    const messages: TestMessage[] = [
+      { messageId: 'u1-v1', role: 'user', branchIndex: 1, createdAt: 1 },
+      { messageId: 'u1-v2', role: 'user', branchIndex: 2, createdAt: 2 },
+      { messageId: 'a1-v2', role: 'assistant', parentMessageId: 'u1-v2', createdAt: 3 },
+    ]
+
+    const defaultResolution = resolveCanonicalBranch(messages, {})
+    const selectedResolution = resolveCanonicalBranch(messages, {
+      [ROOT_BRANCH_PARENT_KEY]: 'u1-v2',
+      'u1-v2': 'a1-v2',
+    })
+
+    expect(defaultResolution.canonicalMessageIds).toEqual(['u1-v1'])
+    expect(defaultResolution.branchOptionsByParent[ROOT_BRANCH_PARENT_KEY]).toEqual([
+      'u1-v1',
+      'u1-v2',
+    ])
+    expect(selectedResolution.canonicalMessageIds).toEqual(['u1-v2', 'a1-v2'])
+  })
+
+  it('resolves editable target only for canonical user messages', () => {
+    const messages: TestMessage[] = [
+      { messageId: 'u1', role: 'user', createdAt: 1 },
+      { messageId: 'a1', role: 'assistant', parentMessageId: 'u1', createdAt: 2 },
+      { messageId: 'u2-v1', role: 'user', parentMessageId: 'a1', branchIndex: 1, createdAt: 3 },
+      { messageId: 'u2-v2', role: 'user', parentMessageId: 'a1', branchIndex: 2, createdAt: 4 },
+    ]
+
+    const canonicalEdit = resolveEditableUserTarget(messages, {
+      u1: 'a1',
+      a1: 'u2-v2',
+    }, 'u2-v2')
+    const hiddenEdit = resolveEditableUserTarget(messages, {
+      u1: 'a1',
+      a1: 'u2-v2',
+    }, 'u2-v1')
+
+    expect(canonicalEdit).toEqual({
+      targetMessageId: 'u2-v2',
+      parentMessageId: 'a1',
+      parentSelectionKey: 'a1',
+      siblingUserMessageIds: ['u2-v1', 'u2-v2'],
+    })
+    expect(hiddenEdit).toBeNull()
   })
 })

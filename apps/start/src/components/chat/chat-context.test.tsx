@@ -101,6 +101,20 @@ function BranchSwitchConsumer() {
   )
 }
 
+function EditConsumer({ messageId, editedText }: { messageId: string; editedText: string }) {
+  const { editMessage } = useChat()
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        void editMessage({ messageId, editedText })
+      }}
+    >
+      edit
+    </button>
+  )
+}
+
 describe('ChatProvider', () => {
   const mockedThreadId = '00000000-0000-0000-0000-000000000001'
 
@@ -221,5 +235,45 @@ describe('ChatProvider', () => {
     })
 
     expect(zeroMutateMock).not.toHaveBeenCalled()
+  })
+
+  it('routes user edits through regenerate with edit trigger payload', async () => {
+    const threadId = 'thread-edit'
+    const sessionId = `chat-ui:${threadId}`
+    const session: UseAIChatResult = {
+      messages: [
+        { id: 'u1', role: 'user', parts: [{ type: 'text', text: 'original' }] },
+        { id: 'a1', role: 'assistant', parts: [{ type: 'text', text: 'answer' }] },
+      ],
+      status: 'ready',
+      error: null,
+      sendMessage: vi.fn(async () => undefined),
+      regenerate: vi.fn(async () => undefined),
+      setMessages: vi.fn(),
+      resumeStream: vi.fn(async () => undefined),
+    }
+    sessions.set(sessionId, session)
+
+    vi.mocked(useAIChatMock).mockClear()
+
+    render(
+      <ChatProvider threadId={threadId}>
+        <EditConsumer messageId="u1" editedText="edited question" />
+      </ChatProvider>,
+    )
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'edit' }))
+    })
+
+    expect(session.regenerate).toHaveBeenCalledTimes(1)
+    expect(session.regenerate).toHaveBeenCalledWith({
+      messageId: 'u1',
+      body: {
+        trigger: 'edit-message',
+        messageId: 'u1',
+        editedText: 'edited question',
+      },
+    })
   })
 })

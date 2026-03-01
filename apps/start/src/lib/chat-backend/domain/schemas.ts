@@ -35,9 +35,11 @@ export const ChatStreamRequest = Schema.Struct({
     Schema.Union([
       Schema.Literal('submit-message'),
       Schema.Literal('regenerate-message'),
+      Schema.Literal('edit-message'),
     ]),
   ),
   messageId: Schema.optional(Schema.String),
+  editedText: Schema.optional(Schema.String),
   expectedBranchVersion: Schema.optional(Schema.Number),
   message: Schema.optional(IncomingUserMessage),
   attachments: Schema.optional(Schema.Array(IncomingAttachmentInput)),

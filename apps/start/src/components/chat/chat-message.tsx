@@ -1,4 +1,5 @@
 // Single chat message renderer (user/assistant).
+import { useEffect, useRef, useState } from 'react'
 import type { UIMessage } from 'ai'
 import type { ChatMessageMetadata } from '@/lib/chat-contracts/message-metadata'
 import type { ChatAttachment } from '@/lib/chat-contracts/attachments'
@@ -24,12 +25,23 @@ function getFileTypeIndicator(fileName: string): string {
   return normalized.slice(dotIndex + 1).toUpperCase()
 }
 
+function getEditMirrorText(text: string): string {
+  if (text.length === 0) return '\u00a0'
+  // Trailing newline does not contribute visible height in plain text nodes.
+  // Add a non-breaking space so the first Enter expands the mirror box immediately.
+  if (text.endsWith('\n')) return `${text}\u00a0`
+  return text
+}
+
 type ChatMessageProps = {
   message: UIMessage
   isAnimating?: boolean
   canRegenerate: boolean
+  canEdit: boolean
   onRegenerate: (messageId: string) => void
+  onEdit: (input: { messageId: string; editedText: string }) => Promise<void>
   branchSelector?: {
+    parentMessageId: string
     optionMessageIds: readonly string[]
     selectedMessageId: string
     disabled?: boolean
@@ -41,10 +53,16 @@ export function ChatMessage({
   message,
   isAnimating = false,
   canRegenerate,
+  canEdit,
   onRegenerate,
+  onEdit,
   branchSelector,
 }: ChatMessageProps) {
   const text = getRawMessageText(message)
+  const [isEditing, setIsEditing] = useState(false)
+  const [draftText, setDraftText] = useState(text)
+  const [isSavingEdit, setIsSavingEdit] = useState(false)
+  const editTextareaRef = useRef<HTMLTextAreaElement | null>(null)
   const isUser = message.role === 'user'
   const metadata = message.metadata as ChatMessageMetadata | undefined
   const attachmentManifest = (isUser ? metadata?.attachments ?? [] : []).filter(
@@ -59,6 +77,22 @@ export function ChatMessage({
     ? metadata.model
     : null
 
+  useEffect(() => {
+    if (isEditing || isSavingEdit) return
+    setDraftText(text)
+  }, [isEditing, isSavingEdit, text])
+
+  useEffect(() => {
+    if (!isEditing) return
+    const textarea = editTextareaRef.current
+    if (!textarea) return
+    // Focus + select all on edit entry so users can replace the full message instantly.
+    requestAnimationFrame(() => {
+      textarea.focus()
+      textarea.select()
+    })
+  }, [isEditing])
+
   if (isUser) {
     return (
       <div
@@ -72,7 +106,47 @@ export function ChatMessage({
           >
             <div className="space-y-4 size-full [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
               <div className="whitespace-pre-wrap break-words text-md leading-7">
-                {text || '\u00a0'}
+                {isEditing ? (
+                  <div className="relative">
+                    {/*
+                      Mirror text preserves the exact wrapping footprint from the
+                      read-only renderer so toggling edit mode does not reflow lines.
+                    */}
+                    <div
+                      aria-hidden
+                      className="pointer-events-none whitespace-pre-wrap break-words opacity-0"
+                    >
+                      {getEditMirrorText(draftText)}
+                    </div>
+                    <textarea
+                      ref={editTextareaRef}
+                      value={draftText}
+                      onChange={(event) => setDraftText(event.target.value)}
+                      onKeyDown={(event) => {
+                        const isSubmitShortcut =
+                          (event.ctrlKey || event.metaKey) &&
+                          event.key === 'Enter'
+                        if (!isSubmitShortcut) return
+                        event.preventDefault()
+                        if (!canEdit || isSavingEdit) return
+                        const nextDraftText = draftText
+                        setIsSavingEdit(true)
+                        setIsEditing(false)
+                        void onEdit({
+                          messageId: message.id,
+                          editedText: nextDraftText,
+                        }).finally(() => {
+                          setIsSavingEdit(false)
+                        })
+                      }}
+                      className="absolute inset-0 w-full resize-none overflow-hidden border-0 bg-transparent p-0 text-md leading-7 outline-none"
+                      style={{ font: 'inherit' }}
+                      disabled={isSavingEdit}
+                    />
+                  </div>
+                ) : (
+                  text || '\u00a0'
+                )}
               </div>
             </div>
           </div>
@@ -98,7 +172,34 @@ export function ChatMessage({
               messageId={message.id}
               text={text}
               canRegenerate={canRegenerate}
+              canEdit={canEdit}
               onRegenerate={onRegenerate}
+              isEditing={isEditing}
+              isSavingEdit={isSavingEdit}
+              onStartEdit={() => {
+                if (!canEdit) return
+                setDraftText(text)
+                setIsEditing(true)
+              }}
+              onCancelEdit={() => {
+                setDraftText(text)
+                setIsEditing(false)
+                setIsSavingEdit(false)
+              }}
+              onConfirmEdit={() => {
+                if (!canEdit || isSavingEdit) return
+                const nextDraftText = draftText
+                // Optimistic UX: immediately exit edit mode and disable
+                // edit controls while the request is in flight.
+                setIsSavingEdit(true)
+                setIsEditing(false)
+                void onEdit({
+                  messageId: message.id,
+                  editedText: nextDraftText,
+                }).finally(() => {
+                  setIsSavingEdit(false)
+                })
+              }}
               branchSelector={branchSelector}
             />
           </div>

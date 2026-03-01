@@ -93,6 +93,8 @@ function statusForTag(tag: string): number {
       return 403
     case 'BranchVersionConflictError':
       return 409
+    case 'InvalidEditTargetError':
+      return 400
     case 'ModelPolicyDeniedError':
       return 403
     case 'RateLimitExceededError':

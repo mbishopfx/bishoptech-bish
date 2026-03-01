@@ -9,6 +9,7 @@ import type {
 } from '@/lib/chat-contracts/attachments'
 import {
   BranchVersionConflictError,
+  InvalidEditTargetError,
   InvalidRequestError,
   MessagePersistenceError,
 } from '../domain/errors'
@@ -17,6 +18,7 @@ import { getUserMessageText } from '../domain/schemas'
 import { getMemoryState } from '../infra/memory/state'
 import { getZeroDatabase, zql } from '../infra/zero/db'
 import {
+  resolveEditableUserTarget,
   resolveCanonicalBranch,
   resolveRegenerationAnchor,
 } from '@/lib/chat-branching/branch-resolver'
@@ -68,6 +70,26 @@ export type MessageStoreServiceShape = {
       readonly regenSourceMessageId: string
     },
     MessagePersistenceError | BranchVersionConflictError | InvalidRequestError
+  >
+  readonly prepareEdit: (input: {
+    readonly threadDbId: string
+    readonly threadId: string
+    readonly userId: string
+    readonly targetMessageId: string
+    readonly editedText: string
+    readonly model: string
+    readonly reasoningEffort?: AiReasoningEffort
+    readonly expectedBranchVersion: number
+    readonly requestId: string
+  }) => Effect.Effect<
+    {
+      readonly editedMessageId: string
+      readonly regenSourceMessageId: string
+    },
+    | MessagePersistenceError
+    | BranchVersionConflictError
+    | InvalidEditTargetError
+    | InvalidRequestError
   >
   readonly finalizeAssistantMessage: (input: {
     readonly threadDbId: string
@@ -180,10 +202,16 @@ function nextBranchIndexForParent(input: {
   }[]
   readonly parentMessageId?: string
 }): number {
-  if (!input.parentMessageId) return 1
-
+  const parentMessageId = input.parentMessageId
   const siblingIndexes = input.messages
-    .filter((message) => message.parentMessageId === input.parentMessageId)
+    .filter((message) => {
+      const candidateParentId =
+        typeof message.parentMessageId === 'string' &&
+        message.parentMessageId.trim().length > 0
+          ? message.parentMessageId
+          : undefined
+      return candidateParentId === parentMessageId
+    })
     .map((message) => message.branchIndex ?? 1)
   const currentMax = siblingIndexes.length > 0 ? Math.max(...siblingIndexes) : 0
   return currentMax + 1
@@ -759,6 +787,145 @@ export const MessageStoreZero = Layer.effect(
             })
           },
         }),
+      prepareEdit: ({
+        threadDbId,
+        threadId,
+        userId,
+        targetMessageId,
+        editedText,
+        model,
+        reasoningEffort,
+        expectedBranchVersion,
+        requestId,
+      }) =>
+        Effect.tryPromise({
+          try: async () => {
+            const db = getZeroDatabase()
+            if (!db) {
+              throw new Error('ZERO_UPSTREAM_DB is not configured')
+            }
+
+            const normalizedEditedText = editedText.trim()
+            if (normalizedEditedText.length === 0) {
+              throw new InvalidRequestError({
+                message: 'Edited message text cannot be empty',
+                requestId,
+                issue: 'editedText must contain non-whitespace text',
+              })
+            }
+
+            return await db.transaction(async (tx) => {
+              const thread = await tx.run(
+                zql.thread.where('id', threadDbId).where('userId', userId).one(),
+              )
+              if (!thread) {
+                throw new Error('thread not found')
+              }
+
+              if (thread.branchVersion !== expectedBranchVersion) {
+                throw new BranchVersionConflictError({
+                  message: 'Branch version mismatch while preparing edit',
+                  requestId,
+                  threadId,
+                  expectedBranchVersion,
+                  actualBranchVersion: thread.branchVersion,
+                })
+              }
+
+              const threadMessages = await tx.run(
+                zql.message
+                  .where('threadId', threadId)
+                  .where('userId', userId)
+                  .orderBy('created_at', 'asc'),
+              )
+              const editableTarget = resolveEditableUserTarget(
+                threadMessages.map((message) => ({
+                  messageId: message.messageId,
+                  role: message.role,
+                  parentMessageId: message.parentMessageId ?? undefined,
+                  branchIndex: message.branchIndex ?? 1,
+                  createdAt: message.created_at,
+                })),
+                normalizeThreadActiveChildMap(thread.activeChildByParent),
+                targetMessageId,
+              )
+              if (!editableTarget) {
+                throw new InvalidEditTargetError({
+                  message: 'Invalid edit target',
+                  requestId,
+                  threadId,
+                  targetMessageId,
+                  issue: 'target message must be a canonical-path user message',
+                })
+              }
+
+              const nextMessageId = crypto.randomUUID()
+              const now = Date.now()
+              const branchIndex = nextBranchIndexForParent({
+                messages: threadMessages,
+                parentMessageId: editableTarget.parentMessageId,
+              })
+
+              await tx.mutate.message.insert({
+                id: nextMessageId,
+                messageId: nextMessageId,
+                threadId,
+                userId,
+                content: normalizedEditedText,
+                status: 'done',
+                role: 'user',
+                created_at: now,
+                updated_at: now,
+                parentMessageId: editableTarget.parentMessageId,
+                branchIndex,
+                branchAnchorMessageId:
+                  editableTarget.parentMessageId ?? targetMessageId,
+                regenSourceMessageId: targetMessageId,
+                model,
+                modelParams: {
+                  reasoningEffort,
+                },
+                attachmentsIds: [],
+              })
+
+              const activeChildByParent = normalizeThreadActiveChildMap(
+                thread.activeChildByParent,
+              )
+              activeChildByParent[editableTarget.parentSelectionKey] = nextMessageId
+
+              await tx.mutate.thread.update({
+                id: threadDbId,
+                model,
+                reasoningEffort,
+                activeChildByParent,
+                branchVersion: thread.branchVersion + 1,
+                generationStatus: 'generation',
+                updatedAt: now,
+                lastMessageAt: now,
+              })
+
+              return {
+                editedMessageId: nextMessageId,
+                regenSourceMessageId: nextMessageId,
+              }
+            })
+          },
+          catch: (error) => {
+            if (
+              error instanceof BranchVersionConflictError ||
+              error instanceof InvalidRequestError ||
+              error instanceof InvalidEditTargetError
+            ) {
+              return error
+            }
+            return new MessagePersistenceError({
+              message: 'Failed to prepare edit',
+              requestId,
+              threadId,
+              cause: String(error),
+            })
+          },
+        }),
       finalizeAssistantMessage: ({
         threadDbId,
         threadModel,
@@ -992,6 +1159,60 @@ export const MessageStoreMemory = Layer.succeed(MessageStoreService, {
         Effect.fail(
           new MessagePersistenceError({
             message: 'Failed to prepare regeneration',
+            requestId,
+            threadId,
+            cause: String(error),
+          }),
+        ),
+        ),
+      ),
+  prepareEdit: ({
+    threadId,
+    targetMessageId,
+    editedText,
+    requestId,
+  }) =>
+    Effect.sync(() => {
+      const existing = getMemoryState().messages.get(threadId)
+      if (!existing) {
+        throw new Error('missing thread message store')
+      }
+      const targetIndex = existing.findIndex(
+        (message) => message.id === targetMessageId,
+      )
+      if (targetIndex < 0) {
+        throw new Error('target message not found')
+      }
+      const target = existing[targetIndex]
+      if (!target || target.role !== 'user') {
+        throw new Error('target message is not editable')
+      }
+      const nextId = crypto.randomUUID()
+      const nextText = editedText.trim()
+      if (nextText.length === 0) {
+        throw new Error('edited text cannot be empty')
+      }
+
+      const truncated = existing.slice(0, targetIndex + 1)
+      const nextParts = target.parts.map((part) =>
+        part.type === 'text' ? { ...part, text: nextText } : part,
+      )
+      truncated[targetIndex] = {
+        ...target,
+        id: nextId,
+        parts: nextParts,
+      }
+      getMemoryState().messages.set(threadId, truncated)
+
+      return {
+        editedMessageId: nextId,
+        regenSourceMessageId: nextId,
+      }
+    }).pipe(
+      Effect.catch((error) =>
+        Effect.fail(
+          new MessagePersistenceError({
+            message: 'Failed to prepare edit',
             requestId,
             threadId,
             cause: String(error),
