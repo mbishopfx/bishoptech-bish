@@ -11,6 +11,12 @@ export type {
   PromptInputTextareaRef,
 } from './prompt-input-textarea'
 export {
+  PromptInputActionsMenu,
+} from './prompt-input-actions-menu'
+export type {
+  PromptInputActionsMenuProps,
+} from './prompt-input-actions-menu'
+export {
   PromptInputToolbar,
   ToolbarSelect,
 } from './prompt-input-toolbar'

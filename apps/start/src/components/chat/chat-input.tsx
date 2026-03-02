@@ -184,42 +184,8 @@ export function ChatInput() {
     </div>
   )
 
-  const modeToggle = (
-    <button
-      type="button"
-      onClick={() =>
-        void setSelectedModeId(isStudyModeEnabled ? undefined : 'study')}
-      disabled={isBusy || isModeEnforced || !activeThreadId}
-      className="h-8 rounded-full border border-border-muted bg-bg-default px-3 text-xs font-medium text-content-emphasis transition-colors hover:bg-bg-inverted/5 disabled:cursor-not-allowed disabled:opacity-60"
-      aria-pressed={isStudyModeEnabled}
-      aria-label={
-        isModeEnforced
-          ? 'Study Mode enforced by organization'
-          : !activeThreadId
-            ? 'Create a thread before changing mode'
-            : 'Toggle Study Mode'
-      }
-      title={
-        isModeEnforced
-          ? 'Study Mode is enforced by your organization'
-          : !activeThreadId
-            ? 'Send your first message to create a thread, then you can toggle Study Mode.'
-          : isStudyModeEnabled
-            ? `Study Mode enabled (${modeLockedModelName} locked)`
-            : 'Enable Study Mode'
-      }
-    >
-      {isModeEnforced
-        ? 'Study Mode (Enforced)'
-        : isStudyModeEnabled
-          ? 'Study Mode On'
-          : 'Study Mode Off'}
-    </button>
-  )
-
   const bottomSlot = (
     <div className="flex items-center justify-start gap-2 px-1 p-1.5">
-      {modeToggle}
       {modelAndReasoningSelectors}
     </div>
   )
@@ -252,6 +218,11 @@ export function ChatInput() {
         onFileSelect={handleFileSelect}
         status={status}
         isBusy={isSendBlocked}
+        isStudyModeEnabled={isStudyModeEnabled}
+        isModeEnforced={isModeEnforced}
+        activeThreadId={activeThreadId ?? null}
+        modeLockedModelName={modeLockedModelName}
+        setSelectedModeId={setSelectedModeId}
       />
     </PromptInputRoot>
   )
@@ -275,11 +246,21 @@ const ComposerToolbar = memo(function ComposerToolbar({
   onFileSelect,
   status,
   isBusy,
+  isStudyModeEnabled,
+  isModeEnforced,
+  activeThreadId,
+  modeLockedModelName,
+  setSelectedModeId,
 }: {
   canAddMore: boolean
   onFileSelect: (event: React.ChangeEvent<HTMLInputElement>) => void
   status: ReturnType<typeof useChatActions>['status']
   isBusy: boolean
+  isStudyModeEnabled: boolean
+  isModeEnforced: boolean
+  activeThreadId: string | null
+  modeLockedModelName: string
+  setSelectedModeId: ReturnType<typeof useChatActions>['setSelectedModeId']
 }) {
   const composerInput = useComposerDraftValue()
   const isEmpty = !composerInput.trim()
@@ -291,6 +272,12 @@ const ComposerToolbar = memo(function ComposerToolbar({
       status={status}
       isEmpty={isEmpty}
       isBusy={isBusy}
+      isStudyModeEnabled={isStudyModeEnabled}
+      isModeEnforced={isModeEnforced}
+      activeThreadId={activeThreadId}
+      modeLockedModelName={modeLockedModelName}
+      onToggleStudyMode={() =>
+        void setSelectedModeId(isStudyModeEnabled ? undefined : 'study')}
       middle={<ComposerTextarea />}
     />
   )

@@ -1,6 +1,6 @@
 'use client'
 
-import { ChevronDown, Paperclip } from 'lucide-react'
+import { ChevronDown } from 'lucide-react'
 // Toolbar controls: file picker, voice placeholder, and submit state.
 import type { ChatStatus } from 'ai'
 import { cn } from '@rift/utils'
@@ -8,7 +8,7 @@ import type { HTMLAttributes } from 'react'
 import { useRef } from 'react'
 import { PromptInputSubmit } from './prompt-input-submit'
 import { ACCEPTED_FILE_TYPES } from '../../../hooks/chat/upload'
-import { Button } from '@rift/ui/button'
+import { PromptInputActionsMenu } from './prompt-input-actions-menu'
 
 /** Styling shared with toolbar ghost buttons for visual consistency. */
 const TOOLBAR_SELECT_CLASS =
@@ -68,6 +68,11 @@ export type PromptInputToolbarProps = HTMLAttributes<HTMLDivElement> & {
   status: ChatStatus
   isEmpty: boolean
   isBusy: boolean
+  isStudyModeEnabled: boolean
+  isModeEnforced: boolean
+  activeThreadId: string | null
+  modeLockedModelName: string
+  onToggleStudyMode: () => void
   middle?: React.ReactNode
   /** Content rendered immediately after the attachment button (e.g. model selector). */
   afterAttach?: React.ReactNode
@@ -83,6 +88,11 @@ export function PromptInputToolbar({
   status,
   isEmpty,
   isBusy,
+  isStudyModeEnabled,
+  isModeEnforced,
+  activeThreadId,
+  modeLockedModelName,
+  onToggleStudyMode,
   middle,
   afterAttach,
   ...props
@@ -116,21 +126,16 @@ export function PromptInputToolbar({
         aria-hidden
         onChange={onFileSelect}
       />
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        aria-label={canAddMore ? 'Upload files' : 'Attach file (max reached)'}
-        disabled={!canAddMore}
-        onClick={handleOpenFilePicker}
-        className={cn(
-          'self-end',
-          'size-8 rounded-full border border-transparent bg-transparent p-0',
-          'text-content-emphasis hover:bg-bg-inverted/5 active:bg-bg-inverted/10 focus-visible:ring-2 focus-visible:ring-border-emphasis/40'
-        )}
-      >
-        <Paperclip className="size-[18px]" aria-hidden />
-      </Button>
+      <PromptInputActionsMenu
+        canAddMore={canAddMore}
+        onOpenFilePicker={handleOpenFilePicker}
+        isStudyModeEnabled={isStudyModeEnabled}
+        isBusy={isBusy}
+        isModeEnforced={isModeEnforced}
+        activeThreadId={activeThreadId}
+        modeLockedModelName={modeLockedModelName}
+        onToggleStudyMode={onToggleStudyMode}
+      />
 
       <div className="min-w-0 flex-1">
         {middle}
