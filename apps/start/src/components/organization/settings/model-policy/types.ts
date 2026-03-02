@@ -7,6 +7,7 @@ export type PolicyPayload = {
     disabledProviderIds: string[]
     disabledModelIds: string[]
     complianceFlags: Record<string, boolean>
+    enforcedModeId?: string
     updatedAt?: number
   }
   providers: Array<{ id: string; disabled: boolean }>
@@ -36,4 +37,8 @@ export type ProviderPolicyUpdateAction =
       action: 'toggle_compliance_flag'
       flag: string
       enabled: boolean
+    }
+  | {
+      action: 'set_enforced_mode'
+      modeId: string | null
     }

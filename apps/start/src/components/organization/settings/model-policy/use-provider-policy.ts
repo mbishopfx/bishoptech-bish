@@ -15,6 +15,7 @@ function buildPolicyPayload(input: {
     disabledProviderIds?: readonly string[]
     disabledModelIds?: readonly string[]
     complianceFlags?: Record<string, boolean>
+    enforcedModeId?: string | null
     updatedAt?: number
   } | null
 }): PolicyPayload {
@@ -22,6 +23,7 @@ function buildPolicyPayload(input: {
     disabledProviderIds: [...(input.policyRow?.disabledProviderIds ?? [])],
     disabledModelIds: [...(input.policyRow?.disabledModelIds ?? [])],
     complianceFlags: { ...(input.policyRow?.complianceFlags ?? {}) },
+    enforcedModeId: input.policyRow?.enforcedModeId ?? undefined,
     updatedAt: input.policyRow?.updatedAt,
   }
 
@@ -90,6 +92,13 @@ export function useProviderPolicy() {
             mutators.orgPolicy.toggleComplianceFlag({
               flag: body.flag,
               enabled: body.enabled,
+            }),
+          ).client
+        }
+        if (body.action === 'set_enforced_mode') {
+          await z.mutate(
+            mutators.orgPolicy.setEnforcedMode({
+              modeId: body.modeId,
             }),
           ).client
         }

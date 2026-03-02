@@ -32,11 +32,18 @@ const ToggleComplianceFlagBody = z.object({
   enabled: z.boolean(),
 })
 
+/** Request shape for organization-wide enforced mode updates. */
+const SetEnforcedModeBody = z.object({
+  action: z.literal('set_enforced_mode'),
+  modeId: z.string().trim().min(1).nullable(),
+})
+
 /** Union for supported update actions handled by POST /api/org/model-policy. */
 const UpdatePolicyBody = z.discriminatedUnion('action', [
   ToggleProviderBody,
   ToggleModelBody,
   ToggleComplianceFlagBody,
+  SetEnforcedModeBody,
 ])
 
 /** Org-scoped API for model policy read/write operations. */

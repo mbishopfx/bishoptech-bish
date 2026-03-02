@@ -1,6 +1,5 @@
 import { Effect, Layer, ServiceMap } from 'effect'
 import {
-  CHAT_DEFAULT_MODEL_ID,
   getCatalogModelProviderRoute,
 } from '@/lib/ai-catalog'
 import type { AiReasoningEffort } from '@/lib/ai-catalog/types'
@@ -55,6 +54,7 @@ export type ModelPolicyServiceShape = {
     readonly threadModel?: string
     readonly threadReasoningEffort?: AiReasoningEffort
     readonly requestedModelId?: string
+    readonly modeModelId?: string
     readonly requestedReasoningEffort?: string
     readonly skipProviderKeyResolution?: boolean
     readonly requestId: string
@@ -107,6 +107,7 @@ export class ModelPolicyService extends ServiceMap.Service<
         threadModel,
         threadReasoningEffort,
         requestedModelId,
+        modeModelId,
         requestedReasoningEffort,
         skipProviderKeyResolution,
         requestId,
@@ -117,6 +118,7 @@ export class ModelPolicyService extends ServiceMap.Service<
         readonly threadModel?: string
         readonly threadReasoningEffort?: AiReasoningEffort
         readonly requestedModelId?: string
+        readonly modeModelId?: string
         readonly requestedReasoningEffort?: string
         readonly skipProviderKeyResolution?: boolean
         readonly requestId: string
@@ -139,9 +141,19 @@ export class ModelPolicyService extends ServiceMap.Service<
             }))
 
           const candidateModelId =
+            modeModelId?.trim() ||
             requestedModelId?.trim() ||
-            threadModel?.trim() ||
-            CHAT_DEFAULT_MODEL_ID
+            threadModel?.trim()
+          if (!candidateModelId) {
+            return yield* Effect.fail(
+              toPolicyDenied({
+                modelId: 'missing-model',
+                threadId,
+                requestId,
+                reason: 'no_model_selected',
+              }),
+            )
+          }
           const selectedModel = getCatalogModelById(candidateModelId)
           if (!selectedModel) {
             return yield* Effect.fail(
@@ -213,8 +225,9 @@ export class ModelPolicyService extends ServiceMap.Service<
                 return {
                   modelId: selectedModel.id,
                   reasoningEffort,
-                  source:
-                    requestedModelId || requestedReasoningEffort
+                  source: modeModelId
+                    ? 'mode'
+                    : requestedModelId || requestedReasoningEffort
                       ? 'request'
                       : 'thread',
                 } satisfies EffectiveModelResolution
@@ -287,8 +300,9 @@ export class ModelPolicyService extends ServiceMap.Service<
                   return {
                     modelId: selectedModel.id,
                     reasoningEffort,
-                    source:
-                      requestedModelId || requestedReasoningEffort
+                    source: modeModelId
+                      ? 'mode'
+                      : requestedModelId || requestedReasoningEffort
                         ? 'request'
                         : 'thread',
                     providerApiKeyOverride: {
@@ -296,7 +310,7 @@ export class ModelPolicyService extends ServiceMap.Service<
                       apiKey: providerApiKey,
                     },
                   } satisfies EffectiveModelResolution
-                }
+              }
 
                 if (strictProviderKeyPolicyEnabled) {
                   return yield* Effect.fail(
@@ -315,8 +329,9 @@ export class ModelPolicyService extends ServiceMap.Service<
           return {
             modelId: selectedModel.id,
             reasoningEffort,
-            source:
-              requestedModelId || requestedReasoningEffort
+            source: modeModelId
+              ? 'mode'
+              : requestedModelId || requestedReasoningEffort
                 ? 'request'
                 : 'thread',
           } satisfies EffectiveModelResolution
@@ -334,19 +349,27 @@ export class ModelPolicyService extends ServiceMap.Service<
     )(
       ({
         requestedModelId,
+        modeModelId,
         requestedReasoningEffort,
       }: {
         readonly requestedModelId?: string
+        readonly modeModelId?: string
         readonly requestedReasoningEffort?: string
       }) =>
         Effect.succeed({
-          modelId: requestedModelId?.trim() || CHAT_DEFAULT_MODEL_ID,
+          modelId:
+            modeModelId?.trim() ||
+            requestedModelId?.trim() ||
+            'missing-model',
           reasoningEffort:
             requestedReasoningEffort && requestedReasoningEffort !== 'none'
               ? (requestedReasoningEffort as AiReasoningEffort)
               : undefined,
-          source:
-            requestedModelId || requestedReasoningEffort ? 'request' : 'thread',
+          source: modeModelId
+            ? 'mode'
+            : requestedModelId || requestedReasoningEffort
+              ? 'request'
+              : 'thread',
         } satisfies EffectiveModelResolution),
     ),
   })

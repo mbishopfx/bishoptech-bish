@@ -74,6 +74,7 @@ describe('chat-backend scaffold', () => {
         return yield* orchestrator.createThread({
           userId: 'user-test',
           requestId: 'req-bootstrap',
+          modelId: 'openai/gpt-5-mini',
         })
       }).pipe(Effect.provide(TestChatLayer)),
     )
@@ -89,6 +90,7 @@ describe('chat-backend scaffold', () => {
         const created = yield* orchestrator.createThread({
           userId: 'user-stream',
           requestId: 'req-create',
+          modelId: 'openai/gpt-5-mini',
         })
 
         const response = yield* orchestrator.streamChat({
@@ -129,6 +131,7 @@ describe('chat-backend scaffold', () => {
         const created = yield* orchestrator.createThread({
           userId: 'user-edit',
           requestId: 'req-create-edit',
+          modelId: 'openai/gpt-5-mini',
         })
 
         yield* orchestrator.streamChat({

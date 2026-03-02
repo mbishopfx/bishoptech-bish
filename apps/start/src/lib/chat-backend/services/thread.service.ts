@@ -1,7 +1,7 @@
 import { Effect, Layer, ServiceMap } from 'effect'
 import { generateText } from 'ai'
-import { CHAT_DEFAULT_MODEL_ID } from '@/lib/ai-catalog'
 import type { AiReasoningEffort } from '@/lib/ai-catalog/types'
+import { isChatModeId, type ChatModeId } from '@/lib/chat-modes'
 import {
   MessagePersistenceError,
   ThreadForbiddenError,
@@ -20,6 +20,8 @@ export type ThreadServiceShape = {
   readonly createThread: (input: {
     readonly userId: string
     readonly requestId: string
+    readonly modelId: string
+    readonly modeId?: ChatModeId
   }) => Effect.Effect<
     { readonly threadId: string; readonly createdAt: number },
     MessagePersistenceError
@@ -29,6 +31,7 @@ export type ThreadServiceShape = {
     readonly threadId: string
     readonly requestId: string
     readonly createIfMissing?: boolean
+    readonly requestedModelId?: string
   }) => Effect.Effect<
     {
       readonly dbId: string
@@ -36,6 +39,7 @@ export type ThreadServiceShape = {
       readonly userId: string
       readonly model: string
       readonly reasoningEffort?: AiReasoningEffort
+      readonly modeId?: ChatModeId
       readonly generationStatus:
         | 'pending'
         | 'generation'
@@ -56,6 +60,12 @@ export type ThreadServiceShape = {
     readonly threadId: string
     readonly requestId: string
   }) => Effect.Effect<void, MessagePersistenceError>
+  readonly setThreadMode: (input: {
+    readonly userId: string
+    readonly threadId: string
+    readonly modeId?: ChatModeId
+    readonly requestId: string
+  }) => Effect.Effect<void, ThreadNotFoundError | ThreadForbiddenError | MessagePersistenceError>
 }
 
 export class ThreadService extends ServiceMap.Service<
@@ -87,9 +97,13 @@ export class ThreadService extends ServiceMap.Service<
         ({
           userId,
           requestId,
+          modelId,
+          modeId,
         }: {
           readonly userId: string
           readonly requestId: string
+          readonly modelId: string
+          readonly modeId?: ChatModeId
         }) =>
           Effect.gen(function* () {
             const db = yield* loadDb({ requestId, threadId: 'new-thread' })
@@ -111,8 +125,9 @@ export class ThreadService extends ServiceMap.Service<
                     visibility: 'visible',
                     userSetTitle: false,
                     userId,
-                    model: DEFAULT_THREAD_MODEL,
+                    model: modelId,
                     reasoningEffort: undefined,
+                    modeId,
                     pinned: false,
                     allowAttachments: true,
                     activeChildByParent: {},
@@ -139,11 +154,13 @@ export class ThreadService extends ServiceMap.Service<
           threadId,
           requestId,
           createIfMissing,
+          requestedModelId,
         }: {
           readonly userId: string
           readonly threadId: string
           readonly requestId: string
           readonly createIfMissing?: boolean
+          readonly requestedModelId?: string
         }) =>
           Effect.gen(function* () {
             const db = yield* loadDb({ requestId, threadId })
@@ -163,6 +180,16 @@ export class ThreadService extends ServiceMap.Service<
                     })
                   }
 
+                  const normalizedRequestedModelId = requestedModelId?.trim()
+                  if (!normalizedRequestedModelId) {
+                    throw new MessagePersistenceError({
+                      message: 'Cannot create thread without an explicit model',
+                      requestId,
+                      threadId,
+                      cause: 'missing_requested_model_id',
+                    })
+                  }
+
                   try {
                     await db.transaction(async (tx) => {
                       // Uses deterministic IDs so first-message bootstrap can be retried safely.
@@ -177,8 +204,9 @@ export class ThreadService extends ServiceMap.Service<
                         visibility: 'visible',
                         userSetTitle: false,
                         userId,
-                        model: DEFAULT_THREAD_MODEL,
+                        model: normalizedRequestedModelId,
                         reasoningEffort: undefined,
+                        modeId: undefined,
                         pinned: false,
                         allowAttachments: true,
                         activeChildByParent: {},
@@ -229,6 +257,10 @@ export class ThreadService extends ServiceMap.Service<
               userId: thread.userId,
               model: thread.model,
               reasoningEffort: thread.reasoningEffort ?? undefined,
+              modeId:
+                thread.modeId && isChatModeId(thread.modeId)
+                  ? thread.modeId
+                  : undefined,
               generationStatus: thread.generationStatus,
               branchVersion: thread.branchVersion,
             }
@@ -270,11 +302,8 @@ export class ThreadService extends ServiceMap.Service<
             const generation = yield* Effect.tryPromise({
               try: async () => {
                 const { openai } = await import('@ai-sdk/openai')
-                const titleModel = DEFAULT_THREAD_MODEL.startsWith('openai/')
-                  ? DEFAULT_THREAD_MODEL.slice('openai/'.length)
-                  : DEFAULT_THREAD_MODEL
                 return generateText({
-                  model: openai(titleModel),
+                  model: openai(TITLE_GENERATION_MODEL),
                   prompt: `You are an expert title generator. You are given a message and you need to generate a short title based on it.
 - you will generate a short 3-4 words title based on the first message a user begins a conversation with
 - the title should creative and unique
@@ -378,11 +407,80 @@ User message: ${trimmedMessage}`,
           }),
       )
 
+      const setThreadMode = Effect.fn('ThreadService.setThreadMode')(
+        ({
+          userId,
+          threadId,
+          modeId,
+          requestId,
+        }: {
+          readonly userId: string
+          readonly threadId: string
+          readonly modeId?: ChatModeId
+          readonly requestId: string
+        }) =>
+          Effect.gen(function* () {
+            const db = yield* loadDb({ requestId, threadId })
+            const thread = yield* Effect.tryPromise({
+              try: () => db.run(zql.thread.where('threadId', threadId).one()),
+              catch: (error) =>
+                new MessagePersistenceError({
+                  message: 'Failed to update thread mode',
+                  requestId,
+                  threadId,
+                  cause: String(error),
+                }),
+            })
+
+            if (!thread) {
+              return yield* Effect.fail(
+                new ThreadNotFoundError({
+                  message: 'Thread not found',
+                  requestId,
+                  threadId,
+                }),
+              )
+            }
+
+            if (thread.userId !== userId) {
+              return yield* Effect.fail(
+                new ThreadForbiddenError({
+                  message: 'Thread is not owned by user',
+                  requestId,
+                  threadId,
+                  userId,
+                }),
+              )
+            }
+
+            if ((thread.modeId ?? undefined) === modeId) return
+
+            yield* Effect.tryPromise({
+              try: async () => {
+                await db.transaction(async (tx) => {
+                  await tx.mutate.thread.update({
+                    id: thread.id,
+                    modeId,
+                  })
+                })
+              },
+              catch: (error) =>
+                new MessagePersistenceError({
+                  message: 'Failed to update thread mode',
+                  requestId,
+                  threadId,
+                  cause: String(error),
+                }),
+            })
+          }),
+      )
+
       return {
         createThread,
         assertThreadAccess,
         autoGenerateTitle,
         markThreadGenerationFailed,
+        setThreadMode,
       }
     }),
   )
@@ -390,7 +488,15 @@ User message: ${trimmedMessage}`,
   // Test-only adapter retained for deterministic unit tests.
   static readonly layerMemory = Layer.succeed(this, {
     createThread: Effect.fn('ThreadService.createThreadMemory')(
-      ({ userId }: { readonly userId: string }) =>
+      ({
+        userId,
+        modelId,
+        modeId,
+      }: {
+        readonly userId: string
+        readonly modelId: string
+        readonly modeId?: ChatModeId
+      }) =>
         Effect.sync(() => {
           const now = Date.now()
           const threadId = crypto.randomUUID()
@@ -399,6 +505,8 @@ User message: ${trimmedMessage}`,
             userId,
             createdAt: now,
             updatedAt: now,
+            modelId,
+            modeId,
           })
           getMemoryState().messages.set(threadId, [])
           return { threadId, createdAt: now }
@@ -410,11 +518,13 @@ User message: ${trimmedMessage}`,
         threadId,
         requestId,
         createIfMissing,
+        requestedModelId,
       }: {
         readonly userId: string
         readonly threadId: string
         readonly requestId: string
         readonly createIfMissing?: boolean
+        readonly requestedModelId?: string
       }) {
         let thread = getMemoryState().threads.get(threadId)
         if (!thread) {
@@ -433,6 +543,18 @@ User message: ${trimmedMessage}`,
             userId,
             createdAt: now,
             updatedAt: now,
+            modelId: requestedModelId?.trim() || '',
+            modeId: undefined,
+          }
+          if (!created.modelId) {
+            return yield* Effect.fail(
+              new MessagePersistenceError({
+                message: 'Cannot create thread without an explicit model',
+                requestId,
+                threadId,
+                cause: 'missing_requested_model_id',
+              }),
+            )
           }
           getMemoryState().threads.set(threadId, created)
           getMemoryState().messages.set(threadId, [])
@@ -452,8 +574,9 @@ User message: ${trimmedMessage}`,
           dbId: thread.threadId,
           threadId: thread.threadId,
           userId: thread.userId,
-          model: DEFAULT_THREAD_MODEL,
+          model: thread.modelId,
           reasoningEffort: undefined,
+          modeId: thread.modeId,
           generationStatus: 'completed' as const,
           branchVersion: 1,
         }
@@ -465,12 +588,37 @@ User message: ${trimmedMessage}`,
     markThreadGenerationFailed: Effect.fn(
       'ThreadService.markThreadGenerationFailedMemory',
     )(() => Effect.void),
+    setThreadMode: Effect.fn('ThreadService.setThreadModeMemory')(
+      ({ userId, threadId, modeId, requestId }) =>
+        Effect.gen(function* () {
+          const thread = getMemoryState().threads.get(threadId)
+          if (!thread) {
+            return yield* Effect.fail(
+              new ThreadNotFoundError({
+                message: 'Thread not found',
+                requestId,
+                threadId,
+              }),
+            )
+          }
+          if (thread.userId !== userId) {
+            return yield* Effect.fail(
+              new ThreadForbiddenError({
+                message: 'Thread is not owned by user',
+                requestId,
+                threadId,
+                userId,
+              }),
+            )
+          }
+          thread.modeId = modeId
+          thread.updatedAt = Date.now()
+        }),
+    ),
   })
 }
-
-/** Fixed thread model stored for traceability; runtime selection is enforced elsewhere. */
-const DEFAULT_THREAD_MODEL = CHAT_DEFAULT_MODEL_ID
 const DEFAULT_THREAD_TITLE = 'Nuevo Chat'
+const TITLE_GENERATION_MODEL = 'gpt-5-mini'
 const MAX_USER_MESSAGE_LENGTH = 200
 const MAX_TITLE_WORDS = 8
 const MAX_TITLE_LENGTH = 50

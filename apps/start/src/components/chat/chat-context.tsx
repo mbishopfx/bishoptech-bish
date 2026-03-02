@@ -27,6 +27,7 @@ import {
   canUseAdvancedProviderTools,
   canUseReasoningControls,
 } from '@/utils/app-feature-flags'
+import { isChatModeId, type ChatModeId } from '@/lib/chat-modes'
 import { evaluateModelAvailability } from '@/lib/model-policy/policy-engine'
 import type {
   ChatAttachment,
@@ -65,11 +66,15 @@ type ChatActionsContextValue = Pick<
     attachments?: readonly ChatAttachmentInput[]
     attachmentManifest?: readonly ChatAttachment[]
   }) => Promise<void>
+  activeThreadId?: string
   selectedModelId: string
   selectedReasoningEffort?: AiReasoningEffort
   selectableModels: readonly ChatModelOption[]
   setSelectedModelId: (modelId: string) => void
   setSelectedReasoningEffort: (reasoningEffort?: AiReasoningEffort) => void
+  selectedModeId?: ChatModeId
+  isModeEnforced: boolean
+  setSelectedModeId: (modeId?: ChatModeId) => Promise<void>
   regenerateMessage: (messageId: string) => Promise<void>
   editMessage: (input: { messageId: string; editedText: string }) => Promise<void>
   selectBranchVersion: (input: {
@@ -523,8 +528,27 @@ export function ChatProvider({
           .map((tool) => tool!.name),
       }))
   }, [orgPolicyRow])
+  const orgEnforcedModeId = useMemo<ChatModeId | undefined>(() => {
+    if (!orgPolicyRow || typeof orgPolicyRow !== 'object') return undefined
+    const candidate =
+      'enforcedModeId' in orgPolicyRow &&
+      typeof orgPolicyRow.enforcedModeId === 'string'
+        ? orgPolicyRow.enforcedModeId
+        : undefined
+    return candidate && isChatModeId(candidate) ? candidate : undefined
+  }, [orgPolicyRow])
+  const threadModeId = useMemo<ChatModeId | undefined>(() => {
+    if (!threadRow || typeof threadRow !== 'object') return undefined
+    const candidate =
+      'modeId' in threadRow && typeof threadRow.modeId === 'string'
+        ? threadRow.modeId
+        : undefined
+    return candidate && isChatModeId(candidate) ? candidate : undefined
+  }, [threadRow])
+  const isModeEnforced = Boolean(orgEnforcedModeId)
+  const effectiveModeId = orgEnforcedModeId ?? threadModeId
   const [selectedModelId, setSelectedModelId] = useState(
-    selectableModels[0]?.id ?? AI_CATALOG[0]?.id ?? 'openai/gpt-4o-mini',
+    selectableModels[0]?.id ?? '',
   )
   const [selectedReasoningEffort, setSelectedReasoningEffort] = useState<
     AiReasoningEffort | undefined
@@ -1245,6 +1269,19 @@ export function ChatProvider({
     },
     [selectableModels, selectedModelId],
   )
+  const setModeSelection = useCallback(
+    async (modeId?: ChatModeId) => {
+      if (!activeThreadId) return
+      if (orgEnforcedModeId) return
+      await z.mutate(
+        mutators.threads.setMode({
+          threadId: activeThreadId,
+          modeId: modeId ?? null,
+        }),
+      ).client
+    },
+    [activeThreadId, orgEnforcedModeId, z],
+  )
 
   const messagesValue = useMemo<ChatMessagesContextValue>(
     () => ({
@@ -1261,11 +1298,15 @@ export function ChatProvider({
       status,
       error: localError ?? error,
       sendMessage,
+      activeThreadId,
       selectedModelId,
       selectedReasoningEffort,
+      selectedModeId: effectiveModeId,
+      isModeEnforced,
       selectableModels,
       setSelectedModelId: setModelSelection,
       setSelectedReasoningEffort: setReasoningSelection,
+      setSelectedModeId: setModeSelection,
       regenerate,
       regenerateMessage,
       editMessage,
@@ -1279,11 +1320,15 @@ export function ChatProvider({
       error,
       localError,
       sendMessage,
+      activeThreadId,
       selectedModelId,
       selectedReasoningEffort,
+      effectiveModeId,
+      isModeEnforced,
       selectableModels,
       setModelSelection,
       setReasoningSelection,
+      setModeSelection,
       regenerate,
       regenerateMessage,
       editMessage,

@@ -76,6 +76,7 @@ export type ModelGatewayServiceShape = {
     readonly messages: UIMessage[]
     readonly model: string
     readonly providerApiKeyOverride?: ProviderApiKeyOverride
+    readonly systemPrompt?: string
     readonly requestId: string
     readonly tools: ToolSet
     readonly activeTools?: readonly string[]
@@ -104,6 +105,7 @@ export class ModelGatewayService extends ServiceMap.Service<
         messages,
         model,
         providerApiKeyOverride,
+        systemPrompt,
         requestId,
         tools,
         activeTools,
@@ -115,6 +117,7 @@ export class ModelGatewayService extends ServiceMap.Service<
         readonly messages: UIMessage[]
         readonly model: string
         readonly providerApiKeyOverride?: ProviderApiKeyOverride
+        readonly systemPrompt?: string
         readonly requestId: string
         readonly tools: ToolSet
         readonly activeTools?: readonly string[]
@@ -139,7 +142,7 @@ export class ModelGatewayService extends ServiceMap.Service<
 
             return streamText({
               model: runtimeModel,
-              system: SYSTEM_PROMPT,
+              system: systemPrompt ?? SYSTEM_PROMPT,
               messages: modelMessages,
               tools,
               activeTools: activeTools ? [...activeTools] : undefined,

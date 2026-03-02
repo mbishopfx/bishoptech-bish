@@ -1,5 +1,6 @@
 import { Effect, Layer, ServiceMap } from 'effect'
 import { AI_CATALOG, AI_MODELS_BY_PROVIDER } from '@/lib/ai-catalog'
+import { isChatModeId, type ChatModeId } from '@/lib/chat-modes'
 import { evaluateModelAvailability } from '@/lib/model-policy/policy-engine'
 import {
   getOrgAiPolicy,
@@ -24,6 +25,10 @@ export type UpdateOrgModelPolicyAction =
       readonly flag: string
       readonly enabled: boolean
     }
+  | {
+      readonly action: 'set_enforced_mode'
+      readonly modeId: string | null
+    }
 
 export type OrgModelPolicyPayload = {
   readonly orgWorkosId: string
@@ -31,6 +36,7 @@ export type OrgModelPolicyPayload = {
     readonly disabledProviderIds: readonly string[]
     readonly disabledModelIds: readonly string[]
     readonly complianceFlags: Readonly<Record<string, boolean>>
+    readonly enforcedModeId?: string
     readonly updatedAt?: number
   }
   readonly providers: readonly {
@@ -82,6 +88,7 @@ export class OrgModelPolicyService extends ServiceMap.Service<
           let complianceFlags: Record<string, boolean> = {
             ...(existing?.complianceFlags ?? {}),
           }
+          let enforcedModeId: ChatModeId | null | undefined = existing?.enforcedModeId
 
           if (action.action === 'toggle_provider') {
             disabledProviderIds = action.disabled
@@ -102,6 +109,18 @@ export class OrgModelPolicyService extends ServiceMap.Service<
             }
           }
 
+          if (action.action === 'set_enforced_mode') {
+            if (action.modeId && !isChatModeId(action.modeId)) {
+              return yield* Effect.fail(
+                new OrgModelPolicyPersistenceError({
+                  message: `Unknown mode id: ${action.modeId}`,
+                  requestId,
+                }),
+              )
+            }
+            enforcedModeId = action.modeId
+          }
+
           yield* Effect.tryPromise({
             try: () =>
               upsertOrgAiPolicy({
@@ -111,6 +130,7 @@ export class OrgModelPolicyService extends ServiceMap.Service<
                 complianceFlags,
                 providerKeyStatus:
                   existing?.providerKeyStatus ?? EMPTY_ORG_PROVIDER_KEY_STATUS,
+                enforcedModeId,
               }),
             catch: (error) =>
               new OrgModelPolicyPersistenceError({
@@ -183,6 +203,7 @@ function toOrgModelPolicyPayload(
       disabledProviderIds: policy?.disabledProviderIds ?? [],
       disabledModelIds: policy?.disabledModelIds ?? [],
       complianceFlags: policy?.complianceFlags ?? {},
+      enforcedModeId: policy?.enforcedModeId,
       updatedAt: policy?.updatedAt,
     },
     providers,

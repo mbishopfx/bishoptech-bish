@@ -46,12 +46,6 @@ export const AI_MODELS_BY_PROVIDER = AI_CATALOG.reduce(
   new Map<string, AiModelCatalogEntry[]>(),
 )
 
-/**
- * Default chat model used as fallback when a thread has no stored model
- * and a request does not provide an explicit override.
- */
-export const CHAT_DEFAULT_MODEL_ID = 'openai/gpt-4o-mini'
-
 /** Returns a catalog row by ID, or undefined when the ID is unknown. */
 export function getCatalogModel(modelId: string): AiModelCatalogEntry | undefined {
   return AI_CATALOG_BY_ID.get(modelId)

@@ -1,5 +1,6 @@
 import type { AiReasoningEffort } from '@/lib/ai-catalog/types'
 import type { OrgComplianceFlags } from '@/lib/ai-catalog/compliance-map'
+import type { ChatModeId } from '@/lib/chat-modes'
 
 export type OrgProviderKeyStatusSnapshot = {
   readonly syncedAt: number
@@ -42,6 +43,7 @@ export type OrgAiPolicy = {
   readonly disabledProviderIds: readonly string[]
   readonly disabledModelIds: readonly string[]
   readonly complianceFlags: OrgComplianceFlags
+  readonly enforcedModeId?: ChatModeId
   /**
    * Optional provider-key presence snapshot used to short-circuit BYOK key
    * resolution on chat requests when no org keys are configured.
@@ -63,7 +65,7 @@ export type ModelAvailabilityDecision = {
 export type EffectiveModelResolution = {
   readonly modelId: string
   readonly reasoningEffort?: AiReasoningEffort
-  readonly source: 'thread' | 'request'
+  readonly source: 'thread' | 'request' | 'mode'
   /**
    * Optional org-scoped provider auth override. When present, runtime model
    * execution must use this key and must not fall back to system credentials.

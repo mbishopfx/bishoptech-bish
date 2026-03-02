@@ -1,4 +1,5 @@
 import { getZeroDatabase, zql } from '@/lib/chat-backend/infra/zero/db'
+import { isChatModeId, type ChatModeId } from '@/lib/chat-modes'
 import {
   EMPTY_ORG_PROVIDER_KEY_STATUS,
   type OrgAiPolicy,
@@ -20,8 +21,15 @@ function fromRow(row: {
   readonly disabledModelIds?: readonly string[]
   readonly complianceFlags?: Record<string, boolean>
   readonly providerKeyStatus?: OrgProviderKeyStatusSnapshot
+  readonly enforcedModeId?: string | null
   readonly updatedAt?: number
 }): OrgAiPolicy {
+  const enforcedModeId = row.enforcedModeId
+  const normalizedModeId =
+    typeof enforcedModeId === 'string' && isChatModeId(enforcedModeId)
+      ? enforcedModeId
+      : undefined
+
   const providerKeyStatus = row.providerKeyStatus
     ? {
       syncedAt: row.providerKeyStatus.syncedAt ?? 0,
@@ -39,6 +47,7 @@ function fromRow(row: {
     disabledModelIds: row.disabledModelIds ?? [],
     complianceFlags: row.complianceFlags ?? {},
     providerKeyStatus,
+    enforcedModeId: normalizedModeId,
     updatedAt: row.updatedAt ?? now(),
   }
 }
@@ -69,6 +78,7 @@ export async function upsertOrgAiPolicy(input: {
   readonly disabledModelIds: readonly string[]
   readonly complianceFlags: Record<string, boolean>
   readonly providerKeyStatus: OrgProviderKeyStatusSnapshot
+  readonly enforcedModeId?: ChatModeId | null
 }): Promise<OrgAiPolicy> {
   const db = getZeroDatabase()
   if (!db) {
@@ -91,6 +101,7 @@ export async function upsertOrgAiPolicy(input: {
         disabledModelIds: [...input.disabledModelIds],
         complianceFlags: input.complianceFlags,
         providerKeyStatus: input.providerKeyStatus,
+        enforcedModeId: input.enforcedModeId ?? null,
         updatedAt,
       })
     })
@@ -101,6 +112,7 @@ export async function upsertOrgAiPolicy(input: {
       disabledModelIds: [...input.disabledModelIds],
       complianceFlags: input.complianceFlags,
       providerKeyStatus: input.providerKeyStatus,
+      enforcedModeId: input.enforcedModeId ?? undefined,
       updatedAt,
     }
   }
@@ -112,6 +124,7 @@ export async function upsertOrgAiPolicy(input: {
       disabledModelIds: [...input.disabledModelIds],
       complianceFlags: input.complianceFlags,
       providerKeyStatus: input.providerKeyStatus,
+      enforcedModeId: input.enforcedModeId ?? null,
       updatedAt,
     })
   })
@@ -122,6 +135,7 @@ export async function upsertOrgAiPolicy(input: {
     disabledModelIds: [...input.disabledModelIds],
     complianceFlags: input.complianceFlags,
     providerKeyStatus: input.providerKeyStatus,
+    enforcedModeId: input.enforcedModeId ?? undefined,
     updatedAt,
   }
 }

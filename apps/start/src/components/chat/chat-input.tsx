@@ -14,6 +14,7 @@ import { ModelSelectorPanel } from './model-selector-panel'
 import { ReasoningSelectorPanel } from './reasoning-selector-panel'
 import { useFileAttachments } from '../../hooks/chat/upload'
 import { parseChatApiError } from './chat-error-messages'
+import { getChatModeDefinition } from '@/lib/chat-modes'
 import {
   clearComposerDraft,
   getComposerDraftValue,
@@ -35,6 +36,10 @@ export function ChatInput() {
     selectedReasoningEffort,
     setSelectedModelId,
     setSelectedReasoningEffort,
+    activeThreadId,
+    selectedModeId,
+    isModeEnforced,
+    setSelectedModeId,
   } = useChatActions()
   const [errorDismissed, setErrorDismissed] = useState(false)
   const [uploadErrorDismissed, setUploadErrorDismissed] = useState(false)
@@ -140,21 +145,32 @@ export function ChatInput() {
   )
 
   const selectedModel = selectableModels.find((m) => m.id === selectedModelId)
+  const isStudyModeEnabled = selectedModeId === 'study'
+  const studyModeDefinition = getChatModeDefinition('study')
+  const modeLockedModelId = isStudyModeEnabled
+    ? studyModeDefinition.fixedModelId
+    : selectedModelId
+  const modeLockedModelName =
+    selectableModels.find((model) => model.id === studyModeDefinition.fixedModelId)
+      ?.name ?? 'GPT-5 mini'
   const reasoningOptions = selectedModel?.reasoningEfforts ?? []
 
-  const hasReasoningOptions = reasoningOptions.length > 0
+  const hasReasoningOptions = !isStudyModeEnabled && reasoningOptions.length > 0
   const selectorTriggerClassName =
     'h-8 rounded-full border border-transparent bg-transparent px-3 pr-7 text-sm leading-[21px] font-medium text-content-emphasis transition-colors hover:bg-bg-inverted/5 active:bg-bg-inverted/10 focus-visible:border-border-emphasis focus-visible:ring-2 focus-visible:ring-border-emphasis/40'
 
   const modelAndReasoningSelectors = (
     <div className="flex items-center gap-1">
       <ModelSelectorPanel
-        value={selectedModelId}
+        value={modeLockedModelId}
         onValueChange={setSelectedModelId}
         options={selectableModels.map((m) => ({ id: m.id, name: m.name }))}
-        disabled={isBusy}
+        disabled={isBusy || isStudyModeEnabled}
         className={selectorTriggerClassName}
       />
+      {isStudyModeEnabled && (
+        <span className="text-xs text-content-muted">{`Locked to ${modeLockedModelName}`}</span>
+      )}
       {hasReasoningOptions && (
         <ReasoningSelectorPanel
           value={selectedReasoningEffort}
@@ -168,8 +184,42 @@ export function ChatInput() {
     </div>
   )
 
+  const modeToggle = (
+    <button
+      type="button"
+      onClick={() =>
+        void setSelectedModeId(isStudyModeEnabled ? undefined : 'study')}
+      disabled={isBusy || isModeEnforced || !activeThreadId}
+      className="h-8 rounded-full border border-border-muted bg-bg-default px-3 text-xs font-medium text-content-emphasis transition-colors hover:bg-bg-inverted/5 disabled:cursor-not-allowed disabled:opacity-60"
+      aria-pressed={isStudyModeEnabled}
+      aria-label={
+        isModeEnforced
+          ? 'Study Mode enforced by organization'
+          : !activeThreadId
+            ? 'Create a thread before changing mode'
+            : 'Toggle Study Mode'
+      }
+      title={
+        isModeEnforced
+          ? 'Study Mode is enforced by your organization'
+          : !activeThreadId
+            ? 'Send your first message to create a thread, then you can toggle Study Mode.'
+          : isStudyModeEnabled
+            ? `Study Mode enabled (${modeLockedModelName} locked)`
+            : 'Enable Study Mode'
+      }
+    >
+      {isModeEnforced
+        ? 'Study Mode (Enforced)'
+        : isStudyModeEnabled
+          ? 'Study Mode On'
+          : 'Study Mode Off'}
+    </button>
+  )
+
   const bottomSlot = (
-    <div className="flex items-center justify-start px-1 p-1.5">
+    <div className="flex items-center justify-start gap-2 px-1 p-1.5">
+      {modeToggle}
       {modelAndReasoningSelectors}
     </div>
   )

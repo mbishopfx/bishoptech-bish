@@ -48,12 +48,15 @@ CREATE TABLE IF NOT EXISTS threads (
   share_name BOOLEAN,
   owner_org_id TEXT,
   custom_instruction_id TEXT,
-  reasoning_effort TEXT
+  reasoning_effort TEXT,
+  mode_id TEXT
 );
 ALTER TABLE threads
 ADD COLUMN IF NOT EXISTS active_child_by_parent JSONB NOT NULL DEFAULT '{}'::jsonb;
 ALTER TABLE threads
 ADD COLUMN IF NOT EXISTS branch_version BIGINT NOT NULL DEFAULT 1;
+ALTER TABLE threads
+ADD COLUMN IF NOT EXISTS mode_id TEXT;
 CREATE INDEX IF NOT EXISTS threads_user_id ON threads (user_id);
 CREATE INDEX IF NOT EXISTS threads_thread_id ON threads (thread_id);
 CREATE INDEX IF NOT EXISTS threads_user_updated ON threads (user_id, updated_at);
@@ -113,11 +116,14 @@ CREATE TABLE IF NOT EXISTS org_ai_policy (
   disabled_model_ids JSONB NOT NULL DEFAULT '[]'::jsonb,
   compliance_flags JSONB NOT NULL DEFAULT '{}'::jsonb,
   provider_key_status JSONB NOT NULL DEFAULT '{"syncedAt": 0, "hasAnyProviderKey": false, "providers": {"openai": false, "anthropic": false}}'::jsonb,
+  enforced_mode_id TEXT,
   version BIGINT NOT NULL DEFAULT 1,
   updated_at BIGINT NOT NULL
 );
 ALTER TABLE org_ai_policy
 ADD COLUMN IF NOT EXISTS provider_key_status JSONB NOT NULL DEFAULT '{"syncedAt": 0, "hasAnyProviderKey": false, "providers": {"openai": false, "anthropic": false}}'::jsonb;
+ALTER TABLE org_ai_policy
+ADD COLUMN IF NOT EXISTS enforced_mode_id TEXT;
 CREATE INDEX IF NOT EXISTS org_ai_policy_org_workos_id ON org_ai_policy (org_workos_id);
 CREATE INDEX IF NOT EXISTS org_ai_policy_updated_at ON org_ai_policy (updated_at);
 

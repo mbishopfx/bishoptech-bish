@@ -161,6 +161,7 @@ const runSet = (
               disabledProviderIds: existing?.disabledProviderIds ?? [],
               disabledModelIds: existing?.disabledModelIds ?? [],
               complianceFlags: existing?.complianceFlags ?? {},
+              enforcedModeId: existing?.enforcedModeId,
               providerKeyStatus: toOrgProviderKeyStatusSnapshot({
                 ...baseline,
                 [action.providerId]: true,
@@ -213,6 +214,7 @@ const runRemove = (
               disabledProviderIds: existing?.disabledProviderIds ?? [],
               disabledModelIds: existing?.disabledModelIds ?? [],
               complianceFlags: existing?.complianceFlags ?? {},
+              enforcedModeId: existing?.enforcedModeId,
               providerKeyStatus: toOrgProviderKeyStatusSnapshot({
                 ...baseline,
                 [action.providerId]: false,

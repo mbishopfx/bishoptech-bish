@@ -59,6 +59,19 @@ export function ComplianceFlagsSection({
               }),
             disabled: updating || !byokEnabled,
           },
+          {
+            id: 'enforce_study_mode',
+            title: 'Enforce Study Mode',
+            description:
+              'Force all organization chat requests to run in Study Mode and lock the mode toggle.',
+            checked: payload.policy.enforcedModeId === 'study',
+            onCheckedChange: (enabled) =>
+              void update({
+                action: 'set_enforced_mode',
+                modeId: enabled ? 'study' : null,
+              }),
+            disabled: updating,
+          },
         ],
       }}
     />

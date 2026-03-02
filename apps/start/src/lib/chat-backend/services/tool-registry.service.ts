@@ -1,6 +1,7 @@
 import type { ToolSet } from 'ai'
 import { Effect, Layer, ServiceMap } from 'effect'
 import { AI_CATALOG_BY_ID } from '@/lib/ai-catalog'
+import type { ResolvedChatMode } from '@/lib/chat-modes'
 import { getProviderToolDefinition } from '@/lib/ai-catalog/provider-tools'
 import { canUseAdvancedProviderTools } from '@/utils/app-feature-flags'
 import type { AiReasoningEffort } from '@/lib/ai-catalog/types'
@@ -25,7 +26,16 @@ export type ToolRegistryServiceShape = {
     readonly userId: string
     readonly requestId: string
     readonly modelId: string
+    readonly mode?: ResolvedChatMode
   }) => Effect.Effect<ToolRegistryResult>
+}
+
+function emptyToolRegistryResult(): ToolRegistryResult {
+  return {
+    tools: {},
+    activeTools: [],
+    providerOptionsByReasoning: {},
+  }
 }
 
 /** Injectable tool registry token. */
@@ -36,14 +46,30 @@ export class ToolRegistryService extends ServiceMap.Service<
   /** Live tool registry resolving provider-specific tool capabilities. */
   static readonly layer = Layer.succeed(this, {
     resolveForThread: Effect.fn('ToolRegistryService.resolveForThread')(
-      ({ modelId }: { readonly modelId: string }) => {
+      ({
+        modelId,
+        mode,
+      }: {
+        readonly modelId: string
+        readonly mode?: ResolvedChatMode
+      }) => {
         const model = AI_CATALOG_BY_ID.get(modelId)
+        if (!model) {
+          return Effect.succeed(emptyToolRegistryResult())
+        }
+        const modeAllowlist =
+          mode?.definition.providerToolAllowlistByProvider?.[model.providerId]
+        const candidateProviderToolIds = modeAllowlist
+          ? model.providerToolIds.filter((toolId) =>
+              modeAllowlist.includes(toolId),
+            )
+          : model.providerToolIds
         const enabledProviderTools =
-          model?.providerToolIds.filter((toolId) => {
+          candidateProviderToolIds.filter((toolId) => {
             const definition = getProviderToolDefinition(model.providerId, toolId)
             if (!definition) return false
             return canUseAdvancedProviderTools() || !definition.advanced
-          }) ?? []
+          })
         const tools =
           model && enabledProviderTools.length > 0
             ? resolveProviderToolSet({
@@ -67,12 +93,7 @@ export class ToolRegistryService extends ServiceMap.Service<
   /** Memory adapter for tests/local runs. */
   static readonly layerMemory = Layer.succeed(this, {
     resolveForThread: Effect.fn('ToolRegistryService.resolveForThreadMemory')(
-      () =>
-        Effect.succeed({
-          tools: {},
-          activeTools: [],
-          providerOptionsByReasoning: {},
-        }),
+      () => Effect.succeed(emptyToolRegistryResult()),
     ),
   })
 }

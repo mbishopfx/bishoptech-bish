@@ -1,11 +1,14 @@
 import type { UIMessage } from 'ai'
+import type { ChatModeId } from '@/lib/chat-modes'
 
 // In-memory state used for local development and tests until DB wiring lands.
 type ThreadRecord = {
   readonly threadId: string
   readonly userId: string
   readonly createdAt: number
+  modelId: string
   updatedAt: number
+  modeId?: ChatModeId
 }
 
 type RateLimitBucket = {

@@ -3,6 +3,7 @@ import {
 } from '@rocicorp/zero'
 import { z } from 'zod'
 import { AI_CATALOG_BY_ID, AI_MODELS_BY_PROVIDER } from '@/lib/ai-catalog'
+import { isChatModeId } from '@/lib/chat-modes'
 import { zql } from '../zql'
 
 const toggleProviderPolicyArgs = z.object({
@@ -20,6 +21,10 @@ const toggleComplianceFlagArgs = z.object({
   enabled: z.boolean(),
 })
 
+const setEnforcedModeArgs = z.object({
+  modeId: z.string().min(1).nullable(),
+})
+
 type OrgPolicyRow = {
   id: string
   orgWorkosId: string
@@ -34,6 +39,7 @@ type OrgPolicyRow = {
       anthropic: boolean
     }
   }
+  enforcedModeId?: string | null
 }
 
 type OrgPolicySnapshot = {
@@ -48,6 +54,7 @@ type OrgPolicySnapshot = {
       anthropic: boolean
     }
   }
+  enforcedModeId?: string | null
 }
 
 /** De-duplicates identifiers while preserving insertion order. */
@@ -88,6 +95,10 @@ function toSnapshot(row?: OrgPolicyRow): OrgPolicySnapshot {
         anthropic: false,
       },
     },
+    enforcedModeId:
+      row?.enforcedModeId && isChatModeId(row.enforcedModeId)
+        ? row.enforcedModeId
+        : undefined,
   }
 }
 
@@ -113,6 +124,7 @@ async function persistOrgPolicy(args: {
               anthropic: boolean
             }
           }
+          enforcedModeId?: string | null
           updatedAt: number
         }) => Promise<void>
         update: (row: {
@@ -128,6 +140,7 @@ async function persistOrgPolicy(args: {
               anthropic: boolean
             }
           }
+          enforcedModeId?: string | null
           updatedAt: number
         }) => Promise<void>
       }
@@ -147,6 +160,7 @@ async function persistOrgPolicy(args: {
       disabledModelIds: args.next.disabledModelIds,
       complianceFlags: args.next.complianceFlags,
       providerKeyStatus: args.next.providerKeyStatus,
+      enforcedModeId: args.next.enforcedModeId ?? null,
       updatedAt,
     })
     return
@@ -158,6 +172,7 @@ async function persistOrgPolicy(args: {
     disabledModelIds: args.next.disabledModelIds,
     complianceFlags: args.next.complianceFlags,
     providerKeyStatus: args.next.providerKeyStatus,
+    enforcedModeId: args.next.enforcedModeId ?? null,
     updatedAt,
   })
 }
@@ -243,5 +258,27 @@ export const orgPolicyMutatorDefinitions = {
         })
       },
     ),
+    setEnforcedMode: defineMutator(setEnforcedModeArgs, async ({ tx, args, ctx }) => {
+      const orgWorkosId = requireOrgWorkosId(ctx)
+      if (args.modeId && !isChatModeId(args.modeId)) {
+        throw new Error(`Unknown mode id: ${args.modeId}`)
+      }
+
+      const existing = await tx.run(
+        zql.orgAiPolicy.where('orgWorkosId', orgWorkosId).one(),
+      )
+      const snapshot = toSnapshot(existing)
+      const next: OrgPolicySnapshot = {
+        ...snapshot,
+        enforcedModeId: args.modeId,
+      }
+
+      await persistOrgPolicy({
+        tx,
+        orgWorkosId,
+        existing,
+        next,
+      })
+    }),
   },
 }

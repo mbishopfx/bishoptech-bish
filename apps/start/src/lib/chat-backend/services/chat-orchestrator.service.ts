@@ -9,6 +9,7 @@ import { getUserMessageText } from '../domain/schemas'
 import { emitWideErrorEvent, getErrorTag } from '../observability/wide-event'
 import { canUseReasoningControls } from '@/utils/app-feature-flags'
 import type { OrgAiPolicy } from '@/lib/model-policy/types'
+import { resolveEffectiveChatMode } from '@/lib/chat-modes'
 import {
   runDetachedObserved,
   runDetachedUnsafe,
@@ -40,6 +41,7 @@ export type ChatOrchestratorServiceShape = {
   readonly createThread: (input: {
     readonly userId: string
     readonly requestId: string
+    readonly modelId: string
   }) => Effect.Effect<{ readonly threadId: string }, ChatDomainError>
 
   readonly streamChat: (input: {
@@ -80,9 +82,9 @@ export class ChatOrchestratorService extends ServiceMap.Service<
 
       const createThread: ChatOrchestratorServiceShape['createThread'] =
         Effect.fn('ChatOrchestratorService.createThread')(
-          ({ userId, requestId }) =>
+          ({ userId, requestId, modelId }) =>
             threads
-              .createThread({ userId, requestId })
+              .createThread({ userId, requestId, modelId })
               .pipe(Effect.map((created) => ({ threadId: created.threadId }))),
         )
 
@@ -130,6 +132,12 @@ export class ChatOrchestratorService extends ServiceMap.Service<
             threadId,
             requestId,
             createIfMissing,
+            requestedModelId: modelId,
+          })
+
+          const effectiveMode = resolveEffectiveChatMode({
+            orgEnforcedModeId: orgPolicy?.enforcedModeId,
+            threadModeId: threadAccess.modeId,
           })
 
           // Fire-and-forget title generation after the first message bootstrap path.
@@ -173,6 +181,7 @@ export class ChatOrchestratorService extends ServiceMap.Service<
             threadModel: threadAccess.model,
             threadReasoningEffort: threadAccess.reasoningEffort,
             requestedModelId: modelId,
+            modeModelId: effectiveMode?.definition.fixedModelId,
             requestedReasoningEffort: canUseReasoningControls()
               ? reasoningEffort
               : undefined,
@@ -184,6 +193,7 @@ export class ChatOrchestratorService extends ServiceMap.Service<
             userId,
             requestId,
             modelId: modelResolution.modelId,
+            mode: effectiveMode,
           })
 
           // Enforce one active stream per user/thread to avoid interleaved assistant writes.
@@ -415,6 +425,7 @@ export class ChatOrchestratorService extends ServiceMap.Service<
             messages,
             model: modelResolution.modelId,
             providerApiKeyOverride: modelResolution.providerApiKeyOverride,
+            systemPrompt: effectiveMode?.definition.systemPrompt,
             requestId,
             tools: toolRegistry.tools,
             activeTools: toolRegistry.activeTools,

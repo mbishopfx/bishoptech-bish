@@ -53,6 +53,7 @@ const orgAiPolicy = table('orgAiPolicy')
         anthropic: boolean
       }
     }>().from('provider_key_status'),
+    enforcedModeId: string().from('enforced_mode_id').optional(),
     updatedAt: number().from('updated_at'),
   })
   .primaryKey('id')
@@ -98,6 +99,7 @@ const thread = table('thread')
     shareName: boolean().from('share_name').optional(),
     ownerOrgId: string().from('owner_org_id').optional(),
     customInstructionId: string().from('custom_instruction_id').optional(),
+    modeId: string().from('mode_id').optional(),
   })
   .primaryKey('id')
 

@@ -62,6 +62,11 @@ const selectBranchChildArgs = z.object({
   expectedBranchVersion: z.number().int().positive(),
 })
 
+const setThreadModeArgs = z.object({
+  threadId: z.string(),
+  modeId: z.string().nullable(),
+})
+
 export const chatMutatorDefinitions = {
   threads: {
     create: defineMutator(createThreadArgs, async ({ tx, args, ctx }) => {
@@ -191,6 +196,24 @@ export const chatMutatorDefinitions = {
         })
       },
     ),
+    setMode: defineMutator(setThreadModeArgs, async ({ tx, args, ctx }) => {
+      const thread = await tx.run(zql.thread.where('threadId', args.threadId).one())
+      if (!thread || thread.userId !== ctx.userID) {
+        return
+      }
+
+      const nextModeId = args.modeId ?? null
+      const currentModeId =
+        typeof thread.modeId === 'string' ? thread.modeId : null
+      if (currentModeId === nextModeId) {
+        return
+      }
+
+      await tx.mutate.thread.update({
+        id: thread.id,
+        modeId: nextModeId,
+      })
+    }),
   },
 
   messages: {
