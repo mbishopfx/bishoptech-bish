@@ -4,6 +4,7 @@ import {
   MessageActions,
 } from './message-actions-primitives'
 import { useMessageCopyAction } from './use-message-copy-action'
+import { m } from '@/paraglide/messages.js'
 
 type AssistantMessageActionsProps = {
   messageId: string
@@ -29,8 +30,8 @@ export function AssistantMessageActions({
     <div className="flex items-center gap-2">
       <MessageActions className="mt-1 opacity-0 transition-opacity group-hover:opacity-100">
         <MessageActionButton
-          tooltip="Regenerate response"
-          label="Regenerate response"
+          tooltip={m.chat_message_action_regenerate()}
+          label={m.chat_message_action_regenerate()}
           disabled={!canRegenerate}
           onClick={() => {
             if (!canRegenerate) return
@@ -40,8 +41,8 @@ export function AssistantMessageActions({
           <RedoIcon className="size-4" />
         </MessageActionButton>
         <MessageActionButton
-          tooltip="Copy text"
-          label="Copy text"
+          tooltip={m.chat_message_action_copy_text()}
+          label={m.chat_message_action_copy_text()}
           onClick={() => {
             void copy()
           }}

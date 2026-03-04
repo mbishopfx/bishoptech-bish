@@ -1,6 +1,7 @@
 'use client'
 
 import { ContentPage } from '@/components/layout'
+import { m } from '@/paraglide/messages.js'
 import { ComplianceFlagsSection } from '../model-policy/compliance-flags-section'
 import { useProviderPolicy } from '../model-policy/use-provider-policy'
 
@@ -14,11 +15,11 @@ export function CompliancePolicyPage() {
 
   return (
     <ContentPage
-      title="Compliance & Policy"
-      description="Configure organization-level compliance flags and policies."
+      title={m.org_compliance_page_title()}
+      description={m.org_compliance_page_description()}
     >
       {loading && (
-        <p className="text-sm text-content-muted">Loading compliance policy…</p>
+        <p className="text-sm text-content-muted">{m.org_compliance_loading()}</p>
       )}
 
       {error && (

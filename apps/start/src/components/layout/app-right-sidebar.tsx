@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { cn } from '@rift/utils'
+import { m } from '@/paraglide/messages.js'
 
 export const RIGHT_SIDEBAR_WIDTH = 280
 
@@ -13,7 +14,7 @@ export function AppRightSidebar({ isOpen, children }: AppRightSidebarProps) {
     <aside
       className="flex h-full min-w-0 shrink-0 flex-col"
       style={{ width: `${RIGHT_SIDEBAR_WIDTH}px` }}
-      aria-label="Right sidebar"
+      aria-label={m.layout_right_sidebar_aria_label()}
     >
       {/** Keep content mounted so exit motion can complete before it visually collapses. */}
       <div

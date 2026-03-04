@@ -5,6 +5,7 @@ import { Button } from '@rift/ui/button'
 import { cn } from '@rift/utils'
 import { Loader2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { m } from '@/paraglide/messages.js'
 import { useAvatarUpload } from './use-avatar-upload'
 
 export type AvatarUploadFieldProps = {
@@ -102,7 +103,7 @@ export function AvatarUploadField({
         size="default"
         onClick={openFilePicker}
         disabled={disabled || isUploading}
-        aria-label="Upload avatar image"
+        aria-label={m.settings_avatar_upload_aria_label()}
         aria-busy={isUploading}
         className="h-auto w-auto cursor-pointer rounded-full border-0 bg-transparent p-0 hover:bg-transparent active:bg-transparent"
       >

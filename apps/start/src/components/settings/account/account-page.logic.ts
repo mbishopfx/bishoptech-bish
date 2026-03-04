@@ -31,9 +31,9 @@ export type AccountPageLogicResult = {
   applyAvatarChange: (uploadedUrl: string) => void
 }
 
-const NAME_SUCCESS_MESSAGE = 'Display name saved.'
-const EMAIL_SUCCESS_MESSAGE = 'Email change request submitted. Check your inbox to finish verification.'
-const AVATAR_SUCCESS_MESSAGE = 'Avatar saved.'
+const NAME_SUCCESS_MESSAGE = () => m.settings_account_name_saved()
+const EMAIL_SUCCESS_MESSAGE = () => m.settings_account_email_change_requested()
+const AVATAR_SUCCESS_MESSAGE = () => m.settings_account_avatar_saved()
 
 function getErrorMessage(cause: unknown, fallback: string): string {
   if (cause instanceof Error && cause.message.trim().length > 0) {
@@ -147,11 +147,11 @@ export function useAccountPageLogic(): AccountPageLogicResult {
   const submitName = async () => {
     const nextName = name.trim()
     if (!canEdit) {
-      setNameMessage('You need to sign in to update your profile.')
+      setNameMessage(m.settings_account_error_sign_in_required_profile())
       return
     }
     if (!nextName) {
-      setNameMessage('Display name cannot be empty.')
+      setNameMessage(m.settings_account_error_name_empty())
       return
     }
 
@@ -163,9 +163,9 @@ export function useAccountPageLogic(): AccountPageLogicResult {
       })
       await refetchSession()
       setName(nextName)
-      setNameMessage(NAME_SUCCESS_MESSAGE)
+      setNameMessage(NAME_SUCCESS_MESSAGE())
     } catch (cause) {
-      setNameMessage(getErrorMessage(cause, 'Unable to save display name.'))
+      setNameMessage(getErrorMessage(cause, m.settings_account_error_name_save_failed()))
     }
   }
 
@@ -174,15 +174,15 @@ export function useAccountPageLogic(): AccountPageLogicResult {
     const currentEmail = user?.email?.trim().toLowerCase() ?? ''
 
     if (!canEdit) {
-      setEmailMessage('You need to sign in to update your profile.')
+      setEmailMessage(m.settings_account_error_sign_in_required_profile())
       return
     }
     if (!nextEmail) {
-      setEmailMessage('Email cannot be empty.')
+      setEmailMessage(m.settings_account_error_email_empty())
       return
     }
     if (nextEmail === currentEmail) {
-      setEmailMessage('Please enter a different email address.')
+      setEmailMessage(m.settings_account_error_email_same())
       return
     }
 
@@ -194,15 +194,15 @@ export function useAccountPageLogic(): AccountPageLogicResult {
       })
       await refetchSession()
       setEmail(nextEmail)
-      setEmailMessage(EMAIL_SUCCESS_MESSAGE)
+      setEmailMessage(EMAIL_SUCCESS_MESSAGE())
     } catch (cause) {
-      setEmailMessage(getErrorMessage(cause, 'Unable to request email change.'))
+      setEmailMessage(getErrorMessage(cause, m.settings_account_error_email_change_failed()))
     }
   }
 
   const persistAvatar = async (uploadedUrl: string) => {
     if (!canEdit) {
-      throw new Error('You need to sign in to update your avatar.')
+      throw new Error(m.settings_account_error_sign_in_required_avatar())
     }
 
     setAvatarMessage(null)
@@ -212,7 +212,7 @@ export function useAccountPageLogic(): AccountPageLogicResult {
       },
     })
     await refetchSession()
-    setAvatarMessage(AVATAR_SUCCESS_MESSAGE)
+    setAvatarMessage(AVATAR_SUCCESS_MESSAGE())
   }
 
   const applyAvatarChange = (uploadedUrl: string) => {

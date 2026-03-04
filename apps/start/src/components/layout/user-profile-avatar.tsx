@@ -4,6 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@rift/ui/avatar'
 import { Button } from '@rift/ui/button'
 import { Link } from '@tanstack/react-router'
 import { SETTINGS_HREF } from '@/routes/(app)/_layout/settings/-settings-nav'
+import { m } from '@/paraglide/messages.js'
 
 export type UserProfileAvatarUser = {
   image?: string | null
@@ -42,7 +43,7 @@ export function UserProfileAvatar({
       asChild
       variant="sidebarIcon"
       size="iconSidebar"
-      aria-label="Open settings"
+      aria-label={m.layout_open_settings_aria_label()}
     >
       <Link to={settingsHref}>
         <Avatar size={size}>

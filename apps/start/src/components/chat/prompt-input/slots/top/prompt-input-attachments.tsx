@@ -6,6 +6,7 @@ import { cn } from '@rift/utils'
 import { AlertTriangle, FileText, Loader2, X } from 'lucide-react'
 import type { HTMLAttributes } from 'react'
 import type { UploadedFile } from '@/lib/chat/upload'
+import { m } from '@/paraglide/messages.js'
 
 export type AttachedFile = {
   id: string
@@ -98,8 +99,8 @@ export function PromptInputAttachments({
               size="iconSmall"
               className="absolute top-1 ltr:right-1 rtl:left-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150"
               onClick={() => onRemove(file.id)}
-              title={`Remove ${file.name}`}
-              aria-label={`Remove ${file.name}`}
+              title={m.chat_prompt_attachment_remove_title({ fileName: file.name })}
+              aria-label={m.chat_prompt_attachment_remove_aria_label({ fileName: file.name })}
             >
               <X className="size-3.5" aria-hidden />
             </Button>
@@ -108,7 +109,7 @@ export function PromptInputAttachments({
           {file.isUploading && (
             <div className="absolute inset-0 z-10 flex items-center justify-center bg-bg-emphasis/70 text-content-primary">
               <Loader2 className="size-5 animate-spin" aria-hidden />
-              <span className="sr-only">Uploading {file.name}</span>
+              <span className="sr-only">{m.chat_prompt_attachment_uploading_sr({ fileName: file.name })}</span>
             </div>
           )}
 
@@ -116,12 +117,12 @@ export function PromptInputAttachments({
             <button
               type="button"
               className="absolute inset-0 z-20 flex items-center justify-center bg-bg-error/95 text-content-primary"
-              title={`${file.uploadError}. Click to remove.`}
-              aria-label={`Upload failed for ${file.name}. Click to remove.`}
+              title={m.chat_prompt_attachment_upload_failed_title({ error: file.uploadError })}
+              aria-label={m.chat_prompt_attachment_upload_failed_aria_label({ fileName: file.name })}
               onClick={() => onRemove?.(file.id)}
             >
               <AlertTriangle className="size-5 text-content-error" aria-hidden />
-              <span className="sr-only">Upload failed. Click to remove.</span>
+              <span className="sr-only">{m.chat_prompt_attachment_upload_failed_sr()}</span>
             </button>
           )}
         </div>

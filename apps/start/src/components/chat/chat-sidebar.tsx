@@ -33,6 +33,7 @@ import type {
 } from '@/components/layout/sidebar/app-sidebar-nav.config'
 import { mutators, queries } from '@/integrations/zero'
 import { CACHE_CHAT_NAV } from '@/integrations/zero/query-cache-policy'
+import { m } from '@/paraglide/messages.js'
 import { syncThreadGenerationStatuses } from './thread-status-store'
 
 // --- Single source of truth: constants and static content ---
@@ -43,8 +44,8 @@ export const CHAT_AREA_KEY = 'default' as const
 export const isChatPath = (pathname: string) =>
   isAreaPath(pathname, ['/', CHAT_HREF])
 
-const CHAT_SIDEBAR_TITLE = 'Rift AI'
-const CHAT_HISTORY_SECTION_NAME = 'Chat History'
+const CHAT_SIDEBAR_TITLE = () => m.chat_sidebar_title()
+const CHAT_HISTORY_SECTION_NAME = () => m.chat_sidebar_history_section()
 const OPTIMISTIC_THREAD_CREATED_EVENT = 'chat:thread-created'
 const MAX_PRELOADED_THREADS = 100
 
@@ -55,24 +56,25 @@ type OptimisticThread = {
 }
 
 /** Static sections only. Dynamic "Chat History" is appended by ChatSidebarContent. */
-const staticSections: NavSection[] = [
-  {
-    items: [
-      { name: 'New Chat', href: CHAT_HREF, icon: Link2, exact: true },
-      { name: 'Projects', href: `${CHAT_HREF}/projects`, icon: Globe },
-    ],
-  },
-]
+function getStaticSections(): NavSection[] {
+  return [
+    {
+      items: [
+        { name: m.chat_sidebar_new_chat(), href: CHAT_HREF, icon: Link2, exact: true },
+        { name: m.chat_sidebar_projects(), href: `${CHAT_HREF}/projects`, icon: Globe },
+      ],
+    },
+  ]
+}
 
 /** Static nav config for the chat area (title, href, icon, description, static sections). */
 export function chatNavStaticConfig() {
   return {
-    title: CHAT_SIDEBAR_TITLE,
+    title: CHAT_SIDEBAR_TITLE(),
     href: CHAT_HREF,
-    description:
-      'Chat with your data and get answers to your questions with AI.',
+    description: m.chat_sidebar_description(),
     icon: Compass,
-    content: staticSections,
+    content: getStaticSections(),
   }
 }
 
@@ -125,7 +127,7 @@ function ThreadRenameInput({
       onBlur={onCancel}
       onClick={(e) => e.stopPropagation()}
       className={RENAME_INPUT_CLASS}
-      aria-label="Rename thread"
+      aria-label={m.chat_sidebar_rename_thread_aria_label()}
     />
   )
 }
@@ -228,7 +230,7 @@ export function ChatSidebarContent({ pathname }: { pathname: string }) {
       ...pending,
       ...threads.map((thread) => ({
         threadId: thread.threadId,
-        title: thread.title || 'Untitled',
+        title: thread.title || m.chat_sidebar_thread_untitled(),
         generationStatus: thread.generationStatus as GenerationStatus,
         isPersisted: true,
       })),
@@ -245,7 +247,7 @@ export function ChatSidebarContent({ pathname }: { pathname: string }) {
   const startEditingThread = useCallback(
     (threadId: string, currentTitle: string) => {
       setEditingThreadId(threadId)
-      setEditingTitle(currentTitle || 'Untitled')
+      setEditingTitle(currentTitle || m.chat_sidebar_thread_untitled())
     },
     [],
   )
@@ -259,7 +261,7 @@ export function ChatSidebarContent({ pathname }: { pathname: string }) {
     async (threadId: string, currentTitle: string) => {
       const trimmed = editingTitle.trim()
       if (!trimmed) {
-        toast.error('Thread title cannot be empty')
+        toast.error(m.chat_sidebar_thread_title_empty_error())
         return
       }
 
@@ -271,11 +273,11 @@ export function ChatSidebarContent({ pathname }: { pathname: string }) {
       try {
         await z.mutate(mutators.threads.rename({ threadId, title: trimmed }))
           .client
-        toast.success('Thread renamed')
+        toast.success(m.chat_sidebar_thread_renamed())
         cancelEditingThread()
       } catch (error) {
         console.error('Failed to rename thread:', error)
-        toast.error('Failed to rename thread')
+        toast.error(m.chat_sidebar_thread_rename_failed())
       }
     },
     [editingTitle, cancelEditingThread, z],
@@ -286,17 +288,17 @@ export function ChatSidebarContent({ pathname }: { pathname: string }) {
       try {
         const write = z.mutate(mutators.threads.delete({ threadId }))
         await write.client
-        toast.success('Thread deleted')
+        toast.success(m.chat_sidebar_thread_deleted())
         if (activeThreadId === threadId) {
           navigate({ to: '/chat' })
         }
         const serverRes = await write.server
         if (serverRes.type === 'error') {
-          toast.error('Failed to delete thread')
+          toast.error(m.chat_sidebar_thread_delete_failed())
         }
       } catch (error) {
         console.error('Failed to delete thread:', error)
-        toast.error('Failed to delete thread')
+        toast.error(m.chat_sidebar_thread_delete_failed())
       }
     },
     [activeThreadId, navigate, z],
@@ -315,11 +317,15 @@ export function ChatSidebarContent({ pathname }: { pathname: string }) {
       const showError = status === 'failed'
       const trailing = showSpinner ? (
         <SidebarGroupTooltip
-          name={status === 'pending' ? 'Pending' : 'Generating'}
+          name={
+            status === 'pending'
+              ? m.chat_sidebar_status_pending()
+              : m.chat_sidebar_status_generating()
+          }
           description={
             status === 'pending'
-              ? 'This chat is queued; a response will be generated shortly.'
-              : 'The AI has started generating the response.'
+              ? m.chat_sidebar_status_pending_description()
+              : m.chat_sidebar_status_generating_description()
           }
         >
           <span className="inline-flex shrink-0">
@@ -328,8 +334,8 @@ export function ChatSidebarContent({ pathname }: { pathname: string }) {
         </SidebarGroupTooltip>
       ) : showError ? (
         <SidebarGroupTooltip
-          name="Error"
-          description="Something went wrong and the response could not be generated."
+          name={m.chat_sidebar_status_error()}
+          description={m.chat_sidebar_status_error_description()}
         >
           <span className="inline-flex shrink-0">
             <AlertTriangle className="size-4 text-content-error" aria-hidden />
@@ -338,7 +344,7 @@ export function ChatSidebarContent({ pathname }: { pathname: string }) {
       ) : undefined
 
       const isEditing = editingThreadId === thread.threadId
-      const currentTitle = thread.title || 'Untitled'
+      const currentTitle = thread.title || m.chat_sidebar_thread_untitled()
 
       return {
         name: currentTitle,
@@ -367,7 +373,7 @@ export function ChatSidebarContent({ pathname }: { pathname: string }) {
                 }}
               >
                 <Pencil />
-                Rename
+                {m.chat_sidebar_rename()}
               </ContextMenuItem>
               <ContextMenuItem
                 onClick={() => {
@@ -375,7 +381,7 @@ export function ChatSidebarContent({ pathname }: { pathname: string }) {
                 }}
               >
                 <Copy />
-                Copy link
+                {m.chat_sidebar_copy_link()}
               </ContextMenuItem>
               <ContextMenuSeparator />
               <ContextMenuItem
@@ -385,7 +391,7 @@ export function ChatSidebarContent({ pathname }: { pathname: string }) {
                 }}
               >
                 <Trash2 />
-                Delete
+                {m.chat_sidebar_delete()}
               </ContextMenuItem>
             </>
           ) : undefined,
@@ -403,21 +409,21 @@ export function ChatSidebarContent({ pathname }: { pathname: string }) {
   )
 
   const historySection: NavSection = {
-    name: CHAT_HISTORY_SECTION_NAME,
+    name: CHAT_HISTORY_SECTION_NAME(),
     items:
       threadItems.length > 0
         ? threadItems
-        : [{ name: 'No chats yet', href: CHAT_HREF }],
+        : [{ name: m.chat_sidebar_no_chats_yet(), href: CHAT_HREF }],
   }
 
-  const sections = [...staticSections, historySection]
+  const sections = [...getStaticSections(), historySection]
 
   return (
     <SidebarAreaLayout
-      title={CHAT_SIDEBAR_TITLE}
+      title={CHAT_SIDEBAR_TITLE()}
       sections={sections}
       pathname={pathname}
-      scrollableSectionName={CHAT_HISTORY_SECTION_NAME}
+      scrollableSectionName={CHAT_HISTORY_SECTION_NAME()}
     />
   )
 }

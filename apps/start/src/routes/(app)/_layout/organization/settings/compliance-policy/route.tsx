@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { ContentPage } from '@/components/layout'
 import { CompliancePolicyPage } from '@/components/organization/settings/compliance-policy'
 import { useAppAuth } from '@/lib/auth/use-auth'
+import { m } from '@/paraglide/messages.js'
 
 /**
  * Organization settings: compliance and policy configuration.
@@ -19,12 +20,11 @@ function CompliancePolicyRoutePage() {
   if (!activeOrganizationId) {
     return (
       <ContentPage
-        title="Compliance & Policy"
-        description="Switch to an organization to manage organization-level compliance policies."
+        title={m.org_compliance_page_title()}
+        description={m.org_route_select_org_compliance_description()}
       >
         <p className="text-sm text-content-muted">
-          Select an organization in the sidebar or switch context to manage
-          policies.
+          {m.org_route_select_org_body()}
         </p>
       </ContentPage>
     )

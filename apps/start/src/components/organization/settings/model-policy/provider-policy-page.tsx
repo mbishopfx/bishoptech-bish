@@ -1,6 +1,7 @@
 'use client'
 
 import { ContentPage } from '@/components/layout'
+import { m } from '@/paraglide/messages.js'
 import { ComplianceFlagsSection } from './compliance-flags-section'
 import { ModelControlsSection } from './model-controls-section'
 import { ProviderControlsSection } from './provider-controls-section'
@@ -16,11 +17,11 @@ export function ProviderPolicyPage() {
 
   return (
     <ContentPage
-      title="Provider policy"
-      description="Configure provider and model restrictions and compliance flags for your organization."
+      title={m.org_provider_policy_page_title()}
+      description={m.org_provider_policy_page_description()}
     >
       {loading && (
-        <p className="text-sm text-content-muted">Loading provider policy…</p>
+        <p className="text-sm text-content-muted">{m.org_provider_policy_loading()}</p>
       )}
 
       {error && (

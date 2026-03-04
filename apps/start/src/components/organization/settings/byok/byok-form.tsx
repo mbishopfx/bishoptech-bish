@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Form } from '@rift/ui/form'
 import type { ByokProvider } from '@/lib/byok/types'
+import { m } from '@/paraglide/messages.js'
 
 /**
  * Help text component with a link to obtain API keys
@@ -16,14 +17,14 @@ function ApiKeyHelpText({ providerId }: { providerId: ByokProvider }) {
 
   return (
     <span className="text-sm text-content-subtle">
-      You can get your {providerName} API key{' '}
+      {m.org_byok_api_key_help_prefix({ providerName })}{' '}
       <a
         href={href}
         target="_blank"
         rel="noopener noreferrer"
         className="font-medium text-accent-default underline underline-offset-2 hover:text-accent-default/80"
       >
-        here
+        {m.org_byok_api_key_help_link_text()}
       </a>
     </span>
   )
@@ -112,8 +113,8 @@ export function ByokForm({
             title={card.title}
             description={
               card.configured
-                ? 'Configured, new requests for this provider will use your org key.'
-                : "Not configured, requests will continue using RIFT's provider key."
+                ? m.org_byok_provider_configured_description()
+                : m.org_byok_provider_not_configured_description()
             }
             inputAttrs={{
               name: `${card.providerId}ApiKey`,
@@ -145,7 +146,11 @@ export function ByokForm({
                   }
                 : undefined
             }
-            buttonText={card.configured ? 'Remove key' : 'Save key'}
+            buttonText={
+              card.configured
+                ? m.org_byok_remove_key_button()
+                : m.org_byok_save_key_button()
+            }
             buttonVariant={card.configured ? 'dangerLight' : 'default'}
             buttonDisabled={!featureEnabled || updating}
             handleSubmit={
@@ -180,7 +185,7 @@ export function ByokForm({
             }
             helpText={
               !featureEnabled ? (
-                'This feature is currently disabled. Contact your administrator to enable it.'
+                m.org_byok_feature_disabled_help()
               ) : (
                 <ApiKeyHelpText providerId={card.providerId} />
               )

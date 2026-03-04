@@ -13,6 +13,7 @@ import {
 } from './provider-constants'
 import type { PolicyPayload } from './types'
 import type { useProviderPolicy } from './use-provider-policy'
+import { m } from '@/paraglide/messages.js'
 
 /** Matches ContentPage title so header block height stays identical when navigating. */
 const PAGE_TITLE_CLASS =
@@ -52,13 +53,13 @@ export function ProviderModelsPage({
   const formContent =
     modelsForProvider.length === 0 ? (
       <p className="rounded-xl border border-border-subtle bg-bg-default p-6 text-sm text-content-subtle">
-        No models available for this provider.
+        {m.org_provider_models_none_available()}
       </p>
     ) : (
       <Form
         title={providerName}
-        description="Enable or disable models for this provider in your organization."
-        helpText="Changes apply immediately. Disabled models are unavailable to the organization."
+        description={m.org_provider_models_description()}
+        helpText={m.org_provider_models_help()}
         toggleSection={{
           rowHover: true,
           items: modelsForProvider.map((model) => ({
@@ -84,10 +85,10 @@ export function ProviderModelsPage({
         <Link
           to="/organization/settings/models"
           className={`inline-flex items-center gap-1 ${PAGE_TITLE_CLASS} hover:text-content-default`}
-          aria-label="Go back to models"
+          aria-label={m.org_provider_models_go_back_aria_label()}
         >
           <ChevronLeft className="size-4 shrink-0" aria-hidden />
-          Go back
+          {m.org_provider_models_go_back()}
         </Link>
       }
       description={

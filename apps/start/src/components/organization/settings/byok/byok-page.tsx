@@ -3,6 +3,7 @@
 import { ContentPage } from '@/components/layout'
 import { ByokForm } from '@/components/organization/settings/byok'
 import { useByok } from '@/lib/byok/use-byok'
+import { m } from '@/paraglide/messages.js'
 
 /**
  * Organization settings page for BYOK (Bring Your Own Key): manage
@@ -21,12 +22,12 @@ export function ByokPage() {
 
   return (
     <ContentPage
-      title="BYOK"
-      description="Manage your organization's API keys for AI providers (Bring Your Own Key). Keys are stored securely in WorkOS Vault."
+      title={m.org_byok_page_title()}
+      description={m.org_byok_page_description()}
     >
       {loading && (
         <p className="text-sm text-content-muted">
-          Loading provider key status…
+          {m.org_byok_loading()}
         </p>
       )}
 

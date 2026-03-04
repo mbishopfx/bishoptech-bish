@@ -3,6 +3,7 @@
 import { useMemo, useRef, useState } from 'react'
 import { uploadFileToServer } from '@/lib/chat/upload'
 import { MAX_UPLOAD_SIZE_BYTES } from '@/lib/upload/upload.model'
+import { m } from '@/paraglide/messages.js'
 
 const DEFAULT_AVATAR_MIME_TYPES = [
   'image/jpeg',
@@ -57,13 +58,15 @@ export function useAvatarUpload({
 
     const normalizedType = selectedFile.type.trim().toLowerCase()
     if (!normalizedMimeTypes.includes(normalizedType)) {
-      setUploadError('Please upload a JPG, PNG, WEBP, or SVG image.')
+      setUploadError(m.settings_avatar_upload_invalid_type())
       return
     }
 
     if (selectedFile.size > maxSizeBytes) {
       setUploadError(
-        `File exceeds limit of ${Math.floor(maxSizeBytes / (1024 * 1024))}MB.`,
+        m.settings_avatar_upload_size_limit({
+          maxSizeMb: String(Math.floor(maxSizeBytes / (1024 * 1024))),
+        }),
       )
       return
     }
@@ -75,7 +78,9 @@ export function useAvatarUpload({
       await onPersistImage(uploaded.url)
       onImageChange?.(uploaded.url)
     } catch (cause) {
-      setUploadError(cause instanceof Error ? cause.message : 'Unable to upload avatar.')
+      setUploadError(
+        cause instanceof Error ? cause.message : m.settings_avatar_upload_failed(),
+      )
     } finally {
       setIsUploading(false)
     }

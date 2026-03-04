@@ -3,6 +3,7 @@ import { ProviderModelsPage } from '@/components/organization/settings/model-pol
 import { useProviderPolicy } from '@/components/organization/settings/model-policy/use-provider-policy'
 import { ContentPage } from '@/components/layout'
 import { useAppAuth } from '@/lib/auth/use-auth'
+import { m } from '@/paraglide/messages.js'
 
 /**
  * Organization settings: models for a single provider (in-depth view).
@@ -22,12 +23,11 @@ function ProviderModelsRoutePage() {
   if (!activeOrganizationId) {
     return (
       <ContentPage
-        title="Models"
-        description="Switch to an organization to manage organization-level provider and model policies."
+        title={m.org_models_page_title()}
+        description={m.org_route_select_org_provider_models_description()}
       >
         <p className="text-sm text-content-muted">
-          Select an organization in the sidebar or switch context to manage
-          policies.
+          {m.org_route_select_org_body()}
         </p>
       </ContentPage>
     )
@@ -35,15 +35,15 @@ function ProviderModelsRoutePage() {
 
   if (loading) {
     return (
-      <ContentPage title="Models">
-        <p className="text-sm text-content-muted">Loading models…</p>
+      <ContentPage title={m.org_models_page_title()}>
+        <p className="text-sm text-content-muted">{m.org_models_loading()}</p>
       </ContentPage>
     )
   }
 
   if (error) {
     return (
-      <ContentPage title="Models">
+      <ContentPage title={m.org_models_page_title()}>
         <div
           className="rounded-md border border-border-default bg-bg-subtle px-3 py-2 text-sm text-content-error"
           role="alert"

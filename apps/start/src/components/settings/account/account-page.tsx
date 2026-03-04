@@ -36,16 +36,20 @@ export function AccountPage() {
     applyAvatarChange,
   } = useAccountPageLogic()
 
-  const nameSuccessMessage = nameMessage === 'Display name saved.' ? nameMessage : undefined
+  const nameSuccessMessage =
+    nameMessage === m.settings_account_name_saved() ? nameMessage : undefined
   const emailSuccessMessage =
-    emailMessage === 'Email change request submitted. Check your inbox to finish verification.'
+    emailMessage === m.settings_account_email_change_requested()
       ? emailMessage
       : undefined
   const selectedLanguageLabel =
     languageOptions.find((localeOption) => localeOption.value === language)?.label ?? language
 
   return (
-    <ContentPage title="Account" description="Manage your account details and avatar.">
+    <ContentPage
+      title={m.settings_account_page_title()}
+      description={m.settings_account_page_description()}
+    >
       <Form
         title={m.settings_account_language_title()}
         description={m.settings_account_language_description()}
@@ -76,13 +80,13 @@ export function AccountPage() {
       />
 
       <Form
-        title="Avatar"
-        description="This is your avatar. Click on the avatar to upload a custom image."
+        title={m.settings_account_avatar_title()}
+        description={m.settings_account_avatar_description()}
         headerSlot={
           <AvatarUploadField
             image={avatarImage}
             fallbackText={initials}
-            alt="Profile avatar"
+            alt={m.settings_account_avatar_alt()}
             disabled={!canEdit}
             onPersistImage={persistAvatar}
             onImageChange={applyAvatarChange}
@@ -91,61 +95,61 @@ export function AccountPage() {
         }
         error={avatarError ?? undefined}
         success={avatarError == null ? avatarMessage ?? undefined : undefined}
-        helpText={<p className="text-sm text-content-subtle">An avatar is optional but strongly recommended.</p>}
+        helpText={<p className="text-sm text-content-subtle">{m.settings_account_avatar_help()}</p>}
       />
 
       <Form
-        title="Display Name"
-        description="Please enter your full name, or a display name you are comfortable with."
+        title={m.settings_account_name_title()}
+        description={m.settings_account_name_description()}
         inputAttrs={{
           name: 'displayName',
           type: 'text',
-          placeholder: 'e.g. Ari Say',
+          placeholder: m.settings_account_name_placeholder(),
           maxLength: 32,
           disabled: !canEdit,
         }}
         value={name}
         onValueChange={setNameInput}
         error={
-          nameMessage != null && nameMessage !== 'Display name saved.'
+          nameMessage != null && nameMessage !== m.settings_account_name_saved()
             ? nameMessage
             : undefined
         }
         success={nameSuccessMessage}
         helpText={
           <p className="text-sm text-content-subtle">
-            Please use 32 characters at maximum.
+            {m.settings_account_name_help()}
           </p>
         }
-        buttonText="Save"
+        buttonText={m.settings_account_save_button()}
         buttonDisabled={!canEdit || name.trim().length === 0}
         handleSubmit={submitName}
       />
 
       <Form
-        title="Email"
-        description="This is your account email address."
+        title={m.settings_account_email_title()}
+        description={m.settings_account_email_description()}
         inputAttrs={{
           name: 'email',
           type: 'email',
-          placeholder: 'you@example.com',
+          placeholder: m.settings_account_email_placeholder(),
           disabled: !canEdit,
         }}
         value={email}
         onValueChange={setEmailInput}
         error={
           emailMessage != null &&
-          emailMessage !== 'Email change request submitted. Check your inbox to finish verification.'
+          emailMessage !== m.settings_account_email_change_requested()
             ? emailMessage
             : undefined
         }
         success={emailSuccessMessage}
         helpText={
           <p className="text-sm text-content-subtle">
-            Use a valid address you can access to complete secure verification.
+            {m.settings_account_email_help()}
           </p>
         }
-        buttonText="Save"
+        buttonText={m.settings_account_save_button()}
         buttonDisabled={!canEdit || email.trim().length === 0}
         handleSubmit={submitEmail}
       />

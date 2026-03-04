@@ -9,17 +9,9 @@ import {
   PopoverTrigger,
 } from '@rift/ui/popover'
 import type { AiReasoningEffort } from '@/lib/ai-catalog/types'
+import { m } from '@/paraglide/messages.js'
 
 /** Readable labels for reasoning effort levels. */
-const REASONING_EFFORT_LABELS: Record<AiReasoningEffort, string> = {
-  none: 'None',
-  minimal: 'Minimal',
-  low: 'Low',
-  medium: 'Medium',
-  high: 'High',
-  xhigh: 'Extra high',
-}
-
 export type ReasoningSelectorPanelProps = {
   value: AiReasoningEffort | undefined
   onValueChange: (effort: AiReasoningEffort | undefined) => void
@@ -44,6 +36,14 @@ export function ReasoningSelectorPanel({
   className,
 }: ReasoningSelectorPanelProps) {
   const [open, setOpen] = React.useState(false)
+  const reasoningEffortLabels: Record<AiReasoningEffort, string> = {
+    none: m.chat_reasoning_effort_none(),
+    minimal: m.chat_reasoning_effort_minimal(),
+    low: m.chat_reasoning_effort_low(),
+    medium: m.chat_reasoning_effort_medium(),
+    high: m.chat_reasoning_effort_high(),
+    xhigh: m.chat_reasoning_effort_xhigh(),
+  }
 
   const handleSelect = React.useCallback(
     (effort: AiReasoningEffort | undefined) => {
@@ -55,19 +55,19 @@ export function ReasoningSelectorPanel({
 
   const triggerLabel =
     value != null
-      ? REASONING_EFFORT_LABELS[value] ?? value
+      ? reasoningEffortLabels[value] ?? value
       : defaultReasoningEffort != null
-        ? REASONING_EFFORT_LABELS[defaultReasoningEffort] ?? defaultReasoningEffort
+        ? reasoningEffortLabels[defaultReasoningEffort] ?? defaultReasoningEffort
         : options[0] != null
-          ? REASONING_EFFORT_LABELS[options[0]] ?? options[0]
-          : 'Reasoning'
+          ? reasoningEffortLabels[options[0]] ?? options[0]
+          : m.chat_reasoning_label()
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         tabIndex={-1}
         disabled={disabled}
-        aria-label="Select reasoning effort"
+        aria-label={m.chat_reasoning_select_aria_label()}
         className={cn(
           'h-10 rounded-lg border border-transparent bg-transparent px-3 ltr:pr-8 rtl:pl-8 text-sm font-medium text-content-default outline-none focus:!outline-none focus-visible:!outline-none transition-colors hover:bg-bg-inverted/5 active:bg-bg-inverted/10 focus-visible:border-border-emphasis focus-visible:ring-[3px] focus-visible:ring-border-emphasis/50 disabled:pointer-events-none disabled:opacity-50',
           'relative flex items-center gap-2 w-fit group',
@@ -109,7 +109,7 @@ export function ReasoningSelectorPanel({
           {options.map((effort) => (
             <ReasoningRow
               key={effort}
-              label={REASONING_EFFORT_LABELS[effort] ?? effort}
+              label={reasoningEffortLabels[effort] ?? effort}
               isSelected={
                 value === effort ||
                 (value == null && defaultReasoningEffort === effort)

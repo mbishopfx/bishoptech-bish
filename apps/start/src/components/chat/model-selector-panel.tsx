@@ -16,6 +16,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@rift/ui/tooltip'
 import { getCatalogModel, getProviderIcon } from '@/lib/ai-catalog'
 import type { AiModelCatalogEntry } from '@/lib/ai-catalog/types'
 import type { CatalogProviderId } from '@/lib/ai-catalog/provider-tools'
+import { m } from '@/paraglide/messages.js'
 
 /** Display names for providers in the sidebar filter. */
 const PROVIDER_NAMES: Record<string, string> = {
@@ -38,13 +39,6 @@ const CAPABILITY_ICONS = {
   supportsImageInput: Image,
   supportsPdfInput: FileText,
 } as const
-
-const CAPABILITY_LABELS: Record<keyof typeof CAPABILITY_ICONS, string> = {
-  supportsTools: 'Tools',
-  supportsReasoning: 'Reasoning',
-  supportsImageInput: 'Images',
-  supportsPdfInput: 'PDF',
-}
 
 const CAPABILITY_ORDER: Array<keyof typeof CAPABILITY_ICONS> = [
   'supportsReasoning',
@@ -82,6 +76,12 @@ export function ModelSelectorPanel({
   const [selectedProvider, setSelectedProvider] = React.useState<
     CatalogProviderId | 'all'
   >('all')
+  const capabilityLabels: Record<keyof typeof CAPABILITY_ICONS, string> = {
+    supportsTools: m.chat_model_capability_tools(),
+    supportsReasoning: m.chat_model_capability_reasoning(),
+    supportsImageInput: m.chat_model_capability_images(),
+    supportsPdfInput: m.chat_model_capability_pdf(),
+  }
 
   const selectedCatalog = React.useMemo(
     () => (value ? getCatalogModel(value) : undefined),
@@ -137,7 +137,7 @@ export function ModelSelectorPanel({
     [options],
   )
   const triggerLabel =
-    optionsById.get(value)?.name ?? selectedCatalog?.name ?? 'Select model'
+    optionsById.get(value)?.name ?? selectedCatalog?.name ?? m.chat_model_select_trigger()
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -150,7 +150,7 @@ export function ModelSelectorPanel({
           className,
         )}
         disabled={disabled}
-        aria-label="Select model"
+        aria-label={m.chat_model_select_aria_label()}
       >
         {selectedCatalog
           ? (() => {
@@ -197,7 +197,7 @@ export function ModelSelectorPanel({
               '[scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden',
               'outline-none focus:!outline-none focus-visible:!outline-none',
             )}
-            aria-label="Filter by provider"
+            aria-label={m.chat_model_filter_by_provider_aria_label()}
             tabIndex={-1}
           >
             <Tooltip>
@@ -207,14 +207,14 @@ export function ModelSelectorPanel({
                   <ProviderButton
                     isActive={selectedProvider === 'all'}
                     onClick={() => setSelectedProvider('all')}
-                    label="All providers"
+                    label={m.chat_model_all_providers()}
                   >
                     <LayoutGrid className="size-5 shrink-0" aria-hidden />
                   </ProviderButton>
                 }
               />
               <TooltipContent side="inline-start" sideOffset={8}>
-                <p className="text-xs">All providers</p>
+                <p className="text-xs">{m.chat_model_all_providers()}</p>
               </TooltipContent>
             </Tooltip>
             {providersInOptions.map((providerId) => {
@@ -258,9 +258,9 @@ export function ModelSelectorPanel({
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search models…"
+                placeholder={m.chat_model_search_placeholder()}
                 className="w-full bg-transparent text-sm text-content-default placeholder:text-content-muted outline-none"
-                aria-label="Search models"
+                aria-label={m.chat_model_search_aria_label()}
               />
             </div>
             <div
@@ -271,7 +271,7 @@ export function ModelSelectorPanel({
             >
               {filteredModels.length === 0 ? (
                 <div className="py-10 text-center text-sm text-content-muted">
-                  No models match your search.
+                  {m.chat_model_no_search_results()}
                 </div>
               ) : (
                 <div className="space-y-1">
@@ -285,6 +285,7 @@ export function ModelSelectorPanel({
                         displayName={opt.name}
                         isSelected={value === opt.id}
                         onSelect={handleSelect}
+                        capabilityLabels={capabilityLabels}
                         style={{
                           contentVisibility: 'auto',
                           containIntrinsicSize: '0 60px',
@@ -307,6 +308,7 @@ interface ModelRowProps {
   displayName: string
   isSelected: boolean
   onSelect: (id: string) => void
+  capabilityLabels: Record<keyof typeof CAPABILITY_ICONS, string>
   style?: React.CSSProperties
 }
 
@@ -315,6 +317,7 @@ const ModelRow = React.memo(function ModelRow({
   displayName,
   isSelected,
   onSelect,
+  capabilityLabels,
   style,
 }: ModelRowProps) {
   const capabilities = CAPABILITY_ORDER.filter(
@@ -367,7 +370,7 @@ const ModelRow = React.memo(function ModelRow({
           <div className="flex items-center gap-1 shrink-0">
             {capabilities.map((key) => {
               const Icon = CAPABILITY_ICONS[key]
-              const label = CAPABILITY_LABELS[key]
+              const label = capabilityLabels[key]
               return Icon ? (
                 <Tooltip key={key}>
                   <TooltipTrigger

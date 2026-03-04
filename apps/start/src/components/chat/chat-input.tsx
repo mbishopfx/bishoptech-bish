@@ -16,6 +16,7 @@ import { ReasoningSelectorPanel } from './reasoning-selector-panel'
 import { useFileAttachments } from '../../hooks/chat/upload'
 import { parseChatApiError } from './chat-error-messages'
 import { getChatModeDefinition } from '@/lib/chat-modes'
+import { m } from '@/paraglide/messages.js'
 import {
   clearComposerDraft,
   getComposerDraftValue,
@@ -153,7 +154,7 @@ export function ChatInput() {
     : selectedModelId
   const modeLockedModelName =
     selectableModels.find((model) => model.id === studyModeDefinition.fixedModelId)
-      ?.name ?? 'GPT OSS 120B'
+      ?.name ?? m.chat_mode_study_default_model_name()
   const reasoningOptions = selectedModel?.reasoningEfforts ?? []
 
   const hasReasoningOptions = !isStudyModeEnabled && reasoningOptions.length > 0
@@ -167,7 +168,7 @@ export function ChatInput() {
           className={`${selectorTriggerClassName} inline-flex items-center gap-1.5 ltr:pr-3 rtl:pl-3`}
         >
           <BookOpen className="size-4 text-blue-500" aria-hidden />
-          <span className="pointer-events-none">Study Mode</span>
+          <span className="pointer-events-none">{m.chat_mode_study_label()}</span>
         </div>
       ) : (
         <ModelSelectorPanel
@@ -242,7 +243,7 @@ const ComposerTextarea = memo(function ComposerTextarea() {
     <PromptInputTextarea
       value={composerInput}
       onChange={(e) => setComposerDraft(e.target.value)}
-      aria-label="Message"
+      aria-label={m.chat_input_message_aria_label()}
       className="placeholder:text-content-default/65"
     />
   )

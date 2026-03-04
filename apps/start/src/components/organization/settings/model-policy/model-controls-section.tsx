@@ -1,6 +1,7 @@
 'use client'
 
 import { Form } from '@rift/ui/form'
+import { m } from '@/paraglide/messages.js'
 import type { PolicyPayload } from './types'
 import type { useProviderPolicy } from './use-provider-policy'
 
@@ -21,18 +22,18 @@ export function ModelControlsSection({
 }: ModelControlsSectionProps) {
   return (
     <Form
-      title="Model Controls"
-      description="Override model availability per model. Disabled by provider or compliance policy is shown in the description."
-      helpText="Changes apply immediately. You can override a provider-level denial per model here."
+      title={m.org_model_controls_title()}
+      description={m.org_model_controls_description()}
+      helpText={m.org_model_controls_help()}
       toggleSection={{
-        sectionTitle: 'Models',
+        sectionTitle: m.org_model_controls_section_title(),
         items: payload.models.map((model) => ({
           id: model.id,
           title: model.name,
           description: [
             model.id,
             model.deniedBy.length > 0
-              ? `Disabled by: ${model.deniedBy.join(', ')}`
+              ? m.org_model_controls_disabled_by({ sources: model.deniedBy.join(', ') })
               : null,
           ]
             .filter(Boolean)

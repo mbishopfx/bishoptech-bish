@@ -9,6 +9,7 @@ import {
   DropdownMenuTrigger,
 } from '@rift/ui/dropdown-menu'
 import { Plus } from 'lucide-react'
+import { m } from '@/paraglide/messages.js'
 
 export type PromptInputActionsMenuProps = {
   canAddMore: boolean
@@ -42,7 +43,7 @@ export function PromptInputActionsMenu({
             type="button"
             variant="ghost"
             size="icon"
-            aria-label="Open input actions"
+            aria-label={m.chat_prompt_actions_open_aria_label()}
             className="self-end size-8 rounded-full border border-transparent bg-transparent p-0 text-content-emphasis hover:bg-bg-inverted/5 active:bg-bg-inverted/10 focus-visible:ring-2 focus-visible:ring-border-emphasis/40"
           >
             <Plus className="size-[18px]" aria-hidden />
@@ -60,7 +61,9 @@ export function PromptInputActionsMenu({
           disabled={!canAddMore}
           onClick={onOpenFilePicker}
         >
-          {canAddMore ? 'Attach files' : 'Attach files (max reached)'}
+          {canAddMore
+            ? m.chat_prompt_actions_attach_files()
+            : m.chat_prompt_actions_attach_files_max_reached()}
         </DropdownMenuItem>
         <DropdownMenuCheckboxItem
           className="h-9 rounded-lg px-2 text-sm font-medium text-content-default focus:bg-bg-inverted/8"
@@ -69,15 +72,15 @@ export function PromptInputActionsMenu({
           onCheckedChange={onToggleStudyMode}
           title={
             isModeEnforced
-              ? 'Study Mode is enforced by your organization'
+              ? m.chat_mode_study_enforced_by_org_title()
               : !activeThreadId
-                ? 'Send your first message to create a thread, then you can toggle Study Mode.'
+                ? m.chat_mode_study_requires_thread_title()
                 : isStudyModeEnabled
-                  ? `Study Mode enabled (${modeLockedModelName} locked)`
-                  : 'Enable Study Mode'
+                  ? m.chat_mode_study_enabled_locked_title({ modelName: modeLockedModelName })
+                  : m.chat_mode_study_enable_title()
           }
         >
-          Study Mode
+          {m.chat_mode_study_label()}
         </DropdownMenuCheckboxItem>
       </DropdownMenuContent>
     </DropdownMenu>

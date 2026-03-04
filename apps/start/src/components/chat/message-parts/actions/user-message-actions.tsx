@@ -5,6 +5,7 @@ import {
   MessageActions,
 } from './message-actions-primitives'
 import { useMessageCopyAction } from './use-message-copy-action'
+import { m } from '@/paraglide/messages.js'
 
 const PENDING_REGEN_BRANCH_PREFIX = '__pending_regen_branch__'
 const PENDING_EDIT_BRANCH_PREFIX = '__pending_edit_branch__'
@@ -101,8 +102,8 @@ export function UserMessageActions({
           {isEditing ? (
             <>
               <MessageActionButton
-                tooltip="Cancel edit"
-                label="Cancel edit"
+                tooltip={m.chat_message_action_cancel_edit()}
+                label={m.chat_message_action_cancel_edit()}
                 className={actionButtonClassName}
                 size="default"
                 disabled={isSavingEdit}
@@ -111,8 +112,8 @@ export function UserMessageActions({
                 <XIcon className="size-4" />
               </MessageActionButton>
               <MessageActionButton
-                tooltip={isSavingEdit ? 'Saving' : 'Save edit'}
-                label={isSavingEdit ? 'Saving edit' : 'Save edit'}
+                tooltip={isSavingEdit ? m.chat_message_action_saving() : m.chat_message_action_save_edit()}
+                label={isSavingEdit ? m.chat_message_action_saving_edit() : m.chat_message_action_save_edit()}
                 variant="default"
                 className={actionButtonClassName}
                 size="default"
@@ -125,8 +126,8 @@ export function UserMessageActions({
           ) : (
             <>
               <MessageActionButton
-                tooltip="Regenerate response"
-                label="Regenerate response"
+                tooltip={m.chat_message_action_regenerate()}
+                label={m.chat_message_action_regenerate()}
                 className={actionButtonClassName}
                 size="default"
                 disabled={!canRegenerate}
@@ -138,8 +139,8 @@ export function UserMessageActions({
                 <RedoIcon className="size-4" />
               </MessageActionButton>
               <MessageActionButton
-                tooltip="Edit message"
-                label="Edit message"
+                tooltip={m.chat_message_action_edit_message()}
+                label={m.chat_message_action_edit_message()}
                 className={actionButtonClassName}
                 size="default"
                 disabled={!canEdit}
@@ -151,8 +152,8 @@ export function UserMessageActions({
                 <EditIcon className="size-4" />
               </MessageActionButton>
               <MessageActionButton
-                tooltip="Copy text"
-                label="Copy text"
+                tooltip={m.chat_message_action_copy_text()}
+                label={m.chat_message_action_copy_text()}
                 className={actionButtonClassName}
                 size="default"
                 onClick={() => {
@@ -167,8 +168,8 @@ export function UserMessageActions({
         {!isEditing && branchSelector && branchSelector.optionMessageIds.length > 1 ? (
           <div className="flex items-center gap-0 py-1">
             <MessageActionButton
-              tooltip="Previous branch version"
-              label="Previous branch version"
+              tooltip={m.chat_message_action_previous_branch_version()}
+              label={m.chat_message_action_previous_branch_version()}
               className={actionButtonClassName}
               size="default"
               disabled={!canNavigateBranches || previousIndex == null}
@@ -185,8 +186,8 @@ export function UserMessageActions({
               {selectedDisplayIndex}/{totalOptions}
             </div>
             <MessageActionButton
-              tooltip="Next branch version"
-              label="Next branch version"
+              tooltip={m.chat_message_action_next_branch_version()}
+              label={m.chat_message_action_next_branch_version()}
               className={actionButtonClassName}
               size="default"
               disabled={!canNavigateBranches || nextIndex == null}

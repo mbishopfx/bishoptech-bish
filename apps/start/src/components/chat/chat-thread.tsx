@@ -6,6 +6,7 @@ import { ChatMessage } from './chat-message'
 import { usePinToLastUserMessage } from '@rift/chat-scroll'
 import { ChatWelcomeScreen } from './chat-welcome-screen'
 import { setComposerDraft } from './composer-draft-store'
+import { m } from '@/paraglide/messages.js'
 
 export function ChatThread() {
   const { messages, status, activeThreadId, branchSelectorsByAnchorMessageId } =
@@ -140,7 +141,7 @@ export function ChatThread() {
       className="flex w-full flex-col"
       role="log"
       aria-live="polite"
-      aria-label="Chat messages"
+      aria-label={m.chat_thread_messages_aria_label()}
     >
       {messages.length === 0 && (
         <div className="relative w-full overflow-hidden pt-9">

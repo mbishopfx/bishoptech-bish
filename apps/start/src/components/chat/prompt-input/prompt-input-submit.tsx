@@ -6,6 +6,7 @@ import { cn } from '@rift/utils'
 import type { ChatStatus } from 'ai'
 import { AlertTriangle } from 'lucide-react'
 import type { ComponentProps } from 'react'
+import { m } from '@/paraglide/messages.js'
 
 export type PromptInputSubmitProps = ComponentProps<typeof Button> & {
   /** From useChat().status (ai.ChatStatus) */
@@ -13,18 +14,20 @@ export type PromptInputSubmitProps = ComponentProps<typeof Button> & {
 }
 
 /** Icon and label per status. */
-const statusConfig: Record<
+function getStatusConfig(): Record<
   ChatStatus,
   {
     icon: React.ComponentType<{ className?: string }>
     label: string
     shouldSpin: boolean
   }
-> = {
-  ready: { icon: SentIcon, label: 'Send message', shouldSpin: false },
-  submitted: { icon: LoadingIcon, label: 'Sending...', shouldSpin: true },
-  streaming: { icon: StopIcon, label: 'Stop generation', shouldSpin: false },
-  error: { icon: AlertTriangle, label: 'Error', shouldSpin: false },
+> {
+  return {
+    ready: { icon: SentIcon, label: m.chat_prompt_submit_send_label(), shouldSpin: false },
+    submitted: { icon: LoadingIcon, label: m.chat_prompt_submit_sending_label(), shouldSpin: true },
+    streaming: { icon: StopIcon, label: m.chat_prompt_submit_stop_label(), shouldSpin: false },
+    error: { icon: AlertTriangle, label: m.chat_prompt_submit_error_label(), shouldSpin: false },
+  }
 }
 
 /**
@@ -38,7 +41,7 @@ export function PromptInputSubmit({
   children,
   ...props
 }: PromptInputSubmitProps) {
-  const { icon: Icon, label, shouldSpin } = statusConfig[status]
+  const { icon: Icon, label, shouldSpin } = getStatusConfig()[status]
 
   return (
     <Button

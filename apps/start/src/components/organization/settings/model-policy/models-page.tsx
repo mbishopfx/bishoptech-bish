@@ -1,6 +1,7 @@
 'use client'
 
 import { ContentPage } from '@/components/layout'
+import { m } from '@/paraglide/messages.js'
 import { ProviderControlsSection } from './provider-controls-section'
 import { useProviderPolicy } from './use-provider-policy'
 
@@ -14,12 +15,12 @@ export function ModelsPage() {
 
   return (
     <ContentPage
-      title="Models"
-      description="Manage providers and models for your organization."
+      title={m.org_models_page_title()}
+      description={m.org_models_page_description()}
     >
       {loading && (
         <p className="text-sm text-content-muted" role="status">
-          Loading models…
+          {m.org_models_loading()}
         </p>
       )}
 

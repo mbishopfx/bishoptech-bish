@@ -19,6 +19,7 @@ import { useAppAuth } from '@/lib/auth/use-auth'
 import { Link, useLocation } from '@tanstack/react-router'
 import type { ComponentType } from 'react'
 import { useMemo } from 'react'
+import { m } from '@/paraglide/messages.js'
 import { SidebarChatThreadPreloader } from './sidebar/sidebar-chat-thread-preloader'
 
 const SIDEBAR_GROUPS_WIDTH = 64
@@ -55,8 +56,8 @@ export const AppSidebar: ComponentType = () => {
         <div className="flex flex-col items-center gap-3">
             <div className="pb-1 pt-2" />
             <SidebarGroupTooltip
-              name="Organization"
-              description="Organization-level settings and controls."
+              name={m.layout_organization_tooltip_name()}
+              description={m.layout_organization_tooltip_description()}
             >
               <Button
                 asChild
@@ -64,7 +65,7 @@ export const AppSidebar: ComponentType = () => {
                 size="iconSidebar"
                 data-active={currentArea === ORG_SETTINGS_AREA_KEY}
               >
-                <Link to={ORG_SETTINGS_HREF} aria-label="Organization settings">
+                <Link to={ORG_SETTINGS_HREF} aria-label={m.layout_organization_settings_aria_label()}>
                   <Avatar size="xs">
                     <AvatarFallback />
                   </Avatar>

@@ -3,6 +3,7 @@
 import { useMemo, type SVGProps } from 'react'
 import { useAppAuth } from '@/lib/auth/use-auth'
 import { motion } from 'motion/react'
+import { m } from '@/paraglide/messages.js'
 
 /**
  * Empty chat state shown before the first message is sent.
@@ -21,34 +22,33 @@ export function ChatWelcomeScreen({
     () => [
       {
         icon: <StudentIcon className="h-6 w-6 text-blue-600" />,
-        title: 'Tecnicas de estudio',
-        prompt: 'Como puedo mejorar mi memoria para recordar mejor?',
+        title: m.chat_welcome_suggestion_1_title(),
+        prompt: m.chat_welcome_suggestion_1_prompt(),
       },
       {
         icon: <IdeaIcon className="h-6 w-6 text-yellow-600" />,
-        title: 'Mejora tus prompts',
-        prompt:
-          'Ensename a estructurar mejor mis prompts para conseguir mejores resultados',
+        title: m.chat_welcome_suggestion_2_title(),
+        prompt: m.chat_welcome_suggestion_2_prompt(),
       },
       {
         icon: <BrainPersonIcon className="h-6 w-6 text-violet-600" />,
-        title: 'Pensamiento critico',
-        prompt: 'Como puedo analizar mejor la informacion que leo?',
+        title: m.chat_welcome_suggestion_3_title(),
+        prompt: m.chat_welcome_suggestion_3_prompt(),
       },
       {
         icon: <DeskIcon className="h-6 w-6 text-green-600" />,
-        title: 'Organizacion personal',
-        prompt: 'Ayudame a crear un plan de estudio efectivo',
+        title: m.chat_welcome_suggestion_4_title(),
+        prompt: m.chat_welcome_suggestion_4_prompt(),
       },
       {
         icon: <LampIcon className="h-6 w-6 text-orange-600" />,
-        title: 'Resolucion creativa',
-        prompt: 'Como puedo desarrollar mi creatividad para proyectos?',
+        title: m.chat_welcome_suggestion_5_title(),
+        prompt: m.chat_welcome_suggestion_5_prompt(),
       },
       {
         icon: <GrowthIcon className="h-6 w-6 text-emerald-600" />,
-        title: 'Crecimiento personal',
-        prompt: 'Que habitos me ayudan a ser un mejor estudiante?',
+        title: m.chat_welcome_suggestion_6_title(),
+        prompt: m.chat_welcome_suggestion_6_prompt(),
       },
     ],
     [],
@@ -62,7 +62,7 @@ export function ChatWelcomeScreen({
             className="mb-4 flex items-center justify-center text-4xl font-semibold text-content-emphasis"
             layout
           >
-            Hola,
+            {m.chat_welcome_greeting_prefix()}
             {displayName ? (
               <span className="relative ml-2 inline-block">
                 <motion.span
@@ -132,7 +132,7 @@ export function ChatWelcomeScreen({
         </div>
 
         <h2 className="mb-8 text-3xl font-normal text-content-muted">
-          Que quieres hacer hoy?
+          {m.chat_welcome_subtitle()}
         </h2>
 
         <div className="hidden gap-3 text-start md:grid md:grid-cols-2">

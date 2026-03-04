@@ -6,6 +6,7 @@ import { AlertTriangle, ChevronDown, X } from 'lucide-react'
 import { cn, copyToClipboard } from '@rift/utils'
 import type { HTMLAttributes } from 'react'
 import { Button } from '@rift/ui/button'
+import { m } from '@/paraglide/messages.js'
 
 export type PromptInputErrorProps = Omit<HTMLAttributes<HTMLDivElement>, 'children'> & {
   error?: string | null
@@ -66,7 +67,7 @@ export function PromptInputError({
                 variant="dangerLight"
                 size="icon"
                 onClick={() => setOpen((o) => !o)}
-                title="Show TraceID"
+                title={m.chat_prompt_error_show_trace_id_title()}
               >
                 <ChevronDown className={cn('size-4', open && 'rotate-180')} aria-hidden />
               </Button>
@@ -78,7 +79,7 @@ export function PromptInputError({
             variant="dangerLight"
             size="icon"
             onClick={onDismiss}
-            title="Dismiss error"
+            title={m.chat_prompt_error_dismiss_title()}
           >
             <X className="size-4" aria-hidden />
           </Button>
@@ -86,7 +87,7 @@ export function PromptInputError({
       </div>
       {open && traceId && (
         <div className="px-3 pb-3 pt-1 border-t border-content-error/20">
-          <div className="text-sm font-medium opacity-90 mb-0.5">TraceID</div>
+          <div className="text-sm font-medium opacity-90 mb-0.5">{m.chat_prompt_error_trace_id_label()}</div>
           <button
             type="button"
             onClick={() => traceId && copyToClipboard(traceId)}

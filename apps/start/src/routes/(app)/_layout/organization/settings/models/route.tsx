@@ -1,6 +1,7 @@
 import { createFileRoute, Outlet } from '@tanstack/react-router'
 import { ContentPage } from '@/components/layout'
 import { useAppAuth } from '@/lib/auth/use-auth'
+import { m } from '@/paraglide/messages.js'
 
 /**
  * Layout for organization settings models: renders child routes (index or
@@ -19,12 +20,11 @@ function ModelsLayoutPage() {
   if (!activeOrganizationId) {
     return (
       <ContentPage
-        title="Models"
-        description="Switch to an organization to manage organization-level provider and model policies."
+        title={m.org_models_page_title()}
+        description={m.org_route_select_org_provider_models_description()}
       >
         <p className="text-sm text-content-muted">
-          Select an organization in the sidebar or switch context to manage
-          policies.
+          {m.org_route_select_org_body()}
         </p>
       </ContentPage>
     )

@@ -20,6 +20,7 @@ import {
   TableBlockFullscreenButton,
   TableBlockTable,
 } from '../components/table-block'
+import { m } from '@/paraglide/messages.js'
 
 const LANGUAGE_CLASS_PREFIX = 'language-'
 const FALLBACK_LANGUAGE: BundledLanguage = 'markdown'
@@ -60,7 +61,7 @@ function extractLanguage(className?: string): BundledLanguage {
 }
 
 function toLanguageLabel(language: string): string {
-  if (!language || language === FALLBACK_LANGUAGE) return 'text'
+  if (!language || language === FALLBACK_LANGUAGE) return m.chat_code_block_language_text_fallback()
   return language
 }
 
@@ -91,19 +92,19 @@ const Code: NonNullable<Components['code']> = ({
         </CodeBlockTitle>
         <CodeBlockActions>
           <CodeBlockLineWrapButton
-            aria-label="Toggle line wrap"
+            aria-label={m.chat_code_block_toggle_line_wrap_aria_label()}
             className="h-6 w-6 rounded-md border border-transparent p-0 text-content-subtle transition-colors duration-100 hover:bg-bg-muted hover:text-content-default focus-visible:border-border-default focus-visible:ring-0"
             size="icon"
             variant="ghost"
           />
           <CodeBlockFullscreenButton
-            aria-label="Toggle fullscreen"
+            aria-label={m.chat_code_block_toggle_fullscreen_aria_label()}
             className="h-6 w-6 rounded-md border border-transparent p-0 text-content-subtle transition-colors duration-100 hover:bg-bg-muted hover:text-content-default focus-visible:border-border-default focus-visible:ring-0"
             size="icon"
             variant="ghost"
           />
           <CodeBlockCopyButton
-            aria-label="Copy code"
+            aria-label={m.chat_code_block_copy_code_aria_label()}
             className="h-6 w-6 rounded-md border border-transparent p-0 text-content-subtle transition-colors duration-100 hover:bg-bg-muted hover:text-content-default focus-visible:border-border-default focus-visible:ring-0"
             variant="ghost"
           />
@@ -118,11 +119,11 @@ const Table: NonNullable<Components['table']> = ({
   className,
   ...props
 }: HTMLAttributes<HTMLTableElement> & { children?: ReactNode }) => (
-  <TableBlock className="my-4" label="Markdown table">
+  <TableBlock className="my-4" label={m.chat_table_block_label()}>
     <TableBlockFloatingControls>
-      <TableBlockFullscreenButton aria-label="Toggle table fullscreen" />
-      <TableBlockCopyButton aria-label="Copy table as tab-separated text" />
-      <TableBlockDownloadButton aria-label="Download table as CSV" />
+      <TableBlockFullscreenButton aria-label={m.chat_table_block_toggle_fullscreen_aria_label()} />
+      <TableBlockCopyButton aria-label={m.chat_table_block_copy_tsv_aria_label()} />
+      <TableBlockDownloadButton aria-label={m.chat_table_block_download_csv_aria_label()} />
     </TableBlockFloatingControls>
     <TableBlockTable className={cn(className)} {...props}>
       {children}

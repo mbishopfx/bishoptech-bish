@@ -2,6 +2,7 @@
 
 import { Form } from '@rift/ui/form'
 import { canUseOrganizationProviderKeys } from '@/utils/app-feature-flags'
+import { m } from '@/paraglide/messages.js'
 import type { PolicyPayload } from './types'
 import type { useProviderPolicy } from './use-provider-policy'
 
@@ -24,16 +25,16 @@ export function ComplianceFlagsSection({
 
   return (
     <Form
-      title="Compliance Flags"
-      description="Organization-level compliance toggles. Denied catalog models are not available for use."
-      helpText="Changes apply immediately. Toggling off a flag re-allows previously denied models."
+      title={m.org_compliance_flags_title()}
+      description={m.org_compliance_flags_description()}
+      helpText={m.org_compliance_flags_help()}
       toggleSection={{
-        sectionTitle: 'Flags',
+        sectionTitle: m.org_compliance_flags_section_title(),
         items: [
           {
             id: 'require_zdr',
-            title: 'Require ZDR (Zero Data Retention)',
-            description: 'Only allow models that do not retain training data.',
+            title: m.org_compliance_flag_require_zdr_title(),
+            description: m.org_compliance_flag_require_zdr_description(),
             checked: Boolean(payload.policy.complianceFlags.require_zdr),
             onCheckedChange: (enabled) =>
               void update({
@@ -45,9 +46,8 @@ export function ComplianceFlagsSection({
           },
           {
             id: 'require_org_provider_key',
-            title: 'Require organization provider key',
-            description:
-              'Only allow models from providers that have an active org API key configured.',
+            title: m.org_compliance_flag_require_org_provider_key_title(),
+            description: m.org_compliance_flag_require_org_provider_key_description(),
             checked: Boolean(
               payload.policy.complianceFlags.require_org_provider_key,
             ),
@@ -61,9 +61,8 @@ export function ComplianceFlagsSection({
           },
           {
             id: 'enforce_study_mode',
-            title: 'Enforce Study Mode',
-            description:
-              'Force all organization chat requests to run in Study Mode and lock the mode toggle.',
+            title: m.org_compliance_flag_enforce_study_mode_title(),
+            description: m.org_compliance_flag_enforce_study_mode_description(),
             checked: payload.policy.enforcedModeId === 'study',
             onCheckedChange: (enabled) =>
               void update({

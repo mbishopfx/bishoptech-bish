@@ -8,6 +8,7 @@ import { forwardRef, useEffect, useState, type HTMLAttributes } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { Streamdown } from 'streamdown'
 import { useRightSidebar } from '@/components/layout/right-sidebar-context'
+import { m } from '@/paraglide/messages.js'
 import { streamdownComponents } from '../renderers/streamdown-components'
 
 type ReasoningTriggerProps = {
@@ -24,9 +25,7 @@ const infinity =
 const circleB =
   'M 12 16 C 14.21 16 16 14.21 16 12 C 16 9.79 14.21 8 12 8 C 9.79 8 8 9.79 8 12 C 8 14.21 9.79 16 12 16 Z'
 
-const words = ['Thinking', 'Moonwalking', 'Planning', 'Refining']
 const fontWeights = { medium: "'wght' 500" } as const
-const finishedWord = 'Finished reasoning'
 
 /**
  * Matches the markdown rendering stack used for assistant text parts so reasoning
@@ -51,13 +50,13 @@ function ReasoningPanel({
       <div className="mb-2 flex shrink-0 items-center justify-between gap-2 border-b border-border-muted px-3 py-2">
         <span className="inline-flex items-center gap-2 text-lg font-semibold text-content-emphasis">
           <ReasoningIcon className="size-4 shrink-0" />
-          Reasoning
+          {m.chat_reasoning_label()}
         </span>
         <Button
           variant="ghost"
           size="icon"
           onClick={onClose}
-          aria-label="Close sidebar"
+          aria-label={m.chat_reasoning_close_sidebar_aria_label()}
           className="size-8 shrink-0"
         >
           <X className="size-4" />
@@ -88,6 +87,13 @@ const ThinkingIndicator = forwardRef<
   HTMLAttributes<HTMLDivElement> & { isStreaming: boolean }
 >(({ className, isStreaming, ...props }, ref) => {
   const [index, setIndex] = useState(0)
+  const words = [
+    m.chat_reasoning_thinking_word_1(),
+    m.chat_reasoning_thinking_word_2(),
+    m.chat_reasoning_thinking_word_3(),
+    m.chat_reasoning_thinking_word_4(),
+  ]
+  const finishedWord = m.chat_reasoning_finished()
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -206,7 +212,11 @@ export function ReasoningTrigger({
         )
       }
       className="group flex w-full cursor-pointer items-center justify-start text-start transition-colors"
-      aria-label={isStreaming ? 'Show reasoning (streaming)' : 'Show reasoning'}
+      aria-label={
+        isStreaming
+          ? m.chat_reasoning_show_streaming_aria_label()
+          : m.chat_reasoning_show_aria_label()
+      }
     >
       <ThinkingIndicator
         isStreaming={isStreaming}

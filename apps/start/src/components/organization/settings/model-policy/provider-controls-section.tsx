@@ -8,6 +8,7 @@ import type { CatalogProviderId } from '@/lib/ai-catalog/provider-tools'
 import { PROVIDER_META, PROVIDER_NAMES } from './provider-constants'
 import type { PolicyPayload } from './types'
 import type { useProviderPolicy } from './use-provider-policy'
+import { m } from '@/paraglide/messages.js'
 
 type ProviderControlsSectionProps = {
   payload: PolicyPayload
@@ -38,9 +39,9 @@ export function ProviderControlsSection({
 
   return (
     <Form
-      title="Providers"
-      description="Enable or disable AI providers for your organization."
-      helpText="Changes apply immediately. Disabled providers and their models are unavailable to the organization."
+      title={m.org_provider_controls_title()}
+      description={m.org_provider_controls_description()}
+      helpText={m.org_provider_controls_help()}
       toggleSection={{
         rowHover: true,
         items: payload.providers.map((provider) => {
@@ -63,9 +64,9 @@ export function ProviderControlsSection({
                 to="/organization/settings/models/$providerId"
                 params={{ providerId: provider.id }}
                 className="inline-flex items-center gap-1 text-sm font-medium text-accent-default underline underline-offset-2 hover:text-accent-default/80"
-                aria-label={`View all models for ${name}`}
+                aria-label={m.org_provider_controls_view_all_models_for_provider_aria_label({ providerName: name })}
               >
-                View all models
+                {m.org_provider_controls_view_all_models()}
               </Link>
             ),
             checked: !provider.disabled,
