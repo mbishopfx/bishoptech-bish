@@ -105,6 +105,18 @@ export interface FormProps extends Omit<
    * Prefer passing ReactNode (e.g. JSX) for dynamic or user-derived content.
    */
   helpText?: string | ReactNode;
+  /** Optional custom content rendered to the right of the title/description header row. */
+  headerSlot?: ReactNode;
+  /** Optional class override for the header row container. */
+  headerClassName?: string;
+  /**
+   * Optional custom content area rendered in the form body.
+   * Useful for non-input controls (for example, avatar upload UI) while
+   * preserving the same settings card structure.
+   */
+  contentSlot?: ReactNode;
+  /** Optional additional classes for the form content container (`p-6` section). */
+  contentClassName?: string;
   /** Submit button label */
   buttonText?: string;
   /** Optional secondary button rendered to the left of the submit button */
@@ -146,6 +158,10 @@ export function Form({
   selectConfig,
   toggleSection,
   helpText,
+  headerSlot,
+  headerClassName,
+  contentSlot,
+  contentClassName,
   buttonText = "Save Changes",
   secondaryButtonText,
   onSecondaryClick,
@@ -237,16 +253,31 @@ export function Form({
       aria-busy={saving}
       data-state={saving ? "busy" : "idle"}
     >
-      <div className="relative flex flex-col space-y-6 p-6">
-        <div className="flex flex-col space-y-1">
-          <h2
-            id={sectionTitleId}
-            className="text-base font-semibold text-content-emphasis text-xl"
-          >
-            {title}
-          </h2>
-          <p className="text-sm text-content-subtle">{description}</p>
+      <div
+        className={cn(
+          "relative flex flex-col space-y-6 p-6",
+          contentClassName,
+        )}
+      >
+        <div
+          className={cn(
+            "flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between",
+            headerClassName,
+          )}
+        >
+          <div className="flex flex-col space-y-1">
+            <h2
+              id={sectionTitleId}
+              className="text-base font-semibold text-content-emphasis text-xl"
+            >
+              {title}
+            </h2>
+            <p className="text-sm text-content-subtle">{description}</p>
+          </div>
+          {headerSlot != null ? <div className="shrink-0">{headerSlot}</div> : null}
         </div>
+
+        {contentSlot != null ? contentSlot : null}
 
         {hasSelect ? (
           <Select value={value} onValueChange={(v) => setValue(v ?? "")}>
