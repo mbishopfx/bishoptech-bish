@@ -23,6 +23,7 @@
     "@ai-sdk/openai": "^3.0.0",
     "@ai-sdk/react": "^3.0.0",
     "@ai-sdk/xai": "^3.0.57",
+    "@better-auth/core": "1.5.2",
     "@elysiajs/eden": "^1.4.8",
     "@json-render/core": "^0.11.0",
     "@json-render/react": "^0.11.0",
@@ -41,9 +42,8 @@
     "@tanstack/react-router-ssr-query": "^1.131.7",
     "@tanstack/react-start": "^1.132.0",
     "@tanstack/router-plugin": "^1.132.0",
-    "@workos-inc/node": "^8.6.0",
-    "@workos/authkit-tanstack-react-start": "^0.5.0",
     "ai": "^6.0.97",
+    "better-auth": "^1.5.2",
     "effect": "4.0.0-beta.21",
     "lucide-react": "^0.561.0",
     "motion": "^12.34.4",
@@ -58,6 +58,7 @@
     "zod": "^3.24.0"
   },
   "devDependencies": {
+    "@better-auth/cli": "^1.4.21",
     "@tanstack/devtools-vite": "^0.3.11",
     "@tanstack/eslint-config": "^0.3.0",
     "@tanstack/router-cli": "^1.162.2",

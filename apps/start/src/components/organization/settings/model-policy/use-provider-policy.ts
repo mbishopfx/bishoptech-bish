@@ -11,7 +11,7 @@ import type { ProviderPolicyUpdateAction, PolicyPayload } from './types'
  */
 function buildPolicyPayload(input: {
   policyRow?: {
-    orgWorkosId?: string
+    organizationId?: string
     disabledProviderIds?: readonly string[]
     disabledModelIds?: readonly string[]
     complianceFlags?: Record<string, boolean>
@@ -37,7 +37,7 @@ function buildPolicyPayload(input: {
       const decision = evaluateModelAvailability({
         model,
         policy: {
-          orgWorkosId: input.policyRow?.orgWorkosId ?? 'unknown-org',
+          organizationId: input.policyRow?.organizationId ?? 'unknown-org',
           disabledProviderIds: policy.disabledProviderIds,
           disabledModelIds: policy.disabledModelIds,
           complianceFlags: policy.complianceFlags,

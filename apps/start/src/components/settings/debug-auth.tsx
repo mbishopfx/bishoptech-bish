@@ -1,4 +1,4 @@
-import { useAuth } from '@workos/authkit-tanstack-react-start/client'
+import { useAppAuth } from '@/lib/auth/use-auth'
 
 type DebugAuthProps = {
   signInUrl: string
@@ -6,7 +6,7 @@ type DebugAuthProps = {
 }
 
 export function DebugAuth({ signInUrl, signUpUrl }: DebugAuthProps) {
-  const { user, loading, signOut } = useAuth()
+  const { user, loading, signOut } = useAppAuth()
 
   if (loading) {
     return <p className="text-sm text-content-muted">Loading auth state…</p>

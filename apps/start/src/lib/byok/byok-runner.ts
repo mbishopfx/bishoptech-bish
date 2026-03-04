@@ -24,8 +24,8 @@ export async function runUpdateByok(data: unknown): Promise<ByokUpdateResult> {
     )
     const resolver = yield* WorkOsOrgResolverService
     const executor = yield* ByokExecutorService
-    const orgWorkosId = yield* resolver.getOrgWorkosId()
-    return yield* executor.executeUpdate(orgWorkosId, validated)
+    const organizationId = yield* resolver.getOrgWorkosId()
+    return yield* executor.executeUpdate(organizationId, validated)
   })
   return ByokRuntime.run(program)
 }

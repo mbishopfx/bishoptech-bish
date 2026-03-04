@@ -1,6 +1,6 @@
 import { createFileRoute, Outlet } from '@tanstack/react-router'
-import { getAuth } from '@workos/authkit-tanstack-react-start'
 import { ContentPage } from '@/components/layout'
+import { useAppAuth } from '@/lib/auth/use-auth'
 
 /**
  * Layout for organization settings models: renders child routes (index or
@@ -10,21 +10,13 @@ import { ContentPage } from '@/components/layout'
 export const Route = createFileRoute(
   '/(app)/_layout/organization/settings/models',
 )({
-  loader: async () => {
-    const auth = await getAuth()
-    const organizationId =
-      'organizationId' in auth && typeof auth.organizationId === 'string'
-        ? auth.organizationId
-        : null
-    return { orgWorkosId: organizationId }
-  },
   component: ModelsLayoutPage,
 })
 
 function ModelsLayoutPage() {
-  const { orgWorkosId } = Route.useLoaderData()
+  const { organizationId } = useAppAuth()
 
-  if (!orgWorkosId) {
+  if (!organizationId) {
     return (
       <ContentPage
         title="Models"

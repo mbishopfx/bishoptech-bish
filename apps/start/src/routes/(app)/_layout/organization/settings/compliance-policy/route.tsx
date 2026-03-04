@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { getAuth } from '@workos/authkit-tanstack-react-start'
 import { ContentPage } from '@/components/layout'
 import { CompliancePolicyPage } from '@/components/organization/settings/compliance-policy'
+import { useAppAuth } from '@/lib/auth/use-auth'
 
 /**
  * Organization settings: compliance and policy configuration.
@@ -10,21 +10,13 @@ import { CompliancePolicyPage } from '@/components/organization/settings/complia
 export const Route = createFileRoute(
   '/(app)/_layout/organization/settings/compliance-policy',
 )({
-  loader: async () => {
-    const auth = await getAuth()
-    const organizationId =
-      'organizationId' in auth && typeof auth.organizationId === 'string'
-        ? auth.organizationId
-        : null
-    return { orgWorkosId: organizationId }
-  },
   component: CompliancePolicyRoutePage,
 })
 
 function CompliancePolicyRoutePage() {
-  const { orgWorkosId } = Route.useLoaderData()
+  const { organizationId } = useAppAuth()
 
-  if (!orgWorkosId) {
+  if (!organizationId) {
     return (
       <ContentPage
         title="Compliance & Policy"

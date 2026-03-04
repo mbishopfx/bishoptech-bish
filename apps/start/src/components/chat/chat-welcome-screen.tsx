@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, type SVGProps } from 'react'
-import { useAuth } from '@workos/authkit-tanstack-react-start/client'
+import { useAppAuth } from '@/lib/auth/use-auth'
 import { motion } from 'motion/react'
 
 /**
@@ -14,7 +14,7 @@ export function ChatWelcomeScreen({
   onSuggestionClick: (prompt: string) => void
   disabled: boolean
 }) {
-  const { user } = useAuth()
+  const { user } = useAppAuth()
   const firstName = user?.firstName ?? null
   const lastName = user?.lastName ?? null
   const displayName = firstName || lastName

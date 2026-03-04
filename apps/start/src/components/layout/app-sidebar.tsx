@@ -13,7 +13,7 @@ import { UserProfileAvatar } from '@/components/layout/user-profile-avatar'
 import { Avatar, AvatarFallback } from '@rift/ui/avatar'
 import { Button } from '@rift/ui/button'
 import { SidebarGroupTooltip } from '@rift/ui/tooltip'
-import { useAuth } from '@workos/authkit-tanstack-react-start/client'
+import { useAppAuth } from '@/lib/auth/use-auth'
 import { Link, useLocation } from '@tanstack/react-router'
 import type { ComponentType } from 'react'
 import { useMemo } from 'react'
@@ -25,7 +25,7 @@ const SIDEBAR_WIDTH = SIDEBAR_GROUPS_WIDTH + SIDEBAR_AREAS_WIDTH
 
 export const AppSidebar: ComponentType = () => {
   const { pathname } = useLocation()
-  const { user } = useAuth()
+  const { user } = useAppAuth()
   const currentArea = getCurrentArea(pathname)
   const showAreaPanel = currentArea !== null
 

@@ -16,7 +16,7 @@ function now() {
  * This keeps policy consumers free from null/undefined branching.
  */
 function fromRow(row: {
-  readonly orgWorkosId: string
+  readonly organizationId: string
   readonly disabledProviderIds?: readonly string[]
   readonly disabledModelIds?: readonly string[]
   readonly complianceFlags?: Record<string, boolean>
@@ -42,7 +42,7 @@ function fromRow(row: {
     : EMPTY_ORG_PROVIDER_KEY_STATUS
 
   return {
-    orgWorkosId: row.orgWorkosId,
+    organizationId: row.organizationId,
     disabledProviderIds: row.disabledProviderIds ?? [],
     disabledModelIds: row.disabledModelIds ?? [],
     complianceFlags: row.complianceFlags ?? {},
@@ -54,7 +54,7 @@ function fromRow(row: {
 
 /** Loads the latest policy snapshot for an org. */
 export async function getOrgAiPolicy(
-  orgWorkosId: string,
+  organizationId: string,
 ): Promise<OrgAiPolicy | undefined> {
   const db = getZeroDatabase()
   if (!db) {
@@ -62,7 +62,7 @@ export async function getOrgAiPolicy(
   }
 
   const row = await db.run(
-    zql.orgAiPolicy.where('orgWorkosId', orgWorkosId).one(),
+    zql.orgAiPolicy.where('organizationId', organizationId).one(),
   )
 
   if (!row) return undefined
@@ -73,7 +73,7 @@ export async function getOrgAiPolicy(
  * Inserts or updates org policy. No versioning; policy is overwritten on each update.
  */
 export async function upsertOrgAiPolicy(input: {
-  readonly orgWorkosId: string
+  readonly organizationId: string
   readonly disabledProviderIds: readonly string[]
   readonly disabledModelIds: readonly string[]
   readonly complianceFlags: Record<string, boolean>
@@ -86,7 +86,7 @@ export async function upsertOrgAiPolicy(input: {
   }
 
   const existing = await db.run(
-    zql.orgAiPolicy.where('orgWorkosId', input.orgWorkosId).one(),
+    zql.orgAiPolicy.where('organizationId', input.organizationId).one(),
   )
 
   const updatedAt = now()
@@ -96,7 +96,7 @@ export async function upsertOrgAiPolicy(input: {
     await db.transaction(async (tx) => {
       await tx.mutate.orgAiPolicy.insert({
         id: insertedId,
-        orgWorkosId: input.orgWorkosId,
+        organizationId: input.organizationId,
         disabledProviderIds: [...input.disabledProviderIds],
         disabledModelIds: [...input.disabledModelIds],
         complianceFlags: input.complianceFlags,
@@ -107,7 +107,7 @@ export async function upsertOrgAiPolicy(input: {
     })
 
     return {
-      orgWorkosId: input.orgWorkosId,
+      organizationId: input.organizationId,
       disabledProviderIds: [...input.disabledProviderIds],
       disabledModelIds: [...input.disabledModelIds],
       complianceFlags: input.complianceFlags,
@@ -130,7 +130,7 @@ export async function upsertOrgAiPolicy(input: {
   })
 
   return {
-    orgWorkosId: input.orgWorkosId,
+    organizationId: input.organizationId,
     disabledProviderIds: [...input.disabledProviderIds],
     disabledModelIds: [...input.disabledModelIds],
     complianceFlags: input.complianceFlags,

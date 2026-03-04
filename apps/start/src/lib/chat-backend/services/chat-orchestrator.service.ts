@@ -47,7 +47,7 @@ export type ChatOrchestratorServiceShape = {
   readonly streamChat: (input: {
     readonly userId: string
     readonly threadId: string
-    readonly orgWorkosId?: string
+    readonly organizationId?: string
     readonly orgPolicy?: OrgAiPolicy
     readonly skipProviderKeyResolution?: boolean
     readonly requestId: string
@@ -93,7 +93,7 @@ export class ChatOrchestratorService extends ServiceMap.Service<
       )(({
         userId,
         threadId,
-        orgWorkosId,
+        organizationId,
         orgPolicy,
         skipProviderKeyResolution,
         requestId,
@@ -176,7 +176,7 @@ export class ChatOrchestratorService extends ServiceMap.Service<
           // persistence, stream runtime, and observability metadata.
           const modelResolution = yield* modelPolicy.resolveThreadModel({
             threadId,
-            orgWorkosId,
+            organizationId,
             orgPolicy,
             threadModel: threadAccess.model,
             threadReasoningEffort: threadAccess.reasoningEffort,

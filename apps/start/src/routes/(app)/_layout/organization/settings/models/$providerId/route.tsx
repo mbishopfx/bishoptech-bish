@@ -1,8 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { getAuth } from '@workos/authkit-tanstack-react-start'
 import { ProviderModelsPage } from '@/components/organization/settings/model-policy/provider-models-page'
 import { useProviderPolicy } from '@/components/organization/settings/model-policy/use-provider-policy'
 import { ContentPage } from '@/components/layout'
+import { useAppAuth } from '@/lib/auth/use-auth'
 
 /**
  * Organization settings: models for a single provider (in-depth view).
@@ -11,23 +11,15 @@ import { ContentPage } from '@/components/layout'
 export const Route = createFileRoute(
   '/(app)/_layout/organization/settings/models/$providerId',
 )({
-  loader: async () => {
-    const auth = await getAuth()
-    const organizationId =
-      'organizationId' in auth && typeof auth.organizationId === 'string'
-        ? auth.organizationId
-        : null
-    return { orgWorkosId: organizationId }
-  },
   component: ProviderModelsRoutePage,
 })
 
 function ProviderModelsRoutePage() {
-  const { orgWorkosId } = Route.useLoaderData()
+  const { organizationId } = useAppAuth()
   const { providerId } = Route.useParams()
   const { payload, loading, error, updating, update } = useProviderPolicy()
 
-  if (!orgWorkosId) {
+  if (!organizationId) {
     return (
       <ContentPage
         title="Models"

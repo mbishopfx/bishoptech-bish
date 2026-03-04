@@ -1,5 +1,4 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { getSignInUrl, getSignUpUrl } from '@workos/authkit-tanstack-react-start'
 import { Form } from '@rift/ui/form'
 import { useEffect, useState } from 'react'
 import { ContentPage } from '@/components/layout'
@@ -11,16 +10,12 @@ const DEBUG_SIZE_KEY = 'rift-debug-auth-size'
 const WEBSITE_PREFIX = 'https://www.'
 
 export const Route = createFileRoute('/(app)/_layout/settings/debug-auth')({
-  loader: async () => {
-    const signInUrl = await getSignInUrl()
-    const signUpUrl = await getSignUpUrl()
-    return { signInUrl, signUpUrl }
-  },
   component: DebugAuthPage,
 })
 
 function DebugAuthPage() {
-  const { signInUrl, signUpUrl } = Route.useLoaderData()
+  const signInUrl = '/auth/sign-in'
+  const signUpUrl = '/auth/sign-up'
   const [defaultLabel, setDefaultLabel] = useState('')
   const [defaultWebsite, setDefaultWebsite] = useState('')
   const [defaultSize, setDefaultSize] = useState('medium')

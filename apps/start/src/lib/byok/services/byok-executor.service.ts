@@ -26,7 +26,7 @@ import {
  */
 export type ByokExecutorServiceShape = {
   readonly executeUpdate: (
-    orgWorkosId: string,
+    organizationId: string,
     action: UpdateByokPayload,
   ) => Effect.Effect<
     ByokUpdateResult,
@@ -44,7 +44,7 @@ export class ByokExecutorService extends ServiceMap.Service<
   static readonly layer = Layer.succeed(this, {
     executeUpdate: Effect.fn('ByokExecutorService.executeUpdate')(
       (
-        orgWorkosId: string,
+        organizationId: string,
         action: UpdateByokPayload,
       ): ExecuteUpdateEffect =>
         pipe(
@@ -57,7 +57,7 @@ export class ByokExecutorService extends ServiceMap.Service<
               ByokFeatureDisabledError | ByokPersistenceError
             > =>
               enabled
-                ? tryGetPolicy(orgWorkosId)
+                ? tryGetPolicy(organizationId)
                 : Effect.fail(
                     new ByokFeatureDisabledError({
                       message:
@@ -68,9 +68,9 @@ export class ByokExecutorService extends ServiceMap.Service<
           Effect.flatMap((existing: ExistingPolicy) => {
             switch (action.action) {
               case 'set_provider_api_key':
-                return runSet(orgWorkosId, existing, action)
+                return runSet(organizationId, existing, action)
               case 'remove_provider_api_key':
-                return runRemove(orgWorkosId, existing, action)
+                return runRemove(organizationId, existing, action)
             }
           }),
         ),
@@ -92,14 +92,14 @@ const toPersistenceError = (cause: unknown): ByokPersistenceError =>
       }),
   )
 
-const tryGetPolicy = (orgWorkosId: string) =>
+const tryGetPolicy = (organizationId: string) =>
   Effect.tryPromise({
-    try: () => getOrgAiPolicy(orgWorkosId),
+    try: () => getOrgAiPolicy(organizationId),
     catch: toPersistenceError,
   })
 
 const tryUpsertKey = (params: {
-  orgWorkosId: string
+  organizationId: string
   providerId: 'openai' | 'anthropic'
   apiKey: string
 }) =>
@@ -109,7 +109,7 @@ const tryUpsertKey = (params: {
   })
 
 const tryDeleteKey = (params: {
-  orgWorkosId: string
+  organizationId: string
   providerId: 'openai' | 'anthropic'
 }) =>
   Effect.tryPromise({
@@ -117,15 +117,15 @@ const tryDeleteKey = (params: {
     catch: toPersistenceError,
   })
 
-const tryReadStatus = (orgWorkosId: string) =>
+const tryReadStatus = (organizationId: string) =>
   Effect.tryPromise({
-    try: () => readOrgProviderApiKeyStatus(orgWorkosId),
+    try: () => readOrgProviderApiKeyStatus(organizationId),
     catch: toPersistenceError,
   })
 
 /** Runs set_provider_api_key branch. */
 const runSet = (
-  orgWorkosId: string,
+  organizationId: string,
   existing: Awaited<ReturnType<typeof getOrgAiPolicy>>,
   action: Extract<UpdateByokPayload, { action: 'set_provider_api_key' }>,
 ): Effect.Effect<
@@ -142,12 +142,12 @@ const runSet = (
     Option.getOrElse(() => true),
   )
   const baselineEffect = needSyncBaseline
-    ? tryReadStatus(orgWorkosId)
+    ? tryReadStatus(organizationId)
     : Effect.succeed(providerKeyStatus.providers)
 
   return pipe(
     tryUpsertKey({
-      orgWorkosId,
+      organizationId,
       providerId: action.providerId,
       apiKey: action.apiKey,
     }),
@@ -157,7 +157,7 @@ const runSet = (
         Effect.tryPromise({
           try: () =>
             upsertOrgAiPolicy({
-              orgWorkosId,
+              organizationId,
               disabledProviderIds: existing?.disabledProviderIds ?? [],
               disabledModelIds: existing?.disabledModelIds ?? [],
               complianceFlags: existing?.complianceFlags ?? {},
@@ -182,7 +182,7 @@ const runSet = (
 
 /** Runs remove_provider_api_key branch. */
 const runRemove = (
-  orgWorkosId: string,
+  organizationId: string,
   existing: Awaited<ReturnType<typeof getOrgAiPolicy>>,
   action: Extract<UpdateByokPayload, { action: 'remove_provider_api_key' }>,
 ): Effect.Effect<
@@ -199,18 +199,18 @@ const runRemove = (
     Option.getOrElse(() => true),
   )
   const baselineEffect = needSyncBaseline
-    ? tryReadStatus(orgWorkosId)
+    ? tryReadStatus(organizationId)
     : Effect.succeed(providerKeyStatus.providers)
 
   return pipe(
-    tryDeleteKey({ orgWorkosId, providerId: action.providerId }),
+    tryDeleteKey({ organizationId, providerId: action.providerId }),
     Effect.flatMap(() => baselineEffect),
     Effect.flatMap((baseline) =>
       pipe(
         Effect.tryPromise({
           try: () =>
             upsertOrgAiPolicy({
-              orgWorkosId,
+              organizationId,
               disabledProviderIds: existing?.disabledProviderIds ?? [],
               disabledModelIds: existing?.disabledModelIds ?? [],
               complianceFlags: existing?.complianceFlags ?? {},

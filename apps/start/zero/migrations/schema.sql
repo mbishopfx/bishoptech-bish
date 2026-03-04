@@ -6,22 +6,22 @@
 CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,
   email TEXT NOT NULL,
-  workos_id TEXT NOT NULL,
+  auth_id TEXT NOT NULL,
   first_name TEXT,
   last_name TEXT,
   profile_picture_url TEXT
 );
-CREATE INDEX IF NOT EXISTS users_workos_id ON users (workos_id);
+CREATE INDEX IF NOT EXISTS users_auth_id ON users (auth_id);
 
 -- organizations
 CREATE TABLE IF NOT EXISTS organizations (
   id TEXT PRIMARY KEY,
-  workos_id TEXT NOT NULL,
+  auth_id TEXT NOT NULL,
   name TEXT NOT NULL,
   plan TEXT,
   product_status TEXT
 );
-CREATE INDEX IF NOT EXISTS organizations_workos_id ON organizations (workos_id);
+CREATE INDEX IF NOT EXISTS organizations_auth_id ON organizations (auth_id);
 
 -- threads
 CREATE TABLE IF NOT EXISTS threads (
@@ -111,7 +111,7 @@ CREATE INDEX IF NOT EXISTS messages_thread_parent ON messages (thread_id, parent
 -- org_ai_policy
 CREATE TABLE IF NOT EXISTS org_ai_policy (
   id TEXT PRIMARY KEY,
-  org_workos_id TEXT NOT NULL UNIQUE,
+  organization_id TEXT NOT NULL UNIQUE,
   disabled_provider_ids JSONB NOT NULL DEFAULT '[]'::jsonb,
   disabled_model_ids JSONB NOT NULL DEFAULT '[]'::jsonb,
   compliance_flags JSONB NOT NULL DEFAULT '{}'::jsonb,
@@ -124,7 +124,7 @@ ALTER TABLE org_ai_policy
 ADD COLUMN IF NOT EXISTS provider_key_status JSONB NOT NULL DEFAULT '{"syncedAt": 0, "hasAnyProviderKey": false, "providers": {"openai": false, "anthropic": false}}'::jsonb;
 ALTER TABLE org_ai_policy
 ADD COLUMN IF NOT EXISTS enforced_mode_id TEXT;
-CREATE INDEX IF NOT EXISTS org_ai_policy_org_workos_id ON org_ai_policy (org_workos_id);
+CREATE INDEX IF NOT EXISTS org_ai_policy_organization_id ON org_ai_policy (organization_id);
 CREATE INDEX IF NOT EXISTS org_ai_policy_updated_at ON org_ai_policy (updated_at);
 
 -- attachments

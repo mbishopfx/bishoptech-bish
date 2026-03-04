@@ -39,7 +39,7 @@ export function toOrgProviderKeyStatusSnapshot(input: {
  * Arrays represent deny rules; missing IDs are considered allowed.
  */
 export type OrgAiPolicy = {
-  readonly orgWorkosId: string
+  readonly organizationId: string
   readonly disabledProviderIds: readonly string[]
   readonly disabledModelIds: readonly string[]
   readonly complianceFlags: OrgComplianceFlags

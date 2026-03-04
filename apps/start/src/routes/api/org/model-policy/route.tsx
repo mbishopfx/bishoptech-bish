@@ -9,7 +9,7 @@ import {
   OrgModelPolicyUnauthorizedError,
   toOrgModelPolicyErrorResponse,
 } from '@/lib/model-policy-backend'
-import { requireOrgAuth } from '@/lib/server-effect/http/server-auth.server'
+import { requireOrgAuth } from '@/lib/server-effect/http/server-auth'
 
 /** Request shape for provider-level policy updates. */
 const ToggleProviderBody = z.object({
@@ -50,11 +50,12 @@ const UpdatePolicyBody = z.discriminatedUnion('action', [
 export const Route = createFileRoute('/api/org/model-policy')({
   server: {
     handlers: {
-      GET: async () => {
+      GET: async ({ request }) => {
         const requestId = crypto.randomUUID()
 
         const program = Effect.gen(function* () {
           const authContext = yield* requireOrgAuth({
+            headers: request.headers,
             onUnauthorized: () =>
               new OrgModelPolicyUnauthorizedError({
                 message: 'Unauthorized',
@@ -69,7 +70,7 @@ export const Route = createFileRoute('/api/org/model-policy')({
 
           const policyService = yield* OrgModelPolicyService
           const payload = yield* policyService.getPayload({
-            orgWorkosId: authContext.orgWorkosId,
+            organizationId: authContext.organizationId,
             requestId,
           })
 
@@ -90,6 +91,7 @@ export const Route = createFileRoute('/api/org/model-policy')({
 
         const program = Effect.gen(function* () {
           const authContext = yield* requireOrgAuth({
+            headers: request.headers,
             onUnauthorized: () =>
               new OrgModelPolicyUnauthorizedError({
                 message: 'Unauthorized',
@@ -123,7 +125,7 @@ export const Route = createFileRoute('/api/org/model-policy')({
 
           const policyService = yield* OrgModelPolicyService
           const payload = yield* policyService.updatePolicy({
-            orgWorkosId: authContext.orgWorkosId,
+            organizationId: authContext.organizationId,
             requestId,
             action: parsedBody.data,
           })

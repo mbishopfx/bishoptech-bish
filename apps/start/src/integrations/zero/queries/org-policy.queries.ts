@@ -12,7 +12,7 @@ export const orgPolicyQueryDefinitions = {
      * The org id comes from server-injected Zero context, not user input.
      */
     current: defineQuery(({ ctx }) =>
-      zql.orgAiPolicy.where('orgWorkosId', ctx.orgWorkosId ?? '__missing_org__').one(),
+      zql.orgAiPolicy.where('organizationId', ctx.organizationId ?? '__missing_org__').one(),
     ),
   },
 }

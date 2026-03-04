@@ -1,9 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { Effect } from 'effect'
 import {
-  getServerAuthContext,
-  requireUserAuth,
-} from '@/lib/server-effect/http/server-auth.server'
+  getServerAuthContextFromHeaders,
+  requireNonAnonymousUserAuth,
+} from '@/lib/server-effect/http/server-auth'
 import { MAX_UPLOAD_SIZE_BYTES } from '@/lib/upload/upload.model'
 import {
   FileInvalidRequestError,
@@ -20,7 +20,8 @@ export const Route = createFileRoute('/api/files/upload')({
         const requestId = crypto.randomUUID()
         const route = '/api/files/upload'
         const program = Effect.gen(function* () {
-          const authContext = yield* requireUserAuth({
+          const authContext = yield* requireNonAnonymousUserAuth({
+            headers: request.headers,
             onUnauthorized: () =>
               new FileUnauthorizedError({
                 message: 'Unauthorized',
@@ -60,7 +61,7 @@ export const Route = createFileRoute('/api/files/upload')({
           const orchestrator = yield* FileUploadOrchestratorService
           const uploaded = yield* orchestrator.upload({
             userId: authContext.userId,
-            ownerOrgId: authContext.orgWorkosId,
+            ownerOrgId: authContext.organizationId,
             accessScope: 'user',
             file: input,
             requestId,
@@ -85,7 +86,7 @@ export const Route = createFileRoute('/api/files/upload')({
           return await FileRuntime.run(program)
         } catch (error) {
           const userId = await Effect.runPromise(
-            getServerAuthContext().pipe(
+            getServerAuthContextFromHeaders(request.headers).pipe(
               Effect.map((context) => context.userId),
             ),
           ).catch(() => undefined)

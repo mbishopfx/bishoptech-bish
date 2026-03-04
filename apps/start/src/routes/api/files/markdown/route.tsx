@@ -2,9 +2,9 @@ import { createFileRoute } from '@tanstack/react-router'
 import { Effect } from 'effect'
 import { z } from 'zod'
 import {
-  getServerAuthContext,
-  requireUserAuth,
-} from '@/lib/server-effect/http/server-auth.server'
+  getServerAuthContextFromHeaders,
+  requireNonAnonymousUserAuth,
+} from '@/lib/server-effect/http/server-auth'
 import {
   FileInvalidRequestError,
   FileRuntime,
@@ -101,7 +101,8 @@ export const Route = createFileRoute('/api/files/markdown')({
       POST: async ({ request }) => {
         const requestId = crypto.randomUUID()
         const program = Effect.gen(function* () {
-          const authContext = yield* requireUserAuth({
+          const authContext = yield* requireNonAnonymousUserAuth({
+            headers: request.headers,
             onUnauthorized: () =>
               new FileUnauthorizedError({
                 message: 'Unauthorized',
@@ -185,7 +186,7 @@ export const Route = createFileRoute('/api/files/markdown')({
           return await FileRuntime.run(program)
         } catch (error) {
           const userId = await Effect.runPromise(
-            getServerAuthContext().pipe(Effect.map((context) => context.userId)),
+            getServerAuthContextFromHeaders(request.headers).pipe(Effect.map((context) => context.userId)),
           ).catch(() => undefined)
           return handleFileRouteFailure({
             error,

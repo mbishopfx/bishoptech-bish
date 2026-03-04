@@ -6,25 +6,27 @@ import { Effect } from 'effect'
  */
 export type ServerAuthContext = {
   readonly userId?: string
-  readonly orgWorkosId?: string
+  readonly organizationId?: string
+  readonly isAnonymous: boolean
 }
 
 export type AuthenticatedServerAuthContext = {
   readonly userId: string
-  readonly orgWorkosId?: string
+  readonly organizationId?: string
+  readonly isAnonymous: boolean
 }
 
 /**
- * Extracts normalized user + org identifiers from WorkOS auth results.
+ * Extracts normalized user + org identifiers from Better Auth session results.
  */
 export function extractServerAuthContext(auth: unknown): ServerAuthContext {
   if (!auth || typeof auth !== 'object') {
-    return {}
+    return { isAnonymous: false }
   }
 
   const record = auth as {
-    user?: { id?: unknown } | null
-    organizationId?: unknown
+    user?: { id?: unknown; isAnonymous?: unknown } | null
+    session?: { activeOrganizationId?: unknown } | null
   }
 
   const userId =
@@ -32,15 +34,18 @@ export function extractServerAuthContext(auth: unknown): ServerAuthContext {
       ? record.user.id
       : undefined
 
-  const orgWorkosId =
-    typeof record.organizationId === 'string' &&
-      record.organizationId.trim().length > 0
-      ? record.organizationId.trim()
+  const organizationId =
+    record.session && typeof record.session.activeOrganizationId === 'string'
+      ? record.session.activeOrganizationId.trim() || undefined
       : undefined
 
   return {
     userId,
-    orgWorkosId,
+    organizationId,
+    isAnonymous:
+      !!record.user &&
+      typeof record.user.isAnonymous === 'boolean' &&
+      record.user.isAnonymous,
   }
 }
 
@@ -61,7 +66,8 @@ export const requireAuthenticatedServerAuthContext = Effect.fn(
     }
     return Effect.succeed({
       userId: context.userId,
-      orgWorkosId: context.orgWorkosId,
+      organizationId: context.organizationId,
+      isAnonymous: context.isAnonymous,
     })
   },
 )

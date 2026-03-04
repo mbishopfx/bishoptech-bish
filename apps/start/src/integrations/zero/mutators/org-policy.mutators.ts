@@ -27,7 +27,7 @@ const setEnforcedModeArgs = z.object({
 
 type OrgPolicyRow = {
   id: string
-  orgWorkosId: string
+  organizationId: string
   disabledProviderIds: readonly string[]
   disabledModelIds: readonly string[]
   complianceFlags: Record<string, boolean>
@@ -73,12 +73,12 @@ function add(values: readonly string[], candidate: string): string[] {
 }
 
 /** Throws when org-scoped mutators are called outside an active org context. */
-function requireOrgWorkosId(ctx: { orgWorkosId?: string }): string {
-  const orgWorkosId = ctx.orgWorkosId?.trim()
-  if (!orgWorkosId) {
+function requireOrgWorkosId(ctx: { organizationId?: string }): string {
+  const organizationId = ctx.organizationId?.trim()
+  if (!organizationId) {
     throw new Error('Organization context is required to update policy')
   }
-  return orgWorkosId
+  return organizationId
 }
 
 /** Normalizes an optional row into a complete policy snapshot with defaults. */
@@ -112,7 +112,7 @@ async function persistOrgPolicy(args: {
       orgAiPolicy: {
         insert: (row: {
           id: string
-          orgWorkosId: string
+          organizationId: string
           disabledProviderIds: readonly string[]
           disabledModelIds: readonly string[]
           complianceFlags: Record<string, boolean>
@@ -146,7 +146,7 @@ async function persistOrgPolicy(args: {
       }
     }
   }
-  orgWorkosId: string
+  organizationId: string
   existing?: OrgPolicyRow
   next: OrgPolicySnapshot
 }): Promise<void> {
@@ -155,7 +155,7 @@ async function persistOrgPolicy(args: {
   if (!args.existing) {
     await args.tx.mutate.orgAiPolicy.insert({
       id: crypto.randomUUID(),
-      orgWorkosId: args.orgWorkosId,
+      organizationId: args.organizationId,
       disabledProviderIds: args.next.disabledProviderIds,
       disabledModelIds: args.next.disabledModelIds,
       complianceFlags: args.next.complianceFlags,
@@ -184,13 +184,13 @@ async function persistOrgPolicy(args: {
 export const orgPolicyMutatorDefinitions = {
   orgPolicy: {
     toggleProvider: defineMutator(toggleProviderPolicyArgs, async ({ tx, args, ctx }) => {
-      const orgWorkosId = requireOrgWorkosId(ctx)
+      const organizationId = requireOrgWorkosId(ctx)
       if (!AI_MODELS_BY_PROVIDER.has(args.providerId)) {
         throw new Error(`Unknown provider id: ${args.providerId}`)
       }
 
       const existing = await tx.run(
-        zql.orgAiPolicy.where('orgWorkosId', orgWorkosId).one(),
+        zql.orgAiPolicy.where('organizationId', organizationId).one(),
       )
       const snapshot = toSnapshot(existing)
       const next: OrgPolicySnapshot = {
@@ -202,20 +202,20 @@ export const orgPolicyMutatorDefinitions = {
 
       await persistOrgPolicy({
         tx,
-        orgWorkosId,
+        organizationId,
         existing,
         next,
       })
     }),
 
     toggleModel: defineMutator(toggleModelPolicyArgs, async ({ tx, args, ctx }) => {
-      const orgWorkosId = requireOrgWorkosId(ctx)
+      const organizationId = requireOrgWorkosId(ctx)
       if (!AI_CATALOG_BY_ID.has(args.modelId)) {
         throw new Error(`Unknown model id: ${args.modelId}`)
       }
 
       const existing = await tx.run(
-        zql.orgAiPolicy.where('orgWorkosId', orgWorkosId).one(),
+        zql.orgAiPolicy.where('organizationId', organizationId).one(),
       )
       const snapshot = toSnapshot(existing)
       const next: OrgPolicySnapshot = {
@@ -227,7 +227,7 @@ export const orgPolicyMutatorDefinitions = {
 
       await persistOrgPolicy({
         tx,
-        orgWorkosId,
+        organizationId,
         existing,
         next,
       })
@@ -236,10 +236,10 @@ export const orgPolicyMutatorDefinitions = {
     toggleComplianceFlag: defineMutator(
       toggleComplianceFlagArgs,
       async ({ tx, args, ctx }) => {
-        const orgWorkosId = requireOrgWorkosId(ctx)
+        const organizationId = requireOrgWorkosId(ctx)
 
         const existing = await tx.run(
-          zql.orgAiPolicy.where('orgWorkosId', orgWorkosId).one(),
+          zql.orgAiPolicy.where('organizationId', organizationId).one(),
         )
         const snapshot = toSnapshot(existing)
         const next: OrgPolicySnapshot = {
@@ -252,20 +252,20 @@ export const orgPolicyMutatorDefinitions = {
 
         await persistOrgPolicy({
           tx,
-          orgWorkosId,
+          organizationId,
           existing,
           next,
         })
       },
     ),
     setEnforcedMode: defineMutator(setEnforcedModeArgs, async ({ tx, args, ctx }) => {
-      const orgWorkosId = requireOrgWorkosId(ctx)
+      const organizationId = requireOrgWorkosId(ctx)
       if (args.modeId && !isChatModeId(args.modeId)) {
         throw new Error(`Unknown mode id: ${args.modeId}`)
       }
 
       const existing = await tx.run(
-        zql.orgAiPolicy.where('orgWorkosId', orgWorkosId).one(),
+        zql.orgAiPolicy.where('organizationId', organizationId).one(),
       )
       const snapshot = toSnapshot(existing)
       const next: OrgPolicySnapshot = {
@@ -275,7 +275,7 @@ export const orgPolicyMutatorDefinitions = {
 
       await persistOrgPolicy({
         tx,
-        orgWorkosId,
+        organizationId,
         existing,
         next,
       })

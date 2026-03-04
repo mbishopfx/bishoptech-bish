@@ -8,7 +8,7 @@ import { mutators } from '@/integrations/zero/mutators'
 import type { ZeroContext } from '@/integrations/zero/schema'
 import { emitWideErrorEvent } from '@/lib/chat-backend/observability/wide-event'
 import { ChatErrorCode } from '@/lib/chat-contracts/error-codes'
-import { requireUserAuth } from '@/lib/server-effect/http/server-auth.server'
+import { requireUserAuth } from '@/lib/server-effect/http/server-auth'
 import { ServerRuntime } from '@/lib/server-effect'
 
 /**
@@ -68,13 +68,15 @@ export const Route = createFileRoute('/api/zero/mutate')({
 
         const program = Effect.gen(function* () {
           const authContext = yield* requireUserAuth({
+            headers: request.headers,
             onUnauthorized: () =>
               new ZeroMutateUnauthorizedError({ message: 'Unauthorized' }),
           })
 
           const context: ZeroContext = {
             userID: authContext.userId,
-            orgWorkosId: authContext.orgWorkosId,
+            organizationId: authContext.organizationId,
+            isAnonymous: authContext.isAnonymous,
           }
           const requestId =
             request.headers.get('x-request-id') ?? crypto.randomUUID()

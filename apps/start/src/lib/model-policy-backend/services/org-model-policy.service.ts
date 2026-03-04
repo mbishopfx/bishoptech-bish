@@ -31,7 +31,7 @@ export type UpdateOrgModelPolicyAction =
     }
 
 export type OrgModelPolicyPayload = {
-  readonly orgWorkosId: string
+  readonly organizationId: string
   readonly policy: {
     readonly disabledProviderIds: readonly string[]
     readonly disabledModelIds: readonly string[]
@@ -56,11 +56,11 @@ export type OrgModelPolicyPayload = {
 
 export type OrgModelPolicyServiceShape = {
   readonly getPayload: (input: {
-    readonly orgWorkosId: string
+    readonly organizationId: string
     readonly requestId: string
   }) => Effect.Effect<OrgModelPolicyPayload, OrgModelPolicyPersistenceError>
   readonly updatePolicy: (input: {
-    readonly orgWorkosId: string
+    readonly organizationId: string
     readonly requestId: string
     readonly action: UpdateOrgModelPolicyAction
   }) => Effect.Effect<OrgModelPolicyPayload, OrgModelPolicyPersistenceError>
@@ -72,16 +72,16 @@ export class OrgModelPolicyService extends ServiceMap.Service<
 >()('model-policy-backend/OrgModelPolicyService') {
   static readonly layer = Layer.succeed(this, {
     getPayload: Effect.fn('OrgModelPolicyService.getPayload')(
-      ({ orgWorkosId, requestId }) =>
+      ({ organizationId, requestId }) =>
         Effect.gen(function* () {
-          const policy = yield* loadPolicy({ orgWorkosId, requestId })
-          return toOrgModelPolicyPayload(orgWorkosId, policy)
+          const policy = yield* loadPolicy({ organizationId, requestId })
+          return toOrgModelPolicyPayload(organizationId, policy)
         }),
     ),
     updatePolicy: Effect.fn('OrgModelPolicyService.updatePolicy')(
-      ({ orgWorkosId, requestId, action }) =>
+      ({ organizationId, requestId, action }) =>
         Effect.gen(function* () {
-          const existing = yield* loadPolicy({ orgWorkosId, requestId })
+          const existing = yield* loadPolicy({ organizationId, requestId })
 
           let disabledProviderIds = existing?.disabledProviderIds ?? []
           let disabledModelIds = existing?.disabledModelIds ?? []
@@ -124,7 +124,7 @@ export class OrgModelPolicyService extends ServiceMap.Service<
           yield* Effect.tryPromise({
             try: () =>
               upsertOrgAiPolicy({
-                orgWorkosId,
+                organizationId,
                 disabledProviderIds,
                 disabledModelIds,
                 complianceFlags,
@@ -139,8 +139,8 @@ export class OrgModelPolicyService extends ServiceMap.Service<
                 cause: String(error),
               }),
           })
-          const updated = yield* loadPolicy({ orgWorkosId, requestId })
-          return toOrgModelPolicyPayload(orgWorkosId, updated)
+          const updated = yield* loadPolicy({ organizationId, requestId })
+          return toOrgModelPolicyPayload(organizationId, updated)
         }),
     ),
   })
@@ -150,14 +150,14 @@ type ExistingOrgPolicy = Awaited<ReturnType<typeof getOrgAiPolicy>>
 
 const loadPolicy = Effect.fn('OrgModelPolicyService.loadPolicy')(
   ({
-    orgWorkosId,
+    organizationId,
     requestId,
   }: {
-    readonly orgWorkosId: string
+    readonly organizationId: string
     readonly requestId: string
   }) =>
     Effect.tryPromise({
-      try: () => getOrgAiPolicy(orgWorkosId),
+      try: () => getOrgAiPolicy(organizationId),
       catch: (error) =>
         new OrgModelPolicyPersistenceError({
           message: 'Failed to load organization model policy',
@@ -176,7 +176,7 @@ function removeFromList(values: readonly string[], target: string): string[] {
 }
 
 function toOrgModelPolicyPayload(
-  orgWorkosId: string,
+  organizationId: string,
   policy: ExistingOrgPolicy,
 ): OrgModelPolicyPayload {
   const models = AI_CATALOG.map((model) => {
@@ -198,7 +198,7 @@ function toOrgModelPolicyPayload(
   }))
 
   return {
-    orgWorkosId,
+    organizationId,
     policy: {
       disabledProviderIds: policy?.disabledProviderIds ?? [],
       disabledModelIds: policy?.disabledModelIds ?? [],

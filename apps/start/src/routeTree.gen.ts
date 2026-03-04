@@ -9,16 +9,18 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as AuthSignUpRouteRouteImport } from './routes/auth/sign-up/route'
+import { Route as AuthSignInRouteRouteImport } from './routes/auth/sign-in/route'
 import { Route as ApiChatRouteRouteImport } from './routes/api/chat/route'
 import { Route as appLayoutRouteRouteImport } from './routes/(app)/_layout/route'
 import { Route as appLayoutIndexRouteImport } from './routes/(app)/_layout/index'
+import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as appLayoutSplatRouteImport } from './routes/(app)/_layout/$'
 import { Route as ApiZeroQueryRouteRouteImport } from './routes/api/zero/query/route'
 import { Route as ApiZeroMutateRouteRouteImport } from './routes/api/zero/mutate/route'
 import { Route as ApiOrgModelPolicyRouteRouteImport } from './routes/api/org/model-policy/route'
 import { Route as ApiFilesUploadRouteRouteImport } from './routes/api/files/upload/route'
 import { Route as ApiFilesMarkdownRouteRouteImport } from './routes/api/files/markdown/route'
-import { Route as ApiAuthCallbackRouteRouteImport } from './routes/api/auth/callback/route'
 import { Route as appLayoutWriterRouteRouteImport } from './routes/(app)/_layout/writer/route'
 import { Route as appLayoutSettingsRouteRouteImport } from './routes/(app)/_layout/settings/route'
 import { Route as appLayoutOrganizationRouteRouteImport } from './routes/(app)/_layout/organization/route'
@@ -37,6 +39,16 @@ import { Route as appLayoutOrganizationSettingsByokRouteRouteImport } from './ro
 import { Route as appLayoutOrganizationSettingsModelsIndexRouteImport } from './routes/(app)/_layout/organization/settings/models/index'
 import { Route as appLayoutOrganizationSettingsModelsProviderIdRouteRouteImport } from './routes/(app)/_layout/organization/settings/models/$providerId/route'
 
+const AuthSignUpRouteRoute = AuthSignUpRouteRouteImport.update({
+  id: '/auth/sign-up',
+  path: '/auth/sign-up',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthSignInRouteRoute = AuthSignInRouteRouteImport.update({
+  id: '/auth/sign-in',
+  path: '/auth/sign-in',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiChatRouteRoute = ApiChatRouteRouteImport.update({
   id: '/api/chat',
   path: '/api/chat',
@@ -50,6 +62,11 @@ const appLayoutIndexRoute = appLayoutIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => appLayoutRouteRoute,
+} as any)
+const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
+  id: '/api/auth/$',
+  path: '/api/auth/$',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const appLayoutSplatRoute = appLayoutSplatRouteImport.update({
   id: '/$',
@@ -79,11 +96,6 @@ const ApiFilesUploadRouteRoute = ApiFilesUploadRouteRouteImport.update({
 const ApiFilesMarkdownRouteRoute = ApiFilesMarkdownRouteRouteImport.update({
   id: '/api/files/markdown',
   path: '/api/files/markdown',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiAuthCallbackRouteRoute = ApiAuthCallbackRouteRouteImport.update({
-  id: '/api/auth/callback',
-  path: '/api/auth/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
 const appLayoutWriterRouteRoute = appLayoutWriterRouteRouteImport.update({
@@ -185,18 +197,20 @@ const appLayoutOrganizationSettingsModelsProviderIdRouteRoute =
 
 export interface FileRoutesByFullPath {
   '/api/chat': typeof ApiChatRouteRoute
+  '/auth/sign-in': typeof AuthSignInRouteRoute
+  '/auth/sign-up': typeof AuthSignUpRouteRoute
   '/chat': typeof appLayoutChatRouteRouteWithChildren
   '/insight': typeof appLayoutInsightRouteRoute
   '/organization': typeof appLayoutOrganizationRouteRouteWithChildren
   '/settings': typeof appLayoutSettingsRouteRouteWithChildren
   '/writer': typeof appLayoutWriterRouteRoute
-  '/api/auth/callback': typeof ApiAuthCallbackRouteRoute
   '/api/files/markdown': typeof ApiFilesMarkdownRouteRoute
   '/api/files/upload': typeof ApiFilesUploadRouteRoute
   '/api/org/model-policy': typeof ApiOrgModelPolicyRouteRoute
   '/api/zero/mutate': typeof ApiZeroMutateRouteRoute
   '/api/zero/query': typeof ApiZeroQueryRouteRoute
   '/$': typeof appLayoutSplatRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
   '/': typeof appLayoutIndexRoute
   '/chat/$threadId': typeof appLayoutChatThreadIdRouteRoute
   '/organization/settings': typeof appLayoutOrganizationSettingsRouteRouteWithChildren
@@ -213,16 +227,18 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/api/chat': typeof ApiChatRouteRoute
+  '/auth/sign-in': typeof AuthSignInRouteRoute
+  '/auth/sign-up': typeof AuthSignUpRouteRoute
   '/insight': typeof appLayoutInsightRouteRoute
   '/organization': typeof appLayoutOrganizationRouteRouteWithChildren
   '/writer': typeof appLayoutWriterRouteRoute
-  '/api/auth/callback': typeof ApiAuthCallbackRouteRoute
   '/api/files/markdown': typeof ApiFilesMarkdownRouteRoute
   '/api/files/upload': typeof ApiFilesUploadRouteRoute
   '/api/org/model-policy': typeof ApiOrgModelPolicyRouteRoute
   '/api/zero/mutate': typeof ApiZeroMutateRouteRoute
   '/api/zero/query': typeof ApiZeroQueryRouteRoute
   '/$': typeof appLayoutSplatRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
   '/': typeof appLayoutIndexRoute
   '/chat/$threadId': typeof appLayoutChatThreadIdRouteRoute
   '/settings/debug-auth': typeof appLayoutSettingsDebugAuthRouteRoute
@@ -239,18 +255,20 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/(app)/_layout': typeof appLayoutRouteRouteWithChildren
   '/api/chat': typeof ApiChatRouteRoute
+  '/auth/sign-in': typeof AuthSignInRouteRoute
+  '/auth/sign-up': typeof AuthSignUpRouteRoute
   '/(app)/_layout/chat': typeof appLayoutChatRouteRouteWithChildren
   '/(app)/_layout/insight': typeof appLayoutInsightRouteRoute
   '/(app)/_layout/organization': typeof appLayoutOrganizationRouteRouteWithChildren
   '/(app)/_layout/settings': typeof appLayoutSettingsRouteRouteWithChildren
   '/(app)/_layout/writer': typeof appLayoutWriterRouteRoute
-  '/api/auth/callback': typeof ApiAuthCallbackRouteRoute
   '/api/files/markdown': typeof ApiFilesMarkdownRouteRoute
   '/api/files/upload': typeof ApiFilesUploadRouteRoute
   '/api/org/model-policy': typeof ApiOrgModelPolicyRouteRoute
   '/api/zero/mutate': typeof ApiZeroMutateRouteRoute
   '/api/zero/query': typeof ApiZeroQueryRouteRoute
   '/(app)/_layout/$': typeof appLayoutSplatRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
   '/(app)/_layout/': typeof appLayoutIndexRoute
   '/(app)/_layout/chat/$threadId': typeof appLayoutChatThreadIdRouteRoute
   '/(app)/_layout/organization/settings': typeof appLayoutOrganizationSettingsRouteRouteWithChildren
@@ -269,18 +287,20 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/api/chat'
+    | '/auth/sign-in'
+    | '/auth/sign-up'
     | '/chat'
     | '/insight'
     | '/organization'
     | '/settings'
     | '/writer'
-    | '/api/auth/callback'
     | '/api/files/markdown'
     | '/api/files/upload'
     | '/api/org/model-policy'
     | '/api/zero/mutate'
     | '/api/zero/query'
     | '/$'
+    | '/api/auth/$'
     | '/'
     | '/chat/$threadId'
     | '/organization/settings'
@@ -297,16 +317,18 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/api/chat'
+    | '/auth/sign-in'
+    | '/auth/sign-up'
     | '/insight'
     | '/organization'
     | '/writer'
-    | '/api/auth/callback'
     | '/api/files/markdown'
     | '/api/files/upload'
     | '/api/org/model-policy'
     | '/api/zero/mutate'
     | '/api/zero/query'
     | '/$'
+    | '/api/auth/$'
     | '/'
     | '/chat/$threadId'
     | '/settings/debug-auth'
@@ -322,18 +344,20 @@ export interface FileRouteTypes {
     | '__root__'
     | '/(app)/_layout'
     | '/api/chat'
+    | '/auth/sign-in'
+    | '/auth/sign-up'
     | '/(app)/_layout/chat'
     | '/(app)/_layout/insight'
     | '/(app)/_layout/organization'
     | '/(app)/_layout/settings'
     | '/(app)/_layout/writer'
-    | '/api/auth/callback'
     | '/api/files/markdown'
     | '/api/files/upload'
     | '/api/org/model-policy'
     | '/api/zero/mutate'
     | '/api/zero/query'
     | '/(app)/_layout/$'
+    | '/api/auth/$'
     | '/(app)/_layout/'
     | '/(app)/_layout/chat/$threadId'
     | '/(app)/_layout/organization/settings'
@@ -352,16 +376,32 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   appLayoutRouteRoute: typeof appLayoutRouteRouteWithChildren
   ApiChatRouteRoute: typeof ApiChatRouteRoute
-  ApiAuthCallbackRouteRoute: typeof ApiAuthCallbackRouteRoute
+  AuthSignInRouteRoute: typeof AuthSignInRouteRoute
+  AuthSignUpRouteRoute: typeof AuthSignUpRouteRoute
   ApiFilesMarkdownRouteRoute: typeof ApiFilesMarkdownRouteRoute
   ApiFilesUploadRouteRoute: typeof ApiFilesUploadRouteRoute
   ApiOrgModelPolicyRouteRoute: typeof ApiOrgModelPolicyRouteRoute
   ApiZeroMutateRouteRoute: typeof ApiZeroMutateRouteRoute
   ApiZeroQueryRouteRoute: typeof ApiZeroQueryRouteRoute
+  ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/auth/sign-up': {
+      id: '/auth/sign-up'
+      path: '/auth/sign-up'
+      fullPath: '/auth/sign-up'
+      preLoaderRoute: typeof AuthSignUpRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/sign-in': {
+      id: '/auth/sign-in'
+      path: '/auth/sign-in'
+      fullPath: '/auth/sign-in'
+      preLoaderRoute: typeof AuthSignInRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/chat': {
       id: '/api/chat'
       path: '/api/chat'
@@ -382,6 +422,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof appLayoutIndexRouteImport
       parentRoute: typeof appLayoutRouteRoute
+    }
+    '/api/auth/$': {
+      id: '/api/auth/$'
+      path: '/api/auth/$'
+      fullPath: '/api/auth/$'
+      preLoaderRoute: typeof ApiAuthSplatRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/(app)/_layout/$': {
       id: '/(app)/_layout/$'
@@ -423,13 +470,6 @@ declare module '@tanstack/react-router' {
       path: '/api/files/markdown'
       fullPath: '/api/files/markdown'
       preLoaderRoute: typeof ApiFilesMarkdownRouteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/auth/callback': {
-      id: '/api/auth/callback'
-      path: '/api/auth/callback'
-      fullPath: '/api/auth/callback'
-      preLoaderRoute: typeof ApiAuthCallbackRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/(app)/_layout/writer': {
@@ -670,12 +710,14 @@ const appLayoutRouteRouteWithChildren = appLayoutRouteRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   appLayoutRouteRoute: appLayoutRouteRouteWithChildren,
   ApiChatRouteRoute: ApiChatRouteRoute,
-  ApiAuthCallbackRouteRoute: ApiAuthCallbackRouteRoute,
+  AuthSignInRouteRoute: AuthSignInRouteRoute,
+  AuthSignUpRouteRoute: AuthSignUpRouteRoute,
   ApiFilesMarkdownRouteRoute: ApiFilesMarkdownRouteRoute,
   ApiFilesUploadRouteRoute: ApiFilesUploadRouteRoute,
   ApiOrgModelPolicyRouteRoute: ApiOrgModelPolicyRouteRoute,
   ApiZeroMutateRouteRoute: ApiZeroMutateRouteRoute,
   ApiZeroQueryRouteRoute: ApiZeroQueryRouteRoute,
+  ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

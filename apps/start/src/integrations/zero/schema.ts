@@ -18,7 +18,7 @@ const user = table('user')
   .columns({
     id: string(),
     email: string(),
-    workos_id: string(),
+    authId: string().from('auth_id'),
     firstName: string().from('first_name').optional(),
     lastName: string().from('last_name').optional(),
     profilePictureUrl: string().from('profile_picture_url').optional(),
@@ -29,7 +29,7 @@ const organization = table('organization')
   .from('organizations')
   .columns({
     id: string(),
-    workos_id: string(),
+    authId: string().from('auth_id'),
     name: string(),
     plan: string().optional(),
     productStatus: string().from('product_status').optional(),
@@ -40,7 +40,7 @@ const orgAiPolicy = table('orgAiPolicy')
   .from('org_ai_policy')
   .columns({
     id: string(),
-    orgWorkosId: string().from('org_workos_id'),
+    organizationId: string().from('organization_id'),
     disabledProviderIds: json<readonly string[]>()
       .from('disabled_provider_ids'),
     disabledModelIds: json<readonly string[]>().from('disabled_model_ids'),
@@ -219,12 +219,13 @@ export type Schema = typeof schema
 
 /**
  * Auth context passed through Zero query/mutate endpoints.
- * `orgWorkosId` is optional because users can browse without an active org,
+ * `organizationId` is optional because users can browse without an active org,
  * but org-scoped queries/mutators must explicitly guard against that case.
  */
 export type ZeroContext = {
   userID: string
-  orgWorkosId?: string
+  organizationId?: string
+  isAnonymous: boolean
 }
 
 declare module '@rocicorp/zero' {

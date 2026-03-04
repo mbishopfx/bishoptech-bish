@@ -441,11 +441,11 @@ export function ChatProvider({
     const hasPolicyRow =
       !!orgPolicyRow &&
       typeof orgPolicyRow === 'object' &&
-      'orgWorkosId' in orgPolicyRow &&
-      typeof orgPolicyRow.orgWorkosId === 'string'
+      'organizationId' in orgPolicyRow &&
+      typeof orgPolicyRow.organizationId === 'string'
     const policy = hasPolicyRow
       ? {
-          orgWorkosId: orgPolicyRow.orgWorkosId,
+          organizationId: orgPolicyRow.organizationId,
           disabledProviderIds:
             'disabledProviderIds' in orgPolicyRow &&
             Array.isArray(orgPolicyRow.disabledProviderIds)

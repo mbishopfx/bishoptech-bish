@@ -44,12 +44,12 @@ function toPolicyDenied(input: {
  */
 export type ModelPolicyServiceShape = {
   readonly getOrgPolicy: (input: {
-    readonly orgWorkosId?: string
+    readonly organizationId?: string
     readonly requestId: string
   }) => Effect.Effect<OrgAiPolicy | undefined, MessagePersistenceError>
   readonly resolveThreadModel: (input: {
     readonly threadId: string
-    readonly orgWorkosId?: string
+    readonly organizationId?: string
     readonly orgPolicy?: OrgAiPolicy
     readonly threadModel?: string
     readonly threadReasoningEffort?: AiReasoningEffort
@@ -79,16 +79,16 @@ export class ModelPolicyService extends ServiceMap.Service<
   static readonly layer = Layer.succeed(this, {
     getOrgPolicy: Effect.fn('ModelPolicyService.getOrgPolicy')(
       ({
-        orgWorkosId,
+        organizationId,
         requestId,
       }: {
-        readonly orgWorkosId?: string
+        readonly organizationId?: string
         readonly requestId: string
       }) =>
         Effect.tryPromise({
           try: async () => {
-            if (!orgWorkosId) return undefined
-            return getOrgAiPolicy(orgWorkosId)
+            if (!organizationId) return undefined
+            return getOrgAiPolicy(organizationId)
           },
           catch: (error) =>
             new MessagePersistenceError({
@@ -102,7 +102,7 @@ export class ModelPolicyService extends ServiceMap.Service<
     resolveThreadModel: Effect.fn('ModelPolicyService.resolveThreadModel')(
       ({
         threadId,
-        orgWorkosId,
+        organizationId,
         orgPolicy,
         threadModel,
         threadReasoningEffort,
@@ -113,7 +113,7 @@ export class ModelPolicyService extends ServiceMap.Service<
         requestId,
       }: {
         readonly threadId: string
-        readonly orgWorkosId?: string
+        readonly organizationId?: string
         readonly orgPolicy?: OrgAiPolicy
         readonly threadModel?: string
         readonly threadReasoningEffort?: AiReasoningEffort
@@ -128,8 +128,8 @@ export class ModelPolicyService extends ServiceMap.Service<
             orgPolicy ??
             (yield* Effect.tryPromise({
               try: async () => {
-                if (!orgWorkosId) return undefined
-                return getOrgAiPolicy(orgWorkosId)
+                if (!organizationId) return undefined
+                return getOrgAiPolicy(organizationId)
               },
               catch: (error) =>
                 new MessagePersistenceError({
@@ -205,7 +205,7 @@ export class ModelPolicyService extends ServiceMap.Service<
               : undefined
 
           if (canUseOrganizationProviderKeys() && !skipProviderKeyResolution) {
-            if (!orgWorkosId) {
+            if (!organizationId) {
               if (strictProviderKeyPolicyEnabled) {
                 return yield* Effect.fail(
                   toPolicyDenied({
@@ -280,7 +280,7 @@ export class ModelPolicyService extends ServiceMap.Service<
                   const providerApiKey = yield* Effect.tryPromise({
                     try: () =>
                       readOrgProviderApiKey({
-                        orgWorkosId,
+                        organizationId,
                         providerId,
                       }),
                     catch: (error) =>

@@ -1,7 +1,6 @@
 import { HeadContent, Scripts, createRootRoute } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
-import { AuthKitProvider } from '@workos/authkit-tanstack-react-start/client'
 
 import ZeroProvider from '../integrations/zero/provider'
 import { ThemeProvider } from '@rift/ui/hooks/useTheme'
@@ -41,27 +40,25 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        <AuthKitProvider>
-          <ZeroProvider>
-            <ThemeProvider>
-              <TooltipProvider delay={100}>
-                {children}
-                <Toaster />
-                <TanStackDevtools
-                  config={{
-                    position: 'bottom-right',
-                  }}
-                  plugins={[
-                    {
-                      name: 'Tanstack Router',
-                      render: <TanStackRouterDevtoolsPanel />,
-                    },
-                  ]}
-                />
-              </TooltipProvider>
-            </ThemeProvider>
-          </ZeroProvider>
-        </AuthKitProvider>
+        <ZeroProvider>
+          <ThemeProvider>
+            <TooltipProvider delay={100}>
+              {children}
+              <Toaster />
+              <TanStackDevtools
+                config={{
+                  position: 'bottom-right',
+                }}
+                plugins={[
+                  {
+                    name: 'Tanstack Router',
+                    render: <TanStackRouterDevtoolsPanel />,
+                  },
+                ]}
+              />
+            </TooltipProvider>
+          </ThemeProvider>
+        </ZeroProvider>
         <Scripts />
       </body>
     </html>
