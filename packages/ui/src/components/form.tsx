@@ -455,7 +455,7 @@ export function Form({
       <div className="relative bg-emphasis/50">
         <div
           className={cn(
-            "relative z-10 flex flex-col space-y-6 rounded-b-2xl bg-bg-muted p-6",
+            "relative z-10 flex flex-col space-y-6 rounded-b-2xl bg-bg-muted p-6 shadow-[0_2px_12px_rgb(0,0,0,0.05)]",
             contentClassName,
           )}
         >

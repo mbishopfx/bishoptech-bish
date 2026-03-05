@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { Badge } from '@rift/ui/badge'
 import { Form } from '@rift/ui/form'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@rift/ui/select'
 import { ContentPage } from '@/components/layout'
@@ -18,8 +17,6 @@ export function AccountPage() {
   const {
     name,
     email,
-    emailVerificationStatus,
-    canResendCurrentEmailVerification,
     language,
     languageOptions,
     languageError,
@@ -35,7 +32,6 @@ export function AccountPage() {
     applyLanguageSelection,
     submitName,
     submitEmail,
-    resendEmailVerification,
     persistAvatar,
     applyAvatarChange,
   } = useAccountPageLogic()
@@ -48,8 +44,6 @@ export function AccountPage() {
       : undefined
   const selectedLanguageLabel =
     languageOptions.find((localeOption) => localeOption.value === language)?.label ?? language
-  const emailVerificationLabel =
-    emailVerificationStatus === 'verified' ? 'Verified' : 'Not verified'
 
   return (
     <ContentPage
@@ -106,20 +100,6 @@ export function AccountPage() {
       <Form
         title={m.settings_account_email_title()}
         description={m.settings_account_email_description()}
-        descriptionInlineSlot={
-          emailVerificationStatus != null ? (
-            <Badge
-              variant="outline"
-              className={
-                emailVerificationStatus === 'verified'
-                  ? 'border-emerald-500/35 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
-                  : 'border-amber-500/35 bg-amber-500/10 text-amber-700 dark:text-amber-300'
-              }
-            >
-              {emailVerificationLabel}
-            </Badge>
-          ) : null
-        }
         inputAttrs={{
           name: 'email',
           type: 'email',
@@ -140,21 +120,11 @@ export function AccountPage() {
             {m.settings_account_email_help()}
           </p>
         }
-        buttonText="Change email"
-        secondaryButtonText={
-          canResendCurrentEmailVerification ? 'Resend verification code' : undefined
-        }
-        onSecondaryClick={
-          canResendCurrentEmailVerification
-            ? () => {
-                void resendEmailVerification()
-              }
-            : undefined
-        }
+        buttonText={m.settings_account_save_button()}
         buttonDisabled={!canEdit || email.trim().length === 0}
         handleSubmit={submitEmail}
       />
-      <Form
+            <Form
         title={m.settings_account_language_title()}
         description={m.settings_account_language_description()}
         error={languageError ?? undefined}
