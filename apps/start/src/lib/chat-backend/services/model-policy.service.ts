@@ -22,6 +22,20 @@ import {
   ModelPolicyDeniedError,
 } from '../domain/errors'
 
+const AI_REASONING_EFFORTS: readonly AiReasoningEffort[] = [
+  'none',
+  'minimal',
+  'low',
+  'medium',
+  'high',
+  'xhigh',
+  'max',
+]
+
+function isAiReasoningEffort(value: string): value is AiReasoningEffort {
+  return (AI_REASONING_EFFORTS as readonly string[]).includes(value)
+}
+
 /** Maps policy/runtime selection failures into a chat-domain denied error. */
 function toPolicyDenied(input: {
   readonly modelId: string
@@ -182,10 +196,14 @@ export class ModelPolicyService extends ServiceMap.Service<
             )
           }
 
-          const requestedEffort =
-            requestedReasoningEffort ??
-            threadReasoningEffort ??
-            selectedModel.defaultReasoningEffort
+          const requestedEffort = [
+            requestedReasoningEffort,
+            threadReasoningEffort,
+            selectedModel.defaultReasoningEffort,
+          ].find(
+            (value): value is AiReasoningEffort =>
+              typeof value === 'string' && isAiReasoningEffort(value),
+          )
           // Validate that the requested effort is supported by the model.
           // Threads may have stale values (e.g. 'minimal' for o1/o3) after catalog updates.
           const supportedEfforts = selectedModel.reasoningEfforts

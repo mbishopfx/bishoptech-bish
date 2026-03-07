@@ -1,6 +1,6 @@
 // Smoke tests for the chat backend scaffold (memory layers + error envelope).
 import { beforeEach, describe, expect, it } from 'vitest'
-import type { UIMessage } from 'ai'
+import type { LanguageModelUsage, UIMessage } from 'ai'
 import { Effect, Layer } from 'effect'
 import {
   BranchVersionConflictError,
@@ -23,6 +23,21 @@ import { ToolRegistryService } from '@/lib/chat-backend/services/tool-registry.s
 const TestModelGatewayLive = Layer.succeed(ModelGatewayService, {
   streamResponse: ({ messages }) =>
     Effect.succeed<ModelStreamResult>({
+      totalUsage: Promise.resolve({
+        inputTokens: 5,
+        inputTokenDetails: {
+          noCacheTokens: 5,
+          cacheReadTokens: 0,
+          cacheWriteTokens: 0,
+        },
+        outputTokens: 3,
+        outputTokenDetails: {
+          textTokens: 3,
+          reasoningTokens: 0,
+        },
+        totalTokens: 8,
+      } satisfies LanguageModelUsage),
+      providerMetadata: Promise.resolve(undefined),
       toUIMessageStreamResponse: (options) => {
         const onFinish = options?.onFinish
         const assistantMessage: UIMessage = {

@@ -1,6 +1,8 @@
 import type { UIMessage } from 'ai'
+import type { ReadonlyJSONValue } from '@rocicorp/zero'
 import { Effect, Layer, ServiceMap } from 'effect'
 import type { AiReasoningEffort } from '@/lib/ai-catalog/types'
+import type { PersistedGenerationAnalytics } from '@/lib/chat-backend/domain/generation-metrics'
 import type { ChatAttachmentInput } from '@/lib/chat-contracts/attachments'
 import type {
   BranchVersionConflictError,
@@ -99,6 +101,8 @@ export type MessageStoreServiceShape = {
     readonly modelParams?: {
       readonly reasoningEffort?: AiReasoningEffort
     }
+    readonly providerMetadata?: ReadonlyJSONValue
+    readonly generationAnalytics?: PersistedGenerationAnalytics
     readonly requestId: string
   }) => Effect.Effect<void, MessagePersistenceError>
 }

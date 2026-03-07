@@ -1,4 +1,5 @@
 import type { UIMessage } from 'ai'
+import type { ReadonlyJSONValue } from '@rocicorp/zero'
 import { Effect, Layer, ServiceMap } from 'effect'
 import type { ChatDomainError } from '../domain/errors'
 import { InvalidRequestError } from '../domain/errors'
@@ -31,6 +32,7 @@ import {
   emitInvalidEditTargetTelemetry,
 } from './chat-orchestrator/failure-telemetry'
 import { normalizeStreamCommand } from './chat-orchestrator/command'
+import { buildPersistedGenerationAnalytics } from '../domain/generation-metrics'
 
 /**
  * High-level chat orchestration boundary.
@@ -393,6 +395,10 @@ export class ChatOrchestratorService extends ServiceMap.Service<
           const finalizeAssistant = (input: {
             ok: boolean
             errorMessage?: string
+            providerMetadata?: ReadonlyJSONValue
+            generationAnalytics?: ReturnType<
+              typeof buildPersistedGenerationAnalytics
+            >
           }) => {
             if (assistantFinalized) return
             assistantFinalized = true
@@ -418,6 +424,8 @@ export class ChatOrchestratorService extends ServiceMap.Service<
                   modelParams: {
                     reasoningEffort: modelResolution.reasoningEffort,
                   },
+                  providerMetadata: input.providerMetadata,
+                  generationAnalytics: input.generationAnalytics,
                   requestId,
                 })
                 .pipe(
@@ -597,15 +605,29 @@ export class ChatOrchestratorService extends ServiceMap.Service<
               )
 
               const ok = assistantBuffer.text.length > 0
-              finalizeAssistant({
-                ok,
-                // Explicit failure reasons improve support/debugging and future analytics.
-                errorMessage: isAborted
-                  ? 'Stream aborted before completion'
-                  : ok
-                    ? undefined
-                    : 'No assistant content generated',
-              })
+              void Promise.all([
+                result.totalUsage,
+                result.providerMetadata,
+              ])
+                .then(([totalUsage, providerMetadata]) =>
+                  buildPersistedGenerationAnalytics({
+                    usage: totalUsage,
+                    providerMetadata,
+                  }),
+                )
+                .catch(() => undefined)
+                .then((persistedGeneration) =>
+                  finalizeAssistant({
+                    ok,
+                    providerMetadata: persistedGeneration?.providerMetadata,
+                    generationAnalytics: persistedGeneration,
+                    errorMessage: isAborted
+                      ? 'Stream aborted before completion'
+                      : ok
+                        ? undefined
+                        : 'No assistant content generated',
+                  }),
+                )
               cleanupActiveStream()
             },
           })

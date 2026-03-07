@@ -179,6 +179,19 @@ const message = table('message')
       .from('model_params')
       .optional(),
     providerMetadata: json().from('provider_metadata').optional(),
+    generationMetadata: json().from('generation_metadata').optional(),
+    aiCost: number().from('ai_cost').optional(),
+    inputTokens: number().from('input_tokens').optional(),
+    outputTokens: number().from('output_tokens').optional(),
+    totalTokens: number().from('total_tokens').optional(),
+    reasoningTokens: number().from('reasoning_tokens').optional(),
+    textTokens: number().from('text_tokens').optional(),
+    cacheReadTokens: number().from('cache_read_tokens').optional(),
+    cacheWriteTokens: number().from('cache_write_tokens').optional(),
+    noCacheTokens: number().from('no_cache_tokens').optional(),
+    billableWebSearchCalls: number()
+      .from('billable_web_search_calls')
+      .optional(),
   })
   .primaryKey('id')
 

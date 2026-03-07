@@ -62,7 +62,6 @@ export type ModelSelectorPanelProps = {
 
 /**
  * Model selector that opens a popover with search, provider filter, and model list.
- * Uses the TanStack app design tokens (bg-bg-default, text-content-default, etc.).
  */
 export function ModelSelectorPanel({
   value,

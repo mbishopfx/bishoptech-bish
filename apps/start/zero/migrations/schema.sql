@@ -63,7 +63,18 @@ CREATE TABLE IF NOT EXISTS messages (
   attachments_ids JSONB NOT NULL,
   sources JSONB,
   model_params JSONB,
-  provider_metadata JSONB
+  provider_metadata JSONB,
+  generation_metadata JSONB,
+  ai_cost DOUBLE PRECISION,
+  input_tokens BIGINT,
+  output_tokens BIGINT,
+  total_tokens BIGINT,
+  reasoning_tokens BIGINT,
+  text_tokens BIGINT,
+  cache_read_tokens BIGINT,
+  cache_write_tokens BIGINT,
+  no_cache_tokens BIGINT,
+  billable_web_search_calls BIGINT
 );
 ALTER TABLE messages
 ADD COLUMN IF NOT EXISTS parent_message_id TEXT;
@@ -81,11 +92,35 @@ ALTER TABLE messages
 ADD COLUMN IF NOT EXISTS branch_anchor_message_id TEXT;
 ALTER TABLE messages
 ADD COLUMN IF NOT EXISTS regen_source_message_id TEXT;
+ALTER TABLE messages
+ADD COLUMN IF NOT EXISTS generation_metadata JSONB;
+ALTER TABLE messages
+ADD COLUMN IF NOT EXISTS ai_cost DOUBLE PRECISION;
+ALTER TABLE messages
+ADD COLUMN IF NOT EXISTS input_tokens BIGINT;
+ALTER TABLE messages
+ADD COLUMN IF NOT EXISTS output_tokens BIGINT;
+ALTER TABLE messages
+ADD COLUMN IF NOT EXISTS total_tokens BIGINT;
+ALTER TABLE messages
+ADD COLUMN IF NOT EXISTS reasoning_tokens BIGINT;
+ALTER TABLE messages
+ADD COLUMN IF NOT EXISTS text_tokens BIGINT;
+ALTER TABLE messages
+ADD COLUMN IF NOT EXISTS cache_read_tokens BIGINT;
+ALTER TABLE messages
+ADD COLUMN IF NOT EXISTS cache_write_tokens BIGINT;
+ALTER TABLE messages
+ADD COLUMN IF NOT EXISTS no_cache_tokens BIGINT;
+ALTER TABLE messages
+ADD COLUMN IF NOT EXISTS billable_web_search_calls BIGINT;
 CREATE INDEX IF NOT EXISTS messages_thread_id ON messages (thread_id);
 CREATE INDEX IF NOT EXISTS messages_thread_user ON messages (thread_id, user_id);
 CREATE INDEX IF NOT EXISTS messages_user ON messages (user_id);
 CREATE INDEX IF NOT EXISTS messages_thread_created ON messages (thread_id, created_at);
 CREATE INDEX IF NOT EXISTS messages_thread_parent ON messages (thread_id, parent_message_id);
+CREATE INDEX IF NOT EXISTS messages_user_ai_cost ON messages (user_id, ai_cost);
+CREATE INDEX IF NOT EXISTS messages_user_total_tokens ON messages (user_id, total_tokens);
 
 -- org_ai_policy
 CREATE TABLE IF NOT EXISTS org_ai_policy (

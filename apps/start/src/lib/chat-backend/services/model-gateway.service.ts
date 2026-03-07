@@ -1,5 +1,5 @@
 import { convertToModelMessages, smoothStream, streamText } from 'ai'
-import type { ToolSet, UIMessage } from 'ai'
+import type { LanguageModelUsage, ToolSet, UIMessage } from 'ai'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { createOpenAI } from '@ai-sdk/openai'
 import { Effect, Layer, ServiceMap } from 'effect'
@@ -53,6 +53,8 @@ function resolveRuntimeModel(input: {
 
 /** Minimal stream contract consumed by chat orchestration. */
 export type ModelStreamResult = {
+  readonly totalUsage: PromiseLike<LanguageModelUsage>
+  readonly providerMetadata: PromiseLike<Record<string, unknown> | undefined>
   readonly toUIMessageStreamResponse: (options?: {
     readonly originalMessages?: UIMessage[]
     readonly headers?: HeadersInit

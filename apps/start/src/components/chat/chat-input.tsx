@@ -3,7 +3,7 @@
 
 import { memo, useCallback, useEffect, useState } from 'react'
 import { BookOpen } from 'lucide-react'
-import { useChatComposer } from './chat-context'
+import { useChatComposer, useChatMessages } from './chat-context'
 import {
   PromptInputRoot,
   PromptInputTextarea,
@@ -11,8 +11,22 @@ import {
   PromptInputError,
   PromptInputAttachments,
 } from './prompt-input'
-import { ModelSelectorPanel } from './model-selector-panel'
-import { ReasoningSelectorPanel } from './reasoning-selector-panel'
+import {
+  ModelSelectorPanel,
+  ReasoningSelectorPanel,
+  Context,
+  ContextContent,
+  ContextContentBody,
+  ContextContentFooter,
+  ContextContentHeader,
+  ContextInputUsage,
+  ContextOutputUsage,
+  ContextReasoningUsage,
+  ContextCacheUsage,
+  ContextTrigger,
+} from './composer-bar'
+import { getCatalogModel } from '@/lib/ai-catalog'
+import { useContextUsage } from '../../hooks/chat/use-context-usage'
 import { useFileAttachments } from '../../hooks/chat/upload'
 import { parseChatApiError } from './chat-error-messages'
 import { getChatModeDefinition } from '@/lib/chat-modes'
@@ -29,6 +43,7 @@ import type {
 } from '@/lib/chat-contracts/attachments'
 
 export function ChatInput() {
+  const { messages } = useChatMessages()
   const {
     sendMessage,
     status,
@@ -43,6 +58,7 @@ export function ChatInput() {
     isModeEnforced,
     setSelectedModeId,
   } = useChatComposer()
+
   const [errorDismissed, setErrorDismissed] = useState(false)
   const [uploadErrorDismissed, setUploadErrorDismissed] = useState(false)
 
@@ -158,6 +174,11 @@ export function ChatInput() {
   const reasoningOptions = selectedModel?.reasoningEfforts ?? []
 
   const hasReasoningOptions = !isStudyModeEnabled && reasoningOptions.length > 0
+  const effectiveModelId =
+    isStudyModeEnabled ? studyModeDefinition.fixedModelId : selectedModelId
+  const catalogModel = getCatalogModel(effectiveModelId)
+  const maxTokens = catalogModel?.contextWindow ?? 128_000
+  const { usedTokens } = useContextUsage(messages)
   const selectorTriggerClassName =
     'h-8 rounded-full border border-transparent bg-transparent px-3 ltr:pr-7 rtl:pl-7 text-sm leading-[21px] font-medium text-content-emphasis transition-colors hover:bg-bg-inverted/5 active:bg-bg-inverted/10 focus-visible:border-border-emphasis focus-visible:ring-2 focus-visible:ring-border-emphasis/40'
 
@@ -193,8 +214,27 @@ export function ChatInput() {
   )
 
   const bottomSlot = (
-    <div className="flex items-center justify-start gap-2 px-1 p-1.5">
+    <div className="flex items-center justify-between gap-2 px-1 p-1.5">
       {modelAndReasoningSelectors}
+      <Context
+        maxTokens={maxTokens}
+        modelId={effectiveModelId}
+        usedTokens={usedTokens}
+      >
+        <ContextTrigger />
+        <ContextContent>
+          <ContextContentHeader />
+          <ContextContentBody>
+            <div className="space-y-2">
+              <ContextInputUsage />
+              <ContextOutputUsage />
+              <ContextReasoningUsage />
+              <ContextCacheUsage />
+            </div>
+          </ContextContentBody>
+          <ContextContentFooter />
+        </ContextContent>
+      </Context>
     </div>
   )
 

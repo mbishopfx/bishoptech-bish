@@ -1,4 +1,5 @@
 import { Effect } from 'effect'
+import type { ReadonlyJSONValue } from '@rocicorp/zero'
 import type { AiReasoningEffort } from '@/lib/ai-catalog/types'
 import { MessagePersistenceError } from '@/lib/chat-backend/domain/errors'
 import { zql } from '@/lib/chat-backend/infra/zero/db'
@@ -34,6 +35,8 @@ export const makeFinalizeAssistantMessageOperation = (dependencies: {
       reasoning,
       errorMessage,
       modelParams,
+      providerMetadata,
+      generationAnalytics,
       requestId,
     }) =>
       Effect.gen(function* () {
@@ -68,6 +71,18 @@ export const makeFinalizeAssistantMessageOperation = (dependencies: {
                   status: 'done' | 'error'
                   updated_at: number
                   modelParams?: { readonly reasoningEffort?: AiReasoningEffort }
+                  providerMetadata?: ReadonlyJSONValue
+                  generationMetadata?: ReadonlyJSONValue
+                  aiCost?: number
+                  inputTokens?: number
+                  outputTokens?: number
+                  totalTokens?: number
+                  reasoningTokens?: number
+                  textTokens?: number
+                  cacheReadTokens?: number
+                  cacheWriteTokens?: number
+                  noCacheTokens?: number
+                  billableWebSearchCalls?: number
                   serverError?: { type: string; message: string }
                 } = {
                   id: existing.id,
@@ -76,6 +91,19 @@ export const makeFinalizeAssistantMessageOperation = (dependencies: {
                   status: ok ? 'done' : 'error',
                   updated_at: now,
                   modelParams,
+                  providerMetadata,
+                  generationMetadata: generationAnalytics?.generationMetadata,
+                  aiCost: generationAnalytics?.aiCost,
+                  inputTokens: generationAnalytics?.inputTokens,
+                  outputTokens: generationAnalytics?.outputTokens,
+                  totalTokens: generationAnalytics?.totalTokens,
+                  reasoningTokens: generationAnalytics?.reasoningTokens,
+                  textTokens: generationAnalytics?.textTokens,
+                  cacheReadTokens: generationAnalytics?.cacheReadTokens,
+                  cacheWriteTokens: generationAnalytics?.cacheWriteTokens,
+                  noCacheTokens: generationAnalytics?.noCacheTokens,
+                  billableWebSearchCalls:
+                    generationAnalytics?.billableWebSearchCalls,
                 }
 
                 if (!ok) {
@@ -116,6 +144,18 @@ export const makeFinalizeAssistantMessageOperation = (dependencies: {
                   updated_at: number
                   model: string
                   modelParams?: { readonly reasoningEffort?: AiReasoningEffort }
+                  providerMetadata?: ReadonlyJSONValue
+                  generationMetadata?: ReadonlyJSONValue
+                  aiCost?: number
+                  inputTokens?: number
+                  outputTokens?: number
+                  totalTokens?: number
+                  reasoningTokens?: number
+                  textTokens?: number
+                  cacheReadTokens?: number
+                  cacheWriteTokens?: number
+                  noCacheTokens?: number
+                  billableWebSearchCalls?: number
                   attachmentsIds: readonly string[]
                   serverError?: { type: string; message: string }
                 } = {
@@ -135,6 +175,19 @@ export const makeFinalizeAssistantMessageOperation = (dependencies: {
                   updated_at: now,
                   model: threadModel,
                   modelParams,
+                  providerMetadata,
+                  generationMetadata: generationAnalytics?.generationMetadata,
+                  aiCost: generationAnalytics?.aiCost,
+                  inputTokens: generationAnalytics?.inputTokens,
+                  outputTokens: generationAnalytics?.outputTokens,
+                  totalTokens: generationAnalytics?.totalTokens,
+                  reasoningTokens: generationAnalytics?.reasoningTokens,
+                  textTokens: generationAnalytics?.textTokens,
+                  cacheReadTokens: generationAnalytics?.cacheReadTokens,
+                  cacheWriteTokens: generationAnalytics?.cacheWriteTokens,
+                  noCacheTokens: generationAnalytics?.noCacheTokens,
+                  billableWebSearchCalls:
+                    generationAnalytics?.billableWebSearchCalls,
                   attachmentsIds: [],
                 }
                 if (!ok) {

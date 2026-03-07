@@ -24,8 +24,6 @@ export type ReasoningSelectorPanelProps = {
 
 /**
  * Reasoning/effort selector that opens a popover with a list of effort levels.
- * Matches the model selector panel styling (trigger button, popover, row states)
- * but simplified for the smaller option set—no search or sidebar filters.
  */
 export function ReasoningSelectorPanel({
   value,
