@@ -1,13 +1,12 @@
 import { zeroNodePg } from '@rocicorp/zero/server/adapters/pg'
 import type { NodePgTransaction } from '@rocicorp/zero/server/adapters/pg'
 import type { ServerTransaction } from '@rocicorp/zero/server'
-import { Pool } from 'pg'
 import { createBuilder } from '@rocicorp/zero'
 import { schema } from '@/integrations/zero/schema'
 import type { Schema as ZeroSchema } from '@/integrations/zero/schema'
+import { getZeroUpstreamPool } from '@/lib/server-effect/infra/zero-upstream-pool'
 
-const connectionString = process.env.ZERO_UPSTREAM_DB
-const pool = connectionString ? new Pool({ connectionString }) : null
+const pool = getZeroUpstreamPool()
 const zeroDatabase = pool ? zeroNodePg(schema, pool) : null
 
 export type ZeroServerTransaction = ServerTransaction<ZeroSchema, NodePgTransaction>

@@ -28,7 +28,10 @@ type ResumeRuntime = {
 type LocalLiveStream = {
   readonly chunks: string[]
   readonly listeners: Set<ReadableStreamDefaultController<string>>
+  bufferedChars: number
+  canReplayFromStart: boolean
   done: boolean
+  released: boolean
 }
 
 const ACTIVE_STREAM_TTL_SECONDS = 5 * 60
@@ -37,6 +40,7 @@ const ACTIVE_KEY_PREFIX = 'chat:active:v1'
 const RESUMABLE_KEY_PREFIX = 'chat:resume:v1'
 const RESUME_BATCH_MAX_CHARS = 16384
 const RESUME_BATCH_MAX_DELAY_MS = 100
+const LOCAL_RESUME_MAX_BUFFER_CHARS = 256_000
 
 /** Pub/sub channel used to broadcast stop requests across instances. */
 function getStopChannel(streamId: string): string {
@@ -86,9 +90,12 @@ function batchSseStream(
 ): ReadableStream<string> {
   const { maxChars, maxDelayMs } = options
 
+  let reader: ReadableStreamDefaultReader<string> | undefined
+
   return new ReadableStream<string>({
     start(controller) {
-      const reader = stream.getReader()
+      reader = stream.getReader()
+      const currentReader = reader
       let buffer = ''
       let timer: ReturnType<typeof setTimeout> | undefined
 
@@ -115,7 +122,7 @@ function batchSseStream(
       const pump = async () => {
         try {
           for (;;) {
-            const { done, value } = await reader.read()
+            const { done, value } = await currentReader.read()
             if (done) break
             buffer += value
             if (buffer.length >= maxChars) {
@@ -131,12 +138,61 @@ function batchSseStream(
         } catch (error) {
           clearTimer()
           controller.error(error)
+        } finally {
+          currentReader.releaseLock()
         }
       }
 
       void pump()
     },
+    cancel() {
+      return reader?.cancel().catch(() => undefined)
+    },
   })
+}
+
+/**
+ * Releases all in-memory state for a local replay stream. This is called from
+ * both explicit cleanup paths and abort listeners so buffered SSE chunks do not
+ * survive after the stream lifecycle is over.
+ */
+function closeLocalLiveStream(local: LocalLiveStream) {
+  if (local.released) return
+
+  local.released = true
+  local.done = true
+  local.bufferedChars = 0
+  local.canReplayFromStart = false
+  local.chunks.length = 0
+
+  for (const listener of Array.from(local.listeners)) {
+    try {
+      listener.close()
+    } catch {
+      // ignore
+    }
+  }
+  local.listeners.clear()
+}
+
+/**
+ * Local replay is an optimization for same-instance reconnects. Once the buffer
+ * exceeds the cap we fall back to Redis-backed resume so process memory stays
+ * bounded without serving partial local history.
+ */
+function pushLocalReplayChunk(local: LocalLiveStream, chunk: string) {
+  local.chunks.push(chunk)
+  local.bufferedChars += chunk.length
+
+  while (
+    local.bufferedChars > LOCAL_RESUME_MAX_BUFFER_CHARS &&
+    local.chunks.length > 0
+  ) {
+    const removed = local.chunks.shift()
+    if (!removed) break
+    local.bufferedChars -= removed.length
+    local.canReplayFromStart = false
+  }
 }
 
 /** Creates an in-memory replay stream for same-instance reconnects. */
@@ -228,6 +284,9 @@ class StreamResumeRuntimeService extends ServiceMap.Service<
       (runtime) =>
         Effect.promise(async () => {
           runtime.localHandles.clear()
+          for (const local of runtime.localStreams.values()) {
+            closeLocalLiveStream(local)
+          }
           runtime.localStreams.clear()
           const closers: Promise<unknown>[] = []
           if (runtime.subscriber.isOpen) {
@@ -356,7 +415,10 @@ export class StreamResumeService extends ServiceMap.Service<
               runtime.localStreams.set(streamId, {
                 chunks: [],
                 listeners: new Set(),
+                bufferedChars: 0,
+                canReplayFromStart: true,
                 done: false,
+                released: false,
               })
 
               abortController.signal.addEventListener(
@@ -364,6 +426,11 @@ export class StreamResumeService extends ServiceMap.Service<
                 () => {
                   void unsubscribe()
                   runtime.localHandles.delete(streamId)
+                  const local = runtime.localStreams.get(streamId)
+                  if (local) {
+                    closeLocalLiveStream(local)
+                    runtime.localStreams.delete(streamId)
+                  }
                 },
                 { once: true },
               )
@@ -415,7 +482,11 @@ export class StreamResumeService extends ServiceMap.Service<
                     for (;;) {
                       const { done, value } = await localReader.read()
                       if (done) break
-                      local.chunks.push(value)
+                      if (local.released) {
+                        await localReader.cancel()
+                        break
+                      }
+                      pushLocalReplayChunk(local, value)
                       for (const listener of Array.from(local.listeners)) {
                         try {
                           listener.enqueue(value)
@@ -426,14 +497,20 @@ export class StreamResumeService extends ServiceMap.Service<
                     }
                   } finally {
                     local.done = true
-                    for (const listener of Array.from(local.listeners)) {
-                      try {
-                        listener.close()
-                      } catch {
-                        // ignore
+                    if (local.released) {
+                      local.bufferedChars = 0
+                      local.chunks.length = 0
+                    } else {
+                      for (const listener of Array.from(local.listeners)) {
+                        try {
+                          listener.close()
+                        } catch {
+                          // ignore
+                        }
                       }
+                      local.listeners.clear()
                     }
-                    local.listeners.clear()
+                    localReader.releaseLock()
                   }
                 })()
               }
@@ -481,7 +558,12 @@ export class StreamResumeService extends ServiceMap.Service<
               if (!record) return null
 
               const local = runtime.localStreams.get(record.streamId)
-              if (local && !local.done) {
+              if (
+                local &&
+                !local.done &&
+                !local.released &&
+                local.canReplayFromStart
+              ) {
                 // Prefer in-process replay to reduce Redis read pressure for fast reconnects.
                 return createLocalResumeStream(local)
               }
@@ -575,10 +657,15 @@ export class StreamResumeService extends ServiceMap.Service<
           Effect.tryPromise({
             try: async () => {
               const handle = runtime.localHandles.get(streamId)
-              if (!handle) return
               runtime.localHandles.delete(streamId)
-              await handle.unsubscribe()
-              runtime.localStreams.delete(streamId)
+              if (handle) {
+                await handle.unsubscribe()
+              }
+              const local = runtime.localStreams.get(streamId)
+              if (local) {
+                closeLocalLiveStream(local)
+                runtime.localStreams.delete(streamId)
+              }
             },
             catch: (error) =>
               toProtocolError({

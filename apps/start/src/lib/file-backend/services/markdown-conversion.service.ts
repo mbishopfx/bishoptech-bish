@@ -9,6 +9,11 @@ type MarkdownWorkerResponse = {
   readonly tokens?: unknown
 }
 
+type WorkerRequestHandle = {
+  readonly controller: AbortController
+  readonly timeoutId: ReturnType<typeof setTimeout>
+}
+
 export type MarkdownConversionServiceShape = {
   readonly convertFromUrl: (input: {
     readonly fileUrl: string
@@ -54,59 +59,82 @@ export class MarkdownConversionService extends ServiceMap.Service<
           const effectiveTimeoutMs = Number.isFinite(timeoutMs)
             ? Math.max(1_000, timeoutMs)
             : DEFAULT_WORKER_TIMEOUT_MS
-          const controller = new AbortController()
-          const timeoutId = setTimeout(
-            () => controller.abort(),
-            effectiveTimeoutMs,
-          )
+          const { response, workerPayload } = yield* Effect.acquireRelease(
+            Effect.sync(() => {
+              const controller = new AbortController()
+              const timeoutId = setTimeout(
+                () => controller.abort(),
+                effectiveTimeoutMs,
+              )
 
-          const response = yield* Effect.tryPromise({
-            try: () =>
-              fetch(resolveWorkerConvertUrl(workerUrl), {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  Authorization: `Bearer ${workerToken}`,
-                },
-                body: JSON.stringify({
-                  fileUrl,
-                  fileName,
-                }),
-                signal: controller.signal,
-              }).finally(() => clearTimeout(timeoutId)),
-            catch: (error) => {
-              if (error instanceof Error && error.name === 'AbortError') {
-                return new FileConversionError({
-                  message: 'Markdown conversion timed out',
-                  requestId,
-                  statusCode: 504,
-                })
-              }
-              return new FileConversionError({
-                message: 'Failed to convert uploaded file',
-                requestId,
-                statusCode: 502,
-                cause: String(error),
-              })
-            },
-          })
-
-          const workerPayload = (yield* Effect.tryPromise({
-            try: async () => {
-              try {
-                return (await response.json()) as MarkdownWorkerResponse
-              } catch {
-                return null
-              }
-            },
-            catch: (error) =>
-              new FileConversionError({
-                message: 'Failed to read markdown conversion response',
-                requestId,
-                statusCode: 502,
-                cause: String(error),
+              return {
+                controller,
+                timeoutId,
+              } satisfies WorkerRequestHandle
+            }),
+            ({ controller, timeoutId }) =>
+              Effect.sync(() => {
+                clearTimeout(timeoutId)
+                if (!controller.signal.aborted) {
+                  controller.abort()
+                }
               }),
-          })) as MarkdownWorkerResponse | null
+          ).pipe(
+            Effect.flatMap(({ controller }) =>
+              Effect.gen(function* () {
+                const response = yield* Effect.tryPromise({
+                  try: () =>
+                    fetch(resolveWorkerConvertUrl(workerUrl), {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${workerToken}`,
+                      },
+                      body: JSON.stringify({
+                        fileUrl,
+                        fileName,
+                      }),
+                      signal: controller.signal,
+                    }),
+                  catch: (error) => {
+                    if (error instanceof Error && error.name === 'AbortError') {
+                      return new FileConversionError({
+                        message: 'Markdown conversion timed out',
+                        requestId,
+                        statusCode: 504,
+                      })
+                    }
+                    return new FileConversionError({
+                      message: 'Failed to convert uploaded file',
+                      requestId,
+                      statusCode: 502,
+                      cause: String(error),
+                    })
+                  },
+                })
+
+                const workerPayload = (yield* Effect.tryPromise({
+                  try: async () => {
+                    try {
+                      return (await response.json()) as MarkdownWorkerResponse
+                    } catch {
+                      return null
+                    }
+                  },
+                  catch: (error) =>
+                    new FileConversionError({
+                      message: 'Failed to read markdown conversion response',
+                      requestId,
+                      statusCode: 502,
+                      cause: String(error),
+                    }),
+                })) as MarkdownWorkerResponse | null
+
+                return { response, workerPayload }
+              }),
+            ),
+            Effect.scoped,
+          )
 
           if (!response.ok) {
             const message =

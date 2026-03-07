@@ -169,6 +169,16 @@ export class ChatOrchestratorService extends ServiceMap.Service<
                     ),
                   ),
                 onFailure: () => Effect.void,
+                onTimeout: emitWideErrorEvent({
+                  eventName: 'chat.thread.title.generation.timed_out',
+                  route,
+                  requestId,
+                  userId,
+                  threadId,
+                  model: threadAccess.model,
+                  errorTag: 'DetachedTimeout',
+                  message: 'Detached thread title generation timed out',
+                }),
               })
             }
           }
@@ -337,8 +347,8 @@ export class ChatOrchestratorService extends ServiceMap.Service<
             if (streamCleanedUp) return
             streamCleanedUp = true
 
-            runDetachedUnsafe(
-              Effect.gen(function* () {
+            runDetachedUnsafe({
+              effect: Effect.gen(function* () {
                 yield* streamResume.clearActiveStream({
                   userId,
                   threadId,
@@ -365,8 +375,19 @@ export class ChatOrchestratorService extends ServiceMap.Service<
                   }),
                 ),
               ),
-              () => Effect.void,
-            )
+              onFailure: () => Effect.void,
+              onTimeout: emitWideErrorEvent({
+                eventName: 'chat.stream.cleanup.timed_out',
+                route,
+                requestId,
+                userId,
+                threadId,
+                model: modelResolution.modelId,
+                errorTag: 'DetachedTimeout',
+                message: 'Detached stream cleanup timed out',
+                latencyMs: Date.now() - startedAt,
+              }),
+            })
           }
 
           const finalizeAssistant = (input: {
@@ -376,8 +397,8 @@ export class ChatOrchestratorService extends ServiceMap.Service<
             if (assistantFinalized) return
             assistantFinalized = true
 
-            runDetachedUnsafe(
-              messageStore
+            runDetachedUnsafe({
+              effect: messageStore
                 .finalizeAssistantMessage({
                   threadDbId: threadAccess.dbId,
                   threadModel: modelResolution.modelId,
@@ -418,8 +439,22 @@ export class ChatOrchestratorService extends ServiceMap.Service<
                     }),
                   ),
                 ),
-              () => Effect.void,
-            )
+              onFailure: () => Effect.void,
+              onTimeout: emitWideErrorEvent({
+                eventName: 'chat.stream.persist.timed_out',
+                route,
+                requestId,
+                userId,
+                threadId,
+                model: modelResolution.modelId,
+                errorTag: 'DetachedTimeout',
+                message: 'Detached assistant finalization timed out',
+                latencyMs: Date.now() - startedAt,
+                cause: input.ok
+                  ? 'assistant_finalize_success'
+                  : 'assistant_finalize_error',
+              }),
+            })
           }
 
           const result = yield* modelGateway.streamResponse({
@@ -450,8 +485,8 @@ export class ChatOrchestratorService extends ServiceMap.Service<
               'Cache-Control': 'no-cache, no-transform',
             },
             consumeSseStream: ({ stream }) => {
-              runDetachedUnsafe(
-                streamResume
+              runDetachedUnsafe({
+                effect: streamResume
                   .persistSseStream({
                     streamId,
                     requestId,
@@ -473,8 +508,19 @@ export class ChatOrchestratorService extends ServiceMap.Service<
                       }),
                     ),
                   ),
-                () => Effect.void,
-              )
+                onFailure: () => Effect.void,
+                onTimeout: emitWideErrorEvent({
+                  eventName: 'chat.stream.resume.persist.timed_out',
+                  route,
+                  requestId,
+                  userId,
+                  threadId,
+                  model: modelResolution.modelId,
+                  errorTag: 'DetachedTimeout',
+                  message: 'Detached resumable stream persistence timed out',
+                  latencyMs: Date.now() - startedAt,
+                }),
+              })
             },
             onError: (error: unknown) => {
               // The AI SDK can invoke stream error hooks more than once for the same
@@ -495,8 +541,8 @@ export class ChatOrchestratorService extends ServiceMap.Service<
               cleanupActiveStream()
 
               // Fire-and-forget observability; do not block the stream response.
-              runDetachedUnsafe(
-                emitWideErrorEvent({
+              runDetachedUnsafe({
+                effect: emitWideErrorEvent({
                   eventName: 'chat.stream.transport.failed',
                   route,
                   requestId,
@@ -509,8 +555,8 @@ export class ChatOrchestratorService extends ServiceMap.Service<
                   latencyMs: Date.now() - startedAt,
                   retryable: true,
                 }),
-                () => Effect.void,
-              )
+                onFailure: () => Effect.void,
+              })
 
               return readableMessage
             },

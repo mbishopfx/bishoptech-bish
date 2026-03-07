@@ -5,7 +5,7 @@ import { multiSession } from 'better-auth/plugins/multi-session'
 import { organization } from 'better-auth/plugins/organization'
 import { twoFactor } from 'better-auth/plugins/two-factor'
 import { tanstackStartCookies } from 'better-auth/tanstack-start'
-import { Pool } from 'pg'
+import { requireZeroUpstreamPool } from '@/lib/server-effect/infra/zero-upstream-pool'
 import { sendAuthEmail } from './auth-email.server'
 
 const googleClientId = process.env.GOOGLE_CLIENT_ID?.trim()
@@ -31,8 +31,7 @@ function resolveAuthBaseURL(): string {
   return raw.replace(/\/+$/, '')
 }
 
-const connectionString = requireEnv('ZERO_UPSTREAM_DB')
-export const authPool = new Pool({ connectionString })
+export const authPool = requireZeroUpstreamPool()
 const authBaseURL = resolveAuthBaseURL()
 
 export const auth = betterAuth({

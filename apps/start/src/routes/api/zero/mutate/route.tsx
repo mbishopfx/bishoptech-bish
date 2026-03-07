@@ -2,12 +2,12 @@ import { createFileRoute } from '@tanstack/react-router'
 import { PushProcessor } from '@rocicorp/zero/server'
 import { zeroNodePg } from '@rocicorp/zero/server/adapters/pg'
 import { Effect, Schema } from 'effect'
-import { Pool } from 'pg'
 import { schema } from '@/integrations/zero/schema'
 import { mutators } from '@/integrations/zero/mutators'
 import type { ZeroContext } from '@/integrations/zero/schema'
 import { emitWideErrorEvent } from '@/lib/chat-backend/observability/wide-event'
 import { ChatErrorCode } from '@/lib/chat-contracts/error-codes'
+import { getZeroUpstreamPool } from '@/lib/server-effect/infra/zero-upstream-pool'
 import { requireUserAuth } from '@/lib/server-effect/http/server-auth'
 import { ServerRuntime } from '@/lib/server-effect'
 
@@ -17,8 +17,7 @@ import { ServerRuntime } from '@/lib/server-effect'
  * the session cookie is forwarded; we derive userID from server auth context,
  * not from forwarded headers.
  */
-const connectionString = process.env.ZERO_UPSTREAM_DB
-const pool = connectionString ? new Pool({ connectionString }) : null
+const pool = getZeroUpstreamPool()
 const dbProvider = pool ? zeroNodePg(schema, pool) : null
 
 class ZeroMutateUnauthorizedError extends Schema.TaggedErrorClass<ZeroMutateUnauthorizedError>()(
