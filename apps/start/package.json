@@ -37,7 +37,7 @@
     "@rift/ui": "workspace:*",
     "@rift/utils": "workspace:*",
     "@rocicorp/zero": "^0.26.0",
-    "@streamdown/code": "^1.0.3",
+    "@streamdown/code": "^1.1.0",
     "@streamdown/math": "^1.0.2",
     "@streamdown/mermaid": "^1.0.2",
     "@tailwindcss/vite": "^4.1.18",

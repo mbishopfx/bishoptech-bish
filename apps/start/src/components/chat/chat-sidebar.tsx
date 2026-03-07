@@ -410,10 +410,7 @@ export function ChatSidebarContent({ pathname }: { pathname: string }) {
 
   const historySection: NavSection = {
     name: CHAT_HISTORY_SECTION_NAME(),
-    items:
-      threadItems.length > 0
-        ? threadItems
-        : [{ name: m.chat_sidebar_no_chats_yet(), href: CHAT_HREF }],
+    items: threadItems,
   }
 
   const sections = [...getStaticSections(), historySection]

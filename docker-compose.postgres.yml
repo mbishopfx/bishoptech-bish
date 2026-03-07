@@ -1,0 +1,23 @@
+# Local Postgres for Zero upstream and Better Auth.
+# Zero replication requires wal_level=logical (not the default "replica").
+# Usage:
+#   docker compose -f docker-compose.postgres.yml up -d
+# Then set in apps/start/.env.local:
+#   ZERO_UPSTREAM_DB=postgresql://rift:rift@localhost:5432/rift
+# Run schema: cd apps/start && bun run scripts/zero-dev-reset.ts
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    command: postgres -c wal_level=logical
+    environment:
+      POSTGRES_USER: rift
+      POSTGRES_PASSWORD: rift
+      POSTGRES_DB: rift
+    ports:
+      - "5432:5432"
+    volumes:
+      - rift_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  rift_postgres_data: {}

@@ -166,12 +166,14 @@ export function DataTable<TData, TValue>({
 
           {showColumnToggle && (
             <DropdownMenu>
-              <DropdownMenuTrigger>
-                <Button variant="ghost" size="default">
-                  <Columns3 className="size-4" aria-hidden />
-                  {copy.columns}
-                </Button>
-              </DropdownMenuTrigger>
+              <DropdownMenuTrigger
+                render={
+                  <Button variant="ghost" size="default">
+                    <Columns3 className="size-4" aria-hidden />
+                    {copy.columns}
+                  </Button>
+                }
+              />
               <DropdownMenuContent align="end" className="w-44">
                 {table
                   .getAllColumns()
