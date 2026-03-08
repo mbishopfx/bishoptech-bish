@@ -1,9 +1,9 @@
 'use client'
 
+import { BlobBackgroundGraphic } from '@rift/ui/blob-background-graphic'
+
 /**
  * Shared layout shell for auth-related pages (sign-in, sign-up, accept-invitation,
- * forgot-password, etc.). Provides the centered flex container and shadow
- * background image used across all auth flows.
  */
 export function AuthPageLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -14,6 +14,15 @@ export function AuthPageLayout({ children }: { children: React.ReactNode }) {
         className="absolute top-0 left-0 w-full h-full z-0 mix-blend-multiply object-cover pointer-events-none dark:hidden"
         aria-hidden
       />
+      <div
+        className="absolute inset-0 z-0 pointer-events-none hidden dark:block"
+        aria-hidden
+      >
+        <BlobBackgroundGraphic
+          className="h-full w-full object-cover"
+          preserveAspectRatio="xMidYMid slice"
+        />
+      </div>
       {children}
     </div>
   )

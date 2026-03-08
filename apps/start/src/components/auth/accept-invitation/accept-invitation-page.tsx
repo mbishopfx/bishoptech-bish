@@ -80,10 +80,10 @@ export function AcceptInvitationPage({ invitationId }: AcceptInvitationPageProps
       </motion.div>
 
       <motion.div
-        className="w-full max-w-md overflow-hidden rounded-3xl bg-emphasis/50 shadow-[0_0_1px_rgba(0,0,0,0.40),0_0_2px_rgba(0,0,0,0.05),0_10px_10px_rgba(0,0,0,0.25)] transition-colors duration-200"
+        className="w-full max-w-md overflow-hidden rounded-3xl bg-bg-emphasis/30 dark:bg-bg-emphasis/50 backdrop-blur-xl shadow-[0_0_1px_rgba(0,0,0,0.40),0_0_2px_rgba(0,0,0,0.05),0_10px_10px_rgba(0,0,0,0.25)] transition-colors duration-200"
         variants={menuCardContentVariants}
       >
-        <div className="rounded-b-3xl bg-bg-muted p-8 shadow-[0_0_1px_rgba(0,0,0,0.3),0_4px_12px_rgba(0,0,0,0.08)] transition-colors duration-200">
+        <div className="rounded-b-3xl bg-bg-muted/70 dark:bg-bg-muted/60 backdrop-blur-sm p-8 shadow-[0_0_1px_rgba(0,0,0,0.3),0_4px_12px_rgba(0,0,0,0.08)] transition-colors duration-200">
           <motion.div
             variants={cardVariants}
             initial="hidden"
@@ -105,7 +105,7 @@ export function AcceptInvitationPage({ invitationId }: AcceptInvitationPageProps
                       className="text-xl"
                     />
                   </Avatar>
-                  <span className="absolute -bottom-0.5 -right-0.5 flex size-5 items-center justify-center rounded-full bg-content-success text-white ring-2 ring-bg-muted">
+                  <span className="absolute -bottom-0.5 -right-0.5 flex size-5 items-center justify-center rounded-full bg-content-success text-white ring-2 ring-bg-bg-muted">
                     <Check strokeWidth={3} className="size-2.5" />
                   </span>
                 </div>

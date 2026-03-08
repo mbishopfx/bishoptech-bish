@@ -29,7 +29,7 @@ const SIDEBAR_WIDTH = SIDEBAR_GROUPS_WIDTH + SIDEBAR_AREAS_WIDTH
 
 export const AppSidebar: ComponentType = () => {
   const { pathname } = useLocation()
-  const { user, loading } = useAppAuth()
+  const { user, loading, isAnonymous } = useAppAuth()
   const { activeOrganization, loading: activeOrganizationLoading } = useActiveOrganization()
   const direction = useDirection()
   const currentArea = getCurrentArea(pathname)
@@ -68,7 +68,10 @@ export const AppSidebar: ComponentType = () => {
                 size="iconSidebar"
                 data-active={currentArea === ORG_SETTINGS_AREA_KEY}
               >
-                <Link to={ORG_SETTINGS_HREF} aria-label={m.layout_organization_settings_aria_label()}>
+                <Link
+                to={isAnonymous ? '/auth/sign-up' : ORG_SETTINGS_HREF}
+                aria-label={m.layout_organization_settings_aria_label()}
+              >
                   <Avatar size="xs">
                     {activeOrganization?.logo ? (
                       <AvatarImage
@@ -114,7 +117,11 @@ export const AppSidebar: ComponentType = () => {
         </div>
         <div className="flex flex-col items-center gap-3">
           <ThemeToggle />
-          <UserProfileAvatar user={user ?? undefined} isLoading={loading} />
+          <UserProfileAvatar
+            user={user ?? undefined}
+            isLoading={loading}
+            settingsHref={isAnonymous ? '/auth/sign-up' : undefined}
+          />
         </div>
       </nav>
       <div
