@@ -110,7 +110,7 @@ export const auth = betterAuth({
       },
     }),
     anonymous({
-      generateName: () => 'Guest User',
+      generateName: () => 'Human',
       onLinkAccount: async ({ anonymousUser, newUser }) => {
         // Reassign app-owned rows so guest chat history survives account upgrade.
         const fromUserId = anonymousUser.user.id

@@ -4,7 +4,6 @@ import { ReasoningTrigger } from '../components/reasoning'
 
 function renderReasoningDecorator({
   parts,
-  isMessageStreaming,
 }: Parameters<AssistantDecoratorRenderer['render']>[0]) {
   const reasoningParts = parts.filter(isReasoningUIPart)
   if (reasoningParts.length === 0) return null
@@ -16,9 +15,9 @@ function renderReasoningDecorator({
 
   if (!reasoningText) return null
 
-  const reasoningIsStreaming =
-    isMessageStreaming ||
-    reasoningParts.some((part) => part.state === 'streaming')
+  const reasoningIsStreaming = reasoningParts.some(
+    (part) => part.state === 'streaming',
+  )
 
   return (
     <ReasoningTrigger

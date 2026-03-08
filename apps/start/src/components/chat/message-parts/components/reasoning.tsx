@@ -154,103 +154,16 @@ const ThinkingIndicatorBase = forwardRef<
       className={cn('relative px-3 py-2', className)}
       {...props}
     >
-      <svg aria-hidden className="absolute size-0 overflow-hidden">
-        <defs>
-          <mask
-            id={maskId}
-            maskUnits="userSpaceOnUse"
-            x={0}
-            y={0}
-            width={SHIMMER_ICON_MASK_SIZE}
-            height={SHIMMER_ICON_MASK_SIZE}
-          >
-            <motion.path
-              d={isStreaming ? undefined : circleA}
-              animate={
-                isStreaming
-                  ? {
-                      d: [circleA, infinity, circleB, infinity, circleA],
-                    }
-                  : undefined
-              }
-              transition={
-                isStreaming
-                  ? {
-                      d: {
-                        duration: 6,
-                        ease: 'easeInOut',
-                        repeat: Infinity,
-                        times: [0, 0.25, 0.5, 0.75, 1.0],
-                      },
-                    }
-                  : undefined
-              }
-              fill="none"
-              stroke="white"
-              strokeWidth={1.5}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              transform="scale(1.5)"
-            />
-          </mask>
-        </defs>
-      </svg>
-
       <div
         className="relative flex items-center gap-2"
       >
-        <span className="relative size-9 shrink-0" aria-hidden="true">
-          {/* The icon keeps its real slot and receives shimmer through its own mask. */}
-          <motion.svg
-            width={36}
-            height={36}
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={1.5}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className={cn('text-content-muted', isStreaming && 'invisible')}
-          >
-            <motion.path
-              d={isStreaming ? undefined : circleA}
-              animate={
-                isStreaming
-                  ? {
-                      d: [circleA, infinity, circleB, infinity, circleA],
-                    }
-                  : undefined
-              }
-              transition={
-                isStreaming
-                  ? {
-                      d: {
-                        duration: 6,
-                        ease: 'easeInOut',
-                        repeat: Infinity,
-                        times: [0, 0.25, 0.5, 0.75, 1.0],
-                      },
-                    }
-                  : undefined
-              }
-            />
-          </motion.svg>
-          {isStreaming && (
-            <div
-              className="absolute inset-0 shimmer-unified"
-              style={{
-                mask: `url(#${maskId})`,
-                maskSize: '36px 36px',
-                maskRepeat: 'no-repeat',
-                maskPosition: '0 0',
-                WebkitMask: `url(#${maskId})`,
-                WebkitMaskSize: '36px 36px',
-                WebkitMaskRepeat: 'no-repeat',
-                WebkitMaskPosition: '0 0',
-              }}
-            />
-          )}
-        </span>
+        <ReasoningMotionIcon
+          isAnimating={isStreaming}
+          size={36}
+          className="size-9 shrink-0"
+          aria-hidden="true"
+          shimmerClassName="shimmer-unified"
+        />
         <span
           className="inline-grid overflow-hidden text-[16px] text-start"
           style={{ fontVariationSettings: fontWeights.medium }}
@@ -303,6 +216,120 @@ const ThinkingIndicator = memo(
     previous.className === next.className &&
     previous.finishedLabel === next.finishedLabel,
 )
+
+type ReasoningMotionIconProps = {
+  isAnimating: boolean
+  size?: number
+  className?: string
+  shimmerClassName?: string
+  'aria-hidden'?: boolean | 'true' | 'false'
+}
+
+export const ReasoningMotionIcon = memo(function ReasoningMotionIcon({
+  isAnimating,
+  size = SHIMMER_ICON_MASK_SIZE,
+  className,
+  shimmerClassName,
+  'aria-hidden': ariaHidden,
+}: ReasoningMotionIconProps) {
+  const maskId = useId()
+  const maskSize = `${size}px ${size}px`
+
+  return (
+    <span className={cn('relative inline-flex shrink-0', className)} aria-hidden={ariaHidden}>
+      <svg aria-hidden className="absolute size-0 overflow-hidden">
+        <defs>
+          <mask
+            id={maskId}
+            maskUnits="userSpaceOnUse"
+            x={0}
+            y={0}
+            width={size}
+            height={size}
+          >
+            <motion.path
+              d={circleA}
+              animate={
+                isAnimating
+                  ? {
+                      d: [circleA, infinity, circleB, infinity, circleA],
+                    }
+                  : undefined
+              }
+              transition={
+                isAnimating
+                  ? {
+                      d: {
+                        duration: 6,
+                        ease: 'easeInOut',
+                        repeat: Infinity,
+                        times: [0, 0.25, 0.5, 0.75, 1.0],
+                      },
+                    }
+                  : undefined
+              }
+              fill="none"
+              stroke="white"
+              strokeWidth={1.5}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              transform="scale(1.5)"
+            />
+          </mask>
+        </defs>
+      </svg>
+      <motion.svg
+        width={size}
+        height={size}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={1.5}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className={cn('text-content-muted', isAnimating && shimmerClassName && 'invisible')}
+      >
+        <motion.path
+          d={circleA}
+          animate={
+            isAnimating
+              ? {
+                  d: [circleA, infinity, circleB, infinity, circleA],
+                }
+              : undefined
+          }
+          transition={
+            isAnimating
+              ? {
+                  d: {
+                    duration: 6,
+                    ease: 'easeInOut',
+                    repeat: Infinity,
+                    times: [0, 0.25, 0.5, 0.75, 1.0],
+                  },
+                }
+              : undefined
+          }
+        />
+      </motion.svg>
+      {isAnimating && shimmerClassName ? (
+        <div
+          className={cn('absolute inset-0', shimmerClassName)}
+          style={{
+            mask: `url(#${maskId})`,
+            maskSize,
+            maskRepeat: 'no-repeat',
+            maskPosition: '0 0',
+            WebkitMask: `url(#${maskId})`,
+            WebkitMaskSize: maskSize,
+            WebkitMaskRepeat: 'no-repeat',
+            WebkitMaskPosition: '0 0',
+          }}
+        />
+      ) : null}
+    </span>
+  )
+})
 
 type ReasoningTriggerButtonProps = {
   reasoningTextRef: RefObject<string>

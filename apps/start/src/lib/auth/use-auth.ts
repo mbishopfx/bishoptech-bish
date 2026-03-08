@@ -37,9 +37,7 @@ export function useAppAuth() {
   }, [sessionQuery])
 
   const signInAnonymously = useCallback(async () => {
-    await authClient.$fetch('/sign-in/anonymous', {
-      method: 'POST',
-    })
+    await authClient.signIn.anonymous()
     await sessionQuery.refetch()
   }, [sessionQuery])
 

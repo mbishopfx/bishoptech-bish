@@ -1,13 +1,13 @@
 // Renders chat messages and keeps scroll pinned to the latest user message.
 import { memo, useCallback, useMemo } from 'react'
 import type { RefObject } from 'react'
-import type { UIMessage } from 'ai'
-import { Spinner } from '@rift/ui/spinner'
+import { isReasoningUIPart, type UIMessage } from 'ai'
 import { useChatMessageActions, useChatMessages } from './chat-context'
 import { ChatMessage } from './chat-message'
 import { usePinToLastUserMessage } from '@rift/chat-scroll'
 import { ChatWelcomeScreen } from './chat-welcome-screen'
 import { setComposerDraft } from './composer-draft-store'
+import { ReasoningMotionIcon } from './message-parts/components/reasoning'
 import { m } from '@/paraglide/messages.js'
 
 type BranchSelectorState = {
@@ -116,6 +116,16 @@ function areChatThreadMessageRowPropsEqual(
   )
 }
 
+function hasVisibleAssistantContent(message: UIMessage | undefined): boolean {
+  if (!message || message.role !== 'assistant') return false
+
+  return message.parts.some((part) => {
+    if (part.type === 'text') return part.text.trim().length > 0
+    if (isReasoningUIPart(part)) return part.text.trim().length > 0
+    return true
+  })
+}
+
 export function ChatThread() {
   const { messages, status, activeThreadId, branchSelectorsByAnchorMessageId } =
     useChatMessages()
@@ -148,10 +158,11 @@ export function ChatThread() {
     })
 
   const isStreaming = status === 'submitted' || status === 'streaming'
-  const isAwaitingStreamStart = status === 'submitted'
   const lastMessage = messages.at(-1)
+  const lastAssistantMessage =
+    lastMessage?.role === 'assistant' ? lastMessage : undefined
   const showThinking =
-    isAwaitingStreamStart && (!lastMessage || lastMessage.role === 'user')
+    isStreaming && !hasVisibleAssistantContent(lastAssistantMessage)
 
   const handleSuggestionClick = useCallback(
     (prompt: string) => {
@@ -261,6 +272,13 @@ export function ChatThread() {
         </div>
       )}
       {messages.map((m) => {
+        const hidePendingAssistantShell =
+          isStreaming &&
+          m.id === lastAssistantMessage?.id &&
+          !hasVisibleAssistantContent(lastAssistantMessage)
+
+        if (hidePendingAssistantShell) return null
+
         return (
           <ChatThreadMessageRow
             key={m.id}
@@ -282,16 +300,24 @@ export function ChatThread() {
       })}
       {showThinking && (
         <div
-          className="group mx-auto flex w-full max-w-2xl items-end gap-2 py-4 is-assistant"
+          className="group mx-auto flex w-full max-w-2xl items-end gap-2 py-1 is-assistant"
           aria-live="polite"
           aria-busy="true"
         >
           <div className="flex w-full flex-col gap-3 overflow-hidden text-content-emphasis text-md leading-[21px]">
             <div className="w-full">
               <div className="py-1">
-                <Spinner size={24} className="animate-spin" aria-hidden />
+                <ReasoningMotionIcon
+                  isAnimating
+                  size={36}
+                  className="flex size-9 items-center justify-center"
+                  aria-hidden="true"
+                />
               </div>
             </div>
+            {/*
+            */}
+            <div aria-hidden className="h-8" />
           </div>
         </div>
       )}
