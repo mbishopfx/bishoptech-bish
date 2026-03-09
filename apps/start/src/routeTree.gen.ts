@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as PricingRouteRouteImport } from './routes/pricing/route'
 import { Route as AuthRouteRouteImport } from './routes/auth/route'
 import { Route as AuthSignUpRouteRouteImport } from './routes/auth/sign-up/route'
 import { Route as AuthSignInRouteRouteImport } from './routes/auth/sign-in/route'
@@ -46,6 +47,11 @@ import { Route as appLayoutOrganizationSettingsAnalyticsRouteRouteImport } from 
 import { Route as appLayoutOrganizationSettingsModelsIndexRouteImport } from './routes/(app)/_layout/organization/settings/models/index'
 import { Route as appLayoutOrganizationSettingsModelsProviderIdRouteRouteImport } from './routes/(app)/_layout/organization/settings/models/$providerId/route'
 
+const PricingRouteRoute = PricingRouteRouteImport.update({
+  id: '/pricing',
+  path: '/pricing',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthRouteRoute = AuthRouteRouteImport.update({
   id: '/auth',
   path: '/auth',
@@ -245,6 +251,7 @@ const appLayoutOrganizationSettingsModelsProviderIdRouteRoute =
 
 export interface FileRoutesByFullPath {
   '/auth': typeof AuthRouteRouteWithChildren
+  '/pricing': typeof PricingRouteRoute
   '/api/chat': typeof ApiChatRouteRoute
   '/auth/sign-in': typeof AuthSignInRouteRoute
   '/auth/sign-up': typeof AuthSignUpRouteRoute
@@ -282,6 +289,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/auth': typeof AuthRouteRouteWithChildren
+  '/pricing': typeof PricingRouteRoute
   '/api/chat': typeof ApiChatRouteRoute
   '/auth/sign-in': typeof AuthSignInRouteRoute
   '/auth/sign-up': typeof AuthSignUpRouteRoute
@@ -316,6 +324,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/auth': typeof AuthRouteRouteWithChildren
+  '/pricing': typeof PricingRouteRoute
   '/(app)/_layout': typeof appLayoutRouteRouteWithChildren
   '/api/chat': typeof ApiChatRouteRoute
   '/auth/sign-in': typeof AuthSignInRouteRoute
@@ -356,6 +365,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/auth'
+    | '/pricing'
     | '/api/chat'
     | '/auth/sign-in'
     | '/auth/sign-up'
@@ -393,6 +403,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/auth'
+    | '/pricing'
     | '/api/chat'
     | '/auth/sign-in'
     | '/auth/sign-up'
@@ -426,6 +437,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/auth'
+    | '/pricing'
     | '/(app)/_layout'
     | '/api/chat'
     | '/auth/sign-in'
@@ -465,6 +477,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   AuthRouteRoute: typeof AuthRouteRouteWithChildren
+  PricingRouteRoute: typeof PricingRouteRoute
   appLayoutRouteRoute: typeof appLayoutRouteRouteWithChildren
   ApiChatRouteRoute: typeof ApiChatRouteRoute
   ApiFilesMarkdownRouteRoute: typeof ApiFilesMarkdownRouteRoute
@@ -477,6 +490,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/pricing': {
+      id: '/pricing'
+      path: '/pricing'
+      fullPath: '/pricing'
+      preLoaderRoute: typeof PricingRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth': {
       id: '/auth'
       path: '/auth'
@@ -877,6 +897,7 @@ const appLayoutRouteRouteWithChildren = appLayoutRouteRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   AuthRouteRoute: AuthRouteRouteWithChildren,
+  PricingRouteRoute: PricingRouteRoute,
   appLayoutRouteRoute: appLayoutRouteRouteWithChildren,
   ApiChatRouteRoute: ApiChatRouteRoute,
   ApiFilesMarkdownRouteRoute: ApiFilesMarkdownRouteRoute,
