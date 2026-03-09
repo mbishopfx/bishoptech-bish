@@ -16,6 +16,7 @@ type BillingSummaryRow = {
     status: string
     seatCount?: number
     billingInterval?: string
+    currentPeriodStart?: number
     currentPeriodEnd?: number
     scheduledPlanId?: string
     scheduledSeatCount?: number
@@ -92,16 +93,6 @@ export function useOrgTopupGrants() {
   return {
     grants,
     loading,
-  }
-}
-
-export function useOrgFeatureAccess(feature: WorkspaceFeatureId) {
-  const { entitlement, loading } = useOrgBillingSummary()
-
-  return {
-    loading,
-    allowed: entitlement?.effectiveFeatures?.[feature] ?? false,
-    planId: entitlement?.planId ?? 'free',
   }
 }
 

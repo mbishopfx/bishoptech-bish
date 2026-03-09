@@ -16,6 +16,7 @@ import { cn } from "@rift/utils";
 import { Button } from "./button";
 import { Input } from "./input";
 import { Label } from "./label";
+import { Progress } from "./progress";
 import {
   Select,
   SelectContent,
@@ -83,6 +84,19 @@ export interface FormSelectConfig {
   /** Initial selected value; defaults to first option's value if omitted */
   defaultValue?: string;
   options: Array<{ value: string; label: string }>;
+}
+
+/**
+ * Config for rendering a progress bar in the form body. Uses max-w-md to match
+ * input field width. Useful for usage indicators (e.g. seats used vs paid).
+ */
+export interface FormProgressBarConfig {
+  /** Progress value 0–100 */
+  value: number;
+  /** Optional label above the bar (e.g. "Seat usage") */
+  label?: string;
+  /** Optional value label shown to the right (e.g. "3 of 5 seats") */
+  valueLabel?: string;
 }
 
 /**
@@ -199,11 +213,29 @@ export interface FormProps extends Omit<
   /** Optional class override for the header row container. */
   headerClassName?: string;
   /**
+   * Optional toggle rendered directly below the title and description.
+   * Prominent toggle with label placed immediately under the header text.
+   */
+  headerToggle?: {
+    checked: boolean;
+    onCheckedChange: (checked: boolean) => void;
+    /** Label when checked. Defaults to "Enabled". */
+    enabledLabel?: string;
+    /** Label when unchecked. Defaults to "Disabled". */
+    disabledLabel?: string;
+    disabled?: boolean;
+  };
+  /**
    * Optional custom content area rendered in the form body.
    * Useful for non-input controls (for example, avatar upload UI) while
    * preserving the same settings card structure.
    */
   contentSlot?: ReactNode;
+  /**
+   * Optional progress bar rendered in the form body. Uses max-w-md to match
+   * input field width. Rendered before contentSlot when both are provided.
+   */
+  progressBar?: FormProgressBarConfig;
   /**
    * Allows rendering submit/secondary actions even when no built-in
    * input/select main field is used, for fully custom form bodies.
@@ -307,7 +339,9 @@ export function Form({
   helpLearnMoreLabel,
   headerSlot,
   headerClassName,
+  headerToggle,
   contentSlot,
+  progressBar,
   forceActions = false,
   contentClassName,
   buttonText = "Save Changes",
@@ -491,15 +525,56 @@ export function Form({
               >
                 {title}
               </h2>
-              <div className="flex flex-wrap items-center gap-2 text-sm text-content-subtle">
-                <p>{description}</p>
-                {descriptionInlineSlot != null ? (
-                  <div className="inline-flex shrink-0">{descriptionInlineSlot}</div>
-                ) : null}
-              </div>
+              {(description != null && description !== "") ||
+              descriptionInlineSlot != null ? (
+                <div className="flex flex-wrap items-center gap-2 text-sm text-content-subtle">
+                  {description != null && description !== "" ? (
+                    <p>{description}</p>
+                  ) : null}
+                  {descriptionInlineSlot != null ? (
+                    <div className="inline-flex shrink-0">{descriptionInlineSlot}</div>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
             {headerSlot != null ? <div className="shrink-0">{headerSlot}</div> : null}
           </div>
+
+          {headerToggle != null ? (
+            <div className="flex items-center gap-3">
+              <Switch
+                checked={headerToggle.checked}
+                onCheckedChange={headerToggle.onCheckedChange}
+                disabled={headerToggle.disabled}
+                aria-label={
+                  headerToggle.checked
+                    ? (headerToggle.enabledLabel ?? "Enabled")
+                    : (headerToggle.disabledLabel ?? "Disabled")
+                }
+              />
+              <span className="text-sm font-medium text-content-emphasis">
+                {headerToggle.checked
+                  ? (headerToggle.enabledLabel ?? "Enabled")
+                  : (headerToggle.disabledLabel ?? "Disabled")}
+              </span>
+            </div>
+          ) : null}
+
+          {progressBar != null ? (
+            <div className="w-full max-w-md space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                {progressBar.label != null ? (
+                  <span className="text-content-muted">{progressBar.label}</span>
+                ) : null}
+                {progressBar.valueLabel != null ? (
+                  <span className="font-medium text-content-default">
+                    {progressBar.valueLabel}
+                  </span>
+                ) : null}
+              </div>
+              <Progress value={progressBar.value} className="w-full" />
+            </div>
+          ) : null}
 
           {contentSlot != null ? contentSlot : null}
 

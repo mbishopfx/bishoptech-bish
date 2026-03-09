@@ -1,9 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { ContentPage } from '@/components/layout'
-import { OrganizationFeatureLockedPage } from '@/components/organization/settings/feature-locked-page'
 import { ToolsPage } from '@/components/organization/settings/tools'
 import { useAppAuth } from '@/lib/auth/use-auth'
-import { useOrgFeatureAccess } from '@/lib/billing/use-org-billing'
 import { m } from '@/paraglide/messages.js'
 
 /**
@@ -18,7 +16,6 @@ export const Route = createFileRoute(
 
 function ToolsRoutePage() {
   const { activeOrganizationId } = useAppAuth()
-  const { allowed, loading } = useOrgFeatureAccess('toolPolicy')
 
   if (!activeOrganizationId) {
     return (
@@ -30,16 +27,6 @@ function ToolsRoutePage() {
           {m.org_route_select_org_body()}
         </p>
       </ContentPage>
-    )
-  }
-
-  if (!loading && !allowed) {
-    return (
-      <OrganizationFeatureLockedPage
-        title={m.org_tools_page_title()}
-        description={m.org_tools_page_description()}
-        requiredPlan="Pro"
-      />
     )
   }
 
