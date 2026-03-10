@@ -48,7 +48,10 @@ export function UserProfileAvatar({
       size="iconSidebar"
       aria-label={m.layout_open_settings_aria_label()}
     >
-      <Link to={settingsHref}>
+      <Link
+        to={settingsHref}
+        preload="intent"
+      >
         <Avatar size={size}>
           {user?.image ? (
             <AvatarImage

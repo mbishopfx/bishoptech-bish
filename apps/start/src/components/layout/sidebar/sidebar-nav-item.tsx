@@ -71,6 +71,11 @@ export function SidebarNavItem({
     <Button asChild variant="sidebarNavItem" size="sidebarNavItem">
       <Link
         to={href}
+        /**
+         * Warm route code/data when intent is detected (hover/focus/touch),
+         * reducing commit latency for frequent sidebar hops.
+         */
+        preload="intent"
         data-active={isActive}
         onPointerEnter={() => setHovered(true)}
         onPointerLeave={() => setHovered(false)}

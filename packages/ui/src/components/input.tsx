@@ -29,8 +29,9 @@ const inputVariants = cva(
   }
 )
 
-export type InputProps = Omit<React.ComponentProps<"input">, "size"> &
+export type InputProps = Omit<React.ComponentPropsWithoutRef<"input">, "size"> &
   VariantProps<typeof inputVariants> & {
+    /** Enables a visibility toggle button when `type="password"`. */
     showPasswordToggle?: boolean
   }
 

@@ -19,7 +19,7 @@ import { useActiveOrganization } from '@/lib/auth/active-organization'
 import { useAppAuth } from '@/lib/auth/use-auth'
 import { Link, useRouterState } from '@tanstack/react-router'
 import type { ComponentType } from 'react'
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { m } from '@/paraglide/messages.js'
 import { SidebarChatThreadPreloader } from './sidebar/sidebar-chat-thread-preloader'
 
@@ -28,15 +28,20 @@ const SIDEBAR_AREAS_WIDTH = 240
 const SIDEBAR_WIDTH = SIDEBAR_GROUPS_WIDTH + SIDEBAR_AREAS_WIDTH
 
 export const AppSidebar: ComponentType = () => {
-  const pathname = useRouterState({
-    /**
-     * Use the last fully resolved route path instead of the in-flight location.
-     * TanStack Router can update `location` before the new outlet tree commits,
-     * which makes the sidebar highlight jump ahead of the main content.
-     * Reading `resolvedLocation` keeps both regions visually synchronized.
-     */
-    select: (state) => state.resolvedLocation.pathname,
+  const resolvedPathname = useRouterState({
+    select: (state) => state.resolvedLocation?.pathname,
   })
+  const initialPathname = useRouterState({
+    select: (state) => state.location?.pathname ?? '/',
+  })
+  const lastResolvedPathnameRef = useRef(initialPathname)
+
+  useEffect(() => {
+    if (resolvedPathname) {
+      lastResolvedPathnameRef.current = resolvedPathname
+    }
+  }, [resolvedPathname])
+  const pathname = resolvedPathname ?? lastResolvedPathnameRef.current ?? initialPathname
   const { user, loading, isAnonymous } = useAppAuth()
   const { activeOrganization, loading: activeOrganizationLoading } = useActiveOrganization()
   const direction = useDirection()
@@ -78,6 +83,7 @@ export const AppSidebar: ComponentType = () => {
               >
                 <Link
                 to={isAnonymous ? '/auth/sign-up' : ORG_SETTINGS_HREF}
+                preload="intent"
                 aria-label={m.layout_organization_settings_aria_label()}
               >
                   <Avatar size="xs">
@@ -115,7 +121,11 @@ export const AppSidebar: ComponentType = () => {
                       size="iconSidebar"
                       data-active={currentArea === areaKey}
                     >
-                      <Link to={config.href} aria-label={config.title}>
+                      <Link
+                        to={config.href}
+                        preload="intent"
+                        aria-label={config.title}
+                      >
                         <Icon className="size-5 text-foreground-primary" />
                       </Link>
                     </Button>

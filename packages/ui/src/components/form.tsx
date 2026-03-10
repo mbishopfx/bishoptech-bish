@@ -138,6 +138,10 @@ type FormTextInputControlProps = {
   onValueChange: (nextValue: string) => void;
 };
 
+type NativeFormSubmitEvent = Parameters<
+  NonNullable<React.ComponentProps<"form">["onSubmit"]>
+>[0];
+
 /**
  * Props for the settings-style Form component.
  * Renders a card with title, description, optional main field (input or select), optional toggle section, help text, and submit button.
@@ -406,7 +410,7 @@ export function Form({
       : String(value ?? "")
     : String(value ?? "");
 
-  const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleFormSubmit = async (e: NativeFormSubmitEvent) => {
     e.preventDefault();
     onSubmitProp?.(e);
     if (!hasActions || handleSubmit == null) return;
