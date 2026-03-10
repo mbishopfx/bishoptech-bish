@@ -1,0 +1,275 @@
+{
+  "name": "@rift/ui",
+  "version": "0.0.1",
+  "private": true,
+  "sideEffects": false,
+  "files": ["src", "dist"],
+  "scripts": {
+    "check-types": "tsc --noEmit",
+    "build": "tsup"
+  },
+  "exports": {
+    "./accordion": {
+      "types": "./src/components/accordion.tsx",
+      "import": "./src/components/accordion.tsx",
+      "default": "./src/components/accordion.tsx"
+    },
+    "./alert-dialog": {
+      "types": "./src/components/alert-dialog.tsx",
+      "import": "./src/components/alert-dialog.tsx",
+      "default": "./src/components/alert-dialog.tsx"
+    },
+    "./avatar": {
+      "types": "./src/components/avatar.tsx",
+      "import": "./src/components/avatar.tsx",
+      "default": "./src/components/avatar.tsx"
+    },
+    "./badge": {
+      "types": "./src/components/badge.tsx",
+      "import": "./src/components/badge.tsx",
+      "default": "./src/components/badge.tsx"
+    },
+    "./blob-background-graphic": {
+      "types": "./src/components/blob-background-graphic.tsx",
+      "import": "./src/components/blob-background-graphic.tsx",
+      "default": "./src/components/blob-background-graphic.tsx"
+    },
+    "./breadcrumb": {
+      "types": "./src/components/breadcrumb.tsx",
+      "import": "./src/components/breadcrumb.tsx",
+      "default": "./src/components/breadcrumb.tsx"
+    },
+    "./button": {
+      "types": "./src/components/button.tsx",
+      "import": "./src/components/button.tsx",
+      "default": "./src/components/button.tsx"
+    },
+    "./calendar": {
+      "types": "./src/components/calendar.tsx",
+      "import": "./src/components/calendar.tsx",
+      "default": "./src/components/calendar.tsx"
+    },
+    "./card": {
+      "types": "./src/components/card.tsx",
+      "import": "./src/components/card.tsx",
+      "default": "./src/components/card.tsx"
+    },
+    "./checkbox": {
+      "types": "./src/components/checkbox.tsx",
+      "import": "./src/components/checkbox.tsx",
+      "default": "./src/components/checkbox.tsx"
+    },
+    "./collapsible": {
+      "types": "./src/components/collapsible.tsx",
+      "import": "./src/components/collapsible.tsx",
+      "default": "./src/components/collapsible.tsx"
+    },
+    "./command": {
+      "types": "./src/components/command.tsx",
+      "import": "./src/components/command.tsx",
+      "default": "./src/components/command.tsx"
+    },
+    "./context-menu": {
+      "types": "./src/components/context-menu.tsx",
+      "import": "./src/components/context-menu.tsx",
+      "default": "./src/components/context-menu.tsx"
+    },
+    "./data-table": {
+      "types": "./src/components/data-table.tsx",
+      "import": "./src/components/data-table.tsx",
+      "default": "./src/components/data-table.tsx"
+    },
+    "./dialog": {
+      "types": "./src/components/dialog.tsx",
+      "import": "./src/components/dialog.tsx",
+      "default": "./src/components/dialog.tsx"
+    },
+    "./drawer": {
+      "types": "./src/components/drawer.tsx",
+      "import": "./src/components/drawer.tsx",
+      "default": "./src/components/drawer.tsx"
+    },
+    "./icons/svg-icons": {
+      "types": "./src/components/icons/svg-icons.tsx",
+      "import": "./src/components/icons/svg-icons.tsx",
+      "default": "./src/components/icons/svg-icons.tsx"
+    },
+    "./hover-card": {
+      "types": "./src/components/hover-card.tsx",
+      "import": "./src/components/hover-card.tsx",
+      "default": "./src/components/hover-card.tsx"
+    },
+    "./hooks/useMediaQuery": {
+      "types": "./src/hooks/useMediaQuery.ts",
+      "import": "./src/hooks/useMediaQuery.ts",
+      "default": "./src/hooks/useMediaQuery.ts"
+    },
+    "./hooks/useTheme": {
+      "types": "./src/hooks/useTheme.tsx",
+      "import": "./src/hooks/useTheme.tsx",
+      "default": "./src/hooks/useTheme.tsx"
+    },
+    "./dropdown-menu": {
+      "types": "./src/components/dropdown-menu.tsx",
+      "import": "./src/components/dropdown-menu.tsx",
+      "default": "./src/components/dropdown-menu.tsx"
+    },
+    "./direction": {
+      "types": "./src/components/direction.tsx",
+      "import": "./src/components/direction.tsx",
+      "default": "./src/components/direction.tsx"
+    },
+    "./field": {
+      "types": "./src/components/field.tsx",
+      "import": "./src/components/field.tsx",
+      "default": "./src/components/field.tsx"
+    },
+    "./form": {
+      "types": "./src/components/form.tsx",
+      "import": "./src/components/form.tsx",
+      "default": "./src/components/form.tsx"
+    },
+    "./input": {
+      "types": "./src/components/input.tsx",
+      "import": "./src/components/input.tsx",
+      "default": "./src/components/input.tsx"
+    },
+    "./input-group": {
+      "types": "./src/components/input-group.tsx",
+      "import": "./src/components/input-group.tsx",
+      "default": "./src/components/input-group.tsx"
+    },
+    "./input-otp": {
+      "types": "./src/components/input-otp.tsx",
+      "import": "./src/components/input-otp.tsx",
+      "default": "./src/components/input-otp.tsx"
+    },
+    "./label": {
+      "types": "./src/components/label.tsx",
+      "import": "./src/components/label.tsx",
+      "default": "./src/components/label.tsx"
+    },
+    "./popover": {
+      "types": "./src/components/popover.tsx",
+      "import": "./src/components/popover.tsx",
+      "default": "./src/components/popover.tsx"
+    },
+    "./progress": {
+      "types": "./src/components/progress.tsx",
+      "import": "./src/components/progress.tsx",
+      "default": "./src/components/progress.tsx"
+    },
+    "./scroll-area": {
+      "types": "./src/components/scroll-area.tsx",
+      "import": "./src/components/scroll-area.tsx",
+      "default": "./src/components/scroll-area.tsx"
+    },
+    "./select": {
+      "types": "./src/components/select.tsx",
+      "import": "./src/components/select.tsx",
+      "default": "./src/components/select.tsx"
+    },
+    "./separator": {
+      "types": "./src/components/separator.tsx",
+      "import": "./src/components/separator.tsx",
+      "default": "./src/components/separator.tsx"
+    },
+    "./skeleton": {
+      "types": "./src/components/skeleton.tsx",
+      "import": "./src/components/skeleton.tsx",
+      "default": "./src/components/skeleton.tsx"
+    },
+    "./spinner": {
+      "types": "./src/components/spinner.tsx",
+      "import": "./src/components/spinner.tsx",
+      "default": "./src/components/spinner.tsx"
+    },
+    "./slider": {
+      "types": "./src/components/slider.tsx",
+      "import": "./src/components/slider.tsx",
+      "default": "./src/components/slider.tsx"
+    },
+    "./sonner": {
+      "types": "./src/components/sonner.tsx",
+      "import": "./src/components/sonner.tsx",
+      "default": "./src/components/sonner.tsx"
+    },
+    "./switch": {
+      "types": "./src/components/switch.tsx",
+      "import": "./src/components/switch.tsx",
+      "default": "./src/components/switch.tsx"
+    },
+    "./table": {
+      "types": "./src/components/table.tsx",
+      "import": "./src/components/table.tsx",
+      "default": "./src/components/table.tsx"
+    },
+    "./charts/pie-chart": {
+      "types": "./src/components/charts/pie-chart.tsx",
+      "import": "./src/components/charts/pie-chart.tsx",
+      "default": "./src/components/charts/pie-chart.tsx"
+    },
+    "./charts/pie-slice": {
+      "types": "./src/components/charts/pie-slice.tsx",
+      "import": "./src/components/charts/pie-slice.tsx",
+      "default": "./src/components/charts/pie-slice.tsx"
+    },
+    "./charts/pie-center": {
+      "types": "./src/components/charts/pie-center.tsx",
+      "import": "./src/components/charts/pie-center.tsx",
+      "default": "./src/components/charts/pie-center.tsx"
+    },
+    "./tabs": {
+      "types": "./src/components/tabs.tsx",
+      "import": "./src/components/tabs.tsx",
+      "default": "./src/components/tabs.tsx"
+    },
+    "./textarea": {
+      "types": "./src/components/textarea.tsx",
+      "import": "./src/components/textarea.tsx",
+      "default": "./src/components/textarea.tsx"
+    },
+    "./theme-toggle": {
+      "types": "./src/components/theme-toggle.tsx",
+      "import": "./src/components/theme-toggle.tsx",
+      "default": "./src/components/theme-toggle.tsx"
+    },
+    "./tooltip": {
+      "types": "./src/components/tooltip.tsx",
+      "import": "./src/components/tooltip.tsx",
+      "default": "./src/components/tooltip.tsx"
+    }
+  },
+  "dependencies": {
+    "@base-ui/react": "^1.2.0",
+    "@rift/utils": "workspace:*",
+    "@tanstack/react-table": "^8.21.3",
+    "@visx/responsive": "4.0.1-alpha.0",
+    "@visx/shape": "4.0.1-alpha.0",
+    "class-variance-authority": "^0.7.1",
+    "cmdk": "^1.1.1",
+    "input-otp": "^1.4.2",
+    "lucide-react": "^0.542.0",
+    "motion": "^12.34.3",
+    "react-day-picker": "^9.13.0",
+    "react-use-measure": "^2.1.7",
+    "sonner": "^2.0.7",
+    "vaul": "^1.1.2"
+  },
+  "devDependencies": {
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "tsup": "^8.3.5",
+    "typescript": "^5.9.3"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0 || ^19.0.0",
+    "react-dom": "^18.0.0 || ^19.0.0",
+    "next-themes": "^0.4.0"
+  },
+  "peerDependenciesMeta": {
+    "next-themes": {
+      "optional": true
+    }
+  }
+}

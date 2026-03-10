@@ -1,0 +1,138 @@
+/**
+ * @rift/tailwind-config — default Tailwind v4 theme (minimal, used by TanStack Start).
+ * Import: @import '@rift/tailwind-config'; @import '@rift/tailwind-config/base.css';
+ * Next.js (legacy): @import '@rift/tailwind-config/legacy'; @import '@rift/tailwind-config/legacy/base.css';
+ */
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  /* ─── Surfaces (backgrounds) ─────────────────────────────────────────────── */
+  --color-surface-base: var(--surface-base);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-overlay: var(--surface-overlay);
+  --color-surface-strong: var(--surface-strong);
+  --color-surface-inverse: var(--surface-inverse);
+  --color-surface-info: var(--surface-info);
+  --color-surface-success: var(--surface-success);
+  --color-surface-warning: var(--surface-warning);
+  --color-surface-error: var(--surface-error);
+
+  /* ─── Foreground (text) ─────────────────────────────────────────────────── */
+  --color-foreground-primary: var(--foreground-primary);
+  --color-foreground-secondary: var(--foreground-secondary);
+  --color-foreground-tertiary: var(--foreground-tertiary);
+  --color-foreground-inverse: var(--foreground-inverse);
+  --color-foreground-strong: var(--foreground-strong);
+  --color-foreground-info: var(--foreground-info);
+  --color-foreground-success: var(--foreground-success);
+  --color-foreground-warning: var(--foreground-warning);
+  --color-foreground-error: var(--foreground-error);
+
+  /* ─── Borders ───────────────────────────────────────────────────────────── */
+  --color-border-faint: var(--border-faint);
+  --color-border-light: var(--border-light);
+  --color-border-base: var(--border-base);
+  --color-border-strong: var(--border-strong);
+
+  /* ─── Accent ────────────────────────────────────────────────────────────── */
+  --color-accent-primary: var(--accent-primary);
+
+  /* ─── Radius (base --radius set on :root) ───────────────────────────────── */
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+:root,
+.light {
+  --radius: 0.5rem;
+
+  /* Streamdown/shadcn-style tokens (external lib compatibility) */
+  --primary: 217 91% 60%;
+  --primary-foreground: 0 0% 100%;
+  --muted: 0 0% 98%;
+  --muted-foreground: 0 0% 64%;
+  --border: 0 0% 83%;
+  --ring: 217 91% 60%;
+
+  /* Surfaces */
+  --surface-base: rgb(252 252 252);
+  --surface-raised: rgb(250 250 250);
+  --surface-overlay: rgb(247 247 247);
+  --surface-strong: rgb(229 229 229);
+  --surface-inverse: rgb(23 23 23);
+  --surface-info: rgb(191 219 254);
+  --surface-success: rgb(220 252 231);
+  --surface-warning: rgb(255 237 213);
+  --surface-error: rgb(254 226 226);
+
+  /* Foreground (text) */
+  --foreground-primary: rgb(64 64 64);
+  --foreground-secondary: rgb(163 163 163);
+  --foreground-tertiary: rgb(115 115 115);
+  --foreground-inverse: rgb(255 255 255);
+  --foreground-strong: rgb(23 23 23);
+  --foreground-info: rgb(29 78 216);
+  --foreground-success: rgb(21 128 61);
+  --foreground-warning: rgb(194 65 12);
+  --foreground-error: rgb(185 28 28);
+
+  /* Borders */
+  --border-faint: rgb(247 247 247);
+  --border-light: rgb(245 245 245);
+  --border-base: rgba(5, 5, 5, 0.06);
+  --border-strong: rgb(163 163 163);
+
+  /* Accent */
+  --accent-primary: rgb(54 115 252);
+}
+
+.dark {
+  /* Streamdown/shadcn-style tokens */
+  --primary: 217 91% 60%;
+  --primary-foreground: 0 0% 100%;
+  --muted: 0 0% 9%;
+  --muted-foreground: 0 0% 64%;
+  --border: 0 0% 32%;
+  --ring: 217 91% 60%;
+
+  /* Surfaces */
+  --surface-base: rgb(22 22 22);
+  --surface-raised: rgb(23 23 23);
+  --surface-overlay: rgb(20 20 20);
+  --surface-strong: rgb(17 17 17);
+  --surface-inverse: rgb(250 250 250);
+  --surface-info: rgb(29 78 216);
+  --surface-success: rgb(21 128 61);
+  --surface-warning: rgb(194 65 12);
+  --surface-error: rgb(31 20 20);
+
+  /* Foreground (text) */
+  --foreground-primary: rgb(212 212 212);
+  --foreground-secondary: rgb(163 163 163);
+  --foreground-tertiary: rgb(124 124 124);
+  --foreground-inverse: rgb(0 0 0);
+  --foreground-strong: rgb(250 250 250);
+  --foreground-info: rgb(191 219 254);
+  --foreground-success: rgb(220 252 231);
+  --foreground-warning: rgb(255 237 213);
+  --foreground-error: rgb(254 226 226);
+
+  /* Borders */
+  --border-faint: rgba(252, 252, 252, 0.08);
+  --border-light: rgb(38 38 38);
+  --border-base: rgba(252, 252, 252, 0.08);
+  --border-strong: rgb(115 115 115);
+
+  /* Accent */
+  --accent-primary: rgb(54 115 252);
+}
+
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+}

@@ -1,0 +1,31 @@
+import { Outlet, createFileRoute, useLocation } from '@tanstack/react-router'
+import { ChatProvider } from '@/components/chat'
+import { ChatPageShell } from '@/components/chat/chat-page-shell'
+
+export const Route = createFileRoute('/(app)/_layout/chat')({
+  component: ChatLayout,
+})
+
+// Reserved segments that are not thread IDs (static chat pages).
+const reservedSegments = new Set(['projects'])
+
+function ChatLayout() {
+  const { pathname } = useLocation()
+
+  const normalized = pathname.replace(/\/+$/, '')
+  const maybeSegment = normalized.startsWith('/chat/')
+    ? normalized.slice('/chat/'.length)
+    : undefined
+
+  const threadId =
+    maybeSegment && !reservedSegments.has(maybeSegment)
+      ? maybeSegment
+      : undefined
+
+  return (
+    <ChatProvider threadId={threadId}>
+      <ChatPageShell />
+      <Outlet />
+    </ChatProvider>
+  )
+}

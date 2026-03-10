@@ -1,0 +1,251 @@
+import { Effect, Layer, ServiceMap } from 'effect'
+import { isEmbeddingFeatureEnabled } from '@/utils/app-feature-flags'
+import { emitWideErrorEvent } from '@/lib/chat-backend/observability/wide-event'
+import { AttachmentRagService } from '@/lib/chat-backend/services/rag'
+import { ZeroDatabaseService } from '@/lib/server-effect/services/zero-database.service'
+import {
+  buildAttachmentChunkRows,
+  normalizeMarkdownForStorage,
+} from '@/lib/chat-backend/services/rag/attachment-content.pipeline'
+import {
+  R2UploadServiceError,
+  r2UploadService,
+} from '@/lib/upload/upload.service'
+import {
+  FileConversionError,
+  FilePersistenceError,
+  FileUploadStorageError,
+} from '../domain/errors'
+import { requireFilePersistenceDb } from './file-persistence-db'
+import { MarkdownConversionService } from './markdown-conversion.service'
+
+type UploadedFileResult = {
+  readonly id: string
+  readonly key: string
+  readonly url: string
+  readonly name: string
+  readonly size: number
+  readonly contentType: string
+}
+
+export type FileUploadOrchestratorServiceShape = {
+  readonly upload: (input: {
+    readonly userId: string
+    readonly ownerOrgId?: string
+    readonly workspaceId?: string
+    readonly accessScope?: 'user' | 'workspace' | 'org'
+    readonly accessGroupIds?: readonly string[]
+    readonly file: File
+    readonly requestId: string
+    readonly route: string
+  }) => Effect.Effect<
+    UploadedFileResult,
+    FileUploadStorageError | FileConversionError | FilePersistenceError
+  >
+}
+
+export class FileUploadOrchestratorService extends ServiceMap.Service<
+  FileUploadOrchestratorService,
+  FileUploadOrchestratorServiceShape
+>()('file-backend/FileUploadOrchestratorService') {
+  /**
+   * Live file upload orchestration layer (storage, conversion, persistence, vector indexing).
+   */
+  static readonly layer = Layer.effect(
+    FileUploadOrchestratorService,
+    Effect.gen(function* () {
+      const attachmentRag = yield* AttachmentRagService
+      const zeroDatabase = yield* ZeroDatabaseService
+      const markdownConversion = yield* MarkdownConversionService
+
+      return {
+        upload: Effect.fn('FileUploadOrchestratorService.upload')(
+          ({
+            userId,
+            ownerOrgId,
+            workspaceId,
+            accessScope,
+            accessGroupIds,
+            file,
+            requestId,
+            route,
+          }) =>
+            Effect.gen(function* () {
+          const uploaded = yield* Effect.tryPromise({
+            try: () =>
+              r2UploadService.upload({
+                userId,
+                file,
+              }),
+            catch: (error) => {
+              if (error instanceof R2UploadServiceError) {
+                return new FileUploadStorageError({
+                  message: error.message,
+                  requestId,
+                  statusCode: error.statusCode,
+                })
+              }
+              return new FileUploadStorageError({
+                message: 'Failed to upload file to storage',
+                requestId,
+                statusCode: 500,
+                cause: String(error),
+              })
+            },
+          })
+
+          const conversion = yield* markdownConversion.convertFromUrl({
+            fileUrl: uploaded.url,
+            fileName: uploaded.name,
+            requestId,
+          })
+          const markdownRaw = conversion.markdown
+
+          const markdown = normalizeMarkdownForStorage(markdownRaw)
+          const now = Date.now()
+          const attachmentId = crypto.randomUUID()
+          const chunkBuild = yield* Effect.tryPromise({
+            try: () =>
+              buildAttachmentChunkRows({
+                attachmentId,
+                userId,
+                markdown,
+                now,
+              }),
+            catch: (error) =>
+              new FilePersistenceError({
+                message: 'Failed to prepare attachment chunks',
+                requestId,
+                cause: String(error),
+              }),
+          })
+          if (
+            isEmbeddingFeatureEnabled() &&
+            chunkBuild.metrics.embeddingStatus === 'failed'
+          ) {
+            yield* Effect.logError(
+              'Attachment embeddings failed during upload; continuing with markdown fallback',
+              {
+                requestId,
+                route,
+                userId,
+                attachmentId,
+              },
+            )
+          }
+
+          const db = yield* requireFilePersistenceDb({
+            zeroDatabase,
+            message: 'File storage is unavailable',
+            requestId,
+          })
+
+          yield* Effect.tryPromise({
+            try: () =>
+              db.transaction(async (tx) => {
+                await tx.mutate.attachment.insert({
+                  id: attachmentId,
+                  messageId: undefined,
+                  threadId: undefined,
+                  userId,
+                  fileKey: uploaded.key,
+                  attachmentUrl: uploaded.url,
+                  fileName: uploaded.name,
+                  mimeType: uploaded.contentType,
+                  fileSize: uploaded.size,
+                  fileContent: markdown,
+                  embeddingModel: chunkBuild.metrics.embeddingModel,
+                  embeddingTokens: chunkBuild.metrics.embeddingTokens,
+                  embeddingDimensions: chunkBuild.metrics.embeddingDimensions,
+                  embeddingChunks: chunkBuild.metrics.embeddingChunks,
+                  embeddingStatus: chunkBuild.metrics.embeddingStatus,
+                  ownerOrgId,
+                  workspaceId,
+                  accessScope: accessScope ?? 'user',
+                  accessGroupIds: accessGroupIds ?? [],
+                  vectorIndexedAt: undefined,
+                  vectorError: undefined,
+                  status: 'uploaded',
+                  createdAt: now,
+                  updatedAt: now,
+                })
+              }),
+            catch: (error) =>
+              new FilePersistenceError({
+                message: 'Failed to persist uploaded attachment',
+                requestId,
+                cause: String(error),
+              }),
+          })
+
+          yield* attachmentRag
+            .indexAttachmentChunks({
+              chunks: chunkBuild.chunks.map((chunk) => ({
+                ...chunk,
+                embeddingModel: chunkBuild.metrics.embeddingModel,
+                ownerOrgId,
+                workspaceId,
+                accessScope: accessScope ?? 'user',
+                accessGroupIds: accessGroupIds ?? [],
+              })),
+            })
+            .pipe(
+              Effect.tap(() =>
+                chunkBuild.metrics.embeddingStatus === 'indexed'
+                  ? Effect.tryPromise({
+                      try: () =>
+                        db.transaction(async (tx) => {
+                          await tx.mutate.attachment.update({
+                            id: attachmentId,
+                            vectorIndexedAt: Date.now(),
+                            vectorError: undefined,
+                            updatedAt: Date.now(),
+                          })
+                        }),
+                      catch: () => undefined,
+                    }).pipe(Effect.catch(() => Effect.void))
+                  : Effect.void,
+              ),
+              Effect.catch((error) =>
+                emitWideErrorEvent({
+                  eventName: 'file.upload.vector_index.failed',
+                  route,
+                  requestId,
+                  userId,
+                  errorTag: 'FileVectorIndexError',
+                  message: 'Failed to index file chunks in vector store',
+                  cause: String(error),
+                }).pipe(
+                  Effect.flatMap(() =>
+                    Effect.tryPromise({
+                      try: () =>
+                        db.transaction(async (tx) => {
+                          await tx.mutate.attachment.update({
+                            id: attachmentId,
+                            embeddingStatus: 'failed',
+                            vectorError: String(error),
+                            updatedAt: Date.now(),
+                          })
+                        }),
+                      catch: () => undefined,
+                    }).pipe(Effect.catch(() => Effect.void)),
+                  ),
+                  Effect.asVoid,
+                ),
+              ),
+            )
+
+              return {
+                id: attachmentId,
+                key: uploaded.key,
+                url: uploaded.url,
+                name: uploaded.name,
+                size: uploaded.size,
+                contentType: uploaded.contentType,
+              }
+            }),
+        ),
+      }
+    }),
+  )
+}

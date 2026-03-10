@@ -1,0 +1,26 @@
+/**
+ * @rift/tailwind-config — default base layer (minimal, used by TanStack Start).
+ * Optional: @import '@rift/tailwind-config/base.css';
+ */
+
+@layer base {
+  * {
+    @apply border-border-base;
+  }
+  html {
+    background-color: var(--surface-base);
+  }
+  body {
+    @apply bg-surface-base text-foreground-primary;
+  }
+}
+
+@layer utilities {
+  /*
+   * Mirrors directional icons (e.g. submenu chevrons) in RTL layouts.
+   * Keep this as a utility class so shared primitives can opt in per-icon.
+   */
+  .cn-rtl-flip:dir(rtl) {
+    transform: scaleX(-1);
+  }
+}

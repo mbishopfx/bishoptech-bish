@@ -1,0 +1,16 @@
+{
+  "name": "@rift/tailwind-config",
+  "description": "Shared Tailwind CSS theme and design tokens for Rift",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./theme.css",
+    "./theme.css": "./theme.css",
+    "./base.css": "./base.css",
+    "./legacy": "./legacy/theme.css",
+    "./legacy/theme.css": "./legacy/theme.css",
+    "./legacy/base.css": "./legacy/base.css"
+  },
+  "files": ["theme.css", "base.css", "legacy/theme.css", "legacy/base.css"]
+}

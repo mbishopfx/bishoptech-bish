@@ -1,0 +1,36 @@
+// Prompt input component exports.
+export { TEXTAREA_MAX_HEIGHT } from './constants'
+export { PromptInputRoot } from './prompt-input-root'
+export type {
+  PromptInputRootProps,
+  PromptInputSlots,
+} from './prompt-input-root'
+export { PromptInputTextarea } from './prompt-input-textarea'
+export type {
+  PromptInputTextareaProps,
+  PromptInputTextareaRef,
+} from './prompt-input-textarea'
+export {
+  PromptInputActionsMenu,
+} from './prompt-input-actions-menu'
+export type {
+  PromptInputActionsMenuProps,
+} from './prompt-input-actions-menu'
+export {
+  PromptInputToolbar,
+  ToolbarSelect,
+} from './prompt-input-toolbar'
+export type {
+  PromptInputToolbarProps,
+  ToolbarSelectOption,
+  ToolbarSelectProps,
+} from './prompt-input-toolbar'
+export { PromptInputSubmit } from './prompt-input-submit'
+export type { PromptInputSubmitProps } from './prompt-input-submit'
+
+export { PromptInputError, PromptInputAttachments } from './slots/top'
+export type {
+  PromptInputErrorProps,
+  PromptInputAttachmentsProps,
+  AttachedFile,
+} from './slots/top'

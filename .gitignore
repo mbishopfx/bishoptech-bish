@@ -1,11 +1,15 @@
 node_modules
 .next/
-bun.lock
-/reference
+dist/
+.turbo/
+**/.turbo/
+*.tsbuildinfo
 .env.local
 lib/local/
 .cursor/rules/effect.mdc
-tsconfig.tsbuildinfo
+zero.db*
+effect-smol/
+next/
 
 # Sentry Config File
 .env.sentry-build-plugin
