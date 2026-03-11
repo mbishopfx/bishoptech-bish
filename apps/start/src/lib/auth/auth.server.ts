@@ -381,6 +381,12 @@ auth = betterAuth({
   ],
   advanced: {
     useSecureCookies: process.env.NODE_ENV === 'production',
+    crossSubDomainCookies: process.env.BETTER_AUTH_COOKIE_DOMAIN?.trim()
+      ? {
+          enabled: true,
+          domain: process.env.BETTER_AUTH_COOKIE_DOMAIN.trim(),
+        }
+      : { enabled: true },
   },
 })
 
