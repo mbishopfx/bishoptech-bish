@@ -18,7 +18,7 @@ Rift is built around TanStack Start for full-stack delivery, Rocicorp Zero for s
 
 ![Rift chat app screenshot](https://github.com/user-attachments/assets/e3cd4f56-0e1d-44f1-b815-76192c905bc0)
 
-> **Note:** This repository is a new version of Rift under active development. The live site at [rift.mx](https://rift.mx) runs an older version of Rift.
+> **Note:** This repository is a new version of Rift under active development [demo.rift.mx]. The live site at [rift.mx](https://rift.mx) runs an older version of Rift.
 
 ## Features
 
