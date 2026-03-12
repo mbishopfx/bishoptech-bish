@@ -36,7 +36,7 @@ import { mutators, queries } from '@/integrations/zero'
 import { CACHE_CHAT_NAV } from '@/integrations/zero/query-cache-policy'
 import { useAppAuth } from '@/lib/frontend/auth/use-auth'
 import { m } from '@/paraglide/messages.js'
-import { ChatSearchCommand, openChatSearchCommand } from './chat-search-command'
+import { openChatSearchCommand } from './chat-search-command'
 import { syncThreadGenerationStatuses } from './thread-status-store'
 
 // --- Single source of truth: constants and static content ---
@@ -432,7 +432,6 @@ export function ChatSidebarContent({ pathname }: { pathname: string }) {
 
   return (
     <>
-      <ChatSearchCommand />
       <SidebarAreaLayout
         title={CHAT_SIDEBAR_TITLE()}
         sections={sections}

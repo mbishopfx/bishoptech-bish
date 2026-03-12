@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { MainNav } from '@/components/layout/main-nav'
 import { AppSidebar } from '@/components/layout/app-sidebar'
 import { RightSidebarProvider } from '@/components/layout/right-sidebar-context'
+import { ChatSearchCommand } from '@/components/chat/chat-search-command'
 import { ActiveOrganizationProvider } from '@/lib/frontend/auth/active-organization'
 
 export function DashboardLayout({ children }: { children: ReactNode }) {
@@ -12,6 +13,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
         <ActiveOrganizationProvider>
           <RightSidebarProvider>
             <MainNav sidebar={AppSidebar}>{children}</MainNav>
+            <ChatSearchCommand />
           </RightSidebarProvider>
         </ActiveOrganizationProvider>
       </div>

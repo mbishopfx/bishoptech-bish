@@ -12,6 +12,7 @@ import {
   User,
 } from 'lucide-react'
 import { useTheme } from '@rift/ui/hooks/useTheme'
+import { useHotkey } from '@tanstack/react-hotkeys'
 import { useNavigate } from '@tanstack/react-router'
 import { AppCommandDialog, type AppCommandGroup } from '@/components/layout/command/app-command-dialog'
 import { searchChatThreads } from '@/lib/frontend/chat/chat-search.functions'
@@ -62,13 +63,6 @@ function useDebouncedValue(value: string, delayMs: number): string {
   return debouncedValue
 }
 
-function isEditableTarget(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) return false
-  if (target.isContentEditable) return true
-  const tagName = target.tagName.toLowerCase()
-  return tagName === 'input' || tagName === 'textarea' || tagName === 'select'
-}
-
 function formatResultDate(timestamp: number): string {
   if (!Number.isFinite(timestamp) || timestamp <= 0) {
     return ''
@@ -109,25 +103,18 @@ export function ChatSearchCommand() {
   const requestSequenceRef = useRef(0)
   const debouncedQuery = useDebouncedValue(query, SEARCH_DEBOUNCE_MS)
 
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== 'k') {
-        return
-      }
-      if (isEditableTarget(event.target)) {
-        return
-      }
-
-      event.preventDefault()
+  useHotkey(
+    'Mod+K',
+    () => {
       setHideActionGroups(false)
       setOpen((current) => !current)
-    }
-
-    window.addEventListener('keydown', onKeyDown)
-    return () => {
-      window.removeEventListener('keydown', onKeyDown)
-    }
-  }, [])
+    },
+    {
+      // Keep prior behavior: don't trigger while typing in inputs/editable fields.
+      ignoreInputs: true,
+      preventDefault: true,
+    },
+  )
 
   useEffect(() => {
     const onOpenRequest = (event: Event) => {

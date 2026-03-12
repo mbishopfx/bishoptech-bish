@@ -1,14 +1,19 @@
 // @vitest-environment jsdom
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { ChatSearchCommand } from './chat-search-command'
+import { ChatSearchCommand, openChatSearchCommand } from './chat-search-command'
 
 const navigateMock = vi.fn()
 const searchChatThreadsMock = vi.fn()
 const setThemeMock = vi.fn()
+const useHotkeyMock = vi.fn()
 
 vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => navigateMock,
+}))
+
+vi.mock('@tanstack/react-hotkeys', () => ({
+  useHotkey: (...args: unknown[]) => useHotkeyMock(...args),
 }))
 
 vi.mock('@/lib/frontend/chat/chat-search.functions', () => ({
@@ -82,6 +87,7 @@ describe('ChatSearchCommand', () => {
     vi.useFakeTimers()
     navigateMock.mockReset()
     searchChatThreadsMock.mockReset()
+    useHotkeyMock.mockReset()
     Object.defineProperty(window.navigator, 'platform', {
       configurable: true,
       value: 'MacIntel',
@@ -106,8 +112,18 @@ describe('ChatSearchCommand', () => {
     searchChatThreadsMock.mockReturnValueOnce(deferred.promise)
 
     render(<ChatSearchCommand />)
+    expect(useHotkeyMock).toHaveBeenCalledWith(
+      'Mod+K',
+      expect.any(Function),
+      expect.objectContaining({
+        ignoreInputs: true,
+        preventDefault: true,
+      }),
+    )
 
-    fireEvent.keyDown(window, { key: 'k', metaKey: true })
+    act(() => {
+      openChatSearchCommand()
+    })
     fireEvent.change(screen.getByLabelText('query'), {
       target: { value: 'stale query' },
     })
