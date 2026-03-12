@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   ROOT_BRANCH_PARENT_KEY,
+  resolveBranchSelectionPath,
   resolveEditableUserTarget,
   resolveCanonicalBranch,
   resolveRegenerationAnchor,
@@ -140,6 +141,124 @@ describe('branch-resolver', () => {
       'u1-v2',
     ])
     expect(selectedResolution.canonicalMessageIds).toEqual(['u1-v2', 'a1-v2'])
+  })
+
+  it('builds the branch path needed to reveal a hidden nested message', () => {
+    const messages: TestMessage[] = [
+      { messageId: 'u1', role: 'user', branchIndex: 1, createdAt: 1 },
+      { messageId: 'a1-v1', role: 'assistant', parentMessageId: 'u1', branchIndex: 1, createdAt: 2 },
+      { messageId: 'a1-v2', role: 'assistant', parentMessageId: 'u1', branchIndex: 2, createdAt: 3 },
+      { messageId: 'u2-v1', role: 'user', parentMessageId: 'a1-v1', branchIndex: 1, createdAt: 4 },
+      { messageId: 'u2-v2', role: 'user', parentMessageId: 'a1-v2', branchIndex: 1, createdAt: 5 },
+      { messageId: 'a2-v2a', role: 'assistant', parentMessageId: 'u2-v2', branchIndex: 1, createdAt: 6 },
+      { messageId: 'a2-v2b', role: 'assistant', parentMessageId: 'u2-v2', branchIndex: 2, createdAt: 7 },
+    ]
+
+    const selections = resolveBranchSelectionPath(
+      messages,
+      {
+        [ROOT_BRANCH_PARENT_KEY]: 'u1',
+        u1: 'a1-v1',
+        'a1-v1': 'u2-v1',
+      },
+      'a2-v2b',
+    )
+
+    expect(selections).toEqual([
+      { parentMessageId: 'u1', childMessageId: 'a1-v2' },
+      { parentMessageId: 'a1-v2', childMessageId: 'u2-v2' },
+      { parentMessageId: 'u2-v2', childMessageId: 'a2-v2b' },
+    ])
+  })
+
+  it('includes the synthetic root selection when the target lives on another root branch', () => {
+    const messages: TestMessage[] = [
+      { messageId: 'u1-v1', role: 'user', branchIndex: 1, createdAt: 1 },
+      { messageId: 'u1-v2', role: 'user', branchIndex: 2, createdAt: 2 },
+      { messageId: 'a1-v2', role: 'assistant', parentMessageId: 'u1-v2', branchIndex: 1, createdAt: 3 },
+    ]
+
+    const selections = resolveBranchSelectionPath(
+      messages,
+      {
+        [ROOT_BRANCH_PARENT_KEY]: 'u1-v1',
+      },
+      'a1-v2',
+    )
+
+    expect(selections).toEqual([
+      { parentMessageId: ROOT_BRANCH_PARENT_KEY, childMessageId: 'u1-v2' },
+      { parentMessageId: 'u1-v2', childMessageId: 'a1-v2' },
+    ])
+  })
+
+  it('scales to deeply nested hidden branch paths', () => {
+    const messages: TestMessage[] = [
+      { messageId: 'u1', role: 'user', branchIndex: 1, createdAt: 1 },
+      { messageId: 'a1-v1', role: 'assistant', parentMessageId: 'u1', branchIndex: 1, createdAt: 2 },
+      { messageId: 'a1-v2', role: 'assistant', parentMessageId: 'u1', branchIndex: 2, createdAt: 3 },
+    ]
+    const activeSelections: Record<string, string> = {
+      [ROOT_BRANCH_PARENT_KEY]: 'u1',
+      u1: 'a1-v1',
+    }
+
+    let parentMessageId = 'a1-v2'
+    let targetMessageId = parentMessageId
+    let createdAt = 4
+
+    for (let depth = 0; depth < 12; depth += 1) {
+      const userMessageId = `u-depth-${depth}`
+      const assistantVisibleId = `a-depth-${depth}-v1`
+      const assistantHiddenId = `a-depth-${depth}-v2`
+
+      messages.push({
+        messageId: userMessageId,
+        role: 'user',
+        parentMessageId,
+        branchIndex: 1,
+        createdAt,
+      })
+      createdAt += 1
+      messages.push({
+        messageId: assistantVisibleId,
+        role: 'assistant',
+        parentMessageId: userMessageId,
+        branchIndex: 1,
+        createdAt,
+      })
+      createdAt += 1
+      messages.push({
+        messageId: assistantHiddenId,
+        role: 'assistant',
+        parentMessageId: userMessageId,
+        branchIndex: 2,
+        createdAt,
+      })
+      createdAt += 1
+
+      activeSelections[parentMessageId] = userMessageId
+      activeSelections[userMessageId] = assistantVisibleId
+      parentMessageId = assistantHiddenId
+      targetMessageId = assistantHiddenId
+    }
+
+    const selections = resolveBranchSelectionPath(
+      messages,
+      activeSelections,
+      targetMessageId,
+    )
+
+    expect(selections).not.toBeNull()
+    expect(selections).toHaveLength(13)
+    expect(selections?.[0]).toEqual({
+      parentMessageId: 'u1',
+      childMessageId: 'a1-v2',
+    })
+    expect(selections?.at(-1)).toEqual({
+      parentMessageId: 'u-depth-11',
+      childMessageId: 'a-depth-11-v2',
+    })
   })
 
   it('resolves editable target only for canonical user messages', () => {

@@ -130,13 +130,15 @@ export function ChatMessage({
   if (isUser) {
     return (
       <div
-        className="group flex w-full items-end justify-end gap-2 pt-8 pb-1 is-user"
+        className="group flex w-full scroll-mt-24 items-end justify-end gap-2 pt-8 pb-1 is-user"
         data-role={message.role}
+        data-message-id={message.id}
+        id={`chat-message-${message.id}`}
       >
         <div className="flex max-w-[80%] flex-col items-end gap-2">
           <div
             dir={direction}
-            className="relative flex min-h-7 w-fit max-w-full self-end flex-col gap-3 overflow-hidden rounded-3xl ltr:rounded-br-lg rtl:rounded-bl-lg border border-border-base bg-surface-overlay px-4 py-1.5 text-md"
+            className="relative flex min-h-7 w-fit max-w-full self-end flex-col gap-3 overflow-hidden rounded-3xl border border-border-base bg-surface-overlay px-4 py-1.5 text-md ltr:rounded-br-lg rtl:rounded-bl-lg"
           >
             <div className="space-y-4 size-full [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
               <div className="whitespace-pre-wrap break-words text-md leading-7">
@@ -238,12 +240,14 @@ export function ChatMessage({
 
   return (
     <div
-      className="group flex w-full items-end gap-2 py-1 is-assistant"
+      className="group flex w-full scroll-mt-24 items-end gap-2 py-1 is-assistant"
       data-role={message.role}
+      data-message-id={message.id}
+      id={`chat-message-${message.id}`}
     >
       <div
         dir={direction}
-        className="flex w-full flex-col gap-3 overflow-hidden text-foreground-strong leading-[21px]"
+        className="flex w-full flex-col gap-3 overflow-hidden rounded-2xl px-2 py-1 text-foreground-strong leading-[21px]"
       >
         <AssistantMessageContent parts={message.parts} isAnimating={isAnimating} />
         <AssistantMessageFooter

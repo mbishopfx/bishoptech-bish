@@ -1,10 +1,12 @@
 import { directionClass, useDirection } from '@rift/ui/direction'
 import { cn } from '@rift/utils'
+import type { ReactNode } from 'react'
 import type { NavSection } from './app-sidebar-nav.config'
 import { SidebarNavItem } from './sidebar-nav-item'
 
 export type SidebarAreaLayoutProps = {
   title?: string
+  headerContent?: ReactNode
   sections: NavSection[]
   pathname: string
   /**
@@ -24,6 +26,7 @@ export type SidebarAreaLayoutProps = {
  */
 export function SidebarAreaLayout({
   title,
+  headerContent,
   sections,
   pathname,
   scrollableSectionName,
@@ -38,6 +41,19 @@ export function SidebarAreaLayout({
           <span className="text-lg font-semibold text-foreground-strong">
             {title}
           </span>
+        </div>
+      ) : null}
+      {headerContent ? (
+        <div
+          className={cn(
+            'shrink-0 px-3',
+            directionClass(direction, {
+              ltr: 'pr-3',
+              rtl: 'pl-3',
+            }),
+          )}
+        >
+          {headerContent}
         </div>
       ) : null}
       <div

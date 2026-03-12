@@ -68,6 +68,8 @@ import {
 } from './thread-status-store'
 import {
   ROOT_BRANCH_PARENT_KEY,
+  normalizeActiveChildByParent,
+  resolveBranchSelectionPath,
   resolveCanonicalBranch,
 } from '@/lib/shared/chat-branching/branch-resolver'
 
@@ -121,6 +123,7 @@ type ChatActionsContextValue = Pick<
     parentMessageId: string
     childMessageId: string
   }) => Promise<void>
+  revealMessageBranch: (input: { messageId: string }) => Promise<boolean>
   clear: () => void
 }
 
@@ -153,6 +156,7 @@ type ChatMessageActionsContextValue = Pick<
   | 'regenerateMessage'
   | 'editMessage'
   | 'selectBranchVersion'
+  | 'revealMessageBranch'
   | 'setMessages'
   | 'resumeStream'
   | 'clear'
@@ -170,6 +174,11 @@ type PendingBranchSelectorState = {
   readonly placeholderMessageId: string
   readonly optionMessageIds: readonly string[]
   readonly expectedOptionCount: number
+}
+
+type OptimisticThreadBranchState = {
+  readonly activeChildByParent: Record<string, string>
+  readonly branchVersion: number
 }
 
 type ChatMessagesContextValue = {
@@ -395,6 +404,42 @@ function mergeStoredMessagesWithLocal(
   })
 }
 
+function buildCanonicalUIMessageSnapshot(input: {
+  readonly storedMessages: readonly {
+    readonly messageId: string
+    readonly role: 'user' | 'assistant' | 'system'
+    readonly parentMessageId?: string | null
+    readonly branchIndex: number
+    readonly created_at: number
+    readonly content: string
+    readonly reasoning?: string | null
+    readonly model: string
+    readonly sources?:
+      | readonly { sourceId: string; url: string; title?: string }[]
+      | null
+  }[]
+  readonly activeChildByParent: Record<string, string>
+}): ChatUIMessage[] {
+  const messageById = new Map(
+    input.storedMessages.map((message) => [message.messageId, message]),
+  )
+  const canonicalIds = resolveCanonicalBranch(
+    input.storedMessages.map((message) => ({
+      messageId: message.messageId,
+      role: message.role,
+      parentMessageId: message.parentMessageId ?? undefined,
+      branchIndex: message.branchIndex,
+      createdAt: message.created_at,
+    })),
+    input.activeChildByParent,
+  ).canonicalMessageIds
+
+  return canonicalIds
+    .map((messageId) => messageById.get(messageId))
+    .filter((message): message is NonNullable<typeof message> => !!message)
+    .map(toUIMessageFromStoredMessage)
+}
+
 function addDefined(
   left: number | undefined,
   right: number | undefined,
@@ -552,6 +597,25 @@ function hasActiveOrgKeyForModel(input: {
   })
 }
 
+function areBranchSelectionsEqual(
+  left: Record<string, string>,
+  right: Record<string, string>,
+): boolean {
+  const leftEntries = Object.entries(left)
+  const rightEntries = Object.entries(right)
+  if (leftEntries.length !== rightEntries.length) {
+    return false
+  }
+
+  for (const [parentId, childId] of leftEntries) {
+    if (right[parentId] !== childId) {
+      return false
+    }
+  }
+
+  return true
+}
+
 export function ChatProvider({
   children,
   threadId,
@@ -579,6 +643,8 @@ export function ChatProvider({
   const [localError, setLocalError] = useState<Error | null>(null)
   const [pendingBranchSelector, setPendingBranchSelector] =
     useState<PendingBranchSelectorState | null>(null)
+  const [optimisticBranchStateByThreadId, setOptimisticBranchStateByThreadId] =
+    useState<Record<string, OptimisticThreadBranchState>>({})
   const activeThreadId = threadId ?? provisionalThreadId
   const [orgPolicyRow] = useQuery(queries.orgPolicy.current())
   const [threadRow] = useQuery(
@@ -592,6 +658,34 @@ export function ChatProvider({
     threadRow?.threadId && threadRow.threadId === activeThreadId
       ? activeThreadId
       : ''
+  const effectiveBranchState = useMemo<OptimisticThreadBranchState | undefined>(() => {
+    if (!activeThreadId) return undefined
+
+    const optimisticState = optimisticBranchStateByThreadId[activeThreadId]
+    const persistedSelections = normalizeActiveChildByParent(
+      threadRow?.activeChildByParent,
+    )
+    const persistedVersion =
+      threadRow?.threadId === activeThreadId &&
+      typeof threadRow.branchVersion === 'number'
+        ? threadRow.branchVersion
+        : 1
+
+    if (!optimisticState) {
+      return {
+        activeChildByParent: persistedSelections,
+        branchVersion: persistedVersion,
+      }
+    }
+
+    return {
+      activeChildByParent: {
+        ...persistedSelections,
+        ...optimisticState.activeChildByParent,
+      },
+      branchVersion: Math.max(persistedVersion, optimisticState.branchVersion),
+    }
+  }, [activeThreadId, optimisticBranchStateByThreadId, threadRow])
   const [storedMessages, storedMessagesResult] = useQuery(
     queries.messages.byThread({ threadId: scopedThreadId }),
     CACHE_CHAT_NAV,
@@ -609,7 +703,7 @@ export function ChatProvider({
           branchIndex: message.branchIndex,
           createdAt: message.created_at,
         })),
-        threadRow?.activeChildByParent,
+        effectiveBranchState?.activeChildByParent,
       )
       const canonical = resolution.canonicalMessageIds
         .map((messageId) => messageById.get(messageId))
@@ -668,7 +762,7 @@ export function ChatProvider({
         canonicalStoredMessages: canonical,
         storedBranchSelectorsByAnchorMessageId: selectors,
       }
-    }, [storedMessages, threadRow?.activeChildByParent])
+    }, [effectiveBranchState?.activeChildByParent, storedMessages])
   const branchSelectorsByAnchorMessageId = useMemo(() => {
     if (!pendingBranchSelector) return storedBranchSelectorsByAnchorMessageId
     return {
@@ -856,6 +950,37 @@ export function ChatProvider({
         ? Math.max(existing, threadRow.branchVersion)
         : threadRow.branchVersion
   }
+  useEffect(() => {
+    if (!activeThreadId) return
+
+    const optimisticState = optimisticBranchStateByThreadId[activeThreadId]
+    if (!optimisticState) return
+
+    const persistedSelections = normalizeActiveChildByParent(
+      threadRow?.activeChildByParent,
+    )
+    const persistedVersion =
+      threadRow?.threadId === activeThreadId &&
+      typeof threadRow.branchVersion === 'number'
+        ? threadRow.branchVersion
+        : undefined
+
+    if (
+      typeof persistedVersion === 'number' &&
+      persistedVersion >= optimisticState.branchVersion &&
+      areBranchSelectionsEqual(
+        optimisticState.activeChildByParent,
+        persistedSelections,
+      )
+    ) {
+      setOptimisticBranchStateByThreadId((current) => {
+        if (!(activeThreadId in current)) return current
+        const next = { ...current }
+        delete next[activeThreadId]
+        return next
+      })
+    }
+  }, [activeThreadId, optimisticBranchStateByThreadId, threadRow])
   const threadStatusesVersion = useSyncExternalStore(
     subscribeThreadStatuses,
     getThreadStatusesVersion,
@@ -957,7 +1082,16 @@ export function ChatProvider({
   activeThreadIdRef.current = activeThreadId
   storedMessagesRef.current = storedMessages
   storedBranchSelectorsRef.current = storedBranchSelectorsByAnchorMessageId
-  threadRowRef.current = threadRow
+  threadRowRef.current =
+    threadRow && activeThreadId
+      ? {
+          ...threadRow,
+          activeChildByParent:
+            effectiveBranchState?.activeChildByParent ??
+            normalizeActiveChildByParent(threadRow.activeChildByParent),
+          branchVersion: effectiveBranchState?.branchVersion ?? threadRow.branchVersion,
+        }
+      : threadRow
   regenerateRef.current = regenerate
   setMessagesRef.current = setMessages
 
@@ -1045,6 +1179,7 @@ export function ChatProvider({
     if (!activeThreadId) {
       createIfMissingRef.current = false
       setPendingBranchSelector(null)
+      setOptimisticBranchStateByThreadId({})
       previousThreadIdRef.current = activeThreadId
       return
     }
@@ -1160,10 +1295,7 @@ export function ChatProvider({
       messages,
       canonicalStoredMessages.map(toUIMessageFromStoredMessage),
     )
-    const currentBranchVersion =
-      threadRow && typeof threadRow.branchVersion === 'number'
-        ? threadRow.branchVersion
-        : undefined
+    const currentBranchVersion = effectiveBranchState?.branchVersion
     const branchVersionChanged =
       typeof currentBranchVersion === 'number' &&
       typeof lastAppliedBranchVersionRef.current === 'number' &&
@@ -1208,7 +1340,7 @@ export function ChatProvider({
     storedMessagesResult.type,
     status,
     messages,
-    threadRow,
+    effectiveBranchState?.branchVersion,
     setMessages,
   ])
 
@@ -1603,6 +1735,32 @@ export function ChatProvider({
         // even if query propagation to `threadRow` lags one render.
         branchVersionByThreadIdRef.current[currentThreadId] =
           expectedBranchVersion + 1
+        let nextSelections: Record<string, string> | null = null
+        setOptimisticBranchStateByThreadId((current) => {
+          const previous = current[currentThreadId]
+          const baseSelections = previous?.activeChildByParent ?? normalizeActiveChildByParent(
+            threadRowRef.current?.activeChildByParent,
+          )
+          nextSelections = {
+            ...baseSelections,
+            [parentMessageId]: childMessageId,
+          }
+          return {
+            ...current,
+            [currentThreadId]: {
+              activeChildByParent: nextSelections,
+              branchVersion: expectedBranchVersion + 1,
+            },
+          }
+        })
+        if (nextSelections) {
+          setMessagesRef.current(
+            buildCanonicalUIMessageSnapshot({
+              storedMessages: storedMessagesRef.current,
+              activeChildByParent: nextSelections,
+            }),
+          )
+        }
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)
         if (message.includes('branch_switch_while_generating')) {
@@ -1618,6 +1776,110 @@ export function ChatProvider({
             'This chat changed in another tab or session. Refresh and try again.',
           ),
         )
+      }
+    },
+    [z],
+  )
+
+  const revealMessageBranch = useCallback<
+    ChatActionsContextValue['revealMessageBranch']
+  >(
+    async ({ messageId }) => {
+      const currentThreadId = activeThreadIdRef.current
+      const currentStatus = statusRef.current
+      const currentThreadRow = threadRowRef.current
+      const currentStoredMessages = storedMessagesRef.current
+
+      if (!currentThreadId) return false
+      if (currentStatus === 'submitted' || currentStatus === 'streaming') {
+        return false
+      }
+      if (
+        !currentThreadRow ||
+        typeof currentThreadRow !== 'object' ||
+        currentThreadRow.threadId !== currentThreadId
+      ) {
+        return false
+      }
+
+      const requiredSelections = resolveBranchSelectionPath(
+        currentStoredMessages.map((message) => ({
+          messageId: message.messageId,
+          role: message.role,
+          parentMessageId: message.parentMessageId ?? undefined,
+          branchIndex: message.branchIndex,
+          createdAt: message.created_at,
+        })),
+        currentThreadRow.activeChildByParent,
+        messageId,
+      )
+      if (!requiredSelections) {
+        return false
+      }
+      if (requiredSelections.length === 0) {
+        return true
+      }
+
+      // Search reveal may target a hidden branch path. Activate the full
+      // root->leaf selection set in one CAS-protected mutator so deeply nested
+      // paths do not require multiple round trips or partial branch updates.
+      allowShrinkOnNextBranchVersionRef.current = true
+      const expectedBranchVersion =
+        branchVersionByThreadIdRef.current[currentThreadId] ??
+        (typeof currentThreadRow.branchVersion === 'number'
+          ? currentThreadRow.branchVersion
+          : 1)
+      const optimisticSelections = {
+        ...normalizeActiveChildByParent(
+          currentThreadRow.activeChildByParent,
+        ),
+      }
+      for (const selection of requiredSelections) {
+        optimisticSelections[selection.parentMessageId] =
+          selection.childMessageId
+      }
+      const nextBranchVersion = expectedBranchVersion + 1
+
+      try {
+        await z.mutate(
+          mutators.threads.activateBranchPath({
+            threadId: currentThreadId,
+            selections: [...requiredSelections],
+            expectedBranchVersion,
+          }),
+        ).client
+
+        branchVersionByThreadIdRef.current[currentThreadId] = nextBranchVersion
+        setOptimisticBranchStateByThreadId((current) => ({
+          ...current,
+          [currentThreadId]: {
+            activeChildByParent: optimisticSelections,
+            branchVersion: nextBranchVersion,
+          },
+        }))
+        setMessagesRef.current(
+          buildCanonicalUIMessageSnapshot({
+            storedMessages: currentStoredMessages,
+            activeChildByParent: optimisticSelections,
+          }),
+        )
+        return true
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        if (message.includes('branch_switch_while_generating')) {
+          setLocalError(
+            new Error(
+              'Please wait until the current response finishes before switching branches.',
+            ),
+          )
+          return false
+        }
+        setLocalError(
+          new Error(
+            'This chat changed in another tab or session. Refresh and try again.',
+          ),
+        )
+        return false
       }
     },
     [z],
@@ -1777,6 +2039,7 @@ export function ChatProvider({
       regenerateMessage,
       editMessage,
       selectBranchVersion,
+      revealMessageBranch,
       setMessages,
       resumeStream,
       clear,
@@ -1787,6 +2050,7 @@ export function ChatProvider({
       regenerateMessage,
       editMessage,
       selectBranchVersion,
+      revealMessageBranch,
       setMessages,
       resumeStream,
       clear,

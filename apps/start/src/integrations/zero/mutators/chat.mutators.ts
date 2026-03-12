@@ -10,7 +10,10 @@ import {
   type OrgAiPolicy,
 } from '@/lib/shared/model-policy/types'
 import { zql } from '../zql'
-import { ROOT_BRANCH_PARENT_KEY } from '@/lib/shared/chat-branching/branch-resolver'
+import {
+  ROOT_BRANCH_PARENT_KEY,
+  type BranchSelection,
+} from '@/lib/shared/chat-branching/branch-resolver'
 
 /**
  * Client-callable mutators only. Thread and message creation are server-only:
@@ -35,6 +38,17 @@ const selectBranchChildArgs = z.object({
   threadId: z.string(),
   parentMessageId: z.string(),
   childMessageId: z.string(),
+  expectedBranchVersion: z.number().int().positive(),
+})
+
+const activateBranchPathArgs = z.object({
+  threadId: z.string(),
+  selections: z.array(
+    z.object({
+      parentMessageId: z.string(),
+      childMessageId: z.string(),
+    }),
+  ),
   expectedBranchVersion: z.number().int().positive(),
 })
 
@@ -109,6 +123,89 @@ function isThreadVisibleInContext(input: {
   }
 
   return !threadOwnerOrgId
+}
+
+type BranchMutatorTx = any
+
+type BranchMutatorCtx = {
+  readonly userID: string
+  readonly organizationId?: string
+}
+
+async function loadValidatedBranchThread(input: {
+  readonly tx: BranchMutatorTx
+  readonly ctx: BranchMutatorCtx
+  readonly threadId: string
+  readonly expectedBranchVersion: number
+}) {
+  const thread = (await input.tx.run(
+    zql.thread.where('threadId', input.threadId).one(),
+  )) as
+    | {
+        id: string
+        userId: string
+        ownerOrgId?: string | null
+        branchVersion: number
+        generationStatus: 'idle' | 'pending' | 'generation' | 'failed'
+        activeChildByParent?: Record<string, string> | null
+      }
+    | null
+  if (!thread || thread.userId !== input.ctx.userID) {
+    return null
+  }
+  if (
+    !isThreadVisibleInContext({
+      threadOwnerOrgId: thread.ownerOrgId,
+      contextOrganizationId: input.ctx.organizationId,
+    })
+  ) {
+    return null
+  }
+
+  if (thread.branchVersion !== input.expectedBranchVersion) {
+    throw new Error('branch_version_conflict')
+  }
+  if (
+    thread.generationStatus === 'pending' ||
+    thread.generationStatus === 'generation'
+  ) {
+    throw new Error('branch_switch_while_generating')
+  }
+
+  return thread
+}
+
+async function validateBranchSelection(
+  input: {
+    readonly tx: BranchMutatorTx
+    readonly ctx: BranchMutatorCtx
+    readonly threadId: string
+  } & BranchSelection,
+): Promise<boolean> {
+  const parent = (await input.tx.run(
+    zql.message
+      .where('threadId', input.threadId)
+      .where('messageId', input.parentMessageId)
+      .where('userId', input.ctx.userID)
+      .one(),
+  )) as { messageId: string } | null
+  if (input.parentMessageId !== ROOT_BRANCH_PARENT_KEY && !parent) {
+    return false
+  }
+
+  const child = (await input.tx.run(
+    zql.message
+      .where('threadId', input.threadId)
+      .where('messageId', input.childMessageId)
+      .where('userId', input.ctx.userID)
+      .one(),
+  )) as { messageId: string; parentMessageId?: string | null } | null
+  const parentMatch =
+    input.parentMessageId === ROOT_BRANCH_PARENT_KEY
+      ? !child?.parentMessageId
+      : child?.parentMessageId === input.parentMessageId
+
+  return Boolean(child && parentMatch)
 }
 
 export const chatMutatorDefinitions = {
@@ -187,52 +284,24 @@ export const chatMutatorDefinitions = {
     selectBranchChild: defineMutator(
       selectBranchChildArgs,
       async ({ tx, args, ctx }) => {
-        const thread = await tx.run(zql.thread.where('threadId', args.threadId).one())
-        if (!thread || thread.userId !== ctx.userID) {
-          return
-        }
-        if (
-          !isThreadVisibleInContext({
-            threadOwnerOrgId: thread.ownerOrgId,
-            contextOrganizationId: ctx.organizationId,
-          })
-        ) {
+        const thread = await loadValidatedBranchThread({
+          tx,
+          ctx,
+          threadId: args.threadId,
+          expectedBranchVersion: args.expectedBranchVersion,
+        })
+        if (!thread) {
           return
         }
 
-        if (thread.branchVersion !== args.expectedBranchVersion) {
-          throw new Error('branch_version_conflict')
-        }
-        if (
-          thread.generationStatus === 'pending' ||
-          thread.generationStatus === 'generation'
-        ) {
-          throw new Error('branch_switch_while_generating')
-        }
-
-        const parent = await tx.run(
-          zql.message
-            .where('threadId', args.threadId)
-            .where('messageId', args.parentMessageId)
-            .where('userId', ctx.userID)
-            .one(),
-        )
-        if (args.parentMessageId !== ROOT_BRANCH_PARENT_KEY && !parent) {
-          return
-        }
-
-        const child = await tx.run(
-          zql.message
-            .where('threadId', args.threadId)
-            .where('messageId', args.childMessageId)
-            .where('userId', ctx.userID)
-            .one(),
-        )
-        const parentMatch =
-          args.parentMessageId === ROOT_BRANCH_PARENT_KEY
-            ? !child?.parentMessageId
-            : child?.parentMessageId === args.parentMessageId
-        if (!child || !parentMatch) {
+        const isValidSelection = await validateBranchSelection({
+          tx,
+          ctx,
+          threadId: args.threadId,
+          parentMessageId: args.parentMessageId,
+          childMessageId: args.childMessageId,
+        })
+        if (!isValidSelection) {
           return
         }
 
@@ -246,6 +315,69 @@ export const chatMutatorDefinitions = {
           return
         }
         activeChildByParent[args.parentMessageId] = args.childMessageId
+
+        await tx.mutate.thread.update({
+          id: thread.id,
+          activeChildByParent,
+          branchVersion: thread.branchVersion + 1,
+        })
+      },
+    ),
+
+    /**
+     * Atomically activates a full root->leaf branch path. Search reveal uses
+     * this to make deeply nested hidden hits visible in one CAS-protected write.
+     */
+    activateBranchPath: defineMutator(
+      activateBranchPathArgs,
+      async ({ tx, args, ctx }) => {
+        const thread = await loadValidatedBranchThread({
+          tx,
+          ctx,
+          threadId: args.threadId,
+          expectedBranchVersion: args.expectedBranchVersion,
+        })
+        if (!thread) {
+          return
+        }
+        if (args.selections.length === 0) {
+          return
+        }
+
+        const activeChildByParent =
+          thread.activeChildByParent &&
+          typeof thread.activeChildByParent === 'object'
+            ? { ...thread.activeChildByParent }
+            : {}
+        let changed = false
+
+        for (const selection of args.selections) {
+          const isValidSelection = await validateBranchSelection({
+            tx,
+            ctx,
+            threadId: args.threadId,
+            parentMessageId: selection.parentMessageId,
+            childMessageId: selection.childMessageId,
+          })
+          if (!isValidSelection) {
+            return
+          }
+
+          if (
+            activeChildByParent[selection.parentMessageId] ===
+            selection.childMessageId
+          ) {
+            continue
+          }
+
+          activeChildByParent[selection.parentMessageId] =
+            selection.childMessageId
+          changed = true
+        }
+
+        if (!changed) {
+          return
+        }
 
         await tx.mutate.thread.update({
           id: thread.id,

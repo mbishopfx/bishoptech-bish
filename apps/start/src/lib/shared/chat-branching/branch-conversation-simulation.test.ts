@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import type { BranchableMessage } from './branch-resolver'
 import {
+  ROOT_BRANCH_PARENT_KEY,
   resolveCanonicalBranch,
+  resolveBranchSelectionPath,
   resolveRegenerationAnchor,
 } from './branch-resolver'
 
@@ -45,7 +47,7 @@ function canonicalLeaf(state: SimState): SimMessage | undefined {
 function siblingsForParent(state: SimState, parentMessageId: string): SimMessage[] {
   return state.messages
     .filter((message) => message.parentMessageId === parentMessageId)
-    .toSorted((left, right) => {
+    .sort((left: SimMessage, right: SimMessage) => {
       const leftBranch = left.branchIndex
       const rightBranch = right.branchIndex
       if (leftBranch !== rightBranch) return leftBranch - rightBranch
@@ -107,11 +109,18 @@ function regenerate(state: SimState, targetMessageId: string, content: string): 
 }
 
 function selectBranch(state: SimState, parentMessageId: string, childMessageId: string): void {
-  const candidate = state.messages.find(
-    (message) =>
-      message.messageId === childMessageId &&
-      message.parentMessageId === parentMessageId,
-  )
+  const candidate =
+    parentMessageId === ROOT_BRANCH_PARENT_KEY
+      ? state.messages.find(
+          (message) =>
+            message.messageId === childMessageId &&
+            !message.parentMessageId,
+        )
+      : state.messages.find(
+          (message) =>
+            message.messageId === childMessageId &&
+            message.parentMessageId === parentMessageId,
+        )
   if (!candidate) {
     throw new Error(`Invalid branch selection ${parentMessageId} -> ${childMessageId}`)
   }
@@ -194,5 +203,51 @@ describe('branch conversation simulation', () => {
     // Switch nested branch again and verify deterministic update.
     selectBranch(state, u3v2, a3v2b)
     assertCanonical(state, [u1, a1, u2, a2v2, u3v2, a3v2b])
+  })
+
+  it('can restore a deeply hidden nested branch path from a leaf hit', () => {
+    const state = createState()
+
+    const u1 = appendUser(state, 'root')
+    const a1v1 = appendAssistantForUser(state, u1, 'root-visible')
+    const a1v2 = regenerate(state, a1v1, 'root-hidden')
+    selectBranch(state, u1, a1v1)
+
+    let hiddenParentAssistantId = a1v2
+    let leafTargetId = a1v2
+
+    for (let depth = 0; depth < 6; depth += 1) {
+      selectBranch(state, u1, a1v2)
+      const hiddenUserId = appendUser(state, `hidden-user-${depth}`)
+      const hiddenVisibleAssistant = appendAssistantForUser(
+        state,
+        hiddenUserId,
+        `hidden-visible-${depth}`,
+      )
+      const hiddenBranchAssistant = regenerate(
+        state,
+        hiddenVisibleAssistant,
+        `hidden-branch-${depth}`,
+      )
+
+      selectBranch(state, u1, a1v1)
+      hiddenParentAssistantId = hiddenBranchAssistant
+      leafTargetId = hiddenBranchAssistant
+    }
+
+    const selections = resolveBranchSelectionPath(
+      state.messages,
+      state.activeChildByParent,
+      leafTargetId,
+    )
+    expect(selections).not.toBeNull()
+
+    for (const selection of selections ?? []) {
+      selectBranch(state, selection.parentMessageId, selection.childMessageId)
+    }
+
+    const canonical = canonicalIds(state)
+    expect(canonical.at(-1)).toBe(hiddenParentAssistantId)
+    expect(canonical).toContain(leafTargetId)
   })
 })

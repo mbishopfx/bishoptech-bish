@@ -8,6 +8,7 @@ import { usePinToLastUserMessage } from '@rift/chat-scroll'
 import { ChatWelcomeScreen } from './chat-welcome-screen'
 import { setComposerDraft } from './composer-draft-store'
 import { ReasoningMotionIcon } from './message-parts/components/reasoning'
+import { useChatSearchReveal } from './use-chat-search-reveal'
 import { m } from '@/paraglide/messages.js'
 
 type BranchSelectorState = {
@@ -133,8 +134,14 @@ export function ChatThread() {
     regenerateMessage,
     editMessage,
     selectBranchVersion,
+    revealMessageBranch,
   } =
     useChatMessageActions()
+  const { disableInitialAlignment } = useChatSearchReveal({
+    activeThreadId,
+    messages,
+    revealMessageBranch,
+  })
   const { userMessageCount, lastUserMessageId } = useMemo(() => {
     let count = 0
     let lastUserId: string | null = null
@@ -153,6 +160,7 @@ export function ChatThread() {
       resetKey: activeThreadId,
       userMessageCount,
       lastUserMessageId,
+      disableInitialAlignment,
       messages,
       status,
     })

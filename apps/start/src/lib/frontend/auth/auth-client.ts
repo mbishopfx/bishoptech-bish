@@ -12,7 +12,12 @@ function resolveAuthClientBaseURL(): string {
   const trimTrailingSlash = (s: string) => s.replace(/\/+$/, '')
 
   if (typeof window === 'undefined') {
-    const raw = process.env.BETTER_AUTH_URL?.trim()
+    // Test environments import this module without a browser origin. Falling
+    // back to localhost keeps client-only hooks importable in unit tests while
+    // production and server environments still require explicit configuration.
+    const raw =
+      process.env.BETTER_AUTH_URL?.trim() ||
+      (process.env.NODE_ENV === 'test' ? 'http://localhost:3000' : '')
     if (!raw) {
       throw new Error(
         'Missing BETTER_AUTH_URL. Set it to app origin (e.g. https://demo.rift.mx).',

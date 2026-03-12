@@ -35,6 +35,7 @@ import { mutators, queries } from '@/integrations/zero'
 import { CACHE_CHAT_NAV } from '@/integrations/zero/query-cache-policy'
 import { useAppAuth } from '@/lib/frontend/auth/use-auth'
 import { m } from '@/paraglide/messages.js'
+import { ChatSearchCommand } from './chat-search-command'
 import { syncThreadGenerationStatuses } from './thread-status-store'
 
 // --- Single source of truth: constants and static content ---
@@ -201,8 +202,9 @@ export function ChatSidebarContent({ pathname }: { pathname: string }) {
         if (previous.some((thread) => thread.threadId === payload.threadId)) {
           return previous
         }
-        return [payload, ...previous].toSorted(
-          (a, b) => b.createdAt - a.createdAt,
+        return [payload, ...previous].sort(
+          (left: OptimisticThread, right: OptimisticThread) =>
+            right.createdAt - left.createdAt,
         )
       })
     }
@@ -425,6 +427,7 @@ export function ChatSidebarContent({ pathname }: { pathname: string }) {
   return (
     <SidebarAreaLayout
       title={CHAT_SIDEBAR_TITLE()}
+      headerContent={<ChatSearchCommand />}
       sections={sections}
       pathname={pathname}
       scrollableSectionName={CHAT_HISTORY_SECTION_NAME()}

@@ -27,6 +27,11 @@ export type EditableUserTarget = {
   readonly siblingUserMessageIds: readonly string[]
 }
 
+export type BranchSelection = {
+  readonly parentMessageId: string
+  readonly childMessageId: string
+}
+
 export type BranchResolutionResult<TMessage extends BranchableMessage> = {
   readonly canonicalMessages: readonly TMessage[]
   readonly canonicalMessageIds: readonly string[]
@@ -254,4 +259,50 @@ export function resolveEditableUserTarget<TMessage extends BranchableMessage>(
     parentSelectionKey,
     siblingUserMessageIds,
   }
+}
+
+/**
+ * Builds the branch-selection path required to make `targetMessageId` visible in
+ * the canonical conversation. The returned selections are ordered from root to
+ * leaf so callers can apply them sequentially through the existing CAS-protected
+ * branch mutator.
+ */
+export function resolveBranchSelectionPath<TMessage extends BranchableMessage>(
+  messages: readonly TMessage[],
+  activeChildByParentInput: unknown,
+  targetMessageId: string,
+): readonly BranchSelection[] | null {
+  const byId = new Map(messages.map((message) => [message.messageId, message]))
+  const target = byId.get(targetMessageId)
+  if (!target) return null
+
+  const activeChildByParent = normalizeActiveChildByParent(
+    activeChildByParentInput,
+  )
+  const selections: BranchSelection[] = []
+  let current: TMessage | undefined = target
+
+  while (current) {
+    const parentId =
+      typeof current.parentMessageId === 'string' &&
+      current.parentMessageId.trim().length > 0 &&
+      byId.has(current.parentMessageId)
+        ? current.parentMessageId
+        : ROOT_BRANCH_PARENT_KEY
+
+    if (activeChildByParent[parentId] !== current.messageId) {
+      selections.push({
+        parentMessageId: parentId,
+        childMessageId: current.messageId,
+      })
+    }
+
+    if (parentId === ROOT_BRANCH_PARENT_KEY) {
+      break
+    }
+
+    current = byId.get(parentId)
+  }
+
+  return selections.reverse()
 }

@@ -10,6 +10,13 @@ export type UsePinToLastUserMessageOptions = {
   resetKey?: string | number;
   userMessageCount: number;
   lastUserMessageId: string | null;
+  /**
+   * When true, skip the initial "snap to bottom" alignment for the current
+   * thread load. This is used by deep-link/reveal navigations that need to
+   * land on a specific historical message instead of forcing the latest turn
+   * into view.
+   */
+  disableInitialAlignment?: boolean;
   /** Passed for effect deps so spacer recalculates when messages or status change. */
   messages: readonly unknown[];
   status?: string;
@@ -25,6 +32,7 @@ export function usePinToLastUserMessage(
     resetKey,
     userMessageCount,
     lastUserMessageId,
+    disableInitialAlignment = false,
     messages,
     status,
     bottomPaddingPx = DEFAULT_BOTTOM_PADDING_PX,
@@ -227,6 +235,15 @@ export function usePinToLastUserMessage(
       return;
     }
 
+    if (disableInitialAlignment) {
+      markManualScroll();
+      recalcSpacer();
+      hasInitialAlignmentRef.current = true;
+      initialSettleUntilRef.current = 0;
+      prevUserMessageCountRef.current = userMessageCount;
+      return;
+    }
+
     resetManualScroll();
     recalcSpacer();
     if (!scrollParentToBottom("auto")) {
@@ -247,6 +264,8 @@ export function usePinToLastUserMessage(
     prevUserMessageCountRef.current = userMessageCount;
   }, [
     messages.length,
+    disableInitialAlignment,
+    markManualScroll,
     recalcSpacer,
     scrollParentToBottom,
     resetManualScroll,

@@ -8,6 +8,7 @@ import {
 import { makeRuntimeRunner } from '@/lib/backend/server-effect'
 import { ZeroDatabaseService } from '@/lib/backend/server-effect/services/zero-database.service'
 import { ChatOrchestratorService } from '../services/chat-orchestrator.service'
+import { ChatSearchService } from '../services/chat-search.service'
 import { FreeChatAllowanceService } from '../services/free-chat-allowance.service'
 import { MessageStoreService } from '../services/message-store.service'
 import { ModelGatewayService } from '../services/model-gateway.service'
@@ -26,6 +27,7 @@ import { ToolPolicyService } from '../services/tool-policy.service'
  */
 const dependencyLayer = Layer.mergeAll(
   ThreadService.layer,
+  ChatSearchService.layer,
   MessageStoreService.layer,
   RateLimitService.layer,
   FreeChatAllowanceService.layer,

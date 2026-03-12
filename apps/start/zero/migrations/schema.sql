@@ -1,3 +1,5 @@
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
 -- Zero upstream schema (run against ZERO_UPSTREAM_DB).
 -- Single source of truth for a fresh DB. zero-cache replicates via publication
 -- zero_data (created by zero-dev-reset after applying this file).
@@ -45,8 +47,16 @@ ADD COLUMN IF NOT EXISTS disabled_tool_keys JSONB NOT NULL DEFAULT '[]'::jsonb;
 CREATE INDEX IF NOT EXISTS threads_user_id ON threads (user_id);
 CREATE INDEX IF NOT EXISTS threads_thread_id ON threads (thread_id);
 CREATE INDEX IF NOT EXISTS threads_user_updated ON threads (user_id, updated_at);
+CREATE INDEX IF NOT EXISTS threads_user_org_visibility_updated
+  ON threads (user_id, owner_org_id, visibility, updated_at DESC);
 CREATE INDEX IF NOT EXISTS threads_share_id ON threads (share_id);
 CREATE INDEX IF NOT EXISTS threads_reasoning_effort ON threads (reasoning_effort);
+CREATE INDEX IF NOT EXISTS threads_title_search_fts
+  ON threads
+  USING GIN (to_tsvector('simple', COALESCE(title, '')));
+CREATE INDEX IF NOT EXISTS threads_title_search_trgm
+  ON threads
+  USING GIN (LOWER(title) gin_trgm_ops);
 
 -- messages
 CREATE TABLE IF NOT EXISTS messages (
@@ -134,6 +144,18 @@ CREATE INDEX IF NOT EXISTS messages_thread_parent ON messages (thread_id, parent
 CREATE INDEX IF NOT EXISTS messages_user_ai_cost ON messages (user_id, ai_cost);
 CREATE INDEX IF NOT EXISTS messages_user_public_cost ON messages (user_id, public_cost);
 CREATE INDEX IF NOT EXISTS messages_user_total_tokens ON messages (user_id, total_tokens);
+CREATE INDEX IF NOT EXISTS messages_content_search_fts
+  ON messages
+  USING GIN (to_tsvector('simple', COALESCE(content, '')));
+CREATE INDEX IF NOT EXISTS messages_content_search_trgm
+  ON messages
+  USING GIN (LOWER(content) gin_trgm_ops)
+  WHERE status = 'done' AND role IN ('user', 'assistant');
+CREATE INDEX IF NOT EXISTS messages_user_created_desc
+  ON messages (user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS messages_user_thread_search_scope
+  ON messages (user_id, thread_id, created_at DESC)
+  WHERE status = 'done' AND role IN ('user', 'assistant');
 
 -- org_ai_policy
 CREATE TABLE IF NOT EXISTS org_ai_policy (
