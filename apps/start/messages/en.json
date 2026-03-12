@@ -573,5 +573,14 @@
   "settings_avatar_upload_failed": "Unable to upload avatar.",
   "settings_avatar_upload_invalid_type": "Please upload a JPG, PNG, WEBP, or SVG image.",
   "settings_avatar_upload_size_limit": "File exceeds limit of {maxSizeMb}MB.",
-  "writer_page_title": "Writer"
+  "writer_page_title": "Writer",
+  "chat_attachment_preview_unavailable": "Preview is not available for this file type.",
+  "chat_attachment_preview_open_new_tab": "Open in new tab",
+  "chat_attachment_preview_open_pill_aria_label": "Open attachment preview for {fileName}",
+  "chat_attachment_preview_download_aria_label": "Download {fileName}",
+  "chat_attachment_preview_download_title": "Download",
+  "chat_attachment_preview_open_new_tab_aria_label": "Open {fileName} in a new tab",
+  "chat_attachment_preview_open_new_tab_title": "Open in new tab",
+  "chat_attachment_preview_close_aria_label": "Close preview",
+  "chat_attachment_preview_close_title": "Close"
 }

@@ -4,6 +4,7 @@ import type { UIMessage } from 'ai'
 import { useDirection } from '@rift/ui/direction'
 import type { ChatMessageMetadata } from '@/lib/shared/chat-contracts/message-metadata'
 import type { ChatAttachment } from '@/lib/shared/chat-contracts/attachments'
+import { AttachmentPreviewPill } from './attachment-preview-pill'
 import {
   AssistantMessageParts,
   AssistantMessageActions,
@@ -18,54 +19,6 @@ function getRawMessageText(message: UIMessage): string {
     .join('\n\n')
     .trim()
 }
-
-function getFileTypeIndicator(fileName: string): string {
-  const normalized = fileName.trim().toLowerCase()
-  const dotIndex = normalized.lastIndexOf('.')
-  if (dotIndex <= 0 || dotIndex === normalized.length - 1) return 'FILE'
-  return normalized.slice(dotIndex + 1).toUpperCase()
-}
-
-/** True when the attachment is an image and has a resolvable URL for preview. */
-function isImageAttachment(attachment: ChatAttachment): boolean {
-  return (
-    typeof attachment.contentType === 'string' &&
-    attachment.contentType.toLowerCase().startsWith('image/') &&
-    typeof attachment.url === 'string' &&
-    attachment.url.length > 0
-  )
-}
-
-const AttachmentPill = memo(function AttachmentPill({
-  attachment,
-}: {
-  attachment: ChatAttachment
-}) {
-  const [imageLoadFailed, setImageLoadFailed] = useState(false)
-  const showImagePreview =
-    isImageAttachment(attachment) && !imageLoadFailed
-
-  return (
-    <div className="inline-flex max-w-full items-center gap-2 rounded-lg border border-border-light bg-surface-overlay px-2.5 py-1 text-xs">
-      {showImagePreview ? (
-        <img
-          src={attachment.url}
-          alt=""
-          className="size-10 shrink-0 rounded object-cover"
-          aria-hidden
-          onError={() => setImageLoadFailed(true)}
-        />
-      ) : (
-        <span className="rounded bg-surface-raised px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-foreground-secondary">
-          {getFileTypeIndicator(attachment.name)}
-        </span>
-      )}
-      <span className="truncate text-foreground-secondary">
-        {attachment.name}
-      </span>
-    </div>
-  )
-})
 
 function getEditMirrorText(text: string): string {
   if (text.length === 0) return '\u00a0'
@@ -235,7 +188,10 @@ export function ChatMessage({
           {attachmentManifest.length > 0 && (
             <div className="flex w-full flex-wrap justify-end gap-2">
               {attachmentManifest.map((attachment) => (
-                <AttachmentPill key={attachment.key} attachment={attachment} />
+                <AttachmentPreviewPill
+                  key={attachment.key}
+                  attachment={attachment}
+                />
               ))}
             </div>
           )}

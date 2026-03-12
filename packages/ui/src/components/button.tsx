@@ -40,7 +40,7 @@ const buttonVariants = cva(
         icon:
           "aspect-square h-10 w-10 rounded-lg",
         iconSmall: 
-          "aspect-square h-5 w-5",
+          "aspect-square h-7.5 w-7.5",
         iconSidebar:
           "size-11 rounded-lg transition-colors duration-150 [&_svg:not([class*='size-'])]:size-5",
         sidebarNavItem:

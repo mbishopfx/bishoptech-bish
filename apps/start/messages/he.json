@@ -573,5 +573,14 @@
   "settings_avatar_upload_failed": "לא ניתן להעלות את האווטר.",
   "settings_avatar_upload_invalid_type": "העלו תמונה בפורמט JPG, PNG, WEBP או SVG.",
   "settings_avatar_upload_size_limit": "הקובץ חורג מהמגבלה של {maxSizeMb} MB.",
-  "writer_page_title": "כותב"
+  "writer_page_title": "כותב",
+  "chat_attachment_preview_unavailable": "תצוגה מקדימה אינה זמינה לסוג קובץ זה.",
+  "chat_attachment_preview_open_new_tab": "פתיחה בלשונית חדשה",
+  "chat_attachment_preview_open_pill_aria_label": "פתיחת תצוגה מקדימה עבור {fileName}",
+  "chat_attachment_preview_download_aria_label": "הורדת {fileName}",
+  "chat_attachment_preview_download_title": "הורדה",
+  "chat_attachment_preview_open_new_tab_aria_label": "פתיחת {fileName} בלשונית חדשה",
+  "chat_attachment_preview_open_new_tab_title": "פתיחה בלשונית חדשה",
+  "chat_attachment_preview_close_aria_label": "סגירת תצוגה מקדימה",
+  "chat_attachment_preview_close_title": "סגירה"
 }
