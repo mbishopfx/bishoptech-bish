@@ -27,6 +27,24 @@ const DEFAULT_KEY_STATUS = {
   anthropic: false,
 }
 
+const EMPTY_PROVIDER_ERRORS: Record<ByokProvider, string | null> = {
+  openai: null,
+  anthropic: null,
+}
+
+const EMPTY_PROVIDER_SUCCESS: Record<ByokProvider, string | null> = {
+  openai: null,
+  anthropic: null,
+}
+
+const EMPTY_PROVIDER_UPDATING: Record<ByokProvider, boolean> = {
+  openai: false,
+  anthropic: false,
+}
+
+const SAVE_SUCCESS_MESSAGE = 'Provider key saved successfully.'
+const REMOVE_SUCCESS_MESSAGE = 'Provider key removed successfully.'
+
 function buildByokPayload(input: {
   policyRow?: {
     providerKeyStatus?: {
@@ -51,23 +69,54 @@ function buildByokPayload(input: {
  */
 export function useByok() {
   const [policyRow, policyResult] = useQuery(queries.orgPolicy.current())
-  const [error, setError] = useState<string | null>(null)
-  const [updating, setUpdating] = useState(false)
+  const [errorByProvider, setErrorByProvider] = useState<
+    Record<ByokProvider, string | null>
+  >(() => ({ ...EMPTY_PROVIDER_ERRORS }))
+  const [successByProvider, setSuccessByProvider] = useState<
+    Record<ByokProvider, string | null>
+  >(() => ({ ...EMPTY_PROVIDER_SUCCESS }))
+  const [updatingByProvider, setUpdatingByProvider] = useState<
+    Record<ByokProvider, boolean>
+  >(() => ({ ...EMPTY_PROVIDER_UPDATING }))
 
   const updateByokFn = useServerFn(updateByok)
 
   const payload = useMemo(() => buildByokPayload({ policyRow }), [policyRow])
 
   const update = useCallback(
-    async (action: ByokUpdateAction) => {
-      setUpdating(true)
-      setError(null)
+    async (input: {
+      readonly action: ByokUpdateAction
+      readonly successMessage: string
+    }) => {
+      setUpdatingByProvider((current) => ({
+        ...current,
+        [input.action.providerId]: true,
+      }))
+      setErrorByProvider((current) => ({
+        ...current,
+        [input.action.providerId]: null,
+      }))
+      setSuccessByProvider((current) => ({
+        ...current,
+        [input.action.providerId]: null,
+      }))
       try {
-        await updateByokFn({ data: action })
+        await updateByokFn({ data: input.action })
+        setSuccessByProvider((current) => ({
+          ...current,
+          [input.action.providerId]: input.successMessage,
+        }))
       } catch (e: unknown) {
-        setError(messageFromThrowable(e))
+        setErrorByProvider((current) => ({
+          ...current,
+          [input.action.providerId]: messageFromThrowable(e),
+        }))
+        throw e
       } finally {
-        setUpdating(false)
+        setUpdatingByProvider((current) => ({
+          ...current,
+          [input.action.providerId]: false,
+        }))
       }
     },
     [updateByokFn],
@@ -76,9 +125,12 @@ export function useByok() {
   const setProviderKey = useCallback(
     async (providerId: ByokProvider, apiKey: string) => {
       await update({
-        action: 'set_provider_api_key',
-        providerId,
-        apiKey,
+        successMessage: SAVE_SUCCESS_MESSAGE,
+        action: {
+          action: 'set_provider_api_key',
+          providerId,
+          apiKey,
+        },
       })
     },
     [update],
@@ -87,8 +139,11 @@ export function useByok() {
   const removeProviderKey = useCallback(
     async (providerId: ByokProvider) => {
       await update({
-        action: 'remove_provider_api_key',
-        providerId,
+        successMessage: REMOVE_SUCCESS_MESSAGE,
+        action: {
+          action: 'remove_provider_api_key',
+          providerId,
+        },
       })
     },
     [update],
@@ -97,8 +152,9 @@ export function useByok() {
   return {
     payload,
     loading: policyResult.type !== 'complete',
-    error,
-    updating,
+    errorByProvider,
+    successByProvider,
+    updatingByProvider,
     setProviderKey,
     removeProviderKey,
   }

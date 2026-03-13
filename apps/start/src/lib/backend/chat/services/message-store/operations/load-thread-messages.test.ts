@@ -7,15 +7,31 @@ describe('makeLoadThreadMessagesOperation', () => {
     const listActiveAttachmentIds = vi.fn(() =>
       Effect.succeed<readonly string[]>([]),
     )
+    const run = vi
+      .fn()
+      .mockResolvedValueOnce([
+        {
+          messageId: 'user-1',
+          role: 'user',
+          parentMessageId: null,
+          branchIndex: 0,
+          created_at: Date.now(),
+          content: 'How does this work?',
+          userId: 'user-1',
+          attachmentsIds: [],
+        },
+      ])
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce([])
 
     const loadThreadMessages = makeLoadThreadMessagesOperation({
       zeroDatabase: {
         getOrFail: Effect.succeed({
-          run: async () => [],
+          run,
         } as never),
         withDatabase: (run) =>
           run({
-            run: async () => [],
+            run,
           } as never),
       } as never,
       attachmentRecord: {
@@ -62,7 +78,11 @@ describe('makeLoadThreadMessagesOperation', () => {
       }),
     )
 
-    expect(messages).toEqual([])
+    expect(messages).toHaveLength(1)
+    expect(messages[0]).toMatchObject({
+      id: 'user-1',
+      role: 'user',
+    })
     expect(listActiveAttachmentIds).toHaveBeenCalledOnce()
   })
 })

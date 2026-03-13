@@ -14,38 +14,39 @@ export function isByokSupportedProviderId(
 }
 
 /**
- * BYOK is intentionally disabled for this migration.
+ * Basic provider key format guardrails:
+ * - OpenAI keys start with `sk-`
+ * - Anthropic keys start with `sk-ant-`
  */
-export async function readOrgProviderApiKey(_input: {
-  readonly organizationId: string
-  readonly providerId: ByokSupportedProviderId
-}): Promise<string | undefined> {
-  return undefined
-}
-
-/**
- * Returns an all-false status map while BYOK is disabled.
- */
-export async function readOrgProviderApiKeyStatus(
-  _organizationId: string,
-): Promise<OrgProviderKeyStatus> {
-  return {
-    openai: false,
-    anthropic: false,
-  }
-}
-
-export async function upsertOrgProviderApiKey(_input: {
-  readonly organizationId: string
+export function validateProviderApiKeyFormat(input: {
   readonly providerId: ByokSupportedProviderId
   readonly apiKey: string
-}): Promise<void> {
-  throw new Error('BYOK is disabled')
-}
+}): { readonly ok: boolean; readonly normalizedApiKey: string; readonly message?: string } {
+  const normalizedApiKey = input.apiKey.trim()
 
-export async function deleteOrgProviderApiKey(_input: {
-  readonly organizationId: string
-  readonly providerId: ByokSupportedProviderId
-}): Promise<void> {
-  throw new Error('BYOK is disabled')
+  if (normalizedApiKey.length === 0) {
+    return {
+      ok: false,
+      normalizedApiKey,
+      message: 'Provider API key is required.',
+    }
+  }
+
+  if (input.providerId === 'openai') {
+    return normalizedApiKey.startsWith('sk-')
+      ? { ok: true, normalizedApiKey }
+      : {
+          ok: false,
+          normalizedApiKey,
+          message: 'OpenAI API keys must start with "sk-".',
+        }
+  }
+
+  return normalizedApiKey.startsWith('sk-ant-')
+    ? { ok: true, normalizedApiKey }
+    : {
+        ok: false,
+        normalizedApiKey,
+        message: 'Anthropic API keys must start with "sk-ant-".',
+      }
 }

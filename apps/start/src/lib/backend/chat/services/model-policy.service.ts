@@ -11,8 +11,8 @@ import { getModelAccess  } from '@/lib/shared/access-control'
 import type {AccessContext} from '@/lib/shared/access-control';
 import {
   isByokSupportedProviderId,
-  readOrgProviderApiKey,
 } from '@/lib/shared/model-policy/provider-keys'
+import { readOrgProviderApiKey } from '@/lib/backend/byok/infra/provider-key-store'
 import { getOrgAiPolicy } from '@/lib/backend/model-policy/repository'
 import type {
   EffectiveModelResolution,

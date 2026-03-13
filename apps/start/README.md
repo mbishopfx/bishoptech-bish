@@ -25,6 +25,7 @@ Required server environment variables:
 
 - `CF_MARKDOWN_WORKER_URL`: URL for your Worker (base URL or `/convert` endpoint).
 - `CF_MARKDOWN_WORKER_TOKEN`: shared secret used to authenticate app -> Worker calls.
+- `BYOK_ENCRYPTION_KEY_B64` (required when org BYOK is enabled): base64-encoded 32-byte key used for AES-256-GCM encryption of org provider API keys at rest.
 - `CF_MARKDOWN_MAX_CHARS` (optional): max markdown characters per converted file (default `120000`).
 - `ENABLE_EMBEDDING` (optional, first-class): set `false` to disable all embedding + vector RAG logic globally. The app will use markdown fallback context directly without requiring Qdrant configuration.
 - `QDRANT_URL`: base URL for the Qdrant API (for example Railway internal URL).

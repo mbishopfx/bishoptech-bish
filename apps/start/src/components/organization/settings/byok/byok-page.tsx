@@ -8,19 +8,19 @@ import { m } from '@/paraglide/messages.js'
 
 /**
  * Organization settings page for BYOK (Bring Your Own Key): manage
- * provider API keys stored in WorkOS Vault for the current org.
+ * provider API keys stored in encrypted org key storage for the current org.
  */
 export function ByokPage() {
   const {
     payload,
     loading,
-    error,
-    updating,
+    errorByProvider,
+    successByProvider,
+    updatingByProvider,
     setProviderKey,
     removeProviderKey,
   } = useByok()
   const featureAccess = useOrgFeatureAccess('byok')
-  const busy = loading || updating
 
   return (
     <ContentPage
@@ -33,19 +33,13 @@ export function ByokPage() {
         </p>
       )}
 
-      {error && (
-        <div
-          className="rounded-md border border-border-base bg-surface-overlay px-3 py-2 text-sm text-foreground-error"
-          role="alert"
-        >
-          {error}
-        </div>
-      )}
-
       <ByokForm
         featureAccess={featureAccess}
         providerKeyStatus={payload.providerKeyStatus}
-        updating={busy}
+        errorByProvider={errorByProvider}
+        successByProvider={successByProvider}
+        loading={loading}
+        updatingByProvider={updatingByProvider}
         onSave={setProviderKey}
         onRemove={removeProviderKey}
       />

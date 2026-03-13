@@ -21,6 +21,12 @@ export class ByokMissingOrgContextError extends Schema.TaggedErrorClass<ByokMiss
   BaseFields,
 ) {}
 
+/** Authenticated org user is not allowed to manage BYOK settings. */
+export class ByokForbiddenError extends Schema.TaggedErrorClass<ByokForbiddenError>()(
+  'ByokForbiddenError',
+  BaseFields,
+) {}
+
 /** Organization provider keys feature is disabled (global flag). */
 export class ByokFeatureDisabledError extends Schema.TaggedErrorClass<ByokFeatureDisabledError>()(
   'ByokFeatureDisabledError',
@@ -49,6 +55,7 @@ export class ByokPersistenceError extends Schema.TaggedErrorClass<ByokPersistenc
 export type ByokDomainError =
   | ByokUnauthorizedError
   | ByokMissingOrgContextError
+  | ByokForbiddenError
   | ByokFeatureDisabledError
   | ByokValidationError
   | ByokPersistenceError

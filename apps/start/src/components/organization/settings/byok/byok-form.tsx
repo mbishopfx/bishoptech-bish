@@ -38,7 +38,19 @@ interface ByokFormProps {
     openai: boolean
     anthropic: boolean
   }
-  updating: boolean
+  errorByProvider: {
+    openai: string | null
+    anthropic: string | null
+  }
+  successByProvider: {
+    openai: string | null
+    anthropic: string | null
+  }
+  loading: boolean
+  updatingByProvider: {
+    openai: boolean
+    anthropic: boolean
+  }
   onSave: (providerId: ByokProvider, apiKey: string) => Promise<void>
   onRemove: (providerId: ByokProvider) => Promise<void>
 }
@@ -53,7 +65,10 @@ const MASKED_KEY_VALUE = '••••••••••••••••••
 export function ByokForm({
   featureAccess,
   providerKeyStatus,
-  updating,
+  errorByProvider,
+  successByProvider,
+  loading,
+  updatingByProvider,
   onSave,
   onRemove,
 }: ByokFormProps) {
@@ -104,8 +119,17 @@ export function ByokForm({
 
   return (
     <section className="space-y-6">
-      {cards.map((card) => (
-        <div key={card.providerId} className="space-y-3">
+      {cards.map((card) => {
+        /**
+         * Error state is isolated per provider card so failures in one
+         * provider mutation do not mark other provider inputs as invalid.
+         */
+        const cardError = errorByProvider[card.providerId]
+        const cardSuccess = successByProvider[card.providerId]
+        const cardUpdating = updatingByProvider[card.providerId]
+
+        return (
+          <div key={card.providerId} className="space-y-3">
           <Form
             title={card.title}
             description={
@@ -127,10 +151,13 @@ export function ByokForm({
               type: 'password',
               placeholder: card.placeholder,
               autoComplete: 'off',
-              disabled: updating || !featureEnabled || card.configured,
+              disabled: loading || cardUpdating || !featureEnabled || card.configured,
+              'aria-invalid': cardError ? true : undefined,
               className:
                 '[&::-webkit-credentials-auto-fill-button]:hidden [&::-webkit-credentials-auto-fill-button]:w-0 [&::-ms-reveal]:hidden',
             }}
+            error={cardError}
+            success={cardSuccess}
             value={card.providerId === 'openai' ? openaiInput : anthropicInput}
             onValueChange={
               featureEnabled
@@ -158,7 +185,7 @@ export function ByokForm({
                 : m.org_byok_save_key_button()
             }
             buttonVariant={card.configured ? 'dangerLight' : 'default'}
-            buttonDisabled={!featureEnabled || updating}
+            buttonDisabled={!featureEnabled || loading || cardUpdating}
             handleSubmit={
               featureEnabled
                 ? async () => {
@@ -169,7 +196,16 @@ export function ByokForm({
                       } else {
                         setAnthropicInput('')
                       }
-                      await onRemove(card.providerId)
+                      try {
+                        await onRemove(card.providerId)
+                      } catch {
+                        // Restore masked placeholder when removal fails.
+                        if (card.providerId === 'openai') {
+                          setOpenaiInput(MASKED_KEY_VALUE)
+                        } else {
+                          setAnthropicInput(MASKED_KEY_VALUE)
+                        }
+                      }
                     } else {
                       // Save new key
                       const rawKey =
@@ -178,12 +214,16 @@ export function ByokForm({
                           : anthropicInput
                       // Don't send the masked placeholder value to the server
                       const key = rawKey === MASKED_KEY_VALUE ? '' : rawKey
-                      await onSave(card.providerId, key)
-                      // After successful save, show masked value again if key was saved
-                      if (card.providerId === 'openai') {
-                        setOpenaiInput(key ? MASKED_KEY_VALUE : '')
-                      } else {
-                        setAnthropicInput(key ? MASKED_KEY_VALUE : '')
+                      try {
+                        await onSave(card.providerId, key)
+                        // After successful save, show masked value again if key was saved
+                        if (card.providerId === 'openai') {
+                          setOpenaiInput(key ? MASKED_KEY_VALUE : '')
+                        } else {
+                          setAnthropicInput(key ? MASKED_KEY_VALUE : '')
+                        }
+                      } catch {
+                        // Keep user-typed value on failed save so they can correct/resubmit.
                       }
                     }
                   }
@@ -200,8 +240,9 @@ export function ByokForm({
                 : getLocalizedFeatureAccessActionLabel(featureAccess.minimumPlanId)
             }
           />
-        </div>
-      ))}
+          </div>
+        )
+      })}
     </section>
   )
 }

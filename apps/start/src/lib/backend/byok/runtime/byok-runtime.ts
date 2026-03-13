@@ -2,7 +2,6 @@ import { Layer } from 'effect'
 import { makeRuntimeRunner } from '@/lib/backend/server-effect'
 import { WorkspaceBillingService } from '@/lib/backend/billing/services/workspace-billing.service'
 import { ByokExecutorService } from '../services/byok-executor.service'
-import { WorkOsOrgResolverService } from '../services/workos-org-resolver.service'
 
 /**
  * Runtime composition for BYOK server-side effects.
@@ -10,7 +9,6 @@ import { WorkOsOrgResolverService } from '../services/workos-org-resolver.servic
  */
 const layer = Layer.mergeAll(
   WorkspaceBillingService.layer,
-  WorkOsOrgResolverService.layer,
   ByokExecutorService.layer,
 )
 

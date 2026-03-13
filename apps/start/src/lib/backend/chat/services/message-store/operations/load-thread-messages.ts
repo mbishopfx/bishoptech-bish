@@ -114,22 +114,6 @@ function buildOrgKnowledgeContextBlock(
   ].join('\n\n')
 }
 
-/**
- * Creates a synthetic system message that carries backend-supplied org
- * knowledge context. Keeping this separate from the user turn lets the model
- * distinguish tenant-level background knowledge from user-provided files.
- */
-function buildSystemContextMessage(input: {
-  readonly id: string
-  readonly text: string
-}): UIMessage {
-  return {
-    id: input.id,
-    role: 'system',
-    parts: [{ type: 'text', text: input.text }],
-  }
-}
-
 export const makeLoadThreadMessagesOperation = (dependencies: {
   readonly zeroDatabase: ZeroDatabaseService['Service']
   readonly attachmentRecord: AttachmentRecordService['Service']
@@ -516,7 +500,7 @@ export const makeLoadThreadMessagesOperation = (dependencies: {
           }
         }
 
-        const promptMessages = canonicalRows.map((message) => {
+        return canonicalRows.map((message) => {
           const attachmentIds = Array.isArray(message.attachmentsIds)
             ? message.attachmentsIds
             : []
@@ -552,8 +536,9 @@ export const makeLoadThreadMessagesOperation = (dependencies: {
             latestUserMessageRow?.messageId === message.messageId &&
             canonicalMessageIdSet.has(message.messageId) &&
             canonicalRowIdSet.has(message.messageId) &&
-            fallbackContextBlock.length > 0
+            (orgKnowledgeContextBlock.length > 0 || fallbackContextBlock.length > 0)
               ? [
+                  orgKnowledgeContextBlock,
                   message.content,
                   fallbackContextBlock,
                 ]
@@ -583,32 +568,6 @@ export const makeLoadThreadMessagesOperation = (dependencies: {
             },
           }
         })
-
-        if (
-          orgKnowledgeContextBlock.length === 0 ||
-          !latestUserMessageRow ||
-          !canonicalRowIdSet.has(latestUserMessageRow.messageId)
-        ) {
-          return promptMessages
-        }
-
-        const latestUserMessageIndex = promptMessages.findIndex(
-          (message) => message.id === latestUserMessageRow.messageId,
-        )
-        if (latestUserMessageIndex < 0) {
-          return promptMessages
-        }
-
-        const orgKnowledgeSystemMessage = buildSystemContextMessage({
-          id: `system-org-knowledge-${latestUserMessageRow.messageId}`,
-          text: orgKnowledgeContextBlock,
-        })
-
-        return [
-          ...promptMessages.slice(0, latestUserMessageIndex),
-          orgKnowledgeSystemMessage,
-          ...promptMessages.slice(latestUserMessageIndex),
-        ]
       }),
   )
 }

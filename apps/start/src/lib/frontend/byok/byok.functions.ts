@@ -1,6 +1,5 @@
 import { createServerFn } from '@tanstack/react-start'
 import type { ByokUpdateAction } from '@/lib/shared/byok/types'
-import { runUpdateByok } from '@/lib/backend/byok/byok-runner'
 
 /** Input shape for the server function; server performs full validation in byok-runner.ts. */
 function updateByokInput(input: unknown): ByokUpdateAction {
@@ -13,5 +12,6 @@ function updateByokInput(input: unknown): ByokUpdateAction {
 export const updateByok = createServerFn({ method: 'POST' })
   .inputValidator(updateByokInput)
   .handler(async ({ data }) => {
-    return runUpdateByok(data)
+    const { updateByokAction } = await import('./byok.server')
+    return updateByokAction({ data })
   })

@@ -4,11 +4,12 @@ import {
   getOrgAiPolicy,
   upsertOrgAiPolicy,
 } from '@/lib/backend/model-policy/repository'
+import type { ByokSupportedProviderId } from '@/lib/shared/model-policy/provider-keys'
 import {
   deleteOrgProviderApiKey,
   readOrgProviderApiKeyStatus,
   upsertOrgProviderApiKey,
-} from '@/lib/shared/model-policy/provider-keys'
+} from '@/lib/backend/byok/infra/provider-key-store'
 import {
   DEFAULT_ORG_TOOL_POLICY,
   EMPTY_ORG_PROVIDER_KEY_STATUS,
@@ -86,11 +87,22 @@ const toPersistenceError = (cause: unknown): ByokPersistenceError =>
     Match.value,
     Match.when(Match.instanceOf(Error), (e: Error) => e.message),
     Match.orElse(() => String(cause)),
-    (causeStr) =>
+    (causeStr) => {
+      const message = causeStr.includes(
+        'Missing required environment variable BYOK_ENCRYPTION_KEY_B64',
+      )
+        ? 'Missing required environment variable BYOK_ENCRYPTION_KEY_B64.'
+        : causeStr.includes('relation "org_provider_api_key" does not exist')
+          ? 'BYOK key storage is not initialized. Run the BYOK migration first.'
+          : 'BYOK persistence failed'
+
+      return (
       new ByokPersistenceError({
-        message: 'BYOK persistence failed',
+        message,
         cause: causeStr,
-      }),
+      })
+      )
+    },
   )
 
 const tryGetPolicy = (organizationId: string) =>
@@ -101,7 +113,7 @@ const tryGetPolicy = (organizationId: string) =>
 
 const tryUpsertKey = (params: {
   organizationId: string
-  providerId: 'openai' | 'anthropic'
+  providerId: ByokSupportedProviderId
   apiKey: string
 }) =>
   Effect.tryPromise({
@@ -111,7 +123,7 @@ const tryUpsertKey = (params: {
 
 const tryDeleteKey = (params: {
   organizationId: string
-  providerId: 'openai' | 'anthropic'
+  providerId: ByokSupportedProviderId
 }) =>
   Effect.tryPromise({
     try: () => deleteOrgProviderApiKey(params),
