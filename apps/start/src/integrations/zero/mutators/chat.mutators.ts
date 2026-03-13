@@ -6,14 +6,16 @@ import { sanitizeThreadDisabledToolKeys } from '@/lib/shared/chat/tool-policy'
 import { isChatModeId, resolveEffectiveChatMode } from '@/lib/shared/chat-modes'
 import {
   DEFAULT_ORG_TOOL_POLICY,
-  EMPTY_ORG_PROVIDER_KEY_STATUS,
-  type OrgAiPolicy,
+  EMPTY_ORG_PROVIDER_KEY_STATUS
+  
 } from '@/lib/shared/model-policy/types'
+import type {OrgAiPolicy} from '@/lib/shared/model-policy/types';
 import { zql } from '../zql'
 import {
-  ROOT_BRANCH_PARENT_KEY,
-  type BranchSelection,
+  ROOT_BRANCH_PARENT_KEY
+  
 } from '@/lib/shared/chat-branching/branch-resolver'
+import type {BranchSelection} from '@/lib/shared/chat-branching/branch-resolver';
 
 /**
  * Client-callable mutators only. Thread and message creation are server-only:

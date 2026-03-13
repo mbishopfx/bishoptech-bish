@@ -1,9 +1,10 @@
 'use client'
 
 import {
-  getFeatureAccessAction,
-  type WorkspaceFeatureAccessState,
+  getFeatureAccessAction
+  
 } from '@/lib/shared/access-control'
+import type {WorkspaceFeatureAccessState} from '@/lib/shared/access-control';
 import {
   getLocalizedFeatureAccessActionLabel,
   getLocalizedFeatureAccessGateMessage,

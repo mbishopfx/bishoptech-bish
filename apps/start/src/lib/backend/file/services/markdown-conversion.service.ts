@@ -128,7 +128,7 @@ export class MarkdownConversionService extends ServiceMap.Service<
                       statusCode: 502,
                       cause: String(error),
                     }),
-                })) as MarkdownWorkerResponse | null
+                }))
 
                 return { response, workerPayload }
               }),

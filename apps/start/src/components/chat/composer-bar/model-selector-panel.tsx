@@ -16,9 +16,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@rift/ui/tooltip'
 import { getCatalogModel, getProviderIcon } from '@/lib/shared/ai-catalog'
 import type { AiModelCatalogEntry } from '@/lib/shared/ai-catalog/types'
 import type { CatalogProviderId } from '@/lib/shared/ai-catalog/provider-tools'
-import {
-  type PaidWorkspacePlanId,
-} from '@/lib/shared/access-control'
+import type {PaidWorkspacePlanId} from '@/lib/shared/access-control';
 import { getLocalizedFeatureAccessGateMessage } from '@/lib/frontend/access-control'
 import { m } from '@/paraglide/messages.js'
 

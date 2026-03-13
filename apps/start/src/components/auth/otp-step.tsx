@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useState  } from 'react'
+import type {ReactNode} from 'react';
 import { motion } from 'motion/react'
 import { m } from '@/paraglide/messages.js'
 import { Button } from '@rift/ui/button'

@@ -8,9 +8,10 @@ import {
 import {
   clearPendingChatSearchReveal,
   getPendingChatSearchReveal,
-  subscribeToChatSearchReveal,
-  type ChatSearchRevealRequest,
+  subscribeToChatSearchReveal
+  
 } from './chat-search-reveal-store'
+import type {ChatSearchRevealRequest} from './chat-search-reveal-store';
 
 type UseChatSearchRevealInput = {
   readonly activeThreadId?: string

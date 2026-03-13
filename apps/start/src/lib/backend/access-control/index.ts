@@ -1,10 +1,12 @@
-import type { RuntimeFeatureAccessId } from '@/lib/shared/access-control'
+import type {
+  AccessContext,
+  FeatureAccessState,
+  RuntimeFeatureAccessId,
+} from '@/lib/shared/access-control'
 import {
   coerceWorkspacePlanId,
   getFeatureAccessState,
   isFreeTierContext,
-  type AccessContext,
-  type FeatureAccessState,
 } from '@/lib/shared/access-control'
 import { readEntitlementSnapshot } from '@/lib/backend/billing/services/workspace-billing/persistence'
 

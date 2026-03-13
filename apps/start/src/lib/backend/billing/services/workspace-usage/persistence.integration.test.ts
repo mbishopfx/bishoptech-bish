@@ -60,7 +60,7 @@ async function loadHarness() {
     authPoolModule = await import('@/lib/backend/auth/auth-pool')
     usagePersistenceModule = await import('./persistence')
     const context = await authModule.auth.$context
-    testHelpers = context.test as TestHelpers
+    testHelpers = context.test as unknown as TestHelpers
   }
 
   return {

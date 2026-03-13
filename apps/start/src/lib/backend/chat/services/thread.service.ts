@@ -1,7 +1,8 @@
 import { Effect, Layer, ServiceMap } from 'effect'
 import { generateText } from 'ai'
 import type { AiReasoningEffort } from '@/lib/shared/ai-catalog/types'
-import { isChatModeId, type ChatModeId } from '@/lib/shared/chat-modes'
+import { isChatModeId  } from '@/lib/shared/chat-modes'
+import type {ChatModeId} from '@/lib/shared/chat-modes';
 import {
   MessagePersistenceError,
   ThreadForbiddenError,

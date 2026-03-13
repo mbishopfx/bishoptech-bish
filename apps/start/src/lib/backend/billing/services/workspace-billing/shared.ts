@@ -1,14 +1,14 @@
 import Stripe from 'stripe'
 import {
   coerceWorkspacePlanId,
-  getWorkspacePlanRank,
-  type StripeManagedWorkspacePlanId,
+  getWorkspacePlanRank
+  
 } from '@/lib/shared/access-control'
+import type {StripeManagedWorkspacePlanId, WorkspacePlanId } from '@/lib/shared/access-control';
 import {
   WorkspaceBillingConfigurationError,
   WorkspaceBillingPersistenceError,
 } from '../../domain/errors'
-import type { WorkspacePlanId } from '@/lib/shared/access-control'
 
 export const AUTO_RESTRICTION_STATUS = 'restricted'
 export const AUTO_RESTRICTION_REASON = 'seat_limit_downgrade'

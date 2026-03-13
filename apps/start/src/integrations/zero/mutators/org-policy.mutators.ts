@@ -8,9 +8,10 @@ import {
   coerceWorkspacePlanId,
   getFeatureAccessGateMessage,
   getPlanEffectiveFeatures,
-  getWorkspaceFeatureAccessState,
-  type WorkspaceFeatureId,
+  getWorkspaceFeatureAccessState
+  
 } from '@/lib/shared/access-control'
+import type {WorkspaceFeatureId} from '@/lib/shared/access-control';
 import { isChatModeId } from '@/lib/shared/chat-modes'
 import { isAdminRole } from '@/lib/shared/auth/roles'
 import { requireOrgContext } from '../org-access'

@@ -4,9 +4,8 @@ import {
   anonymousClient,
   emailOTPClient,
   multiSessionClient,
-  organizationClient,
+  organizationClient, twoFactorClient 
 } from 'better-auth/client/plugins'
-import { twoFactorClient } from 'better-auth/client/plugins'
 
 function resolveAuthClientBaseURL(): string {
   const trimTrailingSlash = (s: string) => s.replace(/\/+$/, '')

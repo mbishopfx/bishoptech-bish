@@ -148,9 +148,9 @@ describe('estimateReservedCostNanoUsd', () => {
     ]
 
     const inflatedMetadataMessages: UIMessage<ChatMessageMetadata>[] = [
-      baseMessages[0]!,
+      baseMessages[0],
       {
-        ...baseMessages[1]!,
+        ...baseMessages[1],
         metadata: { totalTokens: 48_000 },
       },
     ]

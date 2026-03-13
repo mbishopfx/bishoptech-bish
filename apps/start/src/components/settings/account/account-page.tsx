@@ -134,9 +134,9 @@ export function AccountPage() {
             value={language}
             onValueChange={(next) => {
               if (!next || next === language) return
-              if (!locales.includes(next as (typeof locales)[number])) return
-              setLanguageInput(next as (typeof locales)[number])
-              void applyLanguageSelection(next as (typeof locales)[number])
+              if (!locales.includes(next)) return
+              setLanguageInput(next)
+              void applyLanguageSelection(next)
             }}
           >
             <SelectTrigger className="w-full max-w-md" aria-label={m.settings_account_language_title()}>

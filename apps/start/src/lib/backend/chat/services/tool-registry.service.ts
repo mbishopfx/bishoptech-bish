@@ -2,9 +2,10 @@ import type { ToolSet } from 'ai'
 import { Effect, Layer, ServiceMap } from 'effect'
 import { AI_CATALOG_BY_ID } from '@/lib/shared/ai-catalog'
 import {
-  resolveAnthropicRuntimeToolIds,
-  type AnthropicProviderToolId,
+  resolveAnthropicRuntimeToolIds
+  
 } from '@/lib/shared/ai-catalog/provider-tools/anthropic'
+import type {AnthropicProviderToolId} from '@/lib/shared/ai-catalog/provider-tools/anthropic';
 import { TOOL_CATALOG_BY_KEY } from '@/lib/shared/ai-catalog/tool-catalog'
 import type { AiReasoningEffort } from '@/lib/shared/ai-catalog/types'
 import { resolveProviderToolSet } from '../provider-tools'

@@ -291,7 +291,7 @@ Options:
 }
 
 function pickOne<T>(values: readonly T[]): T {
-  return values[Math.floor(Math.random() * values.length)] as T
+  return values[Math.floor(Math.random() * values.length)]
 }
 
 function randomInt(min: number, max: number): number {

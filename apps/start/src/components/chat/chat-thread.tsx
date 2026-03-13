@@ -1,7 +1,8 @@
 // Renders chat messages and keeps scroll pinned to the latest user message.
 import { memo, useCallback, useMemo } from 'react'
 import type { RefObject } from 'react'
-import { isReasoningUIPart, type UIMessage } from 'ai'
+import { isReasoningUIPart  } from 'ai'
+import type {UIMessage} from 'ai';
 import { useChatMessageActions, useChatMessages } from './chat-context'
 import { ChatMessage } from './chat-message'
 import { usePinToLastUserMessage } from '@rift/chat-scroll'

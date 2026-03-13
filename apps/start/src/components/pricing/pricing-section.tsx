@@ -5,7 +5,8 @@ import {
   enterprisePlan,
   selfHostingPlan,
 } from '@/lib/shared/pricing'
-import { PricingCard, type PricingPlanActionOverride } from './pricing-card'
+import { PricingCard  } from './pricing-card'
+import type {PricingPlanActionOverride} from './pricing-card';
 import { DashedBorderFrame } from './pricing-decorative'
 
 type PricingSectionProps = {

@@ -1,5 +1,5 @@
 export * from './domain/errors'
-export * from './http/error-response'
+export { toFileErrorResponse } from './http/error-response'
 export * from './http/route-failure'
 export * from './runtime/file-runtime'
 export * from './services/file-upload-orchestrator.service'

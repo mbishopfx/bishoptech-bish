@@ -280,7 +280,7 @@ describe('useChatSearchReveal', () => {
       />,
     )
 
-    const scrollContainer = view.getByTestId('scroll-container') as HTMLElement
+    const scrollContainer = view.getByTestId('scroll-container')
     const target = document.getElementById('chat-message-edge-message')
     expect(target).not.toBeNull()
     if (!(target instanceof HTMLElement)) {
@@ -373,7 +373,7 @@ describe('useChatSearchReveal', () => {
       />,
     )
 
-    const scrollContainer = view.getByTestId('scroll-container') as HTMLElement
+    const scrollContainer = view.getByTestId('scroll-container')
     const target = document.getElementById('chat-message-visible-message')
     expect(target).not.toBeNull()
     if (!(target instanceof HTMLElement)) {

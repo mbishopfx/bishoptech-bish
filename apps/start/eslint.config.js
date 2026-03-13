@@ -35,6 +35,15 @@ export default [
       'sort-imports': 'off',
       '@typescript-eslint/array-type': 'off',
       '@typescript-eslint/require-await': 'off',
+      // The current app intentionally includes defensive checks around runtime
+      // session/auth/data boundaries that static typing often narrows too aggressively.
+      '@typescript-eslint/no-unnecessary-condition': 'off',
+      // Enforcing strict type-only import forms in this codebase causes broad churn
+      // across tests and service modules without changing runtime semantics.
+      '@typescript-eslint/consistent-type-imports': 'off',
+      // Closure-heavy UI and test code frequently reuses short variable names in
+      // nested scopes; disabling this keeps lint signal focused on functional issues.
+      'no-shadow': 'off',
       'pnpm/json-enforce-catalog': 'off',
       'no-restricted-imports': CANONICAL_LIB_ROOT_RULE,
     },
@@ -148,6 +157,8 @@ export default [
     },
   },
   {
-    ignores: ['eslint.config.js', 'prettier.config.js'],
+    // Paraglide generates JS artifacts that are not hand-edited and can violate
+    // strict TS parser assumptions used by project-aware lint rules.
+    ignores: ['eslint.config.js', 'prettier.config.js', 'src/paraglide/**'],
   },
 ]

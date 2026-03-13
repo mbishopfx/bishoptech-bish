@@ -1,8 +1,9 @@
 import { AI_CATALOG } from './index'
 import {
-  getProviderToolDefinition,
-  type CatalogProviderId,
+  getProviderToolDefinition
+  
 } from './provider-tools'
+import type {CatalogProviderId} from './provider-tools';
 
 export type ToolCatalogEntry = {
   readonly key: string

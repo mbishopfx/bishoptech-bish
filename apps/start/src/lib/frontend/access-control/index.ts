@@ -3,9 +3,10 @@
 import { m } from '@/paraglide/messages.js'
 import {
   getMinimumPlanName,
-  getFeatureAccessAction,
-  type PaidWorkspacePlanId,
+  getFeatureAccessAction
+  
 } from '@/lib/shared/access-control'
+import type {PaidWorkspacePlanId} from '@/lib/shared/access-control';
 
 /**
  * Client-facing access copy is localized here so the shared access catalog can

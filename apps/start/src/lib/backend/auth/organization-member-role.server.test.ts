@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import {
+  isOrgAdmin,
+} from './organization-member-role.server'
+
 const mocks = vi.hoisted(() => ({
   hasPermissionMock: vi.fn(),
 }))
@@ -11,10 +15,6 @@ vi.mock('./auth.server', () => ({
     },
   },
 }))
-
-import {
-  isOrgAdmin,
-} from './organization-member-role.server'
 
 describe('organization member role resolver', () => {
   beforeEach(() => {

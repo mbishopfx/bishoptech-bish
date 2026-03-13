@@ -39,10 +39,10 @@ import { createPortal } from "react-dom";
 import { createHighlighter } from "shiki";
 
 // biome-ignore lint/suspicious/noBitwiseOperators: shiki bitflag check
-// eslint-disable-next-line no-bitwise -- shiki bitflag check
+ 
 const isItalic = (fontStyle: number | undefined) => fontStyle && fontStyle & 1;
 // biome-ignore lint/suspicious/noBitwiseOperators: shiki bitflag check
-// eslint-disable-next-line no-bitwise -- shiki bitflag check
+ 
 // oxlint-disable-next-line eslint(no-bitwise)
 const isBold = (fontStyle: number | undefined) => fontStyle && fontStyle & 2;
 const isUnderline = (fontStyle: number | undefined) =>
@@ -78,7 +78,9 @@ const TokenSpan = ({ token }: { token: ThemedToken }) => (
         fontStyle: isItalic(token.fontStyle) ? "italic" : undefined,
         fontWeight: isBold(token.fontStyle) ? "bold" : undefined,
         textDecoration: isUnderline(token.fontStyle) ? "underline" : undefined,
-        ...token.htmlStyle,
+        ...(typeof token.htmlStyle === "object" && token.htmlStyle !== null
+          ? token.htmlStyle
+          : {}),
       } as CSSProperties
     }
   >

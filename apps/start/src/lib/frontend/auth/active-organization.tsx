@@ -6,9 +6,10 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useState,
-  type PropsWithChildren,
+  useState
+  
 } from 'react'
+import type {PropsWithChildren} from 'react';
 import { authClient } from './auth-client'
 import { useAppAuth } from './use-auth'
 

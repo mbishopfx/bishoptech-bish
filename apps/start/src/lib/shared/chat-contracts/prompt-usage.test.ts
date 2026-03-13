@@ -39,7 +39,7 @@ describe('prompt-usage', () => {
     ]
 
     expect(estimatePromptTokens(messages)).toBe(
-      estimatePromptTokensForMessage(messages[0]!) + estimatePromptTokensForMessage(messages[1]!),
+      estimatePromptTokensForMessage(messages[0]) + estimatePromptTokensForMessage(messages[1]),
     )
   })
 })

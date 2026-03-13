@@ -1,6 +1,5 @@
 import { Effect, Layer, ServiceMap } from 'effect'
-import { WorkspaceBillingPersistenceError } from '../domain/errors'
-import { WorkspaceUsageQuotaExceededError } from '../domain/errors'
+import { WorkspaceBillingPersistenceError, WorkspaceUsageQuotaExceededError  } from '../domain/errors'
 import {
   ensureSeatAssignmentRecord,
   releaseReservationRecord,

@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, type ReactNode } from 'react'
+import { useState  } from 'react'
+import type {ReactNode} from 'react';
 import { Command as CommandPrimitive } from 'cmdk'
 import { Search } from 'lucide-react'
 import { CommandDialog } from '@rift/ui/command'

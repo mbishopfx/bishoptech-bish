@@ -8,10 +8,11 @@ import {
   resolveDefaultUsagePolicyTemplate,
   resolveSeatWindowEndAt,
   resolveSeatWindowStartAt,
-  resolveUsagePolicySnapshot,
-  type UsagePolicySnapshot,
-  type UsagePolicyTemplate,
+  resolveUsagePolicySnapshot
+  
+  
 } from './shared'
+import type {UsagePolicySnapshot, UsagePolicyTemplate} from './shared';
 import {
   asNumber,
   asOptionalNumber,

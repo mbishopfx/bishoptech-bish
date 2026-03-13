@@ -1,7 +1,8 @@
 import {
-  getAnthropicProviderToolDefinition,
-  type AnthropicProviderToolId,
+  getAnthropicProviderToolDefinition
+  
 } from './anthropic'
+import type {AnthropicProviderToolId} from './anthropic';
 import { GOOGLE_PROVIDER_TOOLS } from './google'
 import { OPENAI_PROVIDER_TOOLS } from './openai'
 import { XAI_PROVIDER_TOOLS } from './xai'

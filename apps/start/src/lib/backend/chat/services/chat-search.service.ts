@@ -6,9 +6,10 @@ import {
 } from '@/lib/backend/chat/domain/errors'
 import {
   CHAT_SEARCHABLE_MESSAGE_ROLES,
-  CHAT_SEARCHABLE_MESSAGE_STATUS,
-  type ChatSearchResult,
+  CHAT_SEARCHABLE_MESSAGE_STATUS
+  
 } from '@/lib/shared/chat-search'
+import type {ChatSearchResult} from '@/lib/shared/chat-search';
 import { normalizeSearchQuery } from '@/lib/shared/chat-search-highlight'
 
 const DEFAULT_SEARCH_LIMIT = 20

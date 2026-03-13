@@ -1,6 +1,7 @@
 'use client'
 
-import { useMemo, type SVGProps } from 'react'
+import { useMemo  } from 'react'
+import type {SVGProps} from 'react';
 import { useAppAuth } from '@/lib/frontend/auth/use-auth'
 import { motion } from 'motion/react'
 import { m } from '@/paraglide/messages.js'

@@ -1,9 +1,10 @@
 import { isAnthropicCodeExecutionToolId } from '@/lib/shared/ai-catalog/provider-tools/anthropic'
 import {
   TOOL_CATALOG_BY_KEY,
-  TOOL_KEYS_BY_MODEL_ID,
-  type ToolCatalogEntry,
+  TOOL_KEYS_BY_MODEL_ID
+  
 } from '@/lib/shared/ai-catalog/tool-catalog'
+import type {ToolCatalogEntry} from '@/lib/shared/ai-catalog/tool-catalog';
 import type { ResolvedChatMode } from '@/lib/shared/chat-modes'
 import type { OrgAiPolicy } from '@/lib/shared/model-policy/types'
 import { canUseAdvancedProviderTools } from '@/utils/app-feature-flags'

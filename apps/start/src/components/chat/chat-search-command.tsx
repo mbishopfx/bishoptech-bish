@@ -14,7 +14,8 @@ import {
 import { useTheme } from '@rift/ui/hooks/useTheme'
 import { useHotkey } from '@tanstack/react-hotkeys'
 import { useNavigate } from '@tanstack/react-router'
-import { AppCommandDialog, type AppCommandGroup } from '@/components/layout/command/app-command-dialog'
+import { AppCommandDialog  } from '@/components/layout/command/app-command-dialog'
+import type {AppCommandGroup} from '@/components/layout/command/app-command-dialog';
 import { searchChatThreads } from '@/lib/frontend/chat/chat-search.functions'
 import type { ChatSearchResult } from '@/lib/shared/chat-search'
 import { normalizeSearchQuery } from '@/lib/shared/chat-search-highlight'

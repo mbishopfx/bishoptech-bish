@@ -7,7 +7,8 @@ import {
   evaluateModelAvailability,
   getCatalogModelById,
 } from '@/lib/shared/model-policy/policy-engine'
-import { getModelAccess, type AccessContext } from '@/lib/shared/access-control'
+import { getModelAccess  } from '@/lib/shared/access-control'
+import type {AccessContext} from '@/lib/shared/access-control';
 import {
   isByokSupportedProviderId,
   readOrgProviderApiKey,

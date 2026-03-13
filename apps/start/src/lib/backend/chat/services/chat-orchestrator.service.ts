@@ -15,7 +15,7 @@ import { emitWideErrorEvent, getErrorTag } from '../observability/wide-event'
 import { canUseReasoningControls } from '@/utils/app-feature-flags'
 import type { OrgAiPolicy } from '@/lib/shared/model-policy/types'
 import { resolveEffectiveChatMode } from '@/lib/shared/chat-modes'
-import { type ResolvedChatAccessPolicy } from '@/lib/backend/access-control'
+import type {ResolvedChatAccessPolicy} from '@/lib/backend/access-control';
 import {
   runDetachedObserved,
   runDetachedUnsafe,

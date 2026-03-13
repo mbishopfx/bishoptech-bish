@@ -1,8 +1,9 @@
 import { authPool } from '@/lib/backend/auth/auth-pool'
 import {
-  selectRestrictedMembersForSeatLimit,
-  type SeatReconciliationMember,
+  selectRestrictedMembersForSeatLimit
+  
 } from '@/lib/shared/billing/member-seat-restrictions'
+import type {SeatReconciliationMember} from '@/lib/shared/billing/member-seat-restrictions';
 import { getPlanEffectiveFeatures } from '@/lib/shared/access-control'
 import type { StripeManagedWorkspacePlanId } from '@/lib/shared/access-control'
 import {

@@ -2,10 +2,11 @@ import type { PoolClient } from 'pg'
 import {
   resolveSeatWindowEndAt,
   resolveSeatWindowStartAt,
-  selectSeatSlotCandidate,
-  type SeatSlotCandidate,
-  type UsagePolicySnapshot,
+  selectSeatSlotCandidate
+  
+  
 } from './shared'
+import type {SeatSlotCandidate, UsagePolicySnapshot} from './shared';
 import {
   asNumber,
   asOptionalNumber,

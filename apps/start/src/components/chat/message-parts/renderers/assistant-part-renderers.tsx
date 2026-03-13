@@ -1,4 +1,5 @@
-import { Streamdown, type PluginConfig } from 'streamdown'
+import { Streamdown  } from 'streamdown'
+import type {PluginConfig} from 'streamdown';
 import { code } from '@streamdown/code'
 import { math } from '@streamdown/math'
 import { mermaid } from '@streamdown/mermaid'

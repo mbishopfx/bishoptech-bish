@@ -3,7 +3,8 @@
 import { useMemo } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { cn } from '@rift/utils'
-import { DataTable, type DataTableColumnDef } from '@rift/ui/data-table'
+import { DataTable  } from '@rift/ui/data-table'
+import type {DataTableColumnDef} from '@rift/ui/data-table';
 import { Avatar, AvatarFallback, AvatarImage } from '@rift/ui/avatar'
 import { Badge } from '@rift/ui/badge'
 import { Button } from '@rift/ui/button'
@@ -24,7 +25,8 @@ import { MoreVertical, UserIcon } from 'lucide-react'
 import { ContentPage } from '@/components/layout'
 import { useAppAuth } from '@/lib/frontend/auth/use-auth'
 import { MEMBERS_DIRECTORY_PAGE_SIZE } from '@/integrations/zero/queries/org-settings.queries'
-import { useMembersPageLogic, type MemberRow } from './members-page.logic'
+import { useMembersPageLogic  } from './members-page.logic'
+import type {MemberRow} from './members-page.logic';
 import { InviteMembersDialog } from './invite-members-dialog'
 import { m } from '@/paraglide/messages.js'
 

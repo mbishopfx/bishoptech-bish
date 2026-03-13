@@ -99,7 +99,7 @@ describe('ChatSearchCommand', () => {
   })
 
   it('ignores a stale search response that resolves after the dialog closes', async () => {
-    const deferred = createDeferredPromise([
+    const staleResult = [
       {
         threadId: 'thread-1',
         messageId: 'message-1',
@@ -108,7 +108,8 @@ describe('ChatSearchCommand', () => {
         matchType: 'message' as const,
         matchedAt: 1,
       },
-    ] as const)
+    ] as const
+    const deferred = createDeferredPromise<typeof staleResult>()
     searchChatThreadsMock.mockReturnValueOnce(deferred.promise)
 
     render(<ChatSearchCommand />)

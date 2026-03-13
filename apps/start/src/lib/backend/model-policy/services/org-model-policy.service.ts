@@ -4,7 +4,8 @@ import {
   TOOL_CATALOG,
   TOOL_CATALOG_BY_KEY,
 } from '@/lib/shared/ai-catalog/tool-catalog'
-import { isChatModeId, type ChatModeId } from '@/lib/shared/chat-modes'
+import { isChatModeId  } from '@/lib/shared/chat-modes'
+import type {ChatModeId} from '@/lib/shared/chat-modes';
 import { evaluateModelAvailability } from '@/lib/shared/model-policy/policy-engine'
 import {
   getOrgAiPolicy,
@@ -286,7 +287,7 @@ const loadPolicy = Effect.fn('OrgModelPolicyService.loadPolicy')(
           requestId,
           cause: String(error),
         }),
-    }) as Effect.Effect<ExistingOrgPolicy, OrgModelPolicyPersistenceError>,
+    }),
 )
 
 function addToList(values: readonly string[], nextValue: string): string[] {

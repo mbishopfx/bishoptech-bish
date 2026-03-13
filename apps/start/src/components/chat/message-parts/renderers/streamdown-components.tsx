@@ -1,6 +1,7 @@
 import { isValidElement, memo } from 'react'
 import type { HTMLAttributes, ReactNode } from 'react'
-import { bundledLanguages, type BundledLanguage } from 'shiki'
+import { bundledLanguages  } from 'shiki'
+import type {BundledLanguage} from 'shiki';
 import type { Components } from 'streamdown'
 import { cn } from '@rift/utils'
 import {

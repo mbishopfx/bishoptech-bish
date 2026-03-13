@@ -121,7 +121,7 @@ export function MfaSection({
       margin: 1,
       width: 192,
     })
-      .then((dataUrl) => {
+      .then((dataUrl: string) => {
         if (active) setQrCodeDataURL(dataUrl)
       })
       .catch(() => {

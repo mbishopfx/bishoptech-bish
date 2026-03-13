@@ -63,7 +63,7 @@ async function loadHarness() {
     authModule = await import('./auth.server')
     authPoolModule = await import('./auth-pool')
     const context = await authModule.auth.$context
-    testHelpers = context.test as TestHelpers
+    testHelpers = context.test as unknown as TestHelpers
   }
 
   return {

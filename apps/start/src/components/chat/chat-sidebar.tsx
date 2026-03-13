@@ -6,11 +6,12 @@ import {
   useEffect,
   useMemo,
   useRef,
-  useState,
-  type CSSProperties,
-  type KeyboardEvent,
-  type RefObject,
+  useState
+  
+  
+  
 } from 'react'
+import type {CSSProperties, KeyboardEvent, RefObject} from 'react';
 import type { QueryResultType } from '@rocicorp/zero'
 import {
   useHistoryScrollState,

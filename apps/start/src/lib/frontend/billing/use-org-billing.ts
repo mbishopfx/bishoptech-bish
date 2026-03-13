@@ -6,10 +6,11 @@ import { authClient } from '@/lib/frontend/auth/auth-client'
 import { queries } from '@/integrations/zero'
 import {
   coerceWorkspacePlanId,
-  getWorkspaceFeatureAccessState,
-  type WorkspaceFeatureAccessState,
-  type WorkspaceFeatureId,
+  getWorkspaceFeatureAccessState
+  
+  
 } from '@/lib/shared/access-control'
+import type {WorkspaceFeatureAccessState, WorkspaceFeatureId} from '@/lib/shared/access-control';
 
 type BillingSummaryRow = {
   id: string

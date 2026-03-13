@@ -5,7 +5,8 @@ import { Moon, Sun } from 'lucide-react'
 import { Button } from '@rift/ui/button'
 import { useTheme } from '@rift/ui/hooks/useTheme'
 import { AppLogo } from './navbar-icons'
-import { NavbarAuthButtons, type NavbarDict } from './navbar-auth-buttons'
+import { NavbarAuthButtons  } from './navbar-auth-buttons'
+import type {NavbarDict} from './navbar-auth-buttons';
 
 type NavbarProps = {
   dict?: Partial<NavbarDict>

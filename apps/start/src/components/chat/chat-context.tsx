@@ -14,11 +14,9 @@ import {
 import type { ReactNode } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useChat as useAIChat } from '@ai-sdk/react'
-import type { LanguageModelUsage } from 'ai'
-import { useQuery } from '@rocicorp/zero/react'
-import { useZero } from '@rocicorp/zero/react'
+import type { LanguageModelUsage, UIMessage  } from 'ai'
+import { useQuery, useZero  } from '@rocicorp/zero/react'
 import { DefaultChatTransport } from 'ai'
-import type { UIMessage } from 'ai'
 import { flushSync } from 'react-dom'
 import { mutators, queries } from '@/integrations/zero'
 import { CACHE_CHAT_NAV } from '@/integrations/zero/query-cache-policy'
@@ -27,10 +25,11 @@ import {
   coerceWorkspacePlanId,
   getFeatureAccessState,
   getModelAccess,
-  hasFeatureAccess,
-  type AccessContext,
-  type PaidWorkspacePlanId,
+  hasFeatureAccess
+  
+  
 } from '@/lib/shared/access-control'
+import type {AccessContext, PaidWorkspacePlanId} from '@/lib/shared/access-control';
 import { getLocalizedFeatureAccessGateMessage } from '@/lib/frontend/access-control'
 import {
   getLocalizedToolCopy,
@@ -39,16 +38,18 @@ import {
 import { canUseReasoningControls } from '@/utils/app-feature-flags'
 import {
   isChatModeId,
-  resolveEffectiveChatMode,
-  type ChatModeId,
+  resolveEffectiveChatMode
+  
 } from '@/lib/shared/chat-modes'
+import type {ChatModeId} from '@/lib/shared/chat-modes';
 import { resolveToolPolicy } from '@/lib/shared/chat/tool-policy'
 import { evaluateModelAvailability } from '@/lib/shared/model-policy/policy-engine'
 import {
   DEFAULT_ORG_TOOL_POLICY,
-  EMPTY_ORG_PROVIDER_KEY_STATUS,
-  type OrgAiPolicy,
+  EMPTY_ORG_PROVIDER_KEY_STATUS
+  
 } from '@/lib/shared/model-policy/types'
+import type {OrgAiPolicy} from '@/lib/shared/model-policy/types';
 import type {
   ChatAttachment,
   ChatAttachmentInput,
@@ -377,12 +378,12 @@ function mergeStoredMessagesWithLocal(
     const storedAttachmentCount = Array.isArray(
       storedMessage.metadata?.attachments,
     )
-      ? storedMessage.metadata!.attachments!.length
+      ? storedMessage.metadata.attachments.length
       : 0
     const localAttachmentCount = Array.isArray(
       localMessage.metadata?.attachments,
     )
-      ? localMessage.metadata!.attachments!.length
+      ? localMessage.metadata.attachments.length
       : 0
 
     // Preserve object identity when content is equivalent to avoid unnecessary row rerenders.
@@ -553,7 +554,7 @@ function findRegenerationAnchorMessageId(input: {
   if (target.role !== 'assistant') return null
 
   for (let index = targetIndex - 1; index >= 0; index -= 1) {
-    if (messages[index]?.role === 'user') return messages[index]!.id
+    if (messages[index]?.role === 'user') return messages[index].id
   }
   return null
 }
@@ -761,9 +762,9 @@ export function ChatProvider({
             const selectedMessageId =
               resolution.selectedChildByParent[parentMessageId] &&
               assistantOptionIds.includes(
-                resolution.selectedChildByParent[parentMessageId]!,
+                resolution.selectedChildByParent[parentMessageId],
               )
-                ? resolution.selectedChildByParent[parentMessageId]!
+                ? resolution.selectedChildByParent[parentMessageId]
                 : assistantOptionIds[assistantOptionIds.length - 1]
 
             selectors[parent.messageId] = {
@@ -782,9 +783,9 @@ export function ChatProvider({
         const selectedUserMessageId =
           resolution.selectedChildByParent[parentMessageId] &&
           userOptionIds.includes(
-            resolution.selectedChildByParent[parentMessageId]!,
+            resolution.selectedChildByParent[parentMessageId],
           )
-            ? resolution.selectedChildByParent[parentMessageId]!
+            ? resolution.selectedChildByParent[parentMessageId]
             : userOptionIds[userOptionIds.length - 1]
         selectors[selectedUserMessageId] = {
           parentMessageId,
