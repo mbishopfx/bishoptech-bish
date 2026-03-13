@@ -28,6 +28,7 @@ function getInitials(user: UserProfileAvatarUser): string {
 export type UserProfileAvatarProps = {
   user?: UserProfileAvatarUser | null
   isLoading?: boolean
+  isAnonymous?: boolean
   settingsHref?: string
   size?: 'default' | 'sm' | 'lg' | 'xs'
 }
@@ -35,10 +36,12 @@ export type UserProfileAvatarProps = {
 export function UserProfileAvatar({
   user,
   isLoading = false,
+  isAnonymous = false,
   settingsHref = SETTINGS_HREF,
   size = 'xs',
 }: UserProfileAvatarProps) {
-  const initials = user ? getInitials(user) : '?'
+  const initials = user && !isAnonymous ? getInitials(user) : '?'
+  const fallbackSeed = isAnonymous ? 'sidebar-anonymous-user' : undefined
   const showFallback = !isLoading && !user?.image
 
   return (
@@ -59,7 +62,9 @@ export function UserProfileAvatar({
               alt=""
             />
           ) : null}
-          {showFallback ? <AvatarFallback>{initials}</AvatarFallback> : null}
+          {showFallback ? (
+            <AvatarFallback seed={fallbackSeed}>{initials}</AvatarFallback>
+          ) : null}
         </Avatar>
       </Link>
     </Button>

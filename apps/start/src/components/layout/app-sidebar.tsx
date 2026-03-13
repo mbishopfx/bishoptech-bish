@@ -94,10 +94,15 @@ export const AppSidebar: ComponentType = () => {
   const showAreaPanel =
     effectiveCurrentArea !== null &&
     (effectiveCurrentArea !== CHAT_AREA_KEY || !isChatPageSidebarCollapsed)
+  const organizationFallbackName = isAnonymous
+    ? '?'
+    : activeOrganization?.name ?? undefined
+  const organizationFallbackSeed = isAnonymous
+    ? 'sidebar-anonymous-organization'
+    : undefined
   const showOrganizationFallback =
     !activeOrganizationLoading &&
-    !activeOrganization?.logo &&
-    !!activeOrganization
+    (isAnonymous || (!activeOrganization?.logo && !!activeOrganization))
 
   /**
    * Keep a persistent gutter between the sidebar chrome and the main content.
@@ -180,7 +185,10 @@ export const AppSidebar: ComponentType = () => {
                       />
                     ) : null}
                     {showOrganizationFallback ? (
-                      <AvatarFallback name={activeOrganization.name} />
+                      <AvatarFallback
+                        name={organizationFallbackName}
+                        seed={organizationFallbackSeed}
+                      />
                     ) : null}
                   </Avatar>
                 </Link>
@@ -225,6 +233,7 @@ export const AppSidebar: ComponentType = () => {
             <UserProfileAvatar
               user={user ?? undefined}
               isLoading={loading}
+              isAnonymous={isAnonymous}
               settingsHref={isAnonymous ? '/auth/sign-up' : undefined}
             />
           </div>
