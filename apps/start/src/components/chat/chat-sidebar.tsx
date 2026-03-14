@@ -47,6 +47,7 @@ import { CACHE_CHAT_NAV } from '@/integrations/zero/query-cache-policy'
 import { useAppAuth } from '@/lib/frontend/auth/use-auth'
 import { m } from '@/paraglide/messages.js'
 import { openChatSearchCommand } from './chat-search-command'
+import { buildRenderableHistoryItems } from './chat-sidebar-history-items'
 import { syncThreadGenerationStatuses } from './thread-status-store'
 
 export const CHAT_HREF = '/chat'
@@ -421,12 +422,23 @@ function ChatSidebarHistory({
   })
 
   const virtualItems = virtualizer.getVirtualItems()
+  const renderableHistoryItems = useMemo(
+    () => buildRenderableHistoryItems({ virtualItems, rowAt }),
+    [rowAt, virtualItems],
+  )
   const visibleThreads = useMemo(
     () =>
-      virtualItems
-        .map((item) => rowAt(item.index))
-        .filter((thread): thread is ThreadHistoryRow => thread !== undefined),
-    [rowAt, virtualItems],
+      renderableHistoryItems
+        .filter(
+          (
+            item,
+          ): item is Extract<
+            (typeof renderableHistoryItems)[number],
+            { kind: 'thread' }
+          > => item.kind === 'thread',
+        )
+        .map((item) => item.thread),
+    [renderableHistoryItems],
   )
   const persistedVisibleThreadIds = useMemo(
     () => new Set(visibleThreads.map((thread) => thread.threadId)),
@@ -480,6 +492,24 @@ function ChatSidebarHistory({
       })),
     )
   }, [visibleThreads])
+
+  useEffect(() => {
+    if (persistedVisibleThreadIds.size === 0) {
+      return
+    }
+
+    /**
+     * Optimistic placeholders should disappear permanently once the real thread
+     * row has materialized from Zero. Keeping them around risks re-pinning an
+     * outdated copy when the user revisits the thread from another scroll state.
+     */
+    setOptimisticThreads((current) => {
+      const next = current.filter(
+        (thread) => !persistedVisibleThreadIds.has(thread.threadId),
+      )
+      return next.length === current.length ? current : next
+    })
+  }, [persistedVisibleThreadIds])
 
   useEffect(() => {
     const onOptimisticThread = (event: Event) => {
@@ -670,20 +700,19 @@ function ChatSidebarHistory({
             className="relative"
             style={{ height: virtualizer.getTotalSize() }}
           >
-            {virtualItems.map((virtualRow) => {
-              const thread = rowAt(virtualRow.index)
-              if (!thread) {
+            {renderableHistoryItems.map((item) => {
+              if (item.kind === 'skeleton') {
                 return (
                   <ThreadHistorySkeletonRow
-                    key={virtualRow.key}
-                    style={{ transform: `translateY(${virtualRow.start}px)` }}
+                    key={item.key}
+                    style={{ transform: `translateY(${item.start}px)` }}
                   />
                 )
               }
 
               return renderRow(
-                thread,
-                { transform: `translateY(${virtualRow.start}px)` },
+                item.thread,
+                { transform: `translateY(${item.start}px)` },
                 true,
               )
             })}
