@@ -39,14 +39,12 @@ function useZeroAuth(): { userID: string; context: ZeroContext } {
     return 'anonymous-bootstrap'
   }, [loading, user?.id])
 
-  const context = useMemo<ZeroContext>(
-    () => ({
-      userID,
-      organizationId: activeOrganizationId?.trim() || undefined,
-      isAnonymous,
-    }),
-    [activeOrganizationId, isAnonymous, userID],
-  )
+  const context = useMemo<ZeroContext>(() => {
+    const organizationId = activeOrganizationId?.trim()
+    return organizationId
+      ? { userID, organizationId, isAnonymous }
+      : { userID, isAnonymous }
+  }, [activeOrganizationId, isAnonymous, userID])
 
   return { userID, context }
 }

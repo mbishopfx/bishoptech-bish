@@ -39,11 +39,16 @@ export const Route = createFileRoute('/api/zero/query')({
               new ZeroQueryUnauthorizedError({ message: 'Unauthorized' }),
           })
 
-          const context: ZeroContext = {
-            userID: authContext.userId,
-            organizationId: authContext.organizationId,
-            isAnonymous: authContext.isAnonymous,
-          }
+          const context: ZeroContext = authContext.organizationId
+            ? {
+                userID: authContext.userId,
+                organizationId: authContext.organizationId,
+                isAnonymous: authContext.isAnonymous,
+              }
+            : {
+                userID: authContext.userId,
+                isAnonymous: authContext.isAnonymous,
+              }
           const transformQuery = (name: string, args: unknown) => {
             const query = mustGetQuery(queries, name)(
               args as ReadonlyJSONValue | undefined,

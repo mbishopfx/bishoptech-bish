@@ -72,11 +72,16 @@ export const Route = createFileRoute('/api/zero/mutate')({
               new ZeroMutateUnauthorizedError({ message: 'Unauthorized' }),
           })
 
-          const context: ZeroContext = {
-            userID: authContext.userId,
-            organizationId: authContext.organizationId,
-            isAnonymous: authContext.isAnonymous,
-          }
+          const context: ZeroContext = authContext.organizationId
+            ? {
+                userID: authContext.userId,
+                organizationId: authContext.organizationId,
+                isAnonymous: authContext.isAnonymous,
+              }
+            : {
+                userID: authContext.userId,
+                isAnonymous: authContext.isAnonymous,
+              }
           const requestId =
             request.headers.get('x-request-id') ?? crypto.randomUUID()
           const processor = new PushProcessor(dbProvider, context, 'error')
