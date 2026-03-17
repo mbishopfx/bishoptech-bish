@@ -3,7 +3,7 @@ import { buildPersistedGenerationAnalytics } from './generation-metrics'
 import { canExposeUserCost } from '@/utils/app-feature-flags'
 
 describe('buildPersistedGenerationAnalytics', () => {
-  it('extracts dedicated analytics columns plus generic metadata', () => {
+  it('extracts dedicated analytics columns and omits persisted metadata blobs', () => {
     const analytics = buildPersistedGenerationAnalytics({
       usedByok: false,
       usage: {
@@ -53,15 +53,8 @@ describe('buildPersistedGenerationAnalytics', () => {
     expect(analytics.cacheWriteTokens).toBe(0)
     expect(analytics.noCacheTokens).toBe(100)
     expect(analytics.billableWebSearchCalls).toBe(0)
-    expect(analytics.generationMetadata).toEqual({
-      gatewayGenerationId: 'gen_local_only',
-      gatewayMarketCost: '0.001401',
-      routing: {
-        provider: 'openai',
-      },
-      openaiResponseId: 'resp_123',
-      serviceTier: 'default',
-    })
+    expect(analytics.providerMetadata).toBeUndefined()
+    expect(analytics.generationMetadata).toBeUndefined()
   })
 
   it('falls back to summed totals when totalTokens is absent', () => {
@@ -93,5 +86,7 @@ describe('buildPersistedGenerationAnalytics', () => {
     expect(analytics.usedByok).toBe(true)
     expect(analytics.totalTokens).toBe(275)
     expect(analytics.cacheWriteTokens).toBeUndefined()
+    expect(analytics.providerMetadata).toBeUndefined()
+    expect(analytics.generationMetadata).toBeUndefined()
   })
 })

@@ -27,19 +27,11 @@ export function buildPersistedGenerationAnalytics(input: {
   readonly usedByok: boolean
   readonly generationMetadata?: Record<string, ReadonlyJSONValue | undefined>
 }): PersistedGenerationAnalytics {
-  const providerMetadata = input.providerMetadata as ReadonlyJSONValue | undefined
+  const providerMetadata = undefined
   const usage = normalizeUsage(input.usage)
   const root = asRecord(input.providerMetadata)
   const gateway = asRecord(root?.gateway)
-  const openai = asRecord(root?.openai)
-  const generationMetadata = compactJsonObject({
-    gatewayGenerationId: asOptionalString(gateway?.generationId),
-    gatewayMarketCost: asOptionalString(gateway?.marketCost),
-    routing: asJsonValue(gateway?.routing),
-    openaiResponseId: asOptionalString(openai?.responseId),
-    serviceTier: asOptionalString(openai?.serviceTier),
-    ...(input.generationMetadata ?? {}),
-  })
+  const generationMetadata = undefined
 
   const rawCost = asOptionalNumber(gateway?.cost)
   const shouldExposeCost = input.usedByok || canExposeUserCost()
@@ -62,7 +54,9 @@ export function buildPersistedGenerationAnalytics(input: {
   }
 }
 
-function normalizeUsage(usage: LanguageModelUsage | undefined): LanguageModelUsage {
+function normalizeUsage(
+  usage: LanguageModelUsage | undefined,
+): LanguageModelUsage {
   return {
     inputTokens: usage?.inputTokens,
     inputTokenDetails: {
@@ -96,10 +90,6 @@ function asRecord(value: unknown): UnknownRecord | undefined {
     : undefined
 }
 
-function asOptionalString(value: unknown): string | undefined {
-  return typeof value === 'string' && value.trim().length > 0 ? value : undefined
-}
-
 function asOptionalNumber(value: unknown): number | undefined {
   if (typeof value === 'number' && Number.isFinite(value)) return value
   if (typeof value === 'string' && value.trim().length > 0) {
@@ -107,39 +97,4 @@ function asOptionalNumber(value: unknown): number | undefined {
     return Number.isFinite(parsed) ? parsed : undefined
   }
   return undefined
-}
-
-function asJsonValue(value: unknown): ReadonlyJSONValue | undefined {
-  if (value === null) return null
-  if (typeof value === 'string' || typeof value === 'boolean') return value
-  if (typeof value === 'number') return Number.isFinite(value) ? value : undefined
-  if (Array.isArray(value)) {
-    const converted = value
-      .map((entry) => asJsonValue(entry))
-      .filter((entry): entry is ReadonlyJSONValue => entry !== undefined)
-    return converted
-  }
-  if (value && typeof value === 'object') {
-    const converted: Record<string, ReadonlyJSONValue> = {}
-    for (const [key, entry] of Object.entries(value)) {
-      const jsonEntry = asJsonValue(entry)
-      if (jsonEntry !== undefined) {
-        converted[key] = jsonEntry
-      }
-    }
-    return converted
-  }
-  return undefined
-}
-
-function compactJsonObject(
-  input: Record<string, ReadonlyJSONValue | undefined>,
-): ReadonlyJSONValue | undefined {
-  const output: Record<string, ReadonlyJSONValue> = {}
-  for (const [key, value] of Object.entries(input)) {
-    if (value !== undefined) {
-      output[key] = value
-    }
-  }
-  return Object.keys(output).length > 0 ? output : undefined
 }
