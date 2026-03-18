@@ -36,7 +36,7 @@ function resolveEmbeddingModelId(): string {
 }
 
 function isEmbeddingsEnabled(): boolean {
-  return isEmbeddingFeatureEnabled()
+  return isEmbeddingFeatureEnabled
 }
 
 function normalizeWhitespace(input: string): string {

@@ -38,10 +38,10 @@ describe('buildPersistedGenerationAnalytics', () => {
     })
 
     expect(analytics.aiCost).toBe(
-      canExposeUserCost() ? undefined : 0.0013025,
+      canExposeUserCost ? undefined : 0.0013025,
     )
     expect(analytics.publicCost).toBe(
-      canExposeUserCost() ? 0.0013025 : undefined,
+      canExposeUserCost ? 0.0013025 : undefined,
     )
     expect(analytics.usedByok).toBe(false)
     expect(analytics.inputTokens).toBe(120)

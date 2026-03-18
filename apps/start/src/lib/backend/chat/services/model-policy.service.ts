@@ -254,7 +254,10 @@ export class ModelPolicyService extends ServiceMap.Service<
               ? persistedProviderKeyStatus.hasAnyProviderKey
               : undefined
 
-          if (canUseOrganizationProviderKeys() && !skipProviderKeyResolution) {
+          if (
+            canUseOrganizationProviderKeys &&
+            !skipProviderKeyResolution
+          ) {
             if (!organizationId) {
               if (strictProviderKeyPolicyEnabled) {
                 return yield* Effect.fail(

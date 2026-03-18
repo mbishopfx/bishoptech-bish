@@ -43,7 +43,7 @@ const DEFAULT_QDRANT_BATCH_SIZE = 128
 let ensureReadyPromise: Promise<void> | null = null
 
 function isQdrantEnabled(): boolean {
-  return isEmbeddingFeatureEnabled()
+  return isEmbeddingFeatureEnabled
 }
 
 function getQdrantUrl(): string | null {

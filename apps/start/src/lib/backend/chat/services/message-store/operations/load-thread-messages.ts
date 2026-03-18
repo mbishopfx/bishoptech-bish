@@ -268,7 +268,7 @@ export const makeLoadThreadMessagesOperation = (dependencies: {
             }),
           }).pipe(
             Effect.catchTag('QueryEmbeddingFallbackError', (error) =>
-              isEmbeddingFeatureEnabled()
+              isEmbeddingFeatureEnabled
                 ? Effect.logError(
                     'Embedding query generation failed, using fallback excerpts',
                     {
@@ -301,7 +301,7 @@ export const makeLoadThreadMessagesOperation = (dependencies: {
                     }),
                   ),
                   Effect.catchTag('VectorRetrievalFallbackError', (error) =>
-                    isEmbeddingFeatureEnabled()
+                    isEmbeddingFeatureEnabled
                       ? Effect.logError('Vector retrieval failed, using fallback excerpts', {
                           requestId,
                           threadId,
@@ -401,7 +401,7 @@ export const makeLoadThreadMessagesOperation = (dependencies: {
               }),
             }).pipe(
               Effect.catchTag('QueryEmbeddingFallbackError', (error) =>
-                isEmbeddingFeatureEnabled()
+                isEmbeddingFeatureEnabled
                   ? Effect.logError(
                       'Organization knowledge query embedding failed; skipping org knowledge retrieval',
                       {

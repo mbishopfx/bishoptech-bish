@@ -124,7 +124,7 @@ export class FileUploadOrchestratorService extends ServiceMap.Service<
               }),
           })
           if (
-            isEmbeddingFeatureEnabled() &&
+            isEmbeddingFeatureEnabled &&
             chunkBuild.metrics.embeddingStatus === 'failed'
           ) {
             yield* Effect.logError(

@@ -862,10 +862,10 @@ export function ChatProvider({
       return {
         id: model.id,
         name: model.name,
-        reasoningEfforts: canUseReasoningControls()
+        reasoningEfforts: canUseReasoningControls
           ? model.reasoningEfforts
           : [],
-        defaultReasoningEffort: canUseReasoningControls()
+        defaultReasoningEffort: canUseReasoningControls
           ? model.defaultReasoningEffort
           : undefined,
         locked: !modelAccess.allowed,

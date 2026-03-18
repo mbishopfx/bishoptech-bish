@@ -149,7 +149,7 @@ export const Route = createFileRoute('/api/chat')({
               })
             : undefined
           const skipProviderKeyResolution = Boolean(
-            canUseOrganizationProviderKeys() &&
+            canUseOrganizationProviderKeys &&
             orgPolicy?.providerKeyStatus &&
             orgPolicy.providerKeyStatus.syncedAt > 0 &&
             !orgPolicy.providerKeyStatus.hasAnyProviderKey &&

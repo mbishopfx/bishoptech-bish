@@ -9,7 +9,9 @@ const mockDeleteOrgProviderApiKey = vi.fn()
 const mockReadOrgProviderApiKeyStatus = vi.fn()
 
 vi.mock('@/utils/app-feature-flags', () => ({
-  canUseOrganizationProviderKeys: mockCanUseOrganizationProviderKeys,
+  get canUseOrganizationProviderKeys() {
+    return mockCanUseOrganizationProviderKeys()
+  },
 }))
 
 vi.mock('@/lib/backend/model-policy/repository', () => ({

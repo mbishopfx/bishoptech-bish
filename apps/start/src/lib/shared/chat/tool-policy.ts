@@ -117,7 +117,7 @@ export function resolveToolPolicy(input: {
     ) {
       reasons.push('blocked_by_compliance')
     }
-    if (entry.advanced && !canUseAdvancedProviderTools()) {
+    if (entry.advanced && !canUseAdvancedProviderTools) {
       reasons.push('blocked_by_feature_flag')
     }
 

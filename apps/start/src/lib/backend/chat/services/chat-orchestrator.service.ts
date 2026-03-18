@@ -233,7 +233,7 @@ export class ChatOrchestratorService extends ServiceMap.Service<
             requestedModelId: modelId,
             modeModelId: effectiveMode?.definition.fixedModelId,
             accessContext: accessPolicy.context,
-            requestedReasoningEffort: canUseReasoningControls()
+            requestedReasoningEffort: canUseReasoningControls
               ? reasoningEffort
               : undefined,
             skipProviderKeyResolution,

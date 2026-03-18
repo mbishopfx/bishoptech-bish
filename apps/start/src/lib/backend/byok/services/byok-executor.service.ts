@@ -50,7 +50,7 @@ export class ByokExecutorService extends ServiceMap.Service<
         action: UpdateByokPayload,
       ): ExecuteUpdateEffect =>
         pipe(
-          Effect.sync(() => canUseOrganizationProviderKeys()),
+          Effect.succeed(canUseOrganizationProviderKeys),
           Effect.flatMap(
             (
               enabled,

@@ -26,7 +26,7 @@ import { ToolPolicyService } from '../services/tool-policy.service'
 /**
  * Dependency graph for chat runtime.
  */
-const shouldDisableRedisInfrastructure = isRedisDisabled()
+const shouldDisableRedisInfrastructure = isRedisDisabled
 
 const rateLimitLayer = shouldDisableRedisInfrastructure
   ? RateLimitService.layerDisabled

@@ -34,7 +34,7 @@ export function buildPersistedGenerationAnalytics(input: {
   const generationMetadata = undefined
 
   const rawCost = asOptionalNumber(gateway?.cost)
-  const shouldExposeCost = input.usedByok || canExposeUserCost()
+  const shouldExposeCost = input.usedByok || canExposeUserCost
 
   return {
     providerMetadata,

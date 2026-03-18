@@ -41,29 +41,21 @@ const APP_FEATURE_FLAGS: AppFeatureFlags = Object.freeze({
   disableRedis: readBooleanEnv('VITE_DISABLE_REDIS', false),
 })
 
+/**
+ * Frozen, startup-resolved feature flag snapshot.
+ * Import constants derived from this object to avoid call-site drift.
+ */
+export const APP_FEATURES = APP_FEATURE_FLAGS
+export const isEmbeddingFeatureEnabled = APP_FEATURE_FLAGS.enableEmbedding
+export const canUseReasoningControls =
+  APP_FEATURE_FLAGS.enableReasoningControls
+export const canUseAdvancedProviderTools =
+  APP_FEATURE_FLAGS.enableAdvancedProviderTools
+export const canUseOrganizationProviderKeys =
+  APP_FEATURE_FLAGS.enableOrganizationProviderKeys
+export const canExposeUserCost = APP_FEATURE_FLAGS.exposeUserCost
+export const isRedisDisabled = APP_FEATURE_FLAGS.disableRedis
+
 export function getAppFeatureFlags(): AppFeatureFlags {
   return APP_FEATURE_FLAGS
-}
-
-export function isEmbeddingFeatureEnabled(): boolean {
-  return APP_FEATURE_FLAGS.enableEmbedding
-}
-
-export function canUseReasoningControls(): boolean {
-  return APP_FEATURE_FLAGS.enableReasoningControls
-}
-
-export function canUseAdvancedProviderTools(): boolean {
-  return APP_FEATURE_FLAGS.enableAdvancedProviderTools
-}
-
-export function canUseOrganizationProviderKeys(): boolean {
-  return APP_FEATURE_FLAGS.enableOrganizationProviderKeys
-}
-
-export function canExposeUserCost(): boolean {
-  return APP_FEATURE_FLAGS.exposeUserCost
-}
-export function isRedisDisabled(): boolean {
-  return APP_FEATURE_FLAGS.disableRedis
 }
