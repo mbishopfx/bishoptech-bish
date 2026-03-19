@@ -36,6 +36,7 @@ export function ByokPage() {
       <ByokForm
         featureAccess={featureAccess}
         providerKeyStatus={payload.providerKeyStatus}
+        requireZdr={payload.requireZdr}
         errorByProvider={errorByProvider}
         successByProvider={successByProvider}
         loading={loading}

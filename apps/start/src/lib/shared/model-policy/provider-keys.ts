@@ -4,12 +4,44 @@ export type ByokSupportedProviderId = (typeof BYOK_SUPPORTED_PROVIDERS)[number]
 
 export type OrgProviderKeyStatus = Record<ByokSupportedProviderId, boolean>
 
+type ProviderKeyStatusLike = {
+  readonly syncedAt: number
+  readonly providers: OrgProviderKeyStatus
+}
+
 export function isByokSupportedProviderId(
   providerId: string,
 ): providerId is ByokSupportedProviderId {
   return (
     providerId === BYOK_SUPPORTED_PROVIDERS[0] ||
     providerId === BYOK_SUPPORTED_PROVIDERS[1]
+  )
+}
+
+export function hasActiveOrgProviderKey(input: {
+  readonly providerId: string
+  readonly providerKeyStatus?: ProviderKeyStatusLike
+}): boolean {
+  const { providerId, providerKeyStatus } = input
+  if (!providerKeyStatus || providerKeyStatus.syncedAt <= 0) {
+    return false
+  }
+  if (!isByokSupportedProviderId(providerId)) {
+    return false
+  }
+
+  return providerKeyStatus.providers[providerId]
+}
+
+export function hasActiveOrgProviderKeyForModel(input: {
+  readonly providers: readonly string[]
+  readonly providerKeyStatus?: ProviderKeyStatusLike
+}): boolean {
+  return input.providers.some((providerId) =>
+    hasActiveOrgProviderKey({
+      providerId,
+      providerKeyStatus: input.providerKeyStatus,
+    }),
   )
 }
 

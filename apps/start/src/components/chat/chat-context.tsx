@@ -49,6 +49,7 @@ import {
 import type {ChatModeId} from '@/lib/shared/chat-modes';
 import { resolveToolPolicy } from '@/lib/shared/chat/tool-policy'
 import { evaluateModelAvailability } from '@/lib/shared/model-policy/policy-engine'
+import { hasActiveOrgProviderKeyForModel } from '@/lib/shared/model-policy/provider-keys'
 import {
   DEFAULT_ORG_TOOL_POLICY,
   EMPTY_ORG_PROVIDER_KEY_STATUS
@@ -608,32 +609,6 @@ function uniqueMessageIds(ids: readonly string[]): string[] {
   return next
 }
 
-function hasActiveOrgKeyForModel(input: {
-  readonly providers: readonly string[]
-  readonly providerKeyStatus?: {
-    readonly syncedAt: number
-    readonly providers: {
-      readonly openai: boolean
-      readonly anthropic: boolean
-    }
-  }
-}): boolean {
-  const { providerKeyStatus } = input
-  if (!providerKeyStatus || providerKeyStatus.syncedAt <= 0) {
-    return false
-  }
-
-  /**
-   * `require_org_provider_key` is currently enforced for BYOK-capable providers.
-   * As additional BYOK providers are added, expand this set and snapshot shape.
-   */
-  return input.providers.some((providerId) => {
-    if (providerId === 'openai') return providerKeyStatus.providers.openai
-    if (providerId === 'anthropic') return providerKeyStatus.providers.anthropic
-    return false
-  })
-}
-
 function areBranchSelectionsEqual(
   left: Record<string, string>,
   right: Record<string, string>,
@@ -867,7 +842,7 @@ export function ChatProvider({
         return false
       }
       if (!orgPolicy?.complianceFlags?.require_org_provider_key) return true
-      return hasActiveOrgKeyForModel({
+      return hasActiveOrgProviderKeyForModel({
         providers: model.providers,
         providerKeyStatus: orgPolicy.providerKeyStatus,
       })

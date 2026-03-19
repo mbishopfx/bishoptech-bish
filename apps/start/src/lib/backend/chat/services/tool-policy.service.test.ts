@@ -39,6 +39,7 @@ describe('ToolPolicyService', () => {
               ...DEFAULT_ORG_TOOL_POLICY,
               disabledToolKeys: ['xai.code_execution'],
             },
+            orgKnowledgeEnabled: false,
             updatedAt: Date.now(),
           },
         })
@@ -67,6 +68,7 @@ describe('ToolPolicyService', () => {
               ...DEFAULT_ORG_TOOL_POLICY,
               providerNativeToolsEnabled: false,
             },
+            orgKnowledgeEnabled: false,
             updatedAt: Date.now(),
           },
         })
@@ -99,6 +101,7 @@ describe('ToolPolicyService', () => {
               ...DEFAULT_ORG_TOOL_POLICY,
               disabledToolKeys: ['anthropic.code_execution_20260120'],
             },
+            orgKnowledgeEnabled: false,
             updatedAt: Date.now(),
           },
         })
@@ -124,6 +127,7 @@ describe('ToolPolicyService', () => {
             disabledModelIds: [],
             complianceFlags: { require_zdr: true },
             toolPolicy: DEFAULT_ORG_TOOL_POLICY,
+            orgKnowledgeEnabled: false,
             updatedAt: Date.now(),
           },
         })
@@ -137,5 +141,44 @@ describe('ToolPolicyService', () => {
         (entry) => entry.key === 'anthropic.code_execution_20260120',
       )?.reasons,
     ).toContain('blocked_by_compliance')
+  })
+
+  it('keeps Anthropic code execution enabled under ZDR when an org Anthropic key is configured', async () => {
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* ToolPolicyService
+        return yield* service.resolveForThread({
+          threadId: 'thread-anthropic-zdr-byok',
+          userId: 'user-anthropic-zdr-byok',
+          requestId: 'req-anthropic-zdr-byok',
+          modelId: 'anthropic/claude-opus-4.6',
+          orgPolicy: {
+            organizationId: 'org-5',
+            disabledProviderIds: [],
+            disabledModelIds: [],
+            complianceFlags: { require_zdr: true },
+            toolPolicy: DEFAULT_ORG_TOOL_POLICY,
+            orgKnowledgeEnabled: false,
+            providerKeyStatus: {
+              syncedAt: Date.now(),
+              hasAnyProviderKey: true,
+              providers: {
+                openai: false,
+                anthropic: true,
+              },
+            },
+            updatedAt: Date.now(),
+          },
+        })
+      }).pipe(Effect.provide(ToolPolicyService.layer)),
+    )
+
+    expect(result.activeToolKeys).toContain('anthropic.web_search_20260209')
+    expect(result.activeToolKeys).toContain('anthropic.code_execution_20260120')
+    expect(
+      result.toolEntries.find(
+        (entry) => entry.key === 'anthropic.code_execution_20260120',
+      )?.reasons,
+    ).not.toContain('blocked_by_compliance')
   })
 })

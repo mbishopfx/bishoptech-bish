@@ -47,6 +47,7 @@ const REMOVE_SUCCESS_MESSAGE = 'Provider key removed successfully.'
 
 function buildByokPayload(input: {
   policyRow?: {
+    complianceFlags?: Record<string, boolean>
     providerKeyStatus?: {
       providers: {
         openai: boolean
@@ -60,6 +61,7 @@ function buildByokPayload(input: {
 
   return {
     providerKeyStatus,
+    requireZdr: Boolean(input.policyRow?.complianceFlags?.require_zdr),
   }
 }
 

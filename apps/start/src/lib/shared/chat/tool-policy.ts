@@ -6,6 +6,7 @@ import {
 } from '@/lib/shared/ai-catalog/tool-catalog'
 import type {ToolCatalogEntry} from '@/lib/shared/ai-catalog/tool-catalog';
 import type { ResolvedChatMode } from '@/lib/shared/chat-modes'
+import { hasActiveOrgProviderKey } from '@/lib/shared/model-policy/provider-keys'
 import type { OrgAiPolicy } from '@/lib/shared/model-policy/types'
 import { canUseAdvancedProviderTools } from '@/utils/app-feature-flags'
 
@@ -79,13 +80,18 @@ export function resolveToolPolicy(input: {
   )
   const toolEntries: ResolvedToolAvailability[] = []
   const activeToolKeys: string[] = []
-  const requiresZdr = Boolean(input.orgPolicy?.complianceFlags.require_zdr)
 
   for (const toolKey of modelToolKeys) {
     const entry = TOOL_CATALOG_BY_KEY.get(toolKey)
     if (!entry) continue
 
     const reasons: ToolAvailabilityReason[] = []
+    const requiresZdr =
+      Boolean(input.orgPolicy?.complianceFlags.require_zdr) &&
+      !hasActiveOrgProviderKey({
+        providerId: entry.providerId,
+        providerKeyStatus: input.orgPolicy?.providerKeyStatus,
+      })
 
     if (!isToolAllowedByMode({ entry, mode: input.mode })) {
       reasons.push('blocked_by_mode')

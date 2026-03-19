@@ -71,8 +71,12 @@ function getResolvedCatalogModel(modelId: string) {
 function withGatewayComplianceProviderOptions(input: {
   readonly providerOptions?: Record<string, unknown>
   readonly orgPolicy?: OrgAiPolicy
+  readonly hasProviderKeyOverride?: boolean
 }): Record<string, unknown> | undefined {
-  if (!input.orgPolicy?.complianceFlags.require_zdr) {
+  if (
+    !input.orgPolicy?.complianceFlags.require_zdr ||
+    input.hasProviderKeyOverride
+  ) {
     return input.providerOptions
   }
 
@@ -747,6 +751,9 @@ export class ChatOrchestratorService extends ServiceMap.Service<
                   ]
                 : toolRegistry.defaultProviderOptions,
               orgPolicy,
+              hasProviderKeyOverride: Boolean(
+                modelResolution.providerApiKeyOverride,
+              ),
             }),
             reasoningEffort: modelResolution.reasoningEffort,
             abortSignal: streamAbortController.signal,

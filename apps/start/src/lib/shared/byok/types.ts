@@ -8,6 +8,7 @@ export type ByokProviderKeyStatus = {
 
 export type ByokPayload = {
   readonly providerKeyStatus: ByokProviderKeyStatus
+  readonly requireZdr: boolean
 }
 
 /** Client-safe shape for BYOK update actions; server validates with Effect Schema. */

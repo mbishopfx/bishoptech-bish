@@ -1,6 +1,15 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { Button } from '@rift/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@rift/ui/dialog'
 import { Form } from '@rift/ui/form'
 import {
   getFeatureAccessAction
@@ -34,6 +43,7 @@ interface ProviderCard {
 
 interface ByokFormProps {
   featureAccess: WorkspaceFeatureAccessState & { loading: boolean }
+  requireZdr: boolean
   providerKeyStatus: {
     openai: boolean
     anthropic: boolean
@@ -64,6 +74,7 @@ const MASKED_KEY_VALUE = '••••••••••••••••••
 
 export function ByokForm({
   featureAccess,
+  requireZdr,
   providerKeyStatus,
   errorByProvider,
   successByProvider,
@@ -74,6 +85,10 @@ export function ByokForm({
 }: ByokFormProps) {
   const featureEnabled = featureAccess.allowed
   const featureAction = getFeatureAccessAction(featureAccess.minimumPlanId)
+  const [pendingConfirmation, setPendingConfirmation] = useState<{
+    providerId: ByokProvider
+    apiKey: string
+  } | null>(null)
   const [openaiInput, setOpenaiInput] = useState(() =>
     providerKeyStatus.openai ? MASKED_KEY_VALUE : '',
   )
@@ -117,8 +132,67 @@ export function ByokForm({
     [providerKeyStatus],
   )
 
+  async function saveProviderKey(input: {
+    readonly providerId: ByokProvider
+    readonly apiKey: string
+  }) {
+    await onSave(input.providerId, input.apiKey)
+    if (input.providerId === 'openai') {
+      setOpenaiInput(input.apiKey ? MASKED_KEY_VALUE : '')
+      return
+    }
+
+    setAnthropicInput(input.apiKey ? MASKED_KEY_VALUE : '')
+  }
+
   return (
-    <section className="space-y-6">
+    <>
+      <Dialog
+        open={pendingConfirmation !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPendingConfirmation(null)
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-xl" showCloseButton={false}>
+          <DialogHeader>
+            <DialogTitle>{m.org_byok_zdr_dialog_title()}</DialogTitle>
+            <DialogDescription>
+              {pendingConfirmation
+                ? m.org_byok_zdr_dialog_description({
+                    providerName: getProviderName(pendingConfirmation.providerId),
+                  })
+                : ''}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setPendingConfirmation(null)
+              }}
+            >
+              {m.common_cancel()}
+            </Button>
+            <Button
+              onClick={async () => {
+                if (!pendingConfirmation) return
+                const confirmed = pendingConfirmation
+                setPendingConfirmation(null)
+                try {
+                  await saveProviderKey(confirmed)
+                } catch {
+                  // Keep the user-entered key in the input so it can be retried.
+                }
+              }}
+            >
+              {m.org_byok_zdr_dialog_confirm_button()}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <section className="space-y-6">
       {cards.map((card) => {
         /**
          * Error state is isolated per provider card so failures in one
@@ -215,12 +289,16 @@ export function ByokForm({
                       // Don't send the masked placeholder value to the server
                       const key = rawKey === MASKED_KEY_VALUE ? '' : rawKey
                       try {
-                        await onSave(card.providerId, key)
-                        // After successful save, show masked value again if key was saved
-                        if (card.providerId === 'openai') {
-                          setOpenaiInput(key ? MASKED_KEY_VALUE : '')
+                        if (requireZdr) {
+                          setPendingConfirmation({
+                            providerId: card.providerId,
+                            apiKey: key,
+                          })
                         } else {
-                          setAnthropicInput(key ? MASKED_KEY_VALUE : '')
+                          await saveProviderKey({
+                            providerId: card.providerId,
+                            apiKey: key,
+                          })
                         }
                       } catch {
                         // Keep user-typed value on failed save so they can correct/resubmit.
@@ -243,6 +321,7 @@ export function ByokForm({
           </div>
         )
       })}
-    </section>
+      </section>
+    </>
   )
 }

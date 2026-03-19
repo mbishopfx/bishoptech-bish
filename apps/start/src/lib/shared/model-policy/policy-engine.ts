@@ -3,6 +3,7 @@ import {
   AI_CATALOG_BY_ID,
 } from '@/lib/shared/ai-catalog'
 import { isDeniedByComplianceFlags } from '@/lib/shared/ai-catalog/compliance-map'
+import { hasActiveOrgProviderKeyForModel } from './provider-keys'
 import type { AiModelCatalogEntry } from '@/lib/shared/ai-catalog/types'
 import type {
   ModelAvailabilityDecision,
@@ -34,7 +35,15 @@ export function evaluateModelAvailability(input: {
     deniedBy.push('model')
   }
 
-  if (isDeniedByComplianceFlags(model, policy.complianceFlags)) {
+  const bypassesZdrCompliance = hasActiveOrgProviderKeyForModel({
+    providers: model.providers,
+    providerKeyStatus: policy.providerKeyStatus,
+  })
+
+  if (
+    !bypassesZdrCompliance &&
+    isDeniedByComplianceFlags(model, policy.complianceFlags)
+  ) {
     deniedBy.push('compliance')
   }
 

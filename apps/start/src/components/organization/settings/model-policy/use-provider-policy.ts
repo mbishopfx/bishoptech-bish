@@ -17,6 +17,14 @@ function buildPolicyPayload(input: {
     disabledProviderIds?: readonly string[]
     disabledModelIds?: readonly string[]
     complianceFlags?: Record<string, boolean>
+    providerKeyStatus?: {
+      syncedAt?: number
+      hasAnyProviderKey?: boolean
+      providers?: {
+        openai?: boolean
+        anthropic?: boolean
+      }
+    } | null
     providerNativeToolsEnabled?: boolean | null
     externalToolsEnabled?: boolean | null
     disabledToolKeys?: readonly string[]
@@ -54,6 +62,22 @@ function buildPolicyPayload(input: {
           complianceFlags: policy.complianceFlags,
           toolPolicy: policy.toolPolicy,
           orgKnowledgeEnabled: input.policyRow?.orgKnowledgeEnabled ?? false,
+          providerKeyStatus: input.policyRow?.providerKeyStatus
+            ? {
+                syncedAt: input.policyRow.providerKeyStatus.syncedAt ?? 0,
+                hasAnyProviderKey: Boolean(
+                  input.policyRow.providerKeyStatus.hasAnyProviderKey,
+                ),
+                providers: {
+                  openai: Boolean(
+                    input.policyRow.providerKeyStatus.providers?.openai,
+                  ),
+                  anthropic: Boolean(
+                    input.policyRow.providerKeyStatus.providers?.anthropic,
+                  ),
+                },
+              }
+            : undefined,
           updatedAt: policy.updatedAt ?? Date.now(),
         },
       })

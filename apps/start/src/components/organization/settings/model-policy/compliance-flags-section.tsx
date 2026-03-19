@@ -29,7 +29,7 @@ function ZdrComplianceForm({
       {...getFeatureAccessFormProps({
         enabled: sectionEnabled,
         featureAccess,
-        defaultHelpText: m.org_compliance_flags_help(),
+        defaultHelpText: m.org_compliance_flag_require_zdr_help(),
       })}
       headerToggle={{
         checked: Boolean(payload.policy.complianceFlags.require_zdr),
@@ -60,7 +60,7 @@ function RequireOrgProviderKeyForm({
       {...getFeatureAccessFormProps({
         enabled: byokEnabled,
         featureAccess,
-        defaultHelpText: m.org_compliance_flags_help(),
+        defaultHelpText: m.org_compliance_flag_require_org_provider_key_help(),
       })}
       headerToggle={{
         checked: Boolean(
@@ -93,7 +93,7 @@ function EnforceStudyModeForm({
       {...getFeatureAccessFormProps({
         enabled: sectionEnabled,
         featureAccess,
-        defaultHelpText: m.org_compliance_flags_help(),
+        defaultHelpText: m.org_compliance_flag_enforce_study_mode_help(),
       })}
       headerToggle={{
         checked: payload.policy.enforcedModeId === 'study',
