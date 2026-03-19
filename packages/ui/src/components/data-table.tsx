@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 import {
   type ColumnDef,
   type ColumnFiltersState,
@@ -12,19 +12,19 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
-} from "@tanstack/react-table"
-import { ChevronLeft, ChevronRight, Columns3, Search } from "lucide-react"
+} from "@tanstack/react-table";
+import { ChevronLeft, ChevronRight, Columns3, Search } from "lucide-react";
 
-import { cn } from "@rift/utils"
+import { cn } from "@rift/utils";
 
-import { Button } from "./button"
+import { Button } from "./button";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuTrigger,
-} from "./dropdown-menu"
-import { Input } from "./input"
+} from "./dropdown-menu";
+import { Input } from "./input";
 import {
   Table,
   TableBody,
@@ -32,52 +32,52 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "./table"
+} from "./table";
 
 export type DataTableMessages = {
-  filterPlaceholder?: string
-  columns?: string
-  loading?: string
-  noResults?: string
-  rowsSelected?: string
-  previous?: string
-  next?: string
-}
+  filterPlaceholder?: string;
+  columns?: string;
+  loading?: string;
+  noResults?: string;
+  rowsSelected?: string;
+  previous?: string;
+  next?: string;
+};
 
 export type DataTableServerPagination = {
-  hasNextPage: boolean
-  hasPreviousPage: boolean
-  onNextPage: () => void
-  onPreviousPage: () => void
-}
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+  onNextPage: () => void;
+  onPreviousPage: () => void;
+};
 
 export type DataTableProps<TData, TValue> = {
-  columns: Array<ColumnDef<TData, TValue>>
-  data: Array<TData>
-  isLoading?: boolean
-  filterColumn?: string
-  filterPlaceholder?: string
-  toolbarActionsRight?: React.ReactNode
-  showColumnToggle?: boolean
-  initialColumnVisibility?: VisibilityState
-  pageSize?: number
-  serverPagination?: DataTableServerPagination
-  className?: string
-  tableWrapperClassName?: string
-  messages?: DataTableMessages
-}
+  columns: Array<ColumnDef<TData, TValue>>;
+  data: Array<TData>;
+  isLoading?: boolean;
+  filterColumn?: string;
+  filterPlaceholder?: string;
+  toolbarActionsRight?: React.ReactNode;
+  showColumnToggle?: boolean;
+  initialColumnVisibility?: VisibilityState;
+  pageSize?: number;
+  serverPagination?: DataTableServerPagination;
+  className?: string;
+  tableWrapperClassName?: string;
+  messages?: DataTableMessages;
+};
 
 export type DataTableColumnMeta = {
-  headerClassName?: string
-  cellClassName?: string
-}
+  headerClassName?: string;
+  cellClassName?: string;
+};
 
 export type DataTableColumnDef<TData, TValue = unknown> = ColumnDef<
   TData,
   TValue
 > & {
-  meta?: DataTableColumnMeta
-}
+  meta?: DataTableColumnMeta;
+};
 
 const defaultMessages: Required<DataTableMessages> = {
   filterPlaceholder: "Filter...",
@@ -87,7 +87,7 @@ const defaultMessages: Required<DataTableMessages> = {
   rowsSelected: "row(s) selected.",
   previous: "Previous",
   next: "Next",
-}
+};
 
 /**
  * Generic data table with common UX primitives:
@@ -111,15 +111,14 @@ export function DataTable<TData, TValue>({
   const copy = React.useMemo(
     () => ({ ...defaultMessages, ...messages }),
     [messages],
-  )
-  const [sorting, setSorting] = React.useState<SortingState>([])
+  );
+  const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     [],
-  )
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>(
-    initialColumnVisibility ?? {},
-  )
-  const [rowSelection, setRowSelection] = React.useState({})
+  );
+  const [columnVisibility, setColumnVisibility] =
+    React.useState<VisibilityState>(initialColumnVisibility ?? {});
+  const [rowSelection, setRowSelection] = React.useState({});
 
   const table = useReactTable({
     data,
@@ -139,7 +138,8 @@ export function DataTable<TData, TValue>({
       columnVisibility,
       rowSelection,
     },
-  })
+  });
+  const selectedRowCount = table.getFilteredSelectedRowModel().rows.length;
 
   return (
     <div className={cn("space-y-3", className)}>
@@ -182,7 +182,9 @@ export function DataTable<TData, TValue>({
                     <DropdownMenuCheckboxItem
                       key={column.id}
                       checked={column.getIsVisible()}
-                      onCheckedChange={(value) => column.toggleVisibility(!!value)}
+                      onCheckedChange={(value) =>
+                        column.toggleVisibility(!!value)
+                      }
                     >
                       {column.id.replaceAll("_", " ")}
                     </DropdownMenuCheckboxItem>
@@ -208,20 +210,20 @@ export function DataTable<TData, TValue>({
                 {headerGroup.headers.map((header) => {
                   const meta = header.column.columnDef.meta as
                     | DataTableColumnMeta
-                    | undefined
+                    | undefined;
                   return (
                     <TableHead
                       key={header.id}
                       className={meta?.headerClassName}
                     >
                       {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
-                        )}
+                        ? null
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext(),
+                          )}
                     </TableHead>
-                  )
+                  );
                 })}
               </TableRow>
             ))}
@@ -229,7 +231,10 @@ export function DataTable<TData, TValue>({
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
+                <TableCell
+                  colSpan={columns.length}
+                  className="h-24 text-center"
+                >
                   {copy.loading}
                 </TableCell>
               </TableRow>
@@ -242,24 +247,24 @@ export function DataTable<TData, TValue>({
                   {row.getVisibleCells().map((cell) => {
                     const meta = cell.column.columnDef.meta as
                       | DataTableColumnMeta
-                      | undefined
+                      | undefined;
                     return (
-                      <TableCell
-                        key={cell.id}
-                        className={meta?.cellClassName}
-                      >
+                      <TableCell key={cell.id} className={meta?.cellClassName}>
                         {flexRender(
                           cell.column.columnDef.cell,
                           cell.getContext(),
                         )}
                       </TableCell>
-                    )
+                    );
                   })}
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
+                <TableCell
+                  colSpan={columns.length}
+                  className="h-24 text-center"
+                >
                   {copy.noResults}
                 </TableCell>
               </TableRow>
@@ -270,7 +275,9 @@ export function DataTable<TData, TValue>({
 
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="text-sm text-foreground-secondary">
-          {table.getFilteredSelectedRowModel().rows.length} {copy.rowsSelected}
+          {selectedRowCount > 0
+            ? `${selectedRowCount} ${copy.rowsSelected}`
+            : null}
         </div>
         <div className="flex items-center gap-2">
           <Button
@@ -310,5 +317,5 @@ export function DataTable<TData, TValue>({
         </div>
       </div>
     </div>
-  )
+  );
 }

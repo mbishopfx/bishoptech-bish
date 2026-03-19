@@ -1,13 +1,29 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useMemo, useRef } from 'react'
+import { cn } from '@rift/utils'
+import { Badge } from '@rift/ui/badge'
+import { Button } from '@rift/ui/button'
+import { DataTable } from '@rift/ui/data-table'
+import type { DataTableColumnDef } from '@rift/ui/data-table'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@rift/ui/dropdown-menu'
+import { MoreVertical, Upload } from 'lucide-react'
+import { toast } from 'sonner'
+
 import { ContentPage } from '@/components/layout'
+import { useOrgKnowledge } from '@/lib/frontend/org-knowledge/use-org-knowledge'
+import { ORG_KNOWLEDGE_UPLOAD_ACCEPT } from '@/lib/shared/org-knowledge'
+import type { OrgKnowledgeListItem } from '@/lib/shared/org-knowledge'
+import { m } from '@/paraglide/messages.js'
 import {
   ORG_KNOWLEDGE_UPLOAD_POLICY,
   getUploadValidationError,
 } from '@/lib/shared/upload/upload-validation'
-import { ORG_KNOWLEDGE_UPLOAD_ACCEPT } from '@/lib/shared/org-knowledge'
-import { useOrgKnowledge } from '@/lib/frontend/org-knowledge/use-org-knowledge'
 
 function formatFileSize(bytes: number): string {
   if (bytes >= 1024 * 1024) {
@@ -20,8 +36,78 @@ function formatFileSize(bytes: number): string {
 }
 
 function formatTimestamp(timestamp?: number): string {
-  if (!timestamp || timestamp <= 0) return 'Not indexed yet'
+  if (!timestamp || timestamp <= 0)
+    return m.org_knowledge_last_indexed_pending()
   return new Date(timestamp).toLocaleString()
+}
+
+function getActiveBadgeClassName(active: boolean): string {
+  return active
+    ? 'border-emerald-500/50 bg-emerald-500/15 text-emerald-700 dark:text-emerald-400'
+    : 'border-border-base text-foreground-secondary'
+}
+
+function getIndexBadgeClassName(item: OrgKnowledgeListItem): string {
+  if (item.vectorError) {
+    return 'border-rose-500/50 bg-rose-500/15 text-rose-700 dark:text-rose-400'
+  }
+  if (item.vectorIndexedAt) {
+    return 'border-sky-500/50 bg-sky-500/15 text-sky-700 dark:text-sky-400'
+  }
+  return 'border-amber-500/50 bg-amber-500/15 text-amber-700 dark:text-amber-400'
+}
+
+type OrgKnowledgeRowActionsProps = {
+  item: OrgKnowledgeListItem
+  pending: boolean
+  onSetActive: (attachmentId: string, active: boolean) => Promise<void>
+  onRetryIndex: (attachmentId: string) => Promise<void>
+  onRemove: (attachmentId: string) => Promise<void>
+}
+
+function OrgKnowledgeRowActions({
+  item,
+  pending,
+  onSetActive,
+  onRetryIndex,
+  onRemove,
+}: OrgKnowledgeRowActionsProps) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <Button
+            type="button"
+            variant="ghost"
+            size="iconSmall"
+            className="size-8 rounded-md"
+            aria-label={m.org_knowledge_actions_aria({ name: item.fileName })}
+            disabled={pending}
+          >
+            <MoreVertical className="size-4" aria-hidden />
+          </Button>
+        }
+      />
+      <DropdownMenuContent align="end" sideOffset={6} className="min-w-40">
+        <DropdownMenuItem
+          onClick={() => void onSetActive(item.id, !item.orgKnowledgeActive)}
+        >
+          {item.orgKnowledgeActive
+            ? m.org_knowledge_action_deactivate()
+            : m.org_knowledge_action_activate()}
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => void onRetryIndex(item.id)}>
+          {m.org_knowledge_action_retry_index()}
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          variant="destructive"
+          onClick={() => void onRemove(item.id)}
+        >
+          {m.org_knowledge_action_delete()}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
 }
 
 /**
@@ -30,10 +116,22 @@ function formatTimestamp(timestamp?: number): string {
  */
 export function OrgKnowledgePage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
-  const [uploadError, setUploadError] = useState<string | null>(null)
-  const { items, loading, pending, uploading, error, upload, setActive, remove, retryIndex } =
-    useOrgKnowledge()
+  const {
+    items,
+    loading,
+    pending,
+    uploading,
+    upload,
+    setActive,
+    remove,
+    retryIndex,
+  } = useOrgKnowledge()
 
+  /**
+   * Reuses the shared upload validation policy before invoking the server
+   * action so admins get immediate feedback for unsupported files and size
+   * violations without waiting on a network round trip.
+   */
   const handleFileSelection = async (
     event: React.ChangeEvent<HTMLInputElement>,
   ) => {
@@ -41,155 +139,153 @@ export function OrgKnowledgePage() {
     event.target.value = ''
     if (!file) return
 
-    const validationError = getUploadValidationError(file, ORG_KNOWLEDGE_UPLOAD_POLICY)
+    const validationError = getUploadValidationError(
+      file,
+      ORG_KNOWLEDGE_UPLOAD_POLICY,
+    )
     if (validationError) {
-      setUploadError(validationError)
+      toast.error(validationError)
       return
     }
 
-    setUploadError(null)
     await upload(file)
   }
 
-  return (
-    <ContentPage
-      title="Organization Knowledge"
-      description="Upload Markdown or PDF knowledge files that every chat request in this organization can retrieve when the file is marked active."
-    >
-      <section className="space-y-4">
-        <div className="rounded-xl border border-border-base bg-surface-panel p-4">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div className="space-y-1">
-              <h2 className="text-base font-medium text-foreground-primary">
-                Upload knowledge file
-              </h2>
-              <p className="text-sm text-foreground-secondary">
-                Supported formats follow the existing chat attachment conversion pipeline. Uploaded files stay inactive until you enable them.
+  const columns = useMemo<Array<DataTableColumnDef<OrgKnowledgeListItem>>>(
+    () => [
+      {
+        accessorKey: 'fileName',
+        header: m.org_knowledge_column_file(),
+        cell: ({ row }) => {
+          const item = row.original
+          return (
+            <div className="min-w-0 space-y-1">
+              <p className="truncate font-medium text-foreground-primary">
+                {item.fileName}
+              </p>
+              <p className="text-xs text-foreground-tertiary">
+                {item.mimeType} · {formatFileSize(item.fileSize)}
               </p>
             </div>
+          )
+        },
+      },
+      {
+        id: 'status',
+        header: m.org_knowledge_column_status(),
+        cell: ({ row }) => {
+          const item = row.original
+          return (
+            <div className="flex flex-wrap gap-2">
+              <Badge
+                variant="outline"
+                className={cn(
+                  'rounded-full px-2 py-0.5',
+                  getActiveBadgeClassName(Boolean(item.orgKnowledgeActive)),
+                )}
+              >
+                {item.orgKnowledgeActive
+                  ? m.org_knowledge_status_active()
+                  : m.org_knowledge_status_inactive()}
+              </Badge>
+              <Badge
+                variant="outline"
+                className={cn(
+                  'rounded-full px-2 py-0.5',
+                  getIndexBadgeClassName(item),
+                )}
+              >
+                {item.vectorError
+                  ? m.org_knowledge_index_status_error()
+                  : item.vectorIndexedAt
+                    ? m.org_knowledge_index_status_indexed()
+                    : m.org_knowledge_index_status_pending()}
+              </Badge>
+            </div>
+          )
+        },
+      },
+      {
+        id: 'lastIndexed',
+        header: m.org_knowledge_column_last_indexed(),
+        cell: ({ row }) => {
+          const item = row.original
+          return (
+            <div className="space-y-1">
+              <p className="text-sm text-foreground-primary">
+                {formatTimestamp(item.vectorIndexedAt)}
+              </p>
+              {item.vectorError ? (
+                <p className="max-w-72 text-xs text-foreground-error">
+                  {item.vectorError}
+                </p>
+              ) : null}
+            </div>
+          )
+        },
+      },
+      {
+        id: 'actions',
+        header: () => null,
+        meta: {
+          headerClassName: 'w-10 whitespace-nowrap pr-2 text-right',
+          cellClassName: 'w-10 whitespace-nowrap pr-2 text-right',
+        },
+        cell: ({ row }) => (
+          <div className="flex justify-end">
+            <OrgKnowledgeRowActions
+              item={row.original}
+              pending={pending}
+              onSetActive={setActive}
+              onRetryIndex={retryIndex}
+              onRemove={remove}
+            />
+          </div>
+        ),
+      },
+    ],
+    [pending, remove, retryIndex, setActive],
+  )
 
-            <button
+  return (
+    <ContentPage
+      title={m.org_knowledge_page_heading()}
+      description={m.org_knowledge_page_description()}
+    >
+      <div className="space-y-4">
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept={ORG_KNOWLEDGE_UPLOAD_ACCEPT}
+          className="hidden"
+          onChange={handleFileSelection}
+        />
+
+        <DataTable
+          data={[...items]}
+          isLoading={loading}
+          columns={columns}
+          filterColumn="fileName"
+          filterPlaceholder={m.org_knowledge_filter_placeholder()}
+          showColumnToggle={false}
+          messages={{
+            noResults: m.org_knowledge_empty_state(),
+            loading: m.org_knowledge_loading(),
+          }}
+          tableWrapperClassName="border-border-base bg-surface-base/95"
+          toolbarActionsRight={
+            <Button
               type="button"
-              className="inline-flex items-center justify-center rounded-md bg-foreground-primary px-4 py-2 text-sm font-medium text-background transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-              disabled={uploading}
               onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              aria-busy={uploading}
             >
-              {uploading ? 'Uploading...' : 'Upload file'}
-            </button>
-          </div>
-
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept={ORG_KNOWLEDGE_UPLOAD_ACCEPT}
-            className="hidden"
-            onChange={handleFileSelection}
-          />
-
-          {(uploadError || error) && (
-            <div
-              className="mt-4 rounded-md border border-border-base bg-surface-overlay px-3 py-2 text-sm text-foreground-error"
-              role="alert"
-            >
-              {uploadError ?? error}
-            </div>
-          )}
-        </div>
-
-        <div className="rounded-xl border border-border-base bg-surface-panel p-4">
-          <div className="mb-4 space-y-1">
-            <h2 className="text-base font-medium text-foreground-primary">
-              Active organization knowledge
-            </h2>
-            <p className="text-sm text-foreground-secondary">
-              Active files participate in org-wide retrieval. Inactive files remain stored and can be re-enabled later.
-            </p>
-          </div>
-
-          {loading ? (
-            <p className="text-sm text-foreground-secondary" role="status">
-              Loading organization knowledge...
-            </p>
-          ) : items.length === 0 ? (
-            <p className="text-sm text-foreground-secondary">
-              No organization knowledge files have been uploaded yet.
-            </p>
-          ) : (
-            <div className="space-y-3">
-              {items.map((item) => (
-                <article
-                  key={item.id}
-                  className="rounded-lg border border-border-base bg-background/40 p-4"
-                >
-                  <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                    <div className="space-y-2">
-                      <div>
-                        <h3 className="text-sm font-medium text-foreground-primary">
-                          {item.fileName}
-                        </h3>
-                        <p className="text-xs text-foreground-secondary">
-                          {item.mimeType} · {formatFileSize(item.fileSize)}
-                        </p>
-                      </div>
-
-                      <div className="flex flex-wrap gap-2 text-xs text-foreground-secondary">
-                        <span className="rounded-full border border-border-base px-2 py-1">
-                          {item.orgKnowledgeActive ? 'Active' : 'Inactive'}
-                        </span>
-                        <span className="rounded-full border border-border-base px-2 py-1">
-                          {item.vectorIndexedAt ? 'Indexed' : 'Pending index'}
-                        </span>
-                        {item.vectorError ? (
-                          <span className="rounded-full border border-border-base px-2 py-1 text-foreground-error">
-                            Index error
-                          </span>
-                        ) : null}
-                      </div>
-
-                      <p className="text-xs text-foreground-secondary">
-                        Last indexed: {formatTimestamp(item.vectorIndexedAt)}
-                      </p>
-
-                      {item.vectorError ? (
-                        <p className="text-xs text-foreground-error">
-                          {item.vectorError}
-                        </p>
-                      ) : null}
-                    </div>
-
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        className="rounded-md border border-border-base px-3 py-2 text-sm text-foreground-primary transition hover:bg-surface-overlay disabled:cursor-not-allowed disabled:opacity-60"
-                        disabled={pending}
-                        onClick={() => void setActive(item.id, !item.orgKnowledgeActive)}
-                      >
-                        {item.orgKnowledgeActive ? 'Deactivate' : 'Activate'}
-                      </button>
-                      <button
-                        type="button"
-                        className="rounded-md border border-border-base px-3 py-2 text-sm text-foreground-primary transition hover:bg-surface-overlay disabled:cursor-not-allowed disabled:opacity-60"
-                        disabled={pending}
-                        onClick={() => void retryIndex(item.id)}
-                      >
-                        Retry index
-                      </button>
-                      <button
-                        type="button"
-                        className="rounded-md border border-border-base px-3 py-2 text-sm text-foreground-error transition hover:bg-surface-overlay disabled:cursor-not-allowed disabled:opacity-60"
-                        disabled={pending}
-                        onClick={() => void remove(item.id)}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </div>
-                </article>
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
+              <Upload className="size-4" aria-hidden />
+              {m.org_knowledge_upload_button()}
+            </Button>
+          }
+        />
+      </div>
     </ContentPage>
   )
 }
