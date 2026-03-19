@@ -21,6 +21,7 @@ import {
 import { Input } from '@rift/ui/input'
 import { Label } from '@rift/ui/label'
 import { SidebarGroupTooltip } from '@rift/ui/tooltip'
+import { useDirection } from '@rift/ui/direction'
 import { Check, Plus, Settings } from 'lucide-react'
 import { useNavigate, Link } from '@tanstack/react-router'
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -43,7 +44,9 @@ function formatMemberCountLabel(memberCount: number | null): string {
     return ''
   }
 
-  return memberCount === 1 ? '1 Member' : `${memberCount} Members`
+  return memberCount === 1
+    ? m.layout_organization_member_count_one()
+    : m.layout_organization_member_count_other({ count: memberCount })
 }
 
 /**
@@ -59,6 +62,7 @@ export function SidebarOrganizationMenu({
     useActiveOrganization()
   const { entitlement } = useOrgBillingSummary()
   const navigate = useNavigate()
+  const direction = useDirection()
   const [organizations, setOrganizations] = useState<SidebarOrganization[]>([])
   const [organizationsLoading, setOrganizationsLoading] = useState(false)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -193,7 +197,9 @@ export function SidebarOrganizationMenu({
      */
     if (organizations.length >= MAX_ORGANIZATIONS_PER_USER) {
       setCreateOrganizationError(
-        `You can create up to ${MAX_ORGANIZATIONS_PER_USER} organizations.`,
+        m.layout_organization_create_error_limit({
+          max: MAX_ORGANIZATIONS_PER_USER,
+        }),
       )
       return
     }
@@ -353,7 +359,7 @@ export function SidebarOrganizationMenu({
             />
             <DropdownMenuContent
               align="start"
-              side="right"
+              side={direction === 'rtl' ? 'left' : 'right'}
               sideOffset={10}
               className="w-72 min-w-72 rounded-xl border border-border-base bg-surface-base p-0"
             >
@@ -397,24 +403,24 @@ export function SidebarOrganizationMenu({
                     }}
                   >
                     <Settings className="size-4" aria-hidden />
-                    Settings
+                    {m.layout_organization_settings_aria_label()}
                   </Button>
                 </div>
               ) : null}
 
               <DropdownMenuSeparator className="mx-0 my-0" />
               <div className="px-4 pt-3 pb-1 text-sm font-medium text-foreground-secondary">
-                Organizations
+                {m.layout_organization_menu_list_title()}
               </div>
 
               <div className="px-2 pb-2">
                 {organizationsLoading ? (
                   <DropdownMenuItem disabled>
-                    Loading organizations...
+                    {m.layout_organization_menu_loading()}
                   </DropdownMenuItem>
                 ) : organizations.length === 0 ? (
                   <DropdownMenuItem disabled>
-                    No organizations found
+                    {m.layout_organization_menu_empty()}
                   </DropdownMenuItem>
                 ) : (
                   organizations.map((organization) => {
@@ -446,7 +452,7 @@ export function SidebarOrganizationMenu({
                         </div>
                         {isSwitching ? (
                           <span className="text-xs text-foreground-secondary">
-                            Switching...
+                            {m.layout_organization_menu_switching()}
                           </span>
                         ) : isCurrent ? (
                           <Check
@@ -471,7 +477,7 @@ export function SidebarOrganizationMenu({
                     setIsCreateDialogOpen(true)
                   }}
                 >
-                  <div className="flex min-w-0 items-center gap-2">
+                  <div className="flex min-w-0 items-center gap-2 rtl:flex-row-reverse">
                     <span className="flex size-7 shrink-0 items-center justify-center">
                       <Plus className="size-3.5" aria-hidden />
                     </span>

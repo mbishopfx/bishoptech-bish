@@ -1,4 +1,5 @@
 import { isAreaPath } from '@/utils/nav-utils'
+import { m } from '@/paraglide/messages.js'
 import {
   Building2,
   Cpu,
@@ -23,16 +24,16 @@ export const isOrgSettingsPath = (pathname: string) =>
 
 /** Sidebar configuration for organization-level settings pages. */
 export const orgSettingsNavArea = () => ({
-  title: 'Organization',
+  title: m.layout_organization_tooltip_name(),
   href: ORG_SETTINGS_HREF,
-  description: 'Manage organization-wide controls and preferences.',
+  description: m.org_settings_nav_description(),
   icon: Building2,
   content: [
     {
       name: '',
       items: [
         {
-          name: 'General',
+          name: m.org_settings_general_page_title(),
           icon: Settings,
           href: `${ORG_SETTINGS_HREF}`,
           exact: true,
@@ -44,13 +45,13 @@ export const orgSettingsNavArea = () => ({
         //   exact: true,
         // },
         {
-          name: 'Analytics & Insights',
+          name: m.org_analytics_page_title(),
           icon: TrendingUp,
           href: `${ORG_SETTINGS_HREF}/analytics`,
           exact: true,
         },
         {
-          name: 'Billing',
+          name: m.org_billing_page_title(),
           icon: CreditCard,
           href: `${ORG_SETTINGS_HREF}/billing`,
           exact: true,
@@ -58,10 +59,10 @@ export const orgSettingsNavArea = () => ({
       ],
     },
     {
-      name: 'Organization',
+      name: m.layout_organization_tooltip_name(),
       items: [
         {
-          name: 'Members',
+          name: m.org_members_page_title(),
           icon: Users,
           href: `${ORG_SETTINGS_HREF}/members`,
           exact: true,
@@ -75,28 +76,28 @@ export const orgSettingsNavArea = () => ({
       ],
     },
     {
-      name: 'AI & Data',
+      name: m.org_settings_nav_section_ai_data(),
       items: [
         {
-          name: 'Compliance & Policy',
+          name: m.org_compliance_page_title(),
           icon: Scale,
           href: `${ORG_SETTINGS_HREF}/compliance-policy`,
           exact: true,
         },
         {
-          name: 'Models',
+          name: m.org_models_page_title(),
           icon: Cpu,
           href: `${ORG_SETTINGS_HREF}/models`,
           exact: true,
         },
         {
-          name: 'Tools',
+          name: m.org_tools_page_title(),
           icon: Wrench,
           href: `${ORG_SETTINGS_HREF}/tools`,
           exact: true,
         },
         {
-          name: 'Knowledge',
+          name: m.org_knowledge_page_title(),
           icon: Database,
           href: `${ORG_SETTINGS_HREF}/knowledge`,
           exact: true,
@@ -110,10 +111,10 @@ export const orgSettingsNavArea = () => ({
       ],
     },
     {
-      name: 'Security & Access',
+      name: m.org_settings_nav_section_security_access(),
       items: [
         {
-          name: 'Security',
+          name: m.org_security_page_title(),
           icon: Lock,
           href: `${ORG_SETTINGS_HREF}/security`,
           exact: true,
