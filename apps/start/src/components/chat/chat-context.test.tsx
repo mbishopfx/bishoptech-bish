@@ -40,6 +40,7 @@ const queryState = {
         ownerOrgId: string
         reasoningEffort?: string | null
         disabledToolKeys?: readonly string[] | null
+        contextWindowMode?: 'standard' | 'max'
       }
     | undefined,
   storedMessages: [] as Array<{
@@ -151,6 +152,10 @@ vi.mock('@/integrations/zero', () => ({
         __mutator: 'setDisabledToolKeys',
         args,
       }),
+      setContextWindowMode: (args: Record<string, unknown>) => ({
+        __mutator: 'setContextWindowMode',
+        args,
+      }),
     },
   },
 }))
@@ -235,6 +240,31 @@ function RevealBranchConsumer({ messageId }: { messageId: string }) {
       <output data-testid="selectors">
         {JSON.stringify(branchSelectorsByAnchorMessageId)}
       </output>
+    </>
+  )
+}
+
+function ContextWindowModeConsumer() {
+  const { selectedContextWindowMode, setSelectedContextWindowMode } = useChat()
+  return (
+    <>
+      <output data-testid="context-mode">{selectedContextWindowMode}</output>
+      <button
+        type="button"
+        onClick={() => {
+          void setSelectedContextWindowMode('standard')
+        }}
+      >
+        standard
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          void setSelectedContextWindowMode('max')
+        }}
+      >
+        max
+      </button>
     </>
   )
 }
@@ -469,6 +499,7 @@ describe('ChatProvider', () => {
       branchVersion: 3,
       ownerOrgId: '__missing_org__',
       disabledToolKeys: [],
+      contextWindowMode: 'max',
     }
     queryState.storedMessages = [
       {
@@ -612,5 +643,46 @@ describe('ChatProvider', () => {
     expect(view.getByTestId('selectors').textContent).toContain(
       '"selectedMessageId":"a3-v2b"',
     )
+  })
+
+  it('hydrates persisted context mode and persists changes through the thread mutator', async () => {
+    const threadId = 'thread-context-window'
+    queryState.threadRow = {
+      id: 'thread-context-row',
+      threadId,
+      userId: 'user-1',
+      title: 'Thread',
+      createdAt: 1,
+      updatedAt: 2,
+      lastMessageAt: 2,
+      generationStatus: 'idle',
+      model: 'anthropic/claude-opus-4.6',
+      pinned: false,
+      activeChildByParent: {},
+      branchVersion: 1,
+      ownerOrgId: '__missing_org__',
+      disabledToolKeys: [],
+      contextWindowMode: 'max',
+    }
+
+    const view = render(
+      <ChatProvider threadId={threadId}>
+        <ContextWindowModeConsumer />
+      </ChatProvider>,
+    )
+
+    expect(view.getByTestId('context-mode').textContent).toBe('max')
+
+    await act(async () => {
+      fireEvent.click(view.getByRole('button', { name: 'standard' }))
+    })
+
+    expect(zeroMutateMock).toHaveBeenCalledWith({
+      __mutator: 'setContextWindowMode',
+      args: {
+        threadId,
+        contextWindowMode: 'standard',
+      },
+    })
   })
 })

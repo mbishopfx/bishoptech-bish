@@ -14,6 +14,9 @@ export type AiReasoningEffort =
   | 'xhigh'
   | 'max'
 
+/** Per-thread context mode used to cap prompt history for tiered models. */
+export type AiContextWindowMode = 'standard' | 'max'
+
 /** Provider-local tool id that can be attached to specific models. */
 export type AiProviderToolId = CatalogProviderToolId
 

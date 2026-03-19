@@ -79,6 +79,9 @@ export type PromptInputToolbarProps = HTMLAttributes<HTMLDivElement> & {
   visibleTools: readonly ChatVisibleTool[]
   disabledToolKeys: readonly string[]
   onToolDisabledKeysChange: (disabledToolKeys: readonly string[]) => void
+  contextWindowSupportsMaxMode: boolean
+  isMaxContextEnabled: boolean
+  onMaxContextChange: (enabled: boolean) => void
   middle?: React.ReactNode
   /** Content rendered immediately after the attachment button (e.g. model selector). */
   afterAttach?: React.ReactNode
@@ -104,6 +107,9 @@ export function PromptInputToolbar({
   visibleTools,
   disabledToolKeys,
   onToolDisabledKeysChange,
+  contextWindowSupportsMaxMode,
+  isMaxContextEnabled,
+  onMaxContextChange,
   middle,
   afterAttach,
   ...props
@@ -150,6 +156,9 @@ export function PromptInputToolbar({
         visibleTools={visibleTools}
         disabledToolKeys={disabledToolKeys}
         onToolDisabledKeysChange={onToolDisabledKeysChange}
+        contextWindowSupportsMaxMode={contextWindowSupportsMaxMode}
+        isMaxContextEnabled={isMaxContextEnabled}
+        onMaxContextChange={onMaxContextChange}
       />
 
       <div className="min-w-0 flex-1">

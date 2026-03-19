@@ -34,7 +34,8 @@ CREATE TABLE IF NOT EXISTS threads (
   custom_instruction_id TEXT,
   reasoning_effort TEXT,
   mode_id TEXT,
-  disabled_tool_keys JSONB NOT NULL DEFAULT '[]'::jsonb
+  disabled_tool_keys JSONB NOT NULL DEFAULT '[]'::jsonb,
+  context_window_mode TEXT NOT NULL DEFAULT 'standard'
 );
 ALTER TABLE threads
 ADD COLUMN IF NOT EXISTS active_child_by_parent JSONB NOT NULL DEFAULT '{}'::jsonb;
@@ -44,6 +45,8 @@ ALTER TABLE threads
 ADD COLUMN IF NOT EXISTS mode_id TEXT;
 ALTER TABLE threads
 ADD COLUMN IF NOT EXISTS disabled_tool_keys JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE threads
+ADD COLUMN IF NOT EXISTS context_window_mode TEXT NOT NULL DEFAULT 'standard';
 CREATE INDEX IF NOT EXISTS threads_user_id ON threads (user_id);
 CREATE INDEX IF NOT EXISTS threads_thread_id ON threads (thread_id);
 CREATE INDEX IF NOT EXISTS threads_user_updated ON threads (user_id, updated_at);
@@ -51,6 +54,7 @@ CREATE INDEX IF NOT EXISTS threads_user_org_visibility_updated
   ON threads (user_id, owner_org_id, visibility, updated_at DESC);
 CREATE INDEX IF NOT EXISTS threads_share_id ON threads (share_id);
 CREATE INDEX IF NOT EXISTS threads_reasoning_effort ON threads (reasoning_effort);
+CREATE INDEX IF NOT EXISTS threads_context_window_mode ON threads (context_window_mode);
 CREATE INDEX IF NOT EXISTS threads_title_search_fts
   ON threads
   USING GIN (to_tsvector('simple', COALESCE(title, '')));

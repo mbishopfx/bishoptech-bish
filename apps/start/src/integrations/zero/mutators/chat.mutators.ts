@@ -2,6 +2,7 @@ import {
   defineMutator,
 } from '@rocicorp/zero'
 import { z } from 'zod'
+import type { AiContextWindowMode } from '@/lib/shared/ai-catalog'
 import { sanitizeThreadDisabledToolKeys } from '@/lib/shared/chat/tool-policy'
 import { isChatModeId, resolveEffectiveChatMode } from '@/lib/shared/chat-modes'
 import {
@@ -62,6 +63,11 @@ const setThreadModeArgs = z.object({
 const setThreadDisabledToolKeysArgs = z.object({
   threadId: z.string(),
   disabledToolKeys: z.array(z.string()),
+})
+
+const setThreadContextWindowModeArgs = z.object({
+  threadId: z.string(),
+  contextWindowMode: z.enum(['standard', 'max']),
 })
 
 /**
@@ -415,6 +421,38 @@ export const chatMutatorDefinitions = {
         modeId: nextModeId,
       })
     }),
+
+    setContextWindowMode: defineMutator(
+      setThreadContextWindowModeArgs,
+      async ({ tx, args, ctx }) => {
+        const thread = await tx.run(zql.thread.where('threadId', args.threadId).one())
+        if (!thread || thread.userId !== ctx.userID) {
+          return
+        }
+        if (
+          !isThreadVisibleInContext({
+            threadOwnerOrgId: thread.ownerOrgId,
+            contextOrganizationId: ctx.organizationId,
+          })
+        ) {
+          return
+        }
+
+        const currentContextWindowMode =
+          thread.contextWindowMode === 'max' ? 'max' : 'standard'
+        const nextContextWindowMode =
+          args.contextWindowMode as AiContextWindowMode
+        if (currentContextWindowMode === nextContextWindowMode) {
+          return
+        }
+
+        await tx.mutate.thread.update({
+          id: thread.id,
+          contextWindowMode: nextContextWindowMode,
+          updatedAt: Date.now(),
+        })
+      },
+    ),
 
     /**
      * Thread-local provider tool preferences are stored as disabled tool keys.

@@ -20,7 +20,12 @@ import { DefaultChatTransport } from 'ai'
 import { flushSync } from 'react-dom'
 import { mutators, queries } from '@/integrations/zero'
 import { CACHE_CHAT_NAV } from '@/integrations/zero/query-cache-policy'
-import { AI_CATALOG } from '@/lib/shared/ai-catalog'
+import {
+  AI_CATALOG,
+  DEFAULT_CONTEXT_WINDOW_MODE,
+  resolveContextWindowForMode,
+  resolveModelContextWindow,
+} from '@/lib/shared/ai-catalog'
 import {
   coerceWorkspacePlanId,
   getFeatureAccessState,
@@ -54,10 +59,14 @@ import type {
   ChatAttachment,
   ChatAttachmentInput,
 } from '@/lib/shared/chat-contracts/attachments'
+import { estimatePromptTokens } from '@/lib/shared/chat-contracts'
 import type { ChatMessageMetadata } from '@/lib/shared/chat-contracts/message-metadata'
 import { getChatErrorMessage } from '@/lib/shared/chat-contracts/error-messages'
 import { ChatErrorCode } from '@/lib/shared/chat-contracts/error-codes'
-import type { AiReasoningEffort } from '@/lib/shared/ai-catalog/types'
+import type {
+  AiContextWindowMode,
+  AiReasoningEffort,
+} from '@/lib/shared/ai-catalog/types'
 import { useAppAuth } from '@/lib/frontend/auth/use-auth'
 import { useOrgBillingSummary } from '@/lib/frontend/billing/use-org-billing'
 import {
@@ -105,10 +114,12 @@ type ChatActionsContextValue = Pick<
   activeThreadId?: string
   selectedModelId: string
   selectedReasoningEffort?: AiReasoningEffort
+  selectedContextWindowMode: AiContextWindowMode
   selectableModels: readonly ChatModelOption[]
   visibleModels: readonly ChatModelOption[]
   setSelectedModelId: (modelId: string) => void
   setSelectedReasoningEffort: (reasoningEffort?: AiReasoningEffort) => void
+  setSelectedContextWindowMode: (contextWindowMode: AiContextWindowMode) => Promise<void>
   selectedModeId?: ChatModeId
   isModeEnforced: boolean
   setSelectedModeId: (modeId?: ChatModeId) => Promise<void>
@@ -117,6 +128,8 @@ type ChatActionsContextValue = Pick<
   setThreadDisabledToolKeys: (
     disabledToolKeys: readonly string[],
   ) => Promise<void>
+  activeContextWindow: number
+  contextWindowSupportsMaxMode: boolean
   canUploadFiles: boolean
   uploadUpgradeCallout?: string
   regenerateMessage: (messageId: string) => Promise<void>
@@ -140,16 +153,20 @@ type ChatComposerContextValue = Pick<
   | 'activeThreadId'
   | 'selectedModelId'
   | 'selectedReasoningEffort'
+  | 'selectedContextWindowMode'
   | 'selectableModels'
   | 'visibleModels'
   | 'setSelectedModelId'
   | 'setSelectedReasoningEffort'
+  | 'setSelectedContextWindowMode'
   | 'selectedModeId'
   | 'isModeEnforced'
   | 'setSelectedModeId'
   | 'visibleTools'
   | 'disabledToolKeys'
   | 'setThreadDisabledToolKeys'
+  | 'activeContextWindow'
+  | 'contextWindowSupportsMaxMode'
   | 'canUploadFiles'
   | 'uploadUpgradeCallout'
 >
@@ -897,17 +914,24 @@ export function ChatProvider({
   const [selectedReasoningEffort, setSelectedReasoningEffort] = useState<
     AiReasoningEffort | undefined
   >(undefined)
+  const [selectedContextWindowMode, setSelectedContextWindowMode] = useState<
+    AiContextWindowMode
+  >(DEFAULT_CONTEXT_WINDOW_MODE)
   const [threadDisabledToolKeysById, setThreadDisabledToolKeysById] = useState<
     Record<string, readonly string[]>
   >({})
   const [draftDisabledToolKeys, setDraftDisabledToolKeys] = useState<
     readonly string[]
   >([])
+  const [threadContextWindowModeById, setThreadContextWindowModeById] = useState<
+    Record<string, AiContextWindowMode>
+  >({})
   const hydratedModelSelectionThreadIdRef = useRef<string | undefined>(
     undefined,
   )
   const selectedModelIdRef = useRef(selectedModelId)
   const selectedReasoningEffortRef = useRef(selectedReasoningEffort)
+  const selectedContextWindowModeRef = useRef(selectedContextWindowMode)
   const branchVersionByThreadIdRef = useRef<Record<string, number>>({})
   const pendingAttachmentsRef = useRef<
     readonly ChatAttachmentInput[] | undefined
@@ -923,11 +947,21 @@ export function ChatProvider({
     Array.isArray(threadRow.disabledToolKeys)
       ? threadRow.disabledToolKeys
       : undefined
+  const persistedThreadContextWindowMode =
+    threadRow &&
+    'contextWindowMode' in threadRow &&
+    threadRow.contextWindowMode === 'max'
+      ? 'max'
+      : DEFAULT_CONTEXT_WINDOW_MODE
   const threadDisabledToolKeys = activeThreadId
     ? (threadDisabledToolKeysById[activeThreadId] ??
       persistedThreadDisabledToolKeys ??
       [])
     : draftDisabledToolKeys
+  const effectiveSelectedContextWindowMode = activeThreadId
+    ? (threadContextWindowModeById[activeThreadId] ??
+      persistedThreadContextWindowMode)
+    : selectedContextWindowMode
   const visibleTools = useMemo<readonly ChatVisibleTool[]>(() => {
     const resolvedMode = resolveEffectiveChatMode({
       orgEnforcedModeId: orgPolicy?.enforcedModeId,
@@ -970,8 +1004,37 @@ export function ChatProvider({
       advanced: entry.advanced,
     }))
   }, [orgPolicy, selectedModelId, threadModeId, threadDisabledToolKeys])
+  const resolvedContextWindowMode = useMemo(() => {
+    return resolveEffectiveChatMode({
+      orgEnforcedModeId: orgPolicy?.enforcedModeId,
+      threadModeId,
+    })
+  }, [orgPolicy?.enforcedModeId, threadModeId])
+  const effectiveContextModelId =
+    resolvedContextWindowMode?.definition.fixedModelId ?? selectedModelId
+  const effectiveContextCatalogModel = effectiveContextModelId
+    ? AI_CATALOG.find((model) => model.id === effectiveContextModelId)
+    : undefined
+  const effectiveContextWindowResolution = useMemo(() => {
+    return effectiveContextCatalogModel
+      ? resolveModelContextWindow(effectiveContextCatalogModel)
+      : {
+          baseContextWindow: 128_000,
+          maxContextWindow: 128_000,
+          defaultContextWindowMode: DEFAULT_CONTEXT_WINDOW_MODE,
+          supportsDistinctMaxMode: false,
+        }
+  }, [effectiveContextCatalogModel])
+  const activeContextWindow = resolveContextWindowForMode({
+    model: effectiveContextCatalogModel ?? {
+      contextWindow: 128_000,
+      pricing: undefined,
+    },
+    mode: effectiveSelectedContextWindowMode,
+  })
   selectedModelIdRef.current = selectedModelId
   selectedReasoningEffortRef.current = selectedReasoningEffort
+  selectedContextWindowModeRef.current = effectiveSelectedContextWindowMode
   const disabledToolKeysRef = useRef(threadDisabledToolKeys)
   disabledToolKeysRef.current = threadDisabledToolKeys
   if (
@@ -1082,6 +1145,7 @@ export function ChatProvider({
               createIfMissing: createIfMissingRef.current,
               modelId: selectedModelIdRef.current,
               reasoningEffort: selectedReasoningEffortRef.current,
+              contextWindowMode: selectedContextWindowModeRef.current,
               disabledToolKeys: disabledToolKeysRef.current,
             },
           }
@@ -1149,6 +1213,12 @@ export function ChatProvider({
 
   useEffect(() => {
     if (!activeThreadId) {
+      setSelectedContextWindowMode(DEFAULT_CONTEXT_WINDOW_MODE)
+    }
+  }, [activeThreadId])
+
+  useEffect(() => {
+    if (!activeThreadId) {
       hydratedModelSelectionThreadIdRef.current = undefined
       return
     }
@@ -1196,6 +1266,21 @@ export function ChatProvider({
       }
     })
   }, [activeThreadId, persistedThreadDisabledToolKeys])
+
+  useEffect(() => {
+    if (!activeThreadId) return
+
+    setThreadContextWindowModeById((current) => {
+      const existing = current[activeThreadId] ?? DEFAULT_CONTEXT_WINDOW_MODE
+      if (existing === persistedThreadContextWindowMode) {
+        return current
+      }
+      return {
+        ...current,
+        [activeThreadId]: persistedThreadContextWindowMode,
+      }
+    })
+  }, [activeThreadId, persistedThreadContextWindowMode])
 
   useEffect(() => {
     threadIdRef.current = activeThreadId
@@ -1457,6 +1542,23 @@ export function ChatProvider({
         setLocalError(new Error(message))
         throw new Error(message)
       }
+      const optimisticPromptTokens = estimatePromptTokens([
+        ...messagesRef.current,
+        {
+          id: 'pending-user-message',
+          role: 'user',
+          parts: [{ type: 'text', text }],
+        } satisfies ChatUIMessage,
+      ])
+      if (optimisticPromptTokens >= activeContextWindow) {
+        const message =
+          effectiveContextWindowResolution.supportsDistinctMaxMode &&
+          effectiveSelectedContextWindowMode === 'standard'
+            ? getChatErrorMessage(ChatErrorCode.ContextWindowExceeded)
+            : 'This conversation has reached its current context limit. Start a new chat to continue.'
+        setLocalError(new Error(message))
+        throw new Error(message)
+      }
       // Follow-up sends should not permit branch-snapshot shrink handling.
       allowShrinkOnNextBranchVersionRef.current = false
       let resolvedThreadId = threadIdRef.current
@@ -1471,6 +1573,10 @@ export function ChatProvider({
               setThreadDisabledToolKeysById((current) => ({
                 ...current,
                 [newThreadId]: draftDisabledToolKeys,
+              }))
+              setThreadContextWindowModeById((current) => ({
+                ...current,
+                [newThreadId]: selectedContextWindowModeRef.current,
               }))
 
               // Server can still create the same thread during first send if this
@@ -1549,7 +1655,10 @@ export function ChatProvider({
     },
     [
       accessContext,
+      activeContextWindow,
       draftDisabledToolKeys,
+      effectiveContextWindowResolution.supportsDistinctMaxMode,
+      effectiveSelectedContextWindowMode,
       navigate,
       uploadPermission.minimumPlanId,
       visibleModels,
@@ -1944,6 +2053,7 @@ export function ChatProvider({
 
   const clear = useCallback(() => {
     setDraftDisabledToolKeys([])
+    setSelectedContextWindowMode(DEFAULT_CONTEXT_WINDOW_MODE)
     setMessages([])
   }, [setMessages])
   const setModelSelection = useCallback(
@@ -1969,6 +2079,49 @@ export function ChatProvider({
       setSelectedReasoningEffort(reasoningEffort)
     },
     [selectableModels, selectedModelId],
+  )
+  const setContextWindowModeSelection = useCallback(
+    async (contextWindowMode: AiContextWindowMode) => {
+      if (!effectiveContextWindowResolution.supportsDistinctMaxMode) {
+        setSelectedContextWindowMode(DEFAULT_CONTEXT_WINDOW_MODE)
+        return
+      }
+
+      if (!activeThreadId) {
+        setSelectedContextWindowMode(contextWindowMode)
+        return
+      }
+
+      setThreadContextWindowModeById((current) => ({
+        ...current,
+        [activeThreadId]: contextWindowMode,
+      }))
+
+      try {
+        await z.mutate(
+          mutators.threads.setContextWindowMode({
+            threadId: activeThreadId,
+            contextWindowMode,
+          }),
+        ).client
+      } catch (contextWindowError) {
+        setThreadContextWindowModeById((current) => ({
+          ...current,
+          [activeThreadId]: persistedThreadContextWindowMode,
+        }))
+        setLocalError(
+          contextWindowError instanceof Error
+            ? contextWindowError
+            : new Error('Failed to update thread context window mode'),
+        )
+      }
+    },
+    [
+      activeThreadId,
+      effectiveContextWindowResolution.supportsDistinctMaxMode,
+      persistedThreadContextWindowMode,
+      z,
+    ],
   )
   const setModeSelection = useCallback(
     async (modeId?: ChatModeId) => {
@@ -2055,16 +2208,21 @@ export function ChatProvider({
       activeThreadId,
       selectedModelId,
       selectedReasoningEffort,
+      selectedContextWindowMode: effectiveSelectedContextWindowMode,
       selectedModeId: effectiveModeId,
       isModeEnforced,
       selectableModels,
       visibleModels,
       setSelectedModelId: setModelSelection,
       setSelectedReasoningEffort: setReasoningSelection,
+      setSelectedContextWindowMode: setContextWindowModeSelection,
       setSelectedModeId: setModeSelection,
       visibleTools,
       disabledToolKeys: threadDisabledToolKeys,
       setThreadDisabledToolKeys,
+      activeContextWindow,
+      contextWindowSupportsMaxMode:
+        effectiveContextWindowResolution.supportsDistinctMaxMode,
       canUploadFiles: hasFeatureAccess('chat.fileUpload', accessContext),
       uploadUpgradeCallout: getLocalizedFeatureAccessGateMessage(
         uploadPermission.minimumPlanId,
@@ -2078,16 +2236,20 @@ export function ChatProvider({
       activeThreadId,
       selectedModelId,
       selectedReasoningEffort,
+      effectiveSelectedContextWindowMode,
       effectiveModeId,
       isModeEnforced,
       selectableModels,
       visibleModels,
       setModelSelection,
       setReasoningSelection,
+      setContextWindowModeSelection,
       setModeSelection,
       visibleTools,
       threadDisabledToolKeys,
       setThreadDisabledToolKeys,
+      activeContextWindow,
+      effectiveContextWindowResolution.supportsDistinctMaxMode,
       accessContext,
       uploadPermission.minimumPlanId,
     ],

@@ -226,6 +226,9 @@ const thread = table('thread')
     disabledToolKeys: json<readonly string[]>()
       .from('disabled_tool_keys')
       .optional(),
+    contextWindowMode: enumeration<'standard' | 'max'>()
+      .from('context_window_mode')
+      .optional(),
   })
   .primaryKey('id')
 

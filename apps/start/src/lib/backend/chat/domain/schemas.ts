@@ -1,5 +1,8 @@
 import { Schema } from 'effect'
-import type { AiReasoningEffort } from '@/lib/shared/ai-catalog/types'
+import type {
+  AiContextWindowMode,
+  AiReasoningEffort,
+} from '@/lib/shared/ai-catalog/types'
 import type {
   ChatAttachment,
   ChatAttachmentInput,
@@ -46,11 +49,18 @@ export const ChatStreamRequest = Schema.Struct({
   createIfMissing: Schema.optional(Schema.Boolean),
   modelId: Schema.optional(Schema.String),
   reasoningEffort: Schema.optional(Schema.String),
+  contextWindowMode: Schema.optional(
+    Schema.Union([
+      Schema.Literal('standard'),
+      Schema.Literal('max'),
+    ]),
+  ),
   disabledToolKeys: Schema.optional(Schema.Array(Schema.String)),
 })
 
 export type ChatStreamRequest = Schema.Schema.Type<typeof ChatStreamRequest>
 export type ChatReasoningEffort = AiReasoningEffort
+export type ChatContextWindowMode = AiContextWindowMode
 export type IncomingAttachment = ChatAttachmentInput
 export type PersistedAttachment = ChatAttachment
 

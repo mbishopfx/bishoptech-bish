@@ -3,9 +3,17 @@ import type { ReadonlyJSONValue } from '@rocicorp/zero'
 import { Duration, Effect, Layer, ServiceMap } from 'effect'
 import type { ChatDomainError } from '../domain/errors'
 import {
+  DEFAULT_CONTEXT_WINDOW_MODE,
+  getCatalogModel,
+  resolveContextWindowForMode,
+  resolveModelContextWindow,
+} from '@/lib/shared/ai-catalog'
+import type { AiContextWindowMode } from '@/lib/shared/ai-catalog'
+import {
   InvalidRequestError,
   MessagePersistenceError,
   QuotaExceededError,
+  ContextWindowExceededError,
 } from '../domain/errors'
 import { chatErrorCodeFromTag } from '../domain/error-codes'
 import { toReadableErrorMessage } from '../domain/error-formatting'
@@ -48,6 +56,17 @@ import {
 import { normalizeStreamCommand } from './chat-orchestrator/command'
 import { buildPersistedGenerationAnalytics } from '../domain/generation-metrics'
 import { writeFreeOrgUserUsageSummaryRecord } from '@/lib/backend/billing/services/workspace-usage/usage-summary-store'
+import { estimatePromptTokens } from '@/lib/shared/chat-contracts'
+import { toUserMessage } from './message-store/helpers'
+
+function getResolvedCatalogModel(modelId: string) {
+  const catalogModel = getCatalogModel(modelId)
+  if (!catalogModel) {
+    throw new Error(`Unknown catalog model: ${modelId}`)
+  }
+
+  return catalogModel
+}
 
 /**
  * High-level chat orchestration boundary.
@@ -77,6 +96,7 @@ export type ChatOrchestratorServiceShape = {
     readonly attachments?: readonly IncomingAttachment[]
     readonly modelId?: string
     readonly reasoningEffort?: string
+    readonly contextWindowMode?: AiContextWindowMode
     readonly disabledToolKeys?: readonly string[]
     readonly createIfMissing?: boolean
     readonly route: string
@@ -129,6 +149,7 @@ export class ChatOrchestratorService extends ServiceMap.Service<
         attachments,
         modelId,
         reasoningEffort,
+        contextWindowMode,
         disabledToolKeys,
         createIfMissing,
         route,
@@ -173,6 +194,7 @@ export class ChatOrchestratorService extends ServiceMap.Service<
             requestId,
             createIfMissing,
             requestedModelId: modelId,
+            requestedContextWindowMode: contextWindowMode,
             organizationId,
           })
 
@@ -305,6 +327,19 @@ export class ChatOrchestratorService extends ServiceMap.Service<
             orgPolicy,
             threadDisabledToolKeys: sanitizedDisabledToolKeys,
           })
+          const resolvedCatalogModel = getResolvedCatalogModel(
+            modelResolution.modelId,
+          )
+          const contextWindowResolution = resolveModelContextWindow(
+            resolvedCatalogModel,
+          )
+          const effectiveContextWindowMode = contextWindowMode
+            ? contextWindowMode
+            : threadAccess.contextWindowMode ?? DEFAULT_CONTEXT_WINDOW_MODE
+          const activeContextWindow = resolveContextWindowForMode({
+            model: resolvedCatalogModel,
+            mode: effectiveContextWindowMode,
+          })
           const toolRegistry = yield* tools.resolveForModel({
             modelId: modelResolution.modelId,
             resolvedToolKeys: resolvedToolPolicy.activeToolKeys,
@@ -414,6 +449,33 @@ export class ChatOrchestratorService extends ServiceMap.Service<
               edited_message_id: edited.editedMessageId,
             })
           } else {
+            const existingMessages = yield* messageStore.loadThreadMessages({
+              threadId,
+              model: modelResolution.modelId,
+              organizationId,
+              orgPolicy,
+              requestId,
+            })
+            const nextMessages = [...existingMessages, toUserMessage(command.message!)]
+            const usedTokens = estimatePromptTokens(nextMessages)
+            if (usedTokens >= activeContextWindow) {
+              return yield* Effect.fail(
+                new ContextWindowExceededError({
+                  message:
+                    contextWindowResolution.supportsDistinctMaxMode &&
+                    effectiveContextWindowMode === 'standard'
+                      ? 'This conversation has reached the standard context limit. Switch to Max to continue with the larger window.'
+                      : 'This conversation has reached the current context limit.',
+                  requestId,
+                  threadId,
+                  modelId: modelResolution.modelId,
+                  contextWindowMode: effectiveContextWindowMode,
+                  usedTokens,
+                  maxTokens: activeContextWindow,
+                }),
+              )
+            }
+
             yield* messageStore.appendUserMessage({
               threadDbId: threadAccess.dbId,
               threadId,
@@ -429,13 +491,7 @@ export class ChatOrchestratorService extends ServiceMap.Service<
               requestId,
             })
 
-            messages = yield* messageStore.loadThreadMessages({
-              threadId,
-              model: modelResolution.modelId,
-              organizationId,
-              orgPolicy,
-              requestId,
-            })
+            messages = nextMessages
             assistantParentMessageId = command.message!.id
           }
 

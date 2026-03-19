@@ -15,6 +15,8 @@ export const chatErrorMessages: Record<TChatErrorCode, string> = {
   [ChatErrorCode.InvalidEditTarget]:
     'This message can no longer be edited. Refresh and try again.',
   [ChatErrorCode.ModelNotAllowed]: 'The selected AI model is not allowed for your organization.',
+  [ChatErrorCode.ContextWindowExceeded]:
+    'This conversation has reached its current context limit. Switch to Max if available or start a new chat.',
   [ChatErrorCode.RateLimited]: 'Too many requests. Please wait a moment and retry.',
   [ChatErrorCode.QuotaExceeded]: 'This seat has exhausted its current AI usage allowance. Please wait for the next refill window.',
   [ChatErrorCode.ProviderUnavailable]: 'The AI provider is currently unavailable. Please retry.',

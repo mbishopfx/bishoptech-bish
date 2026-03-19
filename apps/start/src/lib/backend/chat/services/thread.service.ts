@@ -1,6 +1,12 @@
 import { Effect, Layer, ServiceMap } from 'effect'
 import { generateText } from 'ai'
-import type { AiReasoningEffort } from '@/lib/shared/ai-catalog/types'
+import {
+  DEFAULT_CONTEXT_WINDOW_MODE,
+} from '@/lib/shared/ai-catalog'
+import type {
+  AiContextWindowMode,
+  AiReasoningEffort,
+} from '@/lib/shared/ai-catalog/types'
 import { isChatModeId  } from '@/lib/shared/chat-modes'
 import type {ChatModeId} from '@/lib/shared/chat-modes';
 import {
@@ -23,6 +29,7 @@ export type ThreadServiceShape = {
     readonly requestId: string
     readonly modelId: string
     readonly modeId?: ChatModeId
+    readonly contextWindowMode?: AiContextWindowMode
     readonly organizationId?: string
   }) => Effect.Effect<
     { readonly threadId: string; readonly createdAt: number },
@@ -34,6 +41,7 @@ export type ThreadServiceShape = {
     readonly requestId: string
     readonly createIfMissing?: boolean
     readonly requestedModelId?: string
+    readonly requestedContextWindowMode?: AiContextWindowMode
     readonly organizationId?: string
   }) => Effect.Effect<
     {
@@ -43,6 +51,7 @@ export type ThreadServiceShape = {
       readonly model: string
       readonly reasoningEffort?: AiReasoningEffort
       readonly modeId?: ChatModeId
+      readonly contextWindowMode: AiContextWindowMode
       readonly disabledToolKeys: readonly string[]
       readonly generationStatus:
         | 'pending'
@@ -77,6 +86,15 @@ export type ThreadServiceShape = {
     readonly requestId: string
   }) => Effect.Effect<
     readonly string[],
+    ThreadNotFoundError | ThreadForbiddenError | MessagePersistenceError
+  >
+  readonly setThreadContextWindowMode: (input: {
+    readonly userId: string
+    readonly threadId: string
+    readonly contextWindowMode: AiContextWindowMode
+    readonly requestId: string
+  }) => Effect.Effect<
+    AiContextWindowMode,
     ThreadNotFoundError | ThreadForbiddenError | MessagePersistenceError
   >
 }
@@ -126,12 +144,14 @@ export class ThreadService extends ServiceMap.Service<
           requestId,
           modelId,
           modeId,
+          contextWindowMode,
           organizationId,
         }: {
           readonly userId: string
           readonly requestId: string
           readonly modelId: string
           readonly modeId?: ChatModeId
+          readonly contextWindowMode?: AiContextWindowMode
           readonly organizationId?: string
         }) =>
           Effect.gen(function* () {
@@ -157,6 +177,8 @@ export class ThreadService extends ServiceMap.Service<
                     model: modelId,
                     reasoningEffort: undefined,
                     modeId,
+                    contextWindowMode:
+                      contextWindowMode ?? DEFAULT_CONTEXT_WINDOW_MODE,
                     pinned: false,
                     allowAttachments: true,
                     activeChildByParent: {},
@@ -186,6 +208,7 @@ export class ThreadService extends ServiceMap.Service<
           requestId,
           createIfMissing,
           requestedModelId,
+          requestedContextWindowMode,
           organizationId,
         }: {
           readonly userId: string
@@ -193,6 +216,7 @@ export class ThreadService extends ServiceMap.Service<
           readonly requestId: string
           readonly createIfMissing?: boolean
           readonly requestedModelId?: string
+          readonly requestedContextWindowMode?: AiContextWindowMode
           readonly organizationId?: string
         }) =>
           Effect.gen(function* () {
@@ -240,6 +264,9 @@ export class ThreadService extends ServiceMap.Service<
                         model: normalizedRequestedModelId,
                         reasoningEffort: undefined,
                         modeId: undefined,
+                        contextWindowMode:
+                          requestedContextWindowMode ??
+                          DEFAULT_CONTEXT_WINDOW_MODE,
                         pinned: false,
                         allowAttachments: true,
                         activeChildByParent: {},
@@ -311,6 +338,10 @@ export class ThreadService extends ServiceMap.Service<
                 thread.modeId && isChatModeId(thread.modeId)
                   ? thread.modeId
                   : undefined,
+              contextWindowMode:
+                thread.contextWindowMode === 'max'
+                  ? 'max'
+                  : DEFAULT_CONTEXT_WINDOW_MODE,
               disabledToolKeys:
                 Array.isArray(thread.disabledToolKeys) ? thread.disabledToolKeys : [],
               generationStatus: thread.generationStatus,
@@ -597,6 +628,85 @@ User message: ${trimmedMessage}`,
           }),
       )
 
+      const setThreadContextWindowMode = Effect.fn(
+        'ThreadService.setThreadContextWindowMode',
+      )(
+        ({
+          userId,
+          threadId,
+          contextWindowMode,
+          requestId,
+        }: {
+          readonly userId: string
+          readonly threadId: string
+          readonly contextWindowMode: AiContextWindowMode
+          readonly requestId: string
+        }) =>
+          Effect.gen(function* () {
+            const db = yield* loadDb({ requestId, threadId })
+            const thread = yield* Effect.tryPromise({
+              try: () => db.run(zql.thread.where('threadId', threadId).one()),
+              catch: (error) =>
+                new MessagePersistenceError({
+                  message: 'Failed to update thread context window mode',
+                  requestId,
+                  threadId,
+                  cause: String(error),
+                }),
+            })
+
+            if (!thread) {
+              return yield* Effect.fail(
+                new ThreadNotFoundError({
+                  message: 'Thread not found',
+                  requestId,
+                  threadId,
+                }),
+              )
+            }
+
+            if (thread.userId !== userId) {
+              return yield* Effect.fail(
+                new ThreadForbiddenError({
+                  message: 'Thread is not owned by user',
+                  requestId,
+                  threadId,
+                  userId,
+                }),
+              )
+            }
+
+            const currentContextWindowMode =
+              thread.contextWindowMode === 'max'
+                ? 'max'
+                : DEFAULT_CONTEXT_WINDOW_MODE
+            if (currentContextWindowMode === contextWindowMode) {
+              return contextWindowMode
+            }
+
+            yield* Effect.tryPromise({
+              try: async () => {
+                await db.transaction(async (tx) => {
+                  await tx.mutate.thread.update({
+                    id: thread.id,
+                    contextWindowMode,
+                    updatedAt: Date.now(),
+                  })
+                })
+              },
+              catch: (error) =>
+                new MessagePersistenceError({
+                  message: 'Failed to update thread context window mode',
+                  requestId,
+                  threadId,
+                  cause: String(error),
+                }),
+            })
+
+            return contextWindowMode
+          }),
+      )
+
       return {
         createThread,
         assertThreadAccess,
@@ -604,6 +714,7 @@ User message: ${trimmedMessage}`,
         markThreadGenerationFailed,
         setThreadMode,
         setThreadDisabledToolKeys,
+        setThreadContextWindowMode,
       }
     }),
   )
@@ -615,11 +726,13 @@ User message: ${trimmedMessage}`,
         userId,
         modelId,
         modeId,
+        contextWindowMode,
         organizationId: _organizationId,
       }: {
         readonly userId: string
         readonly modelId: string
         readonly modeId?: ChatModeId
+        readonly contextWindowMode?: AiContextWindowMode
         readonly organizationId?: string
       }) =>
         Effect.sync(() => {
@@ -632,6 +745,8 @@ User message: ${trimmedMessage}`,
             updatedAt: now,
             modelId,
             modeId,
+            contextWindowMode:
+              contextWindowMode ?? DEFAULT_CONTEXT_WINDOW_MODE,
             disabledToolKeys: [],
           })
           getMemoryState().messages.set(threadId, [])
@@ -645,6 +760,7 @@ User message: ${trimmedMessage}`,
         requestId,
         createIfMissing,
         requestedModelId,
+        requestedContextWindowMode,
         organizationId: _organizationId,
       }: {
         readonly userId: string
@@ -652,6 +768,7 @@ User message: ${trimmedMessage}`,
         readonly requestId: string
         readonly createIfMissing?: boolean
         readonly requestedModelId?: string
+        readonly requestedContextWindowMode?: AiContextWindowMode
         readonly organizationId?: string
       }) {
         let thread = getMemoryState().threads.get(threadId)
@@ -673,6 +790,8 @@ User message: ${trimmedMessage}`,
             updatedAt: now,
             modelId: requestedModelId?.trim() || '',
             modeId: undefined,
+            contextWindowMode:
+              requestedContextWindowMode ?? DEFAULT_CONTEXT_WINDOW_MODE,
             disabledToolKeys: [],
           }
           if (!created.modelId) {
@@ -706,6 +825,8 @@ User message: ${trimmedMessage}`,
           model: thread.modelId,
           reasoningEffort: undefined,
           modeId: thread.modeId,
+          contextWindowMode:
+            thread.contextWindowMode ?? DEFAULT_CONTEXT_WINDOW_MODE,
           disabledToolKeys: thread.disabledToolKeys ?? [],
           generationStatus: 'completed' as const,
           branchVersion: 1,
@@ -772,6 +893,35 @@ User message: ${trimmedMessage}`,
         thread.disabledToolKeys = [...new Set(disabledToolKeys)] as readonly string[]
         thread.updatedAt = Date.now()
         return thread.disabledToolKeys ?? []
+      }),
+    ),
+    setThreadContextWindowMode: Effect.fn(
+      'ThreadService.setThreadContextWindowModeMemory',
+    )(({ userId, threadId, contextWindowMode, requestId }) =>
+      Effect.gen(function* () {
+        const thread = getMemoryState().threads.get(threadId)
+        if (!thread) {
+          return yield* Effect.fail(
+            new ThreadNotFoundError({
+              message: 'Thread not found',
+              requestId,
+              threadId,
+            }),
+          )
+        }
+        if (thread.userId !== userId) {
+          return yield* Effect.fail(
+            new ThreadForbiddenError({
+              message: 'Thread is not owned by user',
+              requestId,
+              threadId,
+              userId,
+            }),
+          )
+        }
+        thread.contextWindowMode = contextWindowMode
+        thread.updatedAt = Date.now()
+        return contextWindowMode
       }),
     ),
   })

@@ -171,6 +171,7 @@ export const Route = createFileRoute('/api/chat')({
             attachments: body.attachments,
             modelId: body.modelId,
             reasoningEffort: body.reasoningEffort,
+            contextWindowMode: body.contextWindowMode,
             disabledToolKeys: body.disabledToolKeys,
             createIfMissing: body.createIfMissing,
             route: '/api/chat',

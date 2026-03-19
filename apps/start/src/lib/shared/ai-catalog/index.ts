@@ -11,6 +11,13 @@ import { XAI_MODELS } from './providers/xai'
 import { ZAI_MODELS } from './providers/zai'
 import type { AiModelCatalogEntry } from './types'
 import type { CatalogProviderId, ProviderToolIdByProvider } from './provider-tools'
+export {
+  DEFAULT_CONTEXT_WINDOW_MODE,
+  resolveContextWindowForMode,
+  resolveModelContextWindow,
+} from './context-window'
+export type { ResolvedModelContextWindow } from './context-window'
+export type { AiContextWindowMode } from './types'
 
 const DEFAULT_PROVIDER_TOOL_IDS_BY_PROVIDER = {
   openai: ['web_search', 'code_interpreter'],

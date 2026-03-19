@@ -115,6 +115,21 @@ export class ModelPolicyDeniedError extends Schema.TaggedErrorClass<ModelPolicyD
   },
 ) {}
 
+/** Prompt history exceeds the currently active context-window mode cap. */
+export class ContextWindowExceededError extends Schema.TaggedErrorClass<ContextWindowExceededError>()(
+  'ContextWindowExceededError',
+  {
+    ...ErrorFields,
+    threadId: Schema.String,
+    modelId: Schema.String,
+    contextWindowMode: Schema.Union(
+      [Schema.Literal('standard'), Schema.Literal('max')],
+    ),
+    usedTokens: Schema.Number,
+    maxTokens: Schema.Number,
+  },
+) {}
+
 /** A tool execution path failed while serving a model response. */
 export class ToolExecutionError extends Schema.TaggedErrorClass<ToolExecutionError>()(
   'ToolExecutionError',
@@ -157,6 +172,7 @@ export type ChatDomainError =
   | QuotaExceededError
   | ModelProviderError
   | ModelPolicyDeniedError
+  | ContextWindowExceededError
   | ToolExecutionError
   | MessagePersistenceError
   | StreamProtocolError

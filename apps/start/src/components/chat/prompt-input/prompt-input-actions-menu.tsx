@@ -28,6 +28,9 @@ export type PromptInputActionsMenuProps = {
   visibleTools: readonly ChatVisibleTool[]
   disabledToolKeys: readonly string[]
   onToolDisabledKeysChange: (disabledToolKeys: readonly string[]) => void
+  contextWindowSupportsMaxMode: boolean
+  isMaxContextEnabled: boolean
+  onMaxContextChange: (enabled: boolean) => void
 }
 
 /**
@@ -46,6 +49,9 @@ export function PromptInputActionsMenu({
   visibleTools,
   disabledToolKeys,
   onToolDisabledKeysChange,
+  contextWindowSupportsMaxMode,
+  isMaxContextEnabled,
+  onMaxContextChange,
 }: PromptInputActionsMenuProps) {
   return (
     <DropdownMenu>
@@ -97,6 +103,15 @@ export function PromptInputActionsMenu({
         >
           {m.chat_mode_study_label()}
         </DropdownMenuCheckboxItem>
+        {contextWindowSupportsMaxMode ? (
+          <DropdownMenuCheckboxItem
+            className="h-9 rounded-lg px-2 text-sm font-medium text-foreground-primary focus:bg-surface-inverse/8"
+            checked={isMaxContextEnabled}
+            onCheckedChange={onMaxContextChange}
+          >
+            Max
+          </DropdownMenuCheckboxItem>
+        ) : null}
         {visibleTools.length > 0 ? (
           <>
             <DropdownMenuSeparator />

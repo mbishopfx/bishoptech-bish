@@ -25,7 +25,6 @@ import {
   ContextCacheUsage,
   ContextTrigger,
 } from './composer-bar'
-import { getCatalogModel } from '@/lib/shared/ai-catalog'
 import { useFileAttachments } from '../../hooks/chat/upload/use-file-attachments'
 import { parseChatApiError } from './chat-error-messages'
 import { getChatModeDefinition } from '@/lib/shared/chat-modes'
@@ -51,8 +50,10 @@ export function ChatInput() {
     visibleModels,
     selectedModelId,
     selectedReasoningEffort,
+    selectedContextWindowMode,
     setSelectedModelId,
     setSelectedReasoningEffort,
+    setSelectedContextWindowMode,
     activeThreadId,
     selectedModeId,
     isModeEnforced,
@@ -60,6 +61,8 @@ export function ChatInput() {
     visibleTools,
     disabledToolKeys,
     setThreadDisabledToolKeys,
+    activeContextWindow,
+    contextWindowSupportsMaxMode,
     canUploadFiles,
     uploadUpgradeCallout,
   } = useChatComposer()
@@ -77,7 +80,14 @@ export function ChatInput() {
 
   const isBusy = status === 'submitted' || status === 'streaming'
   const hasPendingUploads = files.some((file) => file.isUploading)
-  const isSendBlocked = isBusy || hasPendingUploads
+  const { usedTokens } = useContextUsage(messages)
+  const isContextLimitReached = usedTokens >= activeContextWindow
+  const contextLimitMessage = isContextLimitReached
+    ? contextWindowSupportsMaxMode && selectedContextWindowMode === 'standard'
+      ? 'This conversation has reached the standard context limit. Switch to Max to continue with the larger window.'
+      : 'This conversation has reached its current context limit. Start a new chat to continue.'
+    : null
+  const isSendBlocked = isBusy || hasPendingUploads || isContextLimitReached
   const parsedChatError = parseChatApiError(error)
   const chatErrorMessage = parsedChatError?.message ?? null
   const chatErrorTraceId = parsedChatError?.traceId ?? null
@@ -90,6 +100,8 @@ export function ChatInput() {
     ? chatErrorMessage
     : showUploadError
       ? uploadErrorMessage
+      : contextLimitMessage
+        ? contextLimitMessage
       : null
 
   useEffect(() => {
@@ -185,9 +197,6 @@ export function ChatInput() {
   const hasReasoningOptions = !isStudyModeEnabled && reasoningOptions.length > 0
   const effectiveModelId =
     isStudyModeEnabled ? studyModeDefinition.fixedModelId : selectedModelId
-  const catalogModel = getCatalogModel(effectiveModelId)
-  const maxTokens = catalogModel?.contextWindow ?? 128_000
-  const { usedTokens } = useContextUsage(messages)
   const selectorTriggerClassName =
     'h-8 rounded-full border border-transparent bg-transparent px-3 ltr:pr-7 rtl:pl-7 text-sm leading-[21px] font-medium text-foreground-strong transition-colors hover:bg-surface-inverse/5 active:bg-surface-inverse/10 focus-visible:border-border-strong focus-visible:ring-2 focus-visible:ring-border-strong/40'
 
@@ -228,9 +237,9 @@ export function ChatInput() {
   const bottomSlot = (
     <div className="flex items-center justify-between gap-2 px-1 p-1.5">
       {modelAndReasoningSelectors}
-      {activeThreadId ? (
+      {effectiveModelId ? (
         <Context
-          maxTokens={maxTokens}
+          maxTokens={activeContextWindow}
           modelId={effectiveModelId}
           usedTokens={usedTokens}
           usage={branchUsage}
@@ -293,6 +302,9 @@ export function ChatInput() {
         visibleTools={visibleTools}
         disabledToolKeys={disabledToolKeys}
         setThreadDisabledToolKeys={setThreadDisabledToolKeys}
+        selectedContextWindowMode={selectedContextWindowMode}
+        setSelectedContextWindowMode={setSelectedContextWindowMode}
+        contextWindowSupportsMaxMode={contextWindowSupportsMaxMode}
       />
     </PromptInputRoot>
   )
@@ -327,6 +339,9 @@ const ComposerToolbar = memo(function ComposerToolbar({
   visibleTools,
   disabledToolKeys,
   setThreadDisabledToolKeys,
+  selectedContextWindowMode,
+  setSelectedContextWindowMode,
+  contextWindowSupportsMaxMode,
 }: {
   canAddMore: boolean
   canUploadFiles: boolean
@@ -342,6 +357,9 @@ const ComposerToolbar = memo(function ComposerToolbar({
   visibleTools: ReturnType<typeof useChatComposer>['visibleTools']
   disabledToolKeys: ReturnType<typeof useChatComposer>['disabledToolKeys']
   setThreadDisabledToolKeys: ReturnType<typeof useChatComposer>['setThreadDisabledToolKeys']
+  selectedContextWindowMode: ReturnType<typeof useChatComposer>['selectedContextWindowMode']
+  setSelectedContextWindowMode: ReturnType<typeof useChatComposer>['setSelectedContextWindowMode']
+  contextWindowSupportsMaxMode: ReturnType<typeof useChatComposer>['contextWindowSupportsMaxMode']
 }) {
   const composerInput = useComposerDraftValue()
   const isEmpty = !composerInput.trim()
@@ -365,6 +383,11 @@ const ComposerToolbar = memo(function ComposerToolbar({
       disabledToolKeys={disabledToolKeys}
       onToolDisabledKeysChange={(nextDisabledToolKeys) =>
         void setThreadDisabledToolKeys(nextDisabledToolKeys)
+      }
+      contextWindowSupportsMaxMode={contextWindowSupportsMaxMode}
+      isMaxContextEnabled={selectedContextWindowMode === 'max'}
+      onMaxContextChange={(enabled) =>
+        void setSelectedContextWindowMode(enabled ? 'max' : 'standard')
       }
       middle={<ComposerTextarea />}
     />

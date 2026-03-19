@@ -10,6 +10,7 @@ export const ChatErrorCode = {
   BranchVersionConflict: 'error_chat_branch_version_conflict',
   InvalidEditTarget: 'error_chat_invalid_edit_target',
   ModelNotAllowed: 'error_chat_model_not_allowed',
+  ContextWindowExceeded: 'error_chat_context_window_exceeded',
   RateLimited: 'error_chat_rate_limited',
   QuotaExceeded: 'error_chat_quota_exceeded',
   ProviderUnavailable: 'error_chat_provider_unavailable',
@@ -40,6 +41,8 @@ export function chatErrorCodeFromTag(tag: string): ChatErrorCode {
       return ChatErrorCode.InvalidEditTarget
     case 'ModelPolicyDeniedError':
       return ChatErrorCode.ModelNotAllowed
+    case 'ContextWindowExceededError':
+      return ChatErrorCode.ContextWindowExceeded
     case 'RateLimitExceededError':
       return ChatErrorCode.RateLimited
     case 'RateLimitPersistenceError':
