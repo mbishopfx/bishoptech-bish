@@ -33,54 +33,53 @@ function formatBillingCycleDateRange(
 }
 
 /**
- * The billing page stays intentionally minimal, so the custom seat bar only
- * visualizes how many active members are currently covered by paid seats versus
- * how many are beyond the purchased seat count.
+ * The billing page keeps the original single-line progress layout. When an org
+ * is over its paid seat count, the same track switches to a segmented fill so
+ * covered members remain blue and over-limit members are called out in red.
  */
-function SeatAllocationBar(props: {
+function SeatUsageProgressBar(props: {
   activeMembers: number
   seatCount: number
 }) {
   const coveredMembers = Math.min(props.activeMembers, props.seatCount)
   const overSeatMembers = Math.max(0, props.activeMembers - props.seatCount)
-  const coveredPercent = props.activeMembers > 0
-    ? (coveredMembers / props.activeMembers) * 100
-    : 0
-  const overSeatPercent = props.activeMembers > 0
+  const isOverSeatLimit = overSeatMembers > 0
+  const coveredPercent = isOverSeatLimit
+    ? props.activeMembers > 0
+      ? (coveredMembers / props.activeMembers) * 100
+      : 0
+    : props.seatCount > 0
+      ? (coveredMembers / props.seatCount) * 100
+      : 0
+  const overSeatPercent = isOverSeatLimit && props.activeMembers > 0
     ? (overSeatMembers / props.activeMembers) * 100
     : 0
 
   return (
-    <div className="space-y-2 rounded-xl border border-border-faint bg-surface-raised px-4 py-3">
-      <div className="flex items-center justify-between gap-3 text-sm">
-        <span className="text-foreground-secondary">
-          {m.org_billing_seat_allocation_label()}
-        </span>
-        <span className="font-medium text-content">
-          {m.org_billing_seat_allocation_value({
-            activeMembers: String(props.activeMembers),
-            seatCount: String(props.seatCount),
-          })}
-        </span>
-      </div>
-      <div className="flex h-2 overflow-hidden rounded-sm bg-surface-base-tertiary">
-        {coveredPercent > 0 ? (
-          <div className="bg-sky-500" style={{ width: `${coveredPercent}%` }} />
-        ) : null}
-        {overSeatPercent > 0 ? (
-          <div className="bg-rose-500" style={{ width: `${overSeatPercent}%` }} />
-        ) : null}
-      </div>
-      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-foreground-secondary">
-        <span>
-          {m.org_billing_seat_allocation_covered({ count: String(coveredMembers) })}
-        </span>
-        <span>
-          {overSeatMembers > 0
-            ? m.org_billing_seat_allocation_over_limit({ count: String(overSeatMembers) })
-            : m.org_billing_seat_allocation_all_covered()}
-        </span>
-      </div>
+    <div
+      className="bg-surface-overlay relative flex h-1.5 w-full items-center overflow-x-hidden rounded-full"
+      role="progressbar"
+      aria-label={m.org_billing_seat_allocation_label()}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={isOverSeatLimit ? 100 : coveredPercent}
+      aria-valuetext={m.org_billing_seat_allocation_value({
+        activeMembers: String(props.activeMembers),
+        seatCount: String(props.seatCount),
+      })}
+    >
+      {coveredPercent > 0 ? (
+        <div
+          className="bg-accent-primary h-full rounded-full"
+          style={{ width: `${coveredPercent}%` }}
+        />
+      ) : null}
+      {overSeatPercent > 0 ? (
+        <div
+          className="bg-rose-500 h-full"
+          style={{ width: `${overSeatPercent}%` }}
+        />
+      ) : null}
     </div>
   )
 }
@@ -119,6 +118,7 @@ export function BillingPage() {
   )
   const activeMembers = entitlement?.activeMemberCount ?? 0
   const totalSeats = subscription?.seatCount ?? entitlement?.seatCount ?? 1
+  const seatUsagePercent = totalSeats > 0 ? Math.min(100, (activeMembers / totalSeats) * 100) : 0
 
   return (
     <ContentPage
@@ -128,10 +128,27 @@ export function BillingPage() {
       <Form
         title={`${plan.name} Plan`}
         description={billingCycle}
+        progressBar={
+          !loading
+            ? {
+                value: seatUsagePercent,
+                label: m.org_billing_seat_allocation_label(),
+                valueLabel: m.org_billing_seat_allocation_value({
+                  activeMembers: String(activeMembers),
+                  seatCount: String(totalSeats),
+                }),
+                barSlot: (
+                  <SeatUsageProgressBar
+                    activeMembers={activeMembers}
+                    seatCount={totalSeats}
+                  />
+                ),
+              }
+            : undefined
+        }
         contentSlot={
           !loading ? (
             <div className="space-y-3">
-              <SeatAllocationBar activeMembers={activeMembers} seatCount={totalSeats} />
               {subscription?.scheduledPlanId ? (
                 <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
                   Scheduled change: {subscription.scheduledPlanId}

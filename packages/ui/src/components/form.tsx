@@ -97,6 +97,13 @@ export interface FormProgressBarConfig {
   label?: string;
   /** Optional value label shown to the right (e.g. "3 of 5 seats") */
   valueLabel?: string;
+  /**
+   * Optional custom bar element rendered in place of the default progress bar.
+   * This keeps the shared label/value layout intact while allowing callers to
+   * visualize segmented states such as covered versus over-limit usage without
+   * reimplementing the whole form body.
+   */
+  barSlot?: ReactNode;
 }
 
 /**
@@ -583,7 +590,7 @@ export function Form({
                   </span>
                 ) : null}
               </div>
-              <Progress value={progressBar.value} className="w-full" />
+              {progressBar.barSlot ?? <Progress value={progressBar.value} className="w-full" />}
             </div>
           ) : null}
 
