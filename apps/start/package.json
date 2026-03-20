@@ -59,6 +59,7 @@
     "better-auth": "^1.5.2",
     "cmdk": "^1.1.1",
     "effect": "4.0.0-beta.21",
+    "geist": "^1.7.0",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.561.0",
     "motion": "^12.34.4",

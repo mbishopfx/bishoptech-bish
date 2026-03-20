@@ -7,6 +7,10 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  /* Geist is the only default type family used by Rift. */
+  --font-geist: "Geist", system-ui, sans-serif;
+  --font-geist-mono: "Geist Mono", ui-monospace, monospace;
+
   /* ─── Surfaces (backgrounds) ─────────────────────────────────────────────── */
   --color-surface-base: var(--surface-base);
   --color-surface-raised: var(--surface-raised);

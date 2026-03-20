@@ -56,7 +56,7 @@ export function ChatWelcomeScreen({
   )
 
   return (
-    <div className="flex min-h-[70vh] items-center justify-center py-8">
+    <div className="w-full py-4 md:py-6">
       <div className="w-full max-w-2xl text-center">
         <div className="relative">
           <motion.h1

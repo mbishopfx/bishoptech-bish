@@ -147,7 +147,7 @@ export function ModelSelectorPanel({
       <PopoverTrigger
         tabIndex={-1}
         className={cn(
-          'h-10 rounded-lg border border-transparent bg-transparent px-3 ltr:pr-8 rtl:pl-8 text-sm font-medium text-foreground-primary outline-none focus:!outline-none focus-visible:!outline-none transition-colors hover:bg-surface-inverse/5 active:bg-surface-inverse/10 focus-visible:border-border-strong focus-visible:ring-[3px] focus-visible:ring-border-strong/50 disabled:pointer-events-none disabled:opacity-50',
+          'h-10 rounded-lg border border-transparent bg-transparent px-3 ltr:pr-8 rtl:pl-8 text-sm font-normal text-foreground-primary outline-none focus:!outline-none focus-visible:!outline-none transition-colors hover:bg-surface-inverse/5 active:bg-surface-inverse/10 focus-visible:border-border-strong focus-visible:ring-[3px] focus-visible:ring-border-strong/50 disabled:pointer-events-none disabled:opacity-50',
           'relative flex items-center gap-2 w-fit group',
           'outline-none rounded-lg [&:focus]:!outline-none [&:focus-visible]:!outline-none',
           className,
@@ -170,7 +170,7 @@ export function ModelSelectorPanel({
               ) : null
             })()
           : null}
-        <span className="truncate">{triggerLabel}</span>
+        <span className="truncate font-normal">{triggerLabel}</span>
         <ChevronDown
           className="pointer-events-none absolute ltr:right-2 rtl:left-2 top-1/2 size-4 -translate-y-1/2 text-foreground-secondary shrink-0"
           aria-hidden

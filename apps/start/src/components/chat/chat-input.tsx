@@ -69,11 +69,13 @@ export function ChatInput() {
     visibleTools,
     disabledToolKeys,
     setThreadDisabledToolKeys,
+    activeThreadId,
     activeContextWindow,
     contextWindowSupportsMaxMode,
     canUploadFiles,
     uploadUpgradeCallout,
   } = useChatComposer()
+  const isInThread = !!activeThreadId
 
   const [errorDismissed, setErrorDismissed] = useState(false)
   const [uploadErrorDismissed, setUploadErrorDismissed] = useState(false)
@@ -311,7 +313,7 @@ export function ChatInput() {
   const bottomSlot = (
     <div className="flex items-center justify-between gap-2 px-1 p-1.5">
       {modelAndReasoningSelectors}
-      {effectiveModelId ? (
+      {effectiveModelId && isInThread ? (
         <Context
           maxTokens={activeContextWindow}
           modelId={effectiveModelId}

@@ -104,7 +104,7 @@ const LineSpan = ({
       <span className="grid grid-cols-[3rem_minmax(0,1fr)] items-start gap-4">
         <span
           aria-hidden="true"
-          className="select-none text-right font-mono text-foreground-secondary/60"
+          className="select-none text-right font-geist-mono text-foreground-secondary/60"
         >
           {lineNumber}
         </span>
@@ -316,7 +316,7 @@ const CodeBlockBody = memo(
       >
         <code
           className={cn(
-            "font-mono text-sm",
+            "font-geist-mono text-sm",
             !showLineNumbers && isLineWrapped && "whitespace-pre-wrap break-words"
           )}
         >
@@ -394,7 +394,7 @@ export const CodeBlockFilename = ({
   className,
   ...props
 }: HTMLAttributes<HTMLSpanElement>) => (
-  <span className={cn("font-mono text-[13px] text-foreground-tertiary", className)} {...props}>
+  <span className={cn("font-geist-mono text-[13px] text-foreground-tertiary", className)} {...props}>
     {children}
   </span>
 );

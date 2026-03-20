@@ -177,7 +177,7 @@ export const ContextContentHeader = ({
         <>
           <div className="flex items-center justify-between gap-3 text-xs">
             <p className="text-foreground-strong">{displayPct}</p>
-            <p className="font-mono text-foreground-secondary">
+            <p className="font-geist-mono text-foreground-secondary">
               {used} / {total}
             </p>
           </div>

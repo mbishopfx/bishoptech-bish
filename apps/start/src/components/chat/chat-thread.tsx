@@ -272,20 +272,22 @@ export function ChatThread() {
 
   return (
     <div
-      className="flex w-full flex-col"
+      className="flex h-full min-h-full w-full flex-col"
       role="log"
       aria-live="polite"
       aria-label={m.chat_thread_messages_aria_label()}
     >
       {messages.length === 0 && !activeThreadId && (
-        <div className="relative w-full overflow-hidden pt-9">
-          <div className="relative z-10 mx-auto w-full max-w-2xl">
-            <ChatWelcomeScreen
-              onSuggestionClick={handleSuggestionClick}
-              disabled={isStreaming}
-            />
+        <>
+          <div className="relative z-10 flex h-full min-h-0 w-full flex-1 items-center justify-center px-4 py-9">
+            <div className="mx-auto flex w-full max-w-2xl translate-y-10 items-center md:translate-y-12">
+              <ChatWelcomeScreen
+                onSuggestionClick={handleSuggestionClick}
+                disabled={isStreaming}
+              />
+            </div>
           </div>
-        </div>
+        </>
       )}
       {messages.map((m) => {
         const hidePendingAssistantShell =

@@ -20,10 +20,6 @@ export function CompliancePolicyPage() {
       title={m.org_compliance_page_title()}
       description={m.org_compliance_page_description()}
     >
-      {loading && (
-        <p className="text-sm text-foreground-secondary">{m.org_compliance_loading()}</p>
-      )}
-
       {error && (
         <div
           className="rounded-md border border-border-base bg-surface-overlay px-3 py-2 text-sm text-foreground-error"

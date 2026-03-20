@@ -27,12 +27,6 @@ export function ByokPage() {
       title={m.org_byok_page_title()}
       description={m.org_byok_page_description()}
     >
-      {loading && (
-        <p className="text-sm text-foreground-secondary">
-          {m.org_byok_loading()}
-        </p>
-      )}
-
       <ByokForm
         featureAccess={featureAccess}
         providerKeyStatus={payload.providerKeyStatus}

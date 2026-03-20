@@ -22,12 +22,6 @@ export function ToolsPage() {
       title={m.org_tools_page_title()}
       description={m.org_tools_page_description()}
     >
-      {loading && (
-        <p className="text-sm text-foreground-secondary" role="status">
-          {m.org_tools_loading()}
-        </p>
-      )}
-
       {error && (
         <div
           className="rounded-md border border-border-base bg-surface-overlay px-3 py-2 text-sm text-foreground-error"
@@ -37,22 +31,18 @@ export function ToolsPage() {
         </div>
       )}
 
-      {!loading && (
-        <>
-          <ToolAccessSection
-            payload={payload}
-            updating={busy}
-            update={update}
-            featureAccess={featureAccess}
-          />
-          <ProviderToolsSection
-            payload={payload}
-            updating={busy}
-            update={update}
-            featureAccess={featureAccess}
-          />
-        </>
-      )}
+      <ToolAccessSection
+        payload={payload}
+        updating={busy}
+        update={update}
+        featureAccess={featureAccess}
+      />
+      <ProviderToolsSection
+        payload={payload}
+        updating={busy}
+        update={update}
+        featureAccess={featureAccess}
+      />
     </ContentPage>
   )
 }

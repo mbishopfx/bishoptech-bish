@@ -125,7 +125,7 @@ export function AppCommandDialog({
       description={description}
       className={cn(
         'max-w-3xl overflow-hidden rounded-xl border border-surface-strong bg-surface-strong p-0 text-foreground-primary shadow-md sm:max-w-3xl',
-        'font-sans leading-6 tracking-[-0.1px]',
+        'font-geist leading-6 tracking-[-0.1px]',
       )}
       showCloseButton={false}
     >
@@ -167,7 +167,7 @@ export function AppCommandDialog({
             </div>
 
             <CommandPrimitive.List
-              className="no-scrollbar -mx-6 max-h-[min(460px,calc(100dvh-136px))] overflow-y-auto px-3 pb-0"
+              className="no-scrollbar -mx-6 max-h-[min(460px,calc(100dvh-136px))] overflow-y-auto px-3 pb-3"
               onPointerMove={() => {
                 setNavigationMode('pointer')
               }}

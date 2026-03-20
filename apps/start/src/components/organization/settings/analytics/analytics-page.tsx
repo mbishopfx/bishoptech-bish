@@ -16,7 +16,7 @@ const INTENTION_EXTRACTION_FLAG = 'intention_extraction_enabled' as const
  * Contact Rift support to enable. Analytics are org-internal only, not shared externally.
  */
 export function AnalyticsPage() {
-  const { payload, loading, error, update } = useProviderPolicy()
+  const { payload, error, update } = useProviderPolicy()
   const flags = payload.policy.complianceFlags ?? {}
 
   return (
@@ -24,10 +24,6 @@ export function AnalyticsPage() {
       title={m.org_analytics_page_title()}
       description={m.org_analytics_page_description()}
     >
-      {loading && (
-        <p className="text-sm text-foreground-secondary">{m.org_analytics_loading()}</p>
-      )}
-
       {error && (
         <div
           className="rounded-md border border-border-base bg-surface-overlay px-3 py-2 text-sm text-foreground-error"

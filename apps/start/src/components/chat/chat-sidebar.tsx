@@ -1,17 +1,8 @@
 // Chat navigation sidebar with static actions + virtualized thread history.
 'use client'
 
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState
-  
-  
-  
-} from 'react'
-import type {CSSProperties, KeyboardEvent, RefObject} from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import type { CSSProperties, KeyboardEvent, RefObject } from 'react'
 import type { QueryResultType } from '@rocicorp/zero'
 import {
   useHistoryScrollState,
@@ -45,9 +36,12 @@ import { SidebarNavItem } from '@/components/layout/sidebar/sidebar-nav-item'
 import { mutators, queries } from '@/integrations/zero'
 import { CACHE_CHAT_NAV } from '@/integrations/zero/query-cache-policy'
 import { useAppAuth } from '@/lib/frontend/auth/use-auth'
+import { useOrgBillingSummary } from '@/lib/frontend/billing/use-org-billing'
+import { coerceWorkspacePlanId } from '@/lib/shared/access-control'
 import { m } from '@/paraglide/messages.js'
 import { openChatSearchCommand } from './chat-search-command'
 import { buildRenderableHistoryItems } from './chat-sidebar-history-items'
+import { ChatSidebarUpgradeCta } from './chat-sidebar-upgrade-cta'
 import { syncThreadGenerationStatuses } from './thread-status-store'
 
 export const CHAT_HREF = '/chat'
@@ -725,18 +719,22 @@ function ChatSidebarHistory({
 
 export function ChatSidebarContent({ pathname }: { pathname: string }) {
   const { activeOrganizationId, isAnonymous } = useAppAuth()
+  const { entitlement } = useOrgBillingSummary()
   const normalizedOrganizationId =
     activeOrganizationId?.trim() ?? '__missing_org__'
   const staticSections = useMemo(() => getStaticSections(), [])
   const shouldShowLoginButton = isAnonymous
+  const shouldShowUpgradeCta =
+    !isAnonymous && coerceWorkspacePlanId(entitlement?.planId) === 'free'
+  const shouldShowBottomPanel = shouldShowLoginButton || shouldShowUpgradeCta
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col">
       <div
         className={cn(
           'flex min-h-0 flex-1 flex-col',
-          // Reserve space so the bottom-fixed CTA does not cover thread rows.
-          shouldShowLoginButton ? 'pb-20' : undefined,
+          // Reserve space so bottom-pinned auth/upgrade actions do not cover thread rows.
+          shouldShowBottomPanel ? 'pb-48' : undefined,
         )}
       >
         <SidebarAreaLayout
@@ -751,13 +749,16 @@ export function ChatSidebarContent({ pathname }: { pathname: string }) {
           />
         </div>
       </div>
-      {shouldShowLoginButton ? (
+      {shouldShowBottomPanel ? (
         <div className="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-surface-overlay via-surface-overlay to-transparent px-3 pb-1 pt-8">
-          <Button asChild size="default" className="w-full">
-            <Link to="/auth/sign-in" preload="intent">
-              {m.auth_login_sign_in()}
-            </Link>
-          </Button>
+          {shouldShowLoginButton ? (
+            <Button asChild size="default" className="w-full">
+              <Link to="/auth/sign-in" preload="intent">
+                {m.auth_login_sign_in()}
+              </Link>
+            </Button>
+          ) : null}
+          {shouldShowUpgradeCta ? <ChatSidebarUpgradeCta /> : null}
         </div>
       ) : null}
     </div>

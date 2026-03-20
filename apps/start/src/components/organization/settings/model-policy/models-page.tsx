@@ -18,12 +18,6 @@ export function ModelsPage() {
       title={m.org_models_page_title()}
       description={m.org_models_page_description()}
     >
-      {loading && (
-        <p className="text-sm text-foreground-secondary" role="status">
-          {m.org_models_loading()}
-        </p>
-      )}
-
       {error && (
         <div
           className="rounded-md border border-border-base bg-surface-overlay px-3 py-2 text-sm text-foreground-error"
@@ -33,13 +27,11 @@ export function ModelsPage() {
         </div>
       )}
 
-      {!loading && (
-        <ProviderControlsSection
-          payload={payload}
-          updating={busy}
-          update={update}
-        />
-      )}
+      <ProviderControlsSection
+        payload={payload}
+        updating={busy}
+        update={update}
+      />
     </ContentPage>
   )
 }
