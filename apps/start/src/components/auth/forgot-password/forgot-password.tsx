@@ -21,7 +21,10 @@ export type ForgotPasswordProps = {
   onBackToLogin: () => void
 }
 
-export function ForgotPassword({ redirectTarget, onBackToLogin }: ForgotPasswordProps) {
+export function ForgotPassword({
+  redirectTarget,
+  onBackToLogin,
+}: ForgotPasswordProps) {
   const {
     email,
     setEmail,
@@ -48,9 +51,9 @@ export function ForgotPassword({ redirectTarget, onBackToLogin }: ForgotPassword
   if (step === 'enter-otp') {
     return (
       <OtpStep
-        title={m.auth_forgot_password_otp_title()}
-        description={m.auth_forgot_password_otp_description()}
-        instruction={m.auth_forgot_password_otp_instruction({ email })}
+        title={m.common_check_your_email()}
+        description={m.auth_check_email_description()}
+        instruction={m.auth_enter_code_for_email({ email })}
         formId="forgot-password-otp-form"
         initialOtp={otp}
         otpSentAt={otpSentAt}
@@ -64,18 +67,20 @@ export function ForgotPassword({ redirectTarget, onBackToLogin }: ForgotPassword
           setError('')
           setStep('request-email')
         }}
-        submitText={m.auth_forgot_password_otp_submit()}
-        resendText={m.auth_forgot_password_otp_resend()}
-        backText={m.auth_forgot_password_otp_back()}
+        submitText={m.common_continue()}
+        resendText={m.common_resend_code()}
+        backText={m.common_back()}
       />
     )
   }
 
   const isRequestStep = step === 'request-email'
-  const title = isRequestStep ? m.auth_forgot_password_restore_title() : m.auth_forgot_password_new_title()
+  const title = isRequestStep
+    ? m.auth_forgot_password_restore_title()
+    : m.auth_create_new_password()
   const description = isRequestStep
     ? m.auth_forgot_password_restore_description()
-    : m.auth_forgot_password_new_description()
+    : m.common_password_reset_description()
 
   return (
     <motion.div
@@ -89,8 +94,12 @@ export function ForgotPassword({ redirectTarget, onBackToLogin }: ForgotPassword
         className="text-center mb-8"
         variants={menuCardHeaderVariants}
       >
-        <h1 className="text-3xl font-bold text-black dark:text-white mb-4">{title}</h1>
-        <p className="text-black/70 dark:text-white/60 text-lg mb-6">{description}</p>
+        <h1 className="text-3xl font-bold text-black dark:text-white mb-4">
+          {title}
+        </h1>
+        <p className="text-black/70 dark:text-white/60 text-lg mb-6">
+          {description}
+        </p>
       </motion.div>
 
       <motion.div
@@ -107,7 +116,10 @@ export function ForgotPassword({ redirectTarget, onBackToLogin }: ForgotPassword
             className="space-y-6"
           >
             {isRequestStep ? (
-              <motion.div variants={staggerChildVariants} className="space-y-2 relative">
+              <motion.div
+                variants={staggerChildVariants}
+                className="space-y-2 relative"
+              >
                 <Label htmlFor="forgot-email" variant="muted">
                   {m.auth_forgot_password_email_label()}
                 </Label>
@@ -137,9 +149,12 @@ export function ForgotPassword({ redirectTarget, onBackToLogin }: ForgotPassword
                   </p>
                 </motion.div>
 
-                <motion.div variants={staggerChildVariants} className="space-y-2 relative">
+                <motion.div
+                  variants={staggerChildVariants}
+                  className="space-y-2 relative"
+                >
                   <Label htmlFor="forgot-password-new-password" variant="muted">
-                    {m.auth_forgot_password_new_label()}
+                    {m.auth_new_password()}
                   </Label>
                   <Input
                     id="forgot-password-new-password"
@@ -148,7 +163,7 @@ export function ForgotPassword({ redirectTarget, onBackToLogin }: ForgotPassword
                     autoComplete="new-password"
                     variant="alt"
                     inputSize="large"
-                    placeholder={m.auth_forgot_password_new_placeholder()}
+                    placeholder={m.common_enter_new_password()}
                     value={newPassword}
                     onChange={(event) => {
                       setNewPassword(event.target.value)
@@ -160,9 +175,15 @@ export function ForgotPassword({ redirectTarget, onBackToLogin }: ForgotPassword
                   />
                 </motion.div>
 
-                <motion.div variants={staggerChildVariants} className="space-y-2 relative">
-                  <Label htmlFor="forgot-password-confirm-password" variant="muted">
-                    {m.auth_forgot_password_confirm_label()}
+                <motion.div
+                  variants={staggerChildVariants}
+                  className="space-y-2 relative"
+                >
+                  <Label
+                    htmlFor="forgot-password-confirm-password"
+                    variant="muted"
+                  >
+                    {m.common_confirm_password()}
                   </Label>
                   <Input
                     id="forgot-password-confirm-password"
@@ -171,7 +192,7 @@ export function ForgotPassword({ redirectTarget, onBackToLogin }: ForgotPassword
                     autoComplete="new-password"
                     variant="alt"
                     inputSize="large"
-                    placeholder={m.auth_forgot_password_confirm_placeholder()}
+                    placeholder={m.common_enter_new_password()}
                     value={confirmPassword}
                     onChange={(event) => {
                       setConfirmPassword(event.target.value)
@@ -226,7 +247,7 @@ export function ForgotPassword({ redirectTarget, onBackToLogin }: ForgotPassword
             }
             disabled={isLoading}
           >
-            {m.auth_forgot_password_back()}
+            {m.common_back()}
           </Button>
           <Button
             type="submit"
@@ -239,7 +260,9 @@ export function ForgotPassword({ redirectTarget, onBackToLogin }: ForgotPassword
               (!isRequestStep && (!newPassword || !confirmPassword))
             }
           >
-            {isRequestStep ? m.auth_forgot_password_send_code() : m.auth_forgot_password_update()}
+            {isRequestStep
+              ? m.auth_forgot_password_send_code()
+              : m.auth_forgot_password_update()}
           </Button>
         </motion.div>
       </motion.div>

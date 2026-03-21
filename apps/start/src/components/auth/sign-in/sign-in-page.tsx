@@ -62,9 +62,9 @@ export function SignInPage({
         ) : view === 'email-verification' ? (
           <OtpStep
             key="email-verification"
-            title={m.auth_email_verification_title()}
-            description={m.auth_email_verification_description()}
-            instruction={m.auth_email_verification_instruction({
+            title={m.common_check_your_email()}
+            description={m.auth_check_email_description()}
+            instruction={m.auth_enter_code_for_email({
               email: pendingVerificationEmail,
             })}
             message={verificationMessage}
@@ -77,7 +77,7 @@ export function SignInPage({
             onSubmit={handleVerifyEmailOtp}
             onResend={handleResendVerificationOtp}
             submitText={m.auth_email_verification_submit()}
-            resendText={m.auth_email_verification_resend()}
+            resendText={m.common_resend_code()}
           />
         ) : view === 'mfa-verification' ? (
           <OtpStep
@@ -92,7 +92,7 @@ export function SignInPage({
             onSubmit={handleVerifyMfaTotp}
             onBack={handleBackFromMfa}
             submitText={m.auth_mfa_submit()}
-            backText={m.auth_mfa_back()}
+            backText={m.common_back()}
           />
         ) : (
           <motion.div

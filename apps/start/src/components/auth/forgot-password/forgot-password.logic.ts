@@ -13,7 +13,10 @@ import {
   normalizeEmailAddress,
 } from '@/components/auth/auth-shared'
 
-export type ForgotPasswordStep = 'request-email' | 'enter-otp' | 'set-new-password'
+export type ForgotPasswordStep =
+  | 'request-email'
+  | 'enter-otp'
+  | 'set-new-password'
 
 function readForgotPasswordErrorMessage(
   error: { message?: string; code?: string } | null | undefined,
@@ -48,7 +51,9 @@ export type ForgotPasswordLogicResult = {
   handleEmailSubmit: (event: React.FormEvent<HTMLFormElement>) => Promise<void>
   handleOtpSubmit: (value: string) => Promise<void>
   handleResendOtp: () => Promise<void>
-  handlePasswordReset: (event: React.FormEvent<HTMLFormElement>) => Promise<void>
+  handlePasswordReset: (
+    event: React.FormEvent<HTMLFormElement>,
+  ) => Promise<void>
 }
 
 export function useForgotPasswordLogic(
@@ -71,7 +76,7 @@ export function useForgotPasswordLogic(
       const normalizedEmail = normalizeEmailAddress(email)
 
       if (!isValidEmailAddress(normalizedEmail)) {
-        setError(m.auth_forgot_error_invalid_email())
+        setError(m.common_invalid_email())
         return
       }
 
@@ -153,18 +158,22 @@ export function useForgotPasswordLogic(
       const normalizedEmail = normalizeEmailAddress(email)
 
       if (otp.trim().length !== 6) {
-        setError(m.auth_forgot_error_enter_6_digits())
+        setError(m.common_enter_6_digits())
         setStep('enter-otp')
         return
       }
 
       if (newPassword.length < AUTH_PASSWORD_MIN_LENGTH) {
-        setError(m.auth_forgot_error_password_min_length({ count: String(AUTH_PASSWORD_MIN_LENGTH) }))
+        setError(
+          m.common_password_min_length({
+            count: String(AUTH_PASSWORD_MIN_LENGTH),
+          }),
+        )
         return
       }
 
       if (newPassword !== confirmPassword) {
-        setError(m.auth_forgot_error_password_mismatch())
+        setError(m.common_password_mismatch())
         return
       }
 
@@ -184,7 +193,7 @@ export function useForgotPasswordLogic(
           setError(
             readForgotPasswordErrorMessage(
               result.error,
-              m.auth_forgot_error_reset_failed(),
+              m.common_reset_failed(),
             ),
           )
           return
@@ -203,15 +212,15 @@ export function useForgotPasswordLogic(
         if (signInResult.error) {
           setOtpSentAt(null)
           setStep('request-email')
-          setSuccessMessage(m.auth_forgot_success_but_sign_in_failed())
+          setSuccessMessage(m.common_password_updated())
           return
         }
 
-        toast.success(m.auth_forgot_success_toast())
+        toast.success(m.common_password_updated())
         void navigate({ to: redirectTarget })
       } catch {
         setStep('enter-otp')
-        setError(m.auth_forgot_error_reset_failed())
+        setError(m.common_reset_failed())
       } finally {
         setIsLoading(false)
       }

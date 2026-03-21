@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useState  } from 'react'
-import type {ReactNode} from 'react';
+import { useEffect, useState } from 'react'
+import type { ReactNode } from 'react'
 import { motion } from 'motion/react'
 import { m } from '@/paraglide/messages.js'
 import { Button } from '@rift/ui/button'
@@ -106,9 +106,16 @@ export function OtpStep({
       animate="visible"
       exit="exit"
     >
-      <motion.div className="text-center mb-8" variants={menuCardHeaderVariants}>
-        <h1 className="text-3xl font-bold text-black dark:text-white mb-4">{title}</h1>
-        <p className="text-black/70 dark:text-white/60 text-lg mb-6">{description}</p>
+      <motion.div
+        className="text-center mb-8"
+        variants={menuCardHeaderVariants}
+      >
+        <h1 className="text-3xl font-bold text-black dark:text-white mb-4">
+          {title}
+        </h1>
+        <p className="text-black/70 dark:text-white/60 text-lg mb-6">
+          {description}
+        </p>
       </motion.div>
 
       <motion.div
@@ -134,7 +141,10 @@ export function OtpStep({
               </motion.div>
             ) : null}
 
-            <motion.div variants={staggerChildVariants} className="flex flex-col items-center space-y-4">
+            <motion.div
+              variants={staggerChildVariants}
+              className="flex flex-col items-center space-y-4"
+            >
               <Label htmlFor={`${formId}-otp`} className="block text-center">
                 {label}
               </Label>
@@ -170,7 +180,9 @@ export function OtpStep({
               {remainingSeconds != null ? (
                 <p className="text-center text-sm text-foreground-secondary">
                   {remainingSeconds > 0
-                    ? m.auth_otp_expires_in({ time: formatRemaining(remainingSeconds) })
+                    ? m.auth_otp_expires_in({
+                        time: formatRemaining(remainingSeconds),
+                      })
                     : m.auth_otp_expired()}
                 </p>
               ) : null}
@@ -183,18 +195,36 @@ export function OtpStep({
           className="flex items-center justify-end gap-3 px-8 py-4 transition-colors duration-200"
         >
           {onBack ? (
-            <Button type="button" variant="ghost" size="large" onClick={onBack} disabled={isLoading}>
-              {backText ?? m.auth_otp_back_default()}
+            <Button
+              type="button"
+              variant="ghost"
+              size="large"
+              onClick={onBack}
+              disabled={isLoading}
+            >
+              {backText ?? m.common_back()}
             </Button>
           ) : null}
 
           {onResend ? (
-            <Button type="button" variant="ghost" size="large" onClick={onResend} disabled={isLoading}>
-              {resendText ?? m.auth_otp_resend_default()}
+            <Button
+              type="button"
+              variant="ghost"
+              size="large"
+              onClick={onResend}
+              disabled={isLoading}
+            >
+              {resendText ?? m.common_resend_code()}
             </Button>
           ) : null}
 
-          <Button type="submit" variant="default" size="large" form={formId} disabled={otp.trim().length !== 6 || isLoading}>
+          <Button
+            type="submit"
+            variant="default"
+            size="large"
+            form={formId}
+            disabled={otp.trim().length !== 6 || isLoading}
+          >
             {submitText}
           </Button>
         </motion.div>

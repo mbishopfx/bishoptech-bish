@@ -33,18 +33,25 @@ export type MfaSectionLogicResult = {
   disableMfa: () => Promise<void>
 }
 
-export function useMfaSectionLogic(canEdit: boolean, user: unknown, refetchSession: () => Promise<void>) {
+export function useMfaSectionLogic(
+  canEdit: boolean,
+  user: unknown,
+  refetchSession: () => Promise<void>,
+) {
   const [mfaMessage, setMfaMessage] = useState<string | null>(null)
   const [mfaBusy, setMfaBusy] = useState(false)
   const [mfaSetupTotpURI, setMfaSetupTotpURI] = useState<string | null>(null)
-  const [mfaSetupStep, setMfaSetupStep] = useState<'verify' | 'backup-codes' | null>(null)
+  const [mfaSetupStep, setMfaSetupStep] = useState<
+    'verify' | 'backup-codes' | null
+  >(null)
   const [mfaBackupCodes, setMfaBackupCodes] = useState<Array<string>>([])
   const [mfaSetupPassword, setMfaSetupPassword] = useState('')
   const [mfaSetupCode, setMfaSetupCode] = useState('')
   const [mfaDisablePassword, setMfaDisablePassword] = useState('')
 
   const mfaEnabled = readTwoFactorEnabled(user)
-  const mfaPendingVerification = mfaSetupTotpURI != null || mfaSetupStep === 'backup-codes'
+  const mfaPendingVerification =
+    mfaSetupTotpURI != null || mfaSetupStep === 'backup-codes'
 
   const setMfaSetupPasswordInput = (nextValue: string) => {
     setMfaMessage(null)
@@ -84,7 +91,10 @@ export function useMfaSectionLogic(canEdit: boolean, user: unknown, refetchSessi
       const result = await authClient.twoFactor.enable({
         password: normalizedPassword,
       })
-      const apiErrorMessage = readBetterAuthResultError(result, m.settings_security_mfa_error_enable())
+      const apiErrorMessage = readBetterAuthResultError(
+        result,
+        m.settings_security_mfa_error_enable(),
+      )
       if (apiErrorMessage != null) {
         setMfaMessage(apiErrorMessage)
         return
@@ -102,7 +112,9 @@ export function useMfaSectionLogic(canEdit: boolean, user: unknown, refetchSessi
       setMfaSetupCode('')
       setMfaMessage(null)
     } catch (cause) {
-      setMfaMessage(getErrorMessage(cause, m.settings_security_mfa_error_enable()))
+      setMfaMessage(
+        getErrorMessage(cause, m.settings_security_mfa_error_enable()),
+      )
     } finally {
       setMfaBusy(false)
     }
@@ -128,7 +140,10 @@ export function useMfaSectionLogic(canEdit: boolean, user: unknown, refetchSessi
         code: normalizedCode,
         trustDevice: true,
       })
-      const apiErrorMessage = readBetterAuthResultError(result, m.settings_security_mfa_error_verify())
+      const apiErrorMessage = readBetterAuthResultError(
+        result,
+        m.settings_security_mfa_error_verify(),
+      )
       if (apiErrorMessage != null) {
         setMfaMessage(apiErrorMessage)
         return
@@ -139,7 +154,9 @@ export function useMfaSectionLogic(canEdit: boolean, user: unknown, refetchSessi
       setMfaSetupCode('')
       setMfaMessage(null)
     } catch (cause) {
-      setMfaMessage(getErrorMessage(cause, m.settings_security_mfa_error_verify()))
+      setMfaMessage(
+        getErrorMessage(cause, m.settings_security_mfa_error_verify()),
+      )
     } finally {
       setMfaBusy(false)
     }
@@ -162,7 +179,7 @@ export function useMfaSectionLogic(canEdit: boolean, user: unknown, refetchSessi
     try {
       await refetchSession()
     } finally {
-      setMfaMessage(m.settings_security_mfa_success_enabled())
+      setMfaMessage(m.auth_mfa_enabled_success())
     }
   }
 
@@ -185,7 +202,10 @@ export function useMfaSectionLogic(canEdit: boolean, user: unknown, refetchSessi
       const result = await authClient.twoFactor.disable({
         password: normalizedPassword,
       })
-      const apiErrorMessage = readBetterAuthResultError(result, m.settings_security_mfa_error_disable())
+      const apiErrorMessage = readBetterAuthResultError(
+        result,
+        m.settings_security_mfa_error_disable(),
+      )
       if (apiErrorMessage != null) {
         setMfaMessage(apiErrorMessage)
         return
@@ -196,10 +216,12 @@ export function useMfaSectionLogic(canEdit: boolean, user: unknown, refetchSessi
       setMfaSetupCode('')
       setMfaSetupTotpURI(null)
       setMfaBackupCodes([])
-      setMfaMessage(m.settings_security_mfa_success_disabled())
+      setMfaMessage(m.auth_mfa_disabled_success())
       await refetchSession()
     } catch (cause) {
-      setMfaMessage(getErrorMessage(cause, m.settings_security_mfa_error_disable()))
+      setMfaMessage(
+        getErrorMessage(cause, m.settings_security_mfa_error_disable()),
+      )
     } finally {
       setMfaBusy(false)
     }
@@ -248,7 +270,9 @@ function readTwoFactorEnableData(result: unknown): {
 
 function readTwoFactorEnabled(user: unknown): boolean {
   const userRecord = readRecord(user)
-  const value = readBooleanField(userRecord, ['twoFactorEnabled', 'isTwoFactorEnabled'])
+  const value = readBooleanField(userRecord, [
+    'twoFactorEnabled',
+    'isTwoFactorEnabled',
+  ])
   return value === true
 }
-

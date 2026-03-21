@@ -49,7 +49,9 @@ export type SecurityPageLogicResult = {
   refreshConnectedLoginMethods: () => Promise<void>
   revokeSessionByToken: (sessionToken: string) => Promise<void>
   connectLoginProvider: (providerId: string) => Promise<void>
-  unlinkConnectedLoginMethod: (method: ConnectedLoginMethodViewModel) => Promise<void>
+  unlinkConnectedLoginMethod: (
+    method: ConnectedLoginMethodViewModel,
+  ) => Promise<void>
   revokeAllOtherSessions: () => Promise<void>
 }
 
@@ -81,7 +83,10 @@ export function getErrorMessage(cause: unknown, fallback: string): string {
 /**
  * Maps provider-specific auth errors to user-facing copy that explains what action to take.
  */
-export function normalizeSecurityErrorMessage(message: string, fallback: string): string {
+export function normalizeSecurityErrorMessage(
+  message: string,
+  fallback: string,
+): string {
   const normalizedMessage = message.trim()
   const lowerCaseMessage = normalizedMessage.toLowerCase()
 
@@ -91,14 +96,20 @@ export function normalizeSecurityErrorMessage(message: string, fallback: string)
   ) {
     return m.settings_security_error_current_invalid()
   }
-  if (lowerCaseMessage === 'invalid code' || lowerCaseMessage.includes('invalid code')) {
-    return m.settings_security_mfa_error_invalid_code()
+  if (
+    lowerCaseMessage === 'invalid code' ||
+    lowerCaseMessage.includes('invalid code')
+  ) {
+    return m.auth_mfa_invalid_code()
   }
 
   return normalizedMessage.length > 0 ? normalizedMessage : fallback
 }
 
-export function readBetterAuthResultError(result: unknown, fallback: string): string | null {
+export function readBetterAuthResultError(
+  result: unknown,
+  fallback: string,
+): string | null {
   if (result == null || typeof result !== 'object') {
     return null
   }
@@ -155,7 +166,10 @@ export function readBooleanField(
   return null
 }
 
-export function readDateField(source: Record<string, unknown> | null, keys: Array<string>): Date | null {
+export function readDateField(
+  source: Record<string, unknown> | null,
+  keys: Array<string>,
+): Date | null {
   if (!source) return null
   for (const key of keys) {
     const value = source[key]

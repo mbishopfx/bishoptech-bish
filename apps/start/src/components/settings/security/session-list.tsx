@@ -20,19 +20,27 @@ function parseSessionDeviceLabel(userAgent: string): ParsedSessionDevice {
 
   const browser = (() => {
     if (normalizedUA.includes('edg/')) return 'Microsoft Edge'
-    if (normalizedUA.includes('opr/') || normalizedUA.includes('opera/')) return 'Opera'
+    if (normalizedUA.includes('opr/') || normalizedUA.includes('opera/'))
+      return 'Opera'
     if (normalizedUA.includes('firefox/')) return 'Firefox'
-    if (normalizedUA.includes('chrome/') && !normalizedUA.includes('edg/')) return 'Chrome'
-    if (normalizedUA.includes('safari/') && !normalizedUA.includes('chrome/')) return 'Safari'
+    if (normalizedUA.includes('chrome/') && !normalizedUA.includes('edg/'))
+      return 'Chrome'
+    if (normalizedUA.includes('safari/') && !normalizedUA.includes('chrome/'))
+      return 'Safari'
     return m.settings_security_sessions_device_unknown()
   })()
 
   const platform = (() => {
-    if (normalizedUA.includes('iphone') || normalizedUA.includes('ipad') || normalizedUA.includes('ios')) {
+    if (
+      normalizedUA.includes('iphone') ||
+      normalizedUA.includes('ipad') ||
+      normalizedUA.includes('ios')
+    ) {
       return 'iOS'
     }
     if (normalizedUA.includes('android')) return 'Android'
-    if (normalizedUA.includes('mac os x') || normalizedUA.includes('macintosh')) return 'macOS'
+    if (normalizedUA.includes('mac os x') || normalizedUA.includes('macintosh'))
+      return 'macOS'
     if (normalizedUA.includes('windows')) return 'Windows'
     if (normalizedUA.includes('linux')) return 'Linux'
     return m.settings_security_sessions_device_unknown()
@@ -77,7 +85,9 @@ export function SessionList({
 
   if (activeSessions.length === 0) {
     return (
-      <p className="text-sm text-foreground-tertiary">{m.settings_security_sessions_empty()}</p>
+      <p className="text-sm text-foreground-tertiary">
+        {m.settings_security_sessions_empty()}
+      </p>
     )
   }
 
@@ -98,13 +108,14 @@ export function SessionList({
                     {parsedSession.browser} on {parsedSession.platform}{' '}
                     {session.isCurrent ? (
                       <span className="text-xs font-normal text-foreground-tertiary">
-                        ({m.settings_security_sessions_current_badge()})
+                        ({m.common_current_session()})
                       </span>
                     ) : null}
                   </p>
                   <p className="text-xs text-foreground-tertiary">
                     {m.settings_security_sessions_ip_label()}:{' '}
-                    {session.ipAddress ?? m.settings_security_sessions_ip_unknown()}
+                    {session.ipAddress ??
+                      m.settings_security_sessions_ip_unknown()}
                   </p>
                 </div>
               </div>
@@ -115,11 +126,15 @@ export function SessionList({
                   onClick={() => {
                     void onRevokeSession(session.sessionToken)
                   }}
-                  disabled={!canEdit || revokingSessionToken != null || revokingAllOtherSessions}
+                  disabled={
+                    !canEdit ||
+                    revokingSessionToken != null ||
+                    revokingAllOtherSessions
+                  }
                 >
                   {revokingSessionToken === session.sessionToken
-                    ? m.settings_security_sessions_revoke_single_loading()
-                    : m.settings_security_sessions_revoke_single_button()}
+                    ? m.common_revoking()
+                    : m.common_revoke()}
                 </Button>
               ) : null}
             </div>

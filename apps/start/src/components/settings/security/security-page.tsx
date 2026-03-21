@@ -60,8 +60,8 @@ export function SecurityPage() {
     revokeAllOtherSessions,
   } = useSecurityPageLogic()
   const passwordSuccessMessages = [
-    String(m.settings_security_success()),
-    String(m.settings_security_set_success()),
+    String(m.common_password_updated()),
+    String(m.common_password_set()),
   ]
   const passwordSuccessMessage =
     passwordMessage != null && passwordSuccessMessages.includes(passwordMessage)
@@ -72,7 +72,9 @@ export function SecurityPage() {
   // Reveal the confirm + current fields only once the user starts typing a new password.
   // This keeps the form compact and guides the user through the flow step-by-step.
   const showExtraFields = newPassword.trim().length > 0
-  const otherSessionsCount = activeSessions.filter((session) => !session.isCurrent).length
+  const otherSessionsCount = activeSessions.filter(
+    (session) => !session.isCurrent,
+  ).length
 
   return (
     <ContentPage
@@ -107,18 +109,20 @@ export function SecurityPage() {
 
       <Form
         title={
-          isSetPasswordMode ? m.settings_security_set_password_form_title() : m.settings_security_form_title()
+          isSetPasswordMode
+            ? m.auth_set_password_title()
+            : m.settings_security_form_title()
         }
         description={
           isSetPasswordMode
-            ? m.settings_security_set_password_form_description()
+            ? m.auth_set_password_description()
             : m.settings_security_form_description()
         }
         inputFields={[
           {
             name: 'newPassword',
             label: isSetPasswordMode
-              ? m.settings_security_set_password_label_new_password()
+              ? m.common_password_label()
               : m.settings_security_label_new_password(),
             inputAttrs: {
               type: 'password',
@@ -131,7 +135,7 @@ export function SecurityPage() {
           {
             name: 'confirmPassword',
             label: isSetPasswordMode
-              ? m.settings_security_set_password_label_confirm_password()
+              ? m.common_confirm_password()
               : m.settings_security_label_confirm_password(),
             hidden: !showExtraFields,
             inputAttrs: {
@@ -157,7 +161,7 @@ export function SecurityPage() {
         ]}
         buttonText={
           isSetPasswordMode
-            ? m.settings_security_set_password_button_set_password()
+            ? m.auth_set_password_button()
             : m.settings_security_button_update_password()
         }
         buttonDisabled={
@@ -170,7 +174,8 @@ export function SecurityPage() {
           await submitPasswordChange()
         }}
         error={
-          passwordMessage != null && !passwordSuccessMessages.includes(passwordMessage)
+          passwordMessage != null &&
+          !passwordSuccessMessages.includes(passwordMessage)
             ? passwordMessage
             : undefined
         }
@@ -235,7 +240,9 @@ export function SecurityPage() {
         error={sessionsMessage ?? undefined}
         helpText={
           sessionsMessage == null ? (
-            <p className="text-sm text-foreground-tertiary">{m.settings_security_sessions_help_revoke()}</p>
+            <p className="text-sm text-foreground-tertiary">
+              {m.settings_security_sessions_help_revoke()}
+            </p>
           ) : undefined
         }
       />

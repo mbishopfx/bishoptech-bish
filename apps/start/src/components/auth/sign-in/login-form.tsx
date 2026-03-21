@@ -101,7 +101,11 @@ export function LoginForm({
 
     if (isSignUp) {
       if (password.length < AUTH_PASSWORD_MIN_LENGTH) {
-        setPasswordError(m.auth_error_password_min_length({ count: String(AUTH_PASSWORD_MIN_LENGTH) }))
+        setPasswordError(
+          m.auth_error_password_min_length({
+            count: String(AUTH_PASSWORD_MIN_LENGTH),
+          }),
+        )
         return
       }
       if (password !== confirmPassword) {
@@ -164,172 +168,197 @@ export function LoginForm({
             className="space-y-8 rounded-3xl"
             autoComplete="on"
           >
-        <motion.div variants={staggerChildVariants} className="space-y-2 relative">
-          <Label htmlFor="email" variant="muted">
-            {m.auth_form_email_label()}
-          </Label>
-          <Input
-            id="email"
-            name="username"
-            type="email"
-            variant="alt"
-            inputSize="large"
-            placeholder={m.auth_form_email_placeholder()}
-            value={email}
-            onChange={(e) => {
-              setEmail(e.target.value)
-              if (emailError) setEmailError('')
-            }}
-            disabled={isInteractionDisabled}
-            readOnly={isInvitationEmailLocked}
-            autoComplete={isSignUp ? 'section-sign-up email' : 'section-sign-in username'}
-            aria-invalid={!!emailError}
-            required
-          />
-          {isInvitationEmailLocked && (
-            <p className="text-xs text-foreground-secondary">
-              {m.auth_invitation_tied_to_email()}
-            </p>
-          )}
-          <AnimatePresence>
-            {emailError && (
-              <motion.p
-                className="absolute top-full left-0 text-red-500 dark:text-red-400 text-sm mt-1"
-                initial={{ opacity: 0, y: -5 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -5 }}
-                transition={{ duration: 0.2, ease: 'easeOut' }}
-              >
-                {emailError}
-              </motion.p>
-            )}
-          </AnimatePresence>
-        </motion.div>
-
-        <motion.div variants={staggerChildVariants} className="space-y-2 relative">
-          <Label htmlFor="password" variant="muted">
-            {m.auth_form_password_label()}
-          </Label>
-          <Input
-            id="password"
-            name="password"
-            type="password"
-            variant="alt"
-            inputSize="large"
-            placeholder={isSignUp ? m.auth_form_create_password() : m.auth_form_password_placeholder()}
-            value={password}
-            onChange={(e) => {
-              setPassword(e.target.value)
-              if (passwordError) setPasswordError('')
-            }}
-            disabled={isInteractionDisabled}
-            autoComplete={isSignUp ? 'section-sign-up new-password' : 'section-sign-in current-password'}
-            aria-invalid={!!passwordError}
-            showPasswordToggle
-            required
-          />
-          <AnimatePresence>
-            {passwordError && (
-              <motion.p
-                className="absolute top-full left-0 text-red-500 dark:text-red-400 text-sm mt-1"
-                initial={{ opacity: 0, y: -5 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -5 }}
-                transition={{ duration: 0.2, ease: 'easeOut' }}
-              >
-                {passwordError}
-              </motion.p>
-            )}
-          </AnimatePresence>
-        </motion.div>
-
-        <AnimatePresence>
-          {isSignUp && (
             <motion.div
-              key="confirm-password"
               variants={staggerChildVariants}
-              className="overflow-hidden"
-              initial={{ opacity: 0, height: 0, marginTop: 0 }}
-              animate={{ opacity: 1, height: 'auto', marginTop: 32 }}
-              exit={{ opacity: 0, height: 0, marginTop: -32 }}
-              transition={{ duration: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
+              className="space-y-2 relative"
             >
-              <div className="space-y-2 relative">
-                <Label htmlFor="confirmPassword" variant="muted">
-                  {m.auth_form_confirm_password()}
-                </Label>
-                <Input
-                  id="confirmPassword"
-                  name="confirm-password"
-                  type="password"
-                  variant="alt"
-                  inputSize="large"
-                  placeholder={m.auth_form_confirm_password_placeholder()}
-                  value={confirmPassword}
-                  onChange={(e) => {
-                    setConfirmPassword(e.target.value)
-                    if (confirmPasswordError) setConfirmPasswordError('')
-                  }}
-                  disabled={isInteractionDisabled}
-                  autoComplete="section-sign-up new-password"
-                  aria-invalid={!!confirmPasswordError}
-                  showPasswordToggle
-                  required={isSignUp}
-                />
-                <AnimatePresence>
-                  {confirmPasswordError && (
-                    <motion.p
-                      className="absolute top-full left-0 text-red-500 dark:text-red-400 text-sm mt-1"
-                      initial={{ opacity: 0, y: -5 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -5 }}
-                      transition={{ duration: 0.2, ease: 'easeOut' }}
-                    >
-                      {confirmPasswordError}
-                    </motion.p>
-                  )}
-                </AnimatePresence>
-              </div>
+              <Label htmlFor="email" variant="muted">
+                {m.auth_form_email_label()}
+              </Label>
+              <Input
+                id="email"
+                name="username"
+                type="email"
+                variant="alt"
+                inputSize="large"
+                placeholder={m.auth_form_email_placeholder()}
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value)
+                  if (emailError) setEmailError('')
+                }}
+                disabled={isInteractionDisabled}
+                readOnly={isInvitationEmailLocked}
+                autoComplete={
+                  isSignUp
+                    ? 'section-sign-up email'
+                    : 'section-sign-in username'
+                }
+                aria-invalid={!!emailError}
+                required
+              />
+              {isInvitationEmailLocked && (
+                <p className="text-xs text-foreground-secondary">
+                  {m.auth_invitation_tied_to_email()}
+                </p>
+              )}
+              <AnimatePresence>
+                {emailError && (
+                  <motion.p
+                    className="absolute top-full left-0 text-red-500 dark:text-red-400 text-sm mt-1"
+                    initial={{ opacity: 0, y: -5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -5 }}
+                    transition={{ duration: 0.2, ease: 'easeOut' }}
+                  >
+                    {emailError}
+                  </motion.p>
+                )}
+              </AnimatePresence>
             </motion.div>
-          )}
-        </AnimatePresence>
 
-        <motion.div
-          variants={staggerChildVariants}
-          className="flex items-center justify-between text-sm mt-8"
-        >
-          <div />
-          <AnimatePresence>
-            {!isSignUp && onForgotPassword && (
-              <motion.div
-                initial={{ opacity: 0, height: 0, marginTop: 0 }}
-                animate={{ opacity: 1, height: 'auto', marginTop: 0 }}
-                exit={{ opacity: 0, height: 0, marginTop: 0 }}
-                transition={{ duration: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
-                className="overflow-hidden"
+            <motion.div
+              variants={staggerChildVariants}
+              className="space-y-2 relative"
+            >
+              <Label htmlFor="password" variant="muted">
+                {m.auth_form_password_label()}
+              </Label>
+              <Input
+                id="password"
+                name="password"
+                type="password"
+                variant="alt"
+                inputSize="large"
+                placeholder={
+                  isSignUp
+                    ? m.auth_form_create_password()
+                    : m.auth_form_password_placeholder()
+                }
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value)
+                  if (passwordError) setPasswordError('')
+                }}
+                disabled={isInteractionDisabled}
+                autoComplete={
+                  isSignUp
+                    ? 'section-sign-up new-password'
+                    : 'section-sign-in current-password'
+                }
+                aria-invalid={!!passwordError}
+                showPasswordToggle
+                required
+              />
+              <AnimatePresence>
+                {passwordError && (
+                  <motion.p
+                    className="absolute top-full left-0 text-red-500 dark:text-red-400 text-sm mt-1"
+                    initial={{ opacity: 0, y: -5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -5 }}
+                    transition={{ duration: 0.2, ease: 'easeOut' }}
+                  >
+                    {passwordError}
+                  </motion.p>
+                )}
+              </AnimatePresence>
+            </motion.div>
+
+            <AnimatePresence>
+              {isSignUp && (
+                <motion.div
+                  key="confirm-password"
+                  variants={staggerChildVariants}
+                  className="overflow-hidden"
+                  initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                  animate={{ opacity: 1, height: 'auto', marginTop: 32 }}
+                  exit={{ opacity: 0, height: 0, marginTop: -32 }}
+                  transition={{ duration: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
+                >
+                  <div className="space-y-2 relative">
+                    <Label htmlFor="confirmPassword" variant="muted">
+                      {m.auth_form_confirm_password()}
+                    </Label>
+                    <Input
+                      id="confirmPassword"
+                      name="confirm-password"
+                      type="password"
+                      variant="alt"
+                      inputSize="large"
+                      placeholder={m.common_enter_new_password()}
+                      value={confirmPassword}
+                      onChange={(e) => {
+                        setConfirmPassword(e.target.value)
+                        if (confirmPasswordError) setConfirmPasswordError('')
+                      }}
+                      disabled={isInteractionDisabled}
+                      autoComplete="section-sign-up new-password"
+                      aria-invalid={!!confirmPasswordError}
+                      showPasswordToggle
+                      required={isSignUp}
+                    />
+                    <AnimatePresence>
+                      {confirmPasswordError && (
+                        <motion.p
+                          className="absolute top-full left-0 text-red-500 dark:text-red-400 text-sm mt-1"
+                          initial={{ opacity: 0, y: -5 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -5 }}
+                          transition={{ duration: 0.2, ease: 'easeOut' }}
+                        >
+                          {confirmPasswordError}
+                        </motion.p>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <motion.div
+              variants={staggerChildVariants}
+              className="flex items-center justify-between text-sm mt-8"
+            >
+              <div />
+              <AnimatePresence>
+                {!isSignUp && onForgotPassword && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                    animate={{ opacity: 1, height: 'auto', marginTop: 0 }}
+                    exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                    transition={{
+                      duration: 0.2,
+                      ease: [0.25, 0.46, 0.45, 0.94],
+                    }}
+                    className="overflow-hidden"
+                  >
+                    <Button
+                      type="button"
+                      variant="link"
+                      onClick={onForgotPassword}
+                    >
+                      {m.auth_login_forgot_password()}
+                    </Button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
+
+            <motion.div variants={staggerChildVariants}>
+              <Button
+                type="submit"
+                variant="primaryAlt"
+                size="big"
+                disabled={isInteractionDisabled}
               >
-                <Button type="button" variant="link" onClick={onForgotPassword}>
-                  {m.auth_login_forgot_password()}
-                </Button>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </motion.div>
-
-        <motion.div variants={staggerChildVariants}>
-          <Button
-            type="submit"
-            variant="primaryAlt"
-            size="big"
-            disabled={isInteractionDisabled}
-          >
-            {parentIsLoading
-              ? m.auth_login_submitting()
-              : isSignUp
-                ? m.auth_login_create_account()
-                : m.auth_login_sign_in()}
-          </Button>
-        </motion.div>
+                {parentIsLoading
+                  ? m.auth_login_submitting()
+                  : isSignUp
+                    ? m.auth_login_create_account()
+                    : m.auth_login_sign_in()}
+              </Button>
+            </motion.div>
           </form>
 
           <motion.div
@@ -337,7 +366,9 @@ export function LoginForm({
             className="my-6 flex items-center gap-3"
           >
             <div className="h-px flex-1 bg-border-base" />
-            <span className="text-sm text-foreground-secondary">{m.auth_login_divider()}</span>
+            <span className="text-sm text-foreground-secondary">
+              {m.auth_login_divider()}
+            </span>
             <div className="h-px flex-1 bg-border-base" />
           </motion.div>
 
@@ -347,24 +378,36 @@ export function LoginForm({
               variant="outline"
               size="big"
               onClick={handleGoogleSignIn}
-              disabled={isGoogleLoading || isGithubLoading || isInteractionDisabled}
+              disabled={
+                isGoogleLoading || isGithubLoading || isInteractionDisabled
+              }
             >
               <GoogleIcon className="mr-2.5 size-5" />
               {isGoogleLoading
-                ? (isSignUp ? m.auth_login_submitting_google_sign_up() : m.auth_login_submitting_google())
-                : (isSignUp ? m.auth_login_sign_up_google() : m.auth_login_sign_in_google())}
+                ? isSignUp
+                  ? m.auth_login_submitting_google_sign_up()
+                  : m.auth_login_submitting_google()
+                : isSignUp
+                  ? m.auth_login_sign_up_google()
+                  : m.auth_login_sign_in_google()}
             </Button>
             <Button
               type="button"
               variant="outline"
               size="big"
               onClick={handleGithubSignIn}
-              disabled={isGithubLoading || isGoogleLoading || isInteractionDisabled}
+              disabled={
+                isGithubLoading || isGoogleLoading || isInteractionDisabled
+              }
             >
               <GitHubIcon className="mr-2.5 size-5" />
               {isGithubLoading
-                ? (isSignUp ? m.auth_login_submitting_github_sign_up() : m.auth_login_submitting_github())
-                : (isSignUp ? m.auth_login_sign_up_github() : m.auth_login_sign_in_github())}
+                ? isSignUp
+                  ? m.auth_login_submitting_github_sign_up()
+                  : m.auth_login_submitting_github()
+                : isSignUp
+                  ? m.auth_login_sign_up_github()
+                  : m.auth_login_sign_in_github()}
             </Button>
           </motion.div>
         </div>

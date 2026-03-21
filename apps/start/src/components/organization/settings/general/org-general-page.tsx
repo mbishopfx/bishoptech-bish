@@ -24,7 +24,9 @@ export function OrgGeneralPage() {
   } = useOrgGeneralPageLogic()
 
   const nameSuccessMessage =
-    nameMessage === m.org_settings_general_name_saved() ? nameMessage : undefined
+    nameMessage === m.org_settings_general_name_saved()
+      ? nameMessage
+      : undefined
 
   return (
     <ContentPage
@@ -46,7 +48,7 @@ export function OrgGeneralPage() {
           />
         }
         error={avatarError ?? undefined}
-        success={avatarError == null ? avatarMessage ?? undefined : undefined}
+        success={avatarError == null ? (avatarMessage ?? undefined) : undefined}
         helpText={
           <p className="text-sm text-foreground-tertiary">
             {m.org_settings_general_avatar_help()}
@@ -78,7 +80,7 @@ export function OrgGeneralPage() {
             {m.org_settings_general_name_help()}
           </p>
         }
-        buttonText={m.org_settings_general_save_button()}
+        buttonText={m.common_save()}
         buttonDisabled={!canEdit || loading || name.trim().length === 0}
         handleSubmit={submitName}
       />

@@ -59,7 +59,9 @@ export function MfaSection({
   const [setupDialogOpen, setSetupDialogOpen] = useState(false)
   const [copiedSetupKey, setCopiedSetupKey] = useState(false)
   const [copiedAllCodes, setCopiedAllCodes] = useState(false)
-  const [activeSetupTotpURI, setActiveSetupTotpURI] = useState<string | null>(null)
+  const [activeSetupTotpURI, setActiveSetupTotpURI] = useState<string | null>(
+    null,
+  )
 
   /**
    * Keep the TOTP URI stable while a setup session is pending so failed verify
@@ -101,13 +103,17 @@ export function MfaSection({
   }
 
   const mfaSuccessMessages = [
-    String(m.settings_security_mfa_success_enabled()),
-    String(m.settings_security_mfa_success_disabled()),
+    String(m.auth_mfa_enabled_success()),
+    String(m.auth_mfa_disabled_success()),
   ]
   const mfaSuccessMessage =
-    mfaMessage != null && mfaSuccessMessages.includes(mfaMessage) ? mfaMessage : undefined
+    mfaMessage != null && mfaSuccessMessages.includes(mfaMessage)
+      ? mfaMessage
+      : undefined
   const mfaErrorMessage =
-    mfaMessage != null && !mfaSuccessMessages.includes(mfaMessage) ? mfaMessage : undefined
+    mfaMessage != null && !mfaSuccessMessages.includes(mfaMessage)
+      ? mfaMessage
+      : undefined
 
   useEffect(() => {
     if (!setupTotpURI) {
@@ -142,10 +148,18 @@ export function MfaSection({
     setSetupDialogOpen(false)
   }, [mfaPendingVerification])
 
-  const setupDialogErrorMessage = mfaPendingVerification ? mfaErrorMessage : undefined
-  const setupDialogSuccessMessage = mfaPendingVerification ? mfaSuccessMessage : undefined
-  const inlineFormErrorMessage = mfaPendingVerification ? undefined : mfaErrorMessage
-  const inlineFormSuccessMessage = mfaPendingVerification ? undefined : mfaSuccessMessage
+  const setupDialogErrorMessage = mfaPendingVerification
+    ? mfaErrorMessage
+    : undefined
+  const setupDialogSuccessMessage = mfaPendingVerification
+    ? mfaSuccessMessage
+    : undefined
+  const inlineFormErrorMessage = mfaPendingVerification
+    ? undefined
+    : mfaErrorMessage
+  const inlineFormSuccessMessage = mfaPendingVerification
+    ? undefined
+    : mfaSuccessMessage
   const setupDialogSecondaryButtonText =
     mfaSetupStep === 'backup-codes'
       ? copiedAllCodes
@@ -176,7 +190,9 @@ export function MfaSection({
             },
           ]}
           buttonText={m.settings_security_mfa_button_enable()}
-          buttonDisabled={!canEdit || mfaBusy || mfaSetupPassword.trim().length === 0}
+          buttonDisabled={
+            !canEdit || mfaBusy || mfaSetupPassword.trim().length === 0
+          }
           handleSubmit={async () => {
             await enableMfa()
           }}
@@ -184,7 +200,7 @@ export function MfaSection({
           success={inlineFormSuccessMessage}
           helpText={
             <p className="text-sm text-foreground-tertiary">
-              {m.settings_security_mfa_state_disabled()}
+              {m.auth_mfa_disabled()}
             </p>
           }
         />
@@ -203,7 +219,7 @@ export function MfaSection({
             }}
             title={
               mfaSetupStep === 'backup-codes'
-                ? m.settings_security_mfa_success_enabled()
+                ? m.auth_mfa_enabled_success()
                 : m.settings_security_mfa_button_verify()
             }
             description={
@@ -218,7 +234,9 @@ export function MfaSection({
             }
             buttonDisabled={!canEdit || mfaBusy}
             submitButtonDisabled={
-              mfaSetupStep === 'backup-codes' ? false : mfaSetupCode.trim().length !== 6
+              mfaSetupStep === 'backup-codes'
+                ? false
+                : mfaSetupCode.trim().length !== 6
             }
             secondaryButtonText={setupDialogSecondaryButtonText}
             onSecondaryClick={() => {
@@ -229,7 +247,9 @@ export function MfaSection({
               }
             }}
             secondaryButtonDisabled={
-              mfaSetupStep === 'backup-codes' ? mfaBackupCodes.length === 0 : setupTotpURI == null
+              mfaSetupStep === 'backup-codes'
+                ? mfaBackupCodes.length === 0
+                : setupTotpURI == null
             }
             handleSubmit={
               mfaSetupStep === 'backup-codes'
@@ -256,7 +276,10 @@ export function MfaSection({
               ) : (
                 <div className="grid grid-cols-2 gap-2">
                   {Array.from({ length: 8 }).map((_, index) => (
-                    <div key={index} className="h-7 animate-pulse rounded bg-surface-raised/70" />
+                    <div
+                      key={index}
+                      className="h-7 animate-pulse rounded bg-surface-raised/70"
+                    />
                   ))}
                 </div>
               )
@@ -269,11 +292,16 @@ export function MfaSection({
                     className="mx-auto size-48 rounded-md bg-white p-2"
                   />
                 ) : (
-                  <p className="text-sm text-foreground-tertiary">{m.settings_security_mfa_qr_loading()}</p>
+                  <p className="text-sm text-foreground-tertiary">
+                    {m.settings_security_mfa_qr_loading()}
+                  </p>
                 )}
 
                 <div className="space-y-2">
-                  <Label htmlFor="mfa-verify-code" className="block text-center">
+                  <Label
+                    htmlFor="mfa-verify-code"
+                    className="block text-center"
+                  >
                     {m.settings_security_mfa_label_verification_code()}
                   </Label>
                   <InputOTP
@@ -322,13 +350,19 @@ export function MfaSection({
       ]}
       buttonText={m.settings_security_mfa_button_disable()}
       buttonVariant="dangerLight"
-      buttonDisabled={!canEdit || mfaBusy || mfaDisablePassword.trim().length === 0}
+      buttonDisabled={
+        !canEdit || mfaBusy || mfaDisablePassword.trim().length === 0
+      }
       handleSubmit={async () => {
         await disableMfa()
       }}
       error={mfaErrorMessage}
       success={mfaSuccessMessage}
-      helpText={<p className="text-sm text-foreground-tertiary">{m.settings_security_mfa_state_enabled()}</p>}
+      helpText={
+        <p className="text-sm text-foreground-tertiary">
+          {m.auth_mfa_enabled()}
+        </p>
+      }
     />
   )
 }

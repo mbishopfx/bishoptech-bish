@@ -2,7 +2,13 @@
 
 import { useState } from 'react'
 import { Form } from '@rift/ui/form'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@rift/ui/select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@rift/ui/select'
 import { ContentPage } from '@/components/layout'
 import { AvatarUploadField } from '@/components/settings/avatar-upload'
 import { locales } from '@/paraglide/runtime.js'
@@ -46,7 +52,8 @@ export function AccountPage() {
       ? emailMessage
       : undefined
   const selectedLanguageLabel =
-    languageOptions.find((localeOption) => localeOption.value === language)?.label ?? language
+    languageOptions.find((localeOption) => localeOption.value === language)
+      ?.label ?? language
 
   return (
     <ContentPage
@@ -68,8 +75,12 @@ export function AccountPage() {
           />
         }
         error={avatarError ?? undefined}
-        success={avatarError == null ? avatarMessage ?? undefined : undefined}
-        helpText={<p className="text-sm text-foreground-tertiary">{m.settings_account_avatar_help()}</p>}
+        success={avatarError == null ? (avatarMessage ?? undefined) : undefined}
+        helpText={
+          <p className="text-sm text-foreground-tertiary">
+            {m.settings_account_avatar_help()}
+          </p>
+        }
       />
 
       <Form
@@ -95,7 +106,7 @@ export function AccountPage() {
             {m.settings_account_name_help()}
           </p>
         }
-        buttonText={m.settings_account_save_button()}
+        buttonText={m.common_save()}
         buttonDisabled={!canEdit || name.trim().length === 0}
         handleSubmit={submitName}
       />
@@ -123,7 +134,7 @@ export function AccountPage() {
             {m.settings_account_email_help()}
           </p>
         }
-        buttonText={m.settings_account_save_button()}
+        buttonText={m.common_save()}
         buttonDisabled={!canEdit || email.trim().length === 0}
         handleSubmit={submitEmail}
       />
@@ -132,8 +143,12 @@ export function AccountPage() {
         title={m.settings_account_language_title()}
         description={m.settings_account_language_description()}
         error={languageError ?? undefined}
-        helpText={<p className="text-sm text-foreground-tertiary">{m.settings_account_language_help()}</p>}
-        contentSlot={(
+        helpText={
+          <p className="text-sm text-foreground-tertiary">
+            {m.settings_account_language_help()}
+          </p>
+        }
+        contentSlot={
           <Select
             value={language}
             onValueChange={(next) => {
@@ -143,7 +158,10 @@ export function AccountPage() {
               void applyLanguageSelection(next)
             }}
           >
-            <SelectTrigger className="w-full max-w-md" aria-label={m.settings_account_language_title()}>
+            <SelectTrigger
+              className="w-full max-w-md"
+              aria-label={m.settings_account_language_title()}
+            >
               <SelectValue>{selectedLanguageLabel}</SelectValue>
             </SelectTrigger>
             <SelectContent alignItemWithTrigger={false} align="start">
@@ -154,7 +172,7 @@ export function AccountPage() {
               ))}
             </SelectContent>
           </Select>
-        )}
+        }
       />
 
       <Form

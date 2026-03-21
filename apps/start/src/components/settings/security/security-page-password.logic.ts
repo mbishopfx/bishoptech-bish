@@ -6,7 +6,10 @@ import { m } from '@/paraglide/messages.js'
 import { authClient } from '@/lib/frontend/auth/auth-client'
 import { setPassword } from '@/lib/frontend/settings/security'
 import type { SecurityPagePasswordMode } from './security-page-shared'
-import { getErrorMessage, readBetterAuthResultError } from './security-page-shared'
+import {
+  getErrorMessage,
+  readBetterAuthResultError,
+} from './security-page-shared'
 
 export type SecurityPasswordLogicResult = {
   currentPassword: string
@@ -89,7 +92,10 @@ export function useSecurityPasswordLogic(
           newPassword: normalizedNewPassword,
           revokeOtherSessions: true,
         })
-        const apiErrorMessage = readBetterAuthResultError(result, m.settings_security_error_default())
+        const apiErrorMessage = readBetterAuthResultError(
+          result,
+          m.settings_security_error_default(),
+        )
         if (apiErrorMessage != null) {
           setPasswordMessage(apiErrorMessage)
           return
@@ -108,8 +114,8 @@ export function useSecurityPasswordLogic(
       setConfirmPassword('')
       setPasswordMessage(
         passwordMode === 'change'
-          ? m.settings_security_success()
-          : m.settings_security_set_success(),
+          ? m.common_password_updated()
+          : m.common_password_set(),
       )
     } catch (cause) {
       setPasswordMessage(

@@ -198,7 +198,7 @@ export function OrgKnowledgePage() {
                 {item.vectorError
                   ? m.org_knowledge_index_status_error()
                   : item.vectorIndexedAt
-                    ? m.org_knowledge_index_status_indexed()
+                    ? m.common_indexed()
                     : m.org_knowledge_index_status_pending()}
               </Badge>
             </div>
