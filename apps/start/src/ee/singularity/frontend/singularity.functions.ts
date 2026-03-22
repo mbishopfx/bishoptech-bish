@@ -31,16 +31,19 @@ const CancelInvitationSchema = z.object({
 const SetPlanSchema = z.object({
   organizationId: z.string().trim().min(1),
   planId: z.string().trim().refine(isWorkspacePlanId),
+  seatCount: z.number().int().min(1),
 })
 
 function parseSetPlanInput(input: unknown): {
   organizationId: string
   planId: WorkspacePlanId
+  seatCount: number
 } {
   const parsed = SetPlanSchema.parse(input)
   return {
     organizationId: parsed.organizationId,
     planId: parsed.planId,
+    seatCount: parsed.seatCount,
   }
 }
 

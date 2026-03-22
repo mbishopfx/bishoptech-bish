@@ -104,6 +104,7 @@ describe('SingularityAdminService', () => {
           organizationId: 'org-1',
           actorUserId: 'user-1',
           planId: 'enterprise',
+          seatCount: 12,
         })
       }).pipe(Effect.provide(SingularityAdminService.layer)),
     )
@@ -124,7 +125,7 @@ describe('SingularityAdminService', () => {
         subscriptionId: 'workspace_subscription_org-1',
         organizationId: 'org-1',
         planId: 'enterprise',
-        seatCount: 4,
+        seatCount: 12,
       }),
     )
     expect(mocks.recomputeEntitlementSnapshotRecordMock).toHaveBeenCalledWith(

@@ -117,6 +117,7 @@ export async function cancelSingularityInvitationAction(input: {
 export async function setSingularityOrganizationPlanAction(input: {
   organizationId: string
   planId: WorkspacePlanId
+  seatCount: number
 }) {
   const authContext = await requireSingularityAdminAuth(getRequestHeaders())
 
@@ -127,6 +128,7 @@ export async function setSingularityOrganizationPlanAction(input: {
         organizationId: input.organizationId,
         actorUserId: authContext.userId,
         planId: input.planId,
+        seatCount: input.seatCount,
       })
     }),
   )

@@ -161,7 +161,7 @@ export interface FormProps extends Omit<
   "title" | "children"
 > {
   /** Section title shown at the top; also used for form accessibility (aria-labelledby) */
-  title: string;
+  title: ReactNode;
   /** Short description below the title */
   description: string;
   /**
@@ -410,6 +410,12 @@ export function Form({
   const [dismissedFeedbackKey, setDismissedFeedbackKey] = useState<string | null>(null);
 
   const sectionTitleId = useId();
+  const selectAriaLabel =
+    typeof title === "string"
+      ? title
+      : typeof title === "number"
+        ? String(title)
+        : "Select option";
 
   const submittedValue = hasInput
     ? prefixString != null
@@ -598,7 +604,7 @@ export function Form({
 
           {hasSelect ? (
             <Select value={value} onValueChange={(v) => setValue(v ?? "")}>
-              <SelectTrigger className="w-full max-w-md" aria-label={title}>
+              <SelectTrigger className="w-full max-w-md" aria-label={selectAriaLabel}>
                 <SelectValue placeholder="Select…" />
               </SelectTrigger>
               <SelectContent alignItemWithTrigger={false} align="start">

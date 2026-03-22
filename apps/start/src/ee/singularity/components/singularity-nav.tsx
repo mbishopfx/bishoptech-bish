@@ -23,14 +23,18 @@ export function SingularityNav() {
       <ContentPage className="max-w-none px-3 py-0 lg:px-6 lg:pt-0">
         <div className="flex h-14 items-center justify-between gap-6">
           <div className="flex min-w-0 items-center gap-3">
-            <div className="rounded-md border border-border-base bg-surface-overlay px-2 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-foreground-secondary">
+            <Link
+              to="/singularity"
+              className="truncate text-sm font-semibold text-foreground-strong"
+            >
               Singularity
-            </div>
+            </Link>
+            <span className="hidden h-4 w-px bg-border-light md:block" />
             <p className="hidden text-sm text-foreground-tertiary md:block">
-              Enterprise admin workspace
+              Enterprise admin
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-4">
             {tabs.map((tab) => {
               const isActive =
                 pathname === tab.href || pathname.startsWith(`${tab.href}/`)
@@ -40,9 +44,9 @@ export function SingularityNav() {
                   key={tab.href}
                   to={tab.href}
                   className={cn(
-                    'rounded-md px-3 py-1.5 text-sm transition-colors',
+                    'border-b-2 border-transparent px-1 py-3 text-sm transition-colors',
                     isActive
-                      ? 'bg-surface-overlay text-foreground-primary'
+                      ? 'border-foreground-primary text-foreground-primary'
                       : 'text-foreground-tertiary hover:text-foreground-primary',
                   )}
                 >

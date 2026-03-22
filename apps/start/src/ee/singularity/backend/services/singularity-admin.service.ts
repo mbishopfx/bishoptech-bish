@@ -60,6 +60,7 @@ export type SingularityAdminServiceShape = {
     organizationId: string
     actorUserId: string
     planId: WorkspacePlanId
+    seatCount: number
   }) => Effect.Effect<
     void,
     SingularityNotFoundError | SingularityPersistenceError
@@ -397,7 +398,7 @@ export class SingularityAdminService extends ServiceMap.Service<
 
     setOrganizationPlanOverride: Effect.fn(
       'SingularityAdminService.setOrganizationPlanOverride',
-    )(({ organizationId, actorUserId, planId }) =>
+    )(({ organizationId, actorUserId, planId, seatCount }) =>
       Effect.tryPromise({
         try: async () => {
           const orgResult = await authPool.query<{ id: string }>(
@@ -418,7 +419,7 @@ export class SingularityAdminService extends ServiceMap.Service<
           await ensureOrganizationBillingBaseline(organizationId)
 
           const currentSubscription = await readCurrentOrgSubscription(organizationId)
-          const seatCount = Math.max(1, currentSubscription?.seatCount ?? 1)
+          const normalizedSeatCount = Math.max(1, seatCount)
           const now = Date.now()
           const billingAccountId = `billing_${organizationId}`
           const subscriptionId = `workspace_subscription_${organizationId}`
@@ -441,7 +442,7 @@ export class SingularityAdminService extends ServiceMap.Service<
             billingInterval: currentSubscription?.billingProvider === 'manual'
               ? 'month'
               : null,
-            seatCount,
+            seatCount: normalizedSeatCount,
             status: 'active',
             periodStart: now,
             periodEnd: currentSubscription?.currentPeriodEnd ?? null,
