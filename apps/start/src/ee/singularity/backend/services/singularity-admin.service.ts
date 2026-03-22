@@ -87,6 +87,11 @@ type OrganizationSummaryRow = {
   seatCount: number | null
   memberCount: number
   pendingInvitationCount: number
+  aiSpendThisMonth: number | null
+  aiSpendAllTime: number | null
+  billingPeriodStart: number | null
+  billingPeriodEnd: number | null
+  paidSubscriptionStartedAt: number | null
 }
 
 type MemberRow = {
@@ -197,10 +202,49 @@ export class SingularityAdminService extends ServiceMap.Service<
                  from invitation i
                  where i."organizationId" = o.id
                    and i.status = 'pending'
-               ) as "pendingInvitationCount"
+               ) as "pendingInvitationCount",
+               (
+                 select coalesce(sum(msg.public_cost), 0)::float8
+                 from threads t
+                 join messages msg
+                   on msg.thread_id = t.thread_id
+                 where t.owner_org_id = o.id
+                   and msg.role = 'assistant'
+                   and msg.public_cost is not null
+                   and msg.created_at >= (
+                     extract(epoch from date_trunc('month', now())) * 1000
+                   )::bigint
+               ) as "aiSpendThisMonth",
+               (
+                 select coalesce(sum(msg.public_cost), 0)::float8
+                 from threads t
+                 join messages msg
+                   on msg.thread_id = t.thread_id
+                 where t.owner_org_id = o.id
+                   and msg.role = 'assistant'
+                   and msg.public_cost is not null
+               ) as "aiSpendAllTime",
+               current_subscription.current_period_start as "billingPeriodStart",
+               current_subscription.current_period_end as "billingPeriodEnd",
+               (
+                 select min(paid_sub.created_at)
+                 from org_subscription paid_sub
+                 where paid_sub.organization_id = o.id
+                   and paid_sub.plan_id <> 'free'
+               ) as "paidSubscriptionStartedAt"
              from organization o
              left join org_entitlement_snapshot es
                on es.organization_id = o.id
+             left join lateral (
+               select
+                 org_subscription.current_period_start,
+                 org_subscription.current_period_end
+               from org_subscription
+               where org_subscription.organization_id = o.id
+                 and org_subscription.status in ('active', 'trialing', 'past_due')
+               order by org_subscription.updated_at desc
+               limit 1
+             ) current_subscription on true
              where o.id = $1
              limit 1`,
             [organizationId],
@@ -267,6 +311,11 @@ export class SingularityAdminService extends ServiceMap.Service<
             seatCount: Math.max(1, summary.seatCount ?? 1),
             memberCount: summary.memberCount,
             pendingInvitationCount: summary.pendingInvitationCount,
+            aiSpendThisMonth: summary.aiSpendThisMonth ?? 0,
+            aiSpendAllTime: summary.aiSpendAllTime ?? 0,
+            billingPeriodStart: summary.billingPeriodStart ?? null,
+            billingPeriodEnd: summary.billingPeriodEnd ?? null,
+            paidSubscriptionStartedAt: summary.paidSubscriptionStartedAt ?? null,
             members: membersResult.rows.map((member) => ({
               memberId: member.memberId,
               organizationId: member.organizationId,

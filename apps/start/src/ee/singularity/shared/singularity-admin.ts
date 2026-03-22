@@ -41,6 +41,11 @@ export type SingularityOrganizationDetail = {
   seatCount: number
   memberCount: number
   pendingInvitationCount: number
+  aiSpendThisMonth: number
+  aiSpendAllTime: number
+  billingPeriodStart: number | null
+  billingPeriodEnd: number | null
+  paidSubscriptionStartedAt: number | null
   members: Array<SingularityMember>
   invitations: Array<SingularityInvitation>
 }

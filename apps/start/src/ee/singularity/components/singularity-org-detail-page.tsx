@@ -52,6 +52,88 @@ type DirectoryRow = {
   invitationId?: string
 }
 
+const usdCurrencyFormatter = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD',
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+})
+
+const mediumDateFormatter = new Intl.DateTimeFormat('en-US', {
+  month: 'short',
+  day: 'numeric',
+  year: 'numeric',
+})
+
+function formatCurrencyAmount(amount: number): string {
+  return usdCurrencyFormatter.format(Number.isFinite(amount) ? amount : 0)
+}
+
+function formatDateLabel(timestamp: number | null): string {
+  if (timestamp == null || !Number.isFinite(timestamp)) {
+    return 'Not available'
+  }
+
+  return mediumDateFormatter.format(new Date(timestamp))
+}
+
+function formatBillingPeriodLabel(
+  startTimestamp: number | null,
+  endTimestamp: number | null,
+): string {
+  if (
+    startTimestamp != null
+    && Number.isFinite(startTimestamp)
+    && endTimestamp != null
+    && Number.isFinite(endTimestamp)
+  ) {
+    return `${formatDateLabel(startTimestamp)} - ${formatDateLabel(endTimestamp)}`
+  }
+
+  if (endTimestamp != null && Number.isFinite(endTimestamp)) {
+    return `Ends ${formatDateLabel(endTimestamp)}`
+  }
+
+  return 'Not available'
+}
+
+/**
+ * Subscription tenure is shown in coarse units so operators can compare orgs
+ * quickly without mentally converting from exact dates.
+ */
+function formatSubscriptionAge(timestamp: number | null): string {
+  if (timestamp == null || !Number.isFinite(timestamp)) {
+    return 'Not subscribed'
+  }
+
+  const startedAt = new Date(timestamp)
+  const now = new Date()
+  let months =
+    (now.getFullYear() - startedAt.getFullYear()) * 12
+    + (now.getMonth() - startedAt.getMonth())
+
+  if (now.getDate() < startedAt.getDate()) {
+    months -= 1
+  }
+
+  if (months <= 0) {
+    return 'Less than 1 month'
+  }
+
+  const years = Math.floor(months / 12)
+  const remainingMonths = months % 12
+
+  if (years === 0) {
+    return `${months} month${months === 1 ? '' : 's'}`
+  }
+
+  if (remainingMonths === 0) {
+    return `${years} year${years === 1 ? '' : 's'}`
+  }
+
+  return `${years}y ${remainingMonths}mo`
+}
+
 /**
  * Shared shell for the remaining sections so the page keeps one consistent
  * rhythm after invites move into the table toolbar.
@@ -88,14 +170,18 @@ function DetailSection({
 }
 
 /**
- * Compact key/value summary cells keep the org overview readable while fitting
- * inside the shared Form card body.
+ * The overview metrics use self-contained tiles instead of row dividers so the
+ * layout stays balanced when the grid wraps across breakpoints.
  */
 function SummaryMetric({ label, value }: { label: string; value: ReactNode }) {
   return (
-    <div className="space-y-1 border-l border-border-light pl-4 first:border-l-0 first:pl-0">
-      <dt className="text-xs font-medium text-foreground-tertiary">{label}</dt>
-      <dd className="text-sm font-medium text-foreground-strong">{value}</dd>
+    <div className="rounded-xl border border-border-light/80 bg-surface-overlay/70 px-4 py-3">
+      <dt className="text-[11px] font-medium text-foreground-tertiary">
+        {label}
+      </dt>
+      <dd className="mt-2 text-sm font-semibold leading-5 text-foreground-strong">
+        {value}
+      </dd>
     </div>
   )
 }
@@ -557,6 +643,7 @@ export function SingularityOrgDetailPage({
 
   return (
     <ContentPage
+      className="lg:pt-6"
       title={
         <div className="flex min-w-0 items-center gap-4">
           <div className="min-w-0">
@@ -602,7 +689,7 @@ export function SingularityOrgDetailPage({
           }
           description=""
           contentSlot={
-            <dl className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <dl className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <SummaryMetric
                 label="Members"
                 value={`${organization.memberCount} active`}
@@ -617,6 +704,38 @@ export function SingularityOrgDetailPage({
               />
               <SummaryMetric label="Seats" value={organization.seatCount} />
               <SummaryMetric label="Plan" value={activePlanName} />
+              <SummaryMetric
+                label="AI spend this month"
+                value={formatCurrencyAmount(organization.aiSpendThisMonth)}
+              />
+              <SummaryMetric
+                label="AI spend all time"
+                value={formatCurrencyAmount(organization.aiSpendAllTime)}
+              />
+              <SummaryMetric
+                label="Billing period"
+                value={formatBillingPeriodLabel(
+                  organization.billingPeriodStart,
+                  organization.billingPeriodEnd,
+                )}
+              />
+              <SummaryMetric
+                label="Subscribed since"
+                value={
+                  organization.paidSubscriptionStartedAt == null ? (
+                    'Not subscribed'
+                  ) : (
+                    <div className="space-y-0.5">
+                      <div>{formatDateLabel(organization.paidSubscriptionStartedAt)}</div>
+                      <div className="text-xs font-normal text-foreground-tertiary">
+                        {formatSubscriptionAge(
+                          organization.paidSubscriptionStartedAt,
+                        )}
+                      </div>
+                    </div>
+                  )
+                }
+              />
             </dl>
           }
           helpText=""

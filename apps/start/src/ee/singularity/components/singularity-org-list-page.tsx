@@ -159,10 +159,7 @@ export function SingularityOrgListPage({
   )
 
   return (
-    <ContentPage
-      title="Singularity"
-      description="Organization-level control plane for internal administrators."
-    >
+    <ContentPage className="lg:pt-6">
       <DataTable
         data={rows}
         columns={columns}
