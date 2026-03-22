@@ -663,5 +663,9 @@
   "org_settings_general_save_button": "Save",
   "settings_security_mfa_description": "Use an authenticator app to add a second step at sign-in.",
   "settings_security_mfa_scan_instructions": "Scan this QR code in your authenticator app. If you can't scan it, \"copy\" the code manually. Then enter the 6-digit code to finish setup.",
-  "common_reset_failed": "We could not reset your password with that code. Request a new one and try again."
+  "common_reset_failed": "We could not reset your password with that code. Request a new one and try again.",
+  "pricing_manage_billing": "Manage in billing portal",
+  "pricing_subscribe": "Subscribe",
+  "pricing_error_billing_portal": "Billing portal could not be opened",
+  "pricing_error_checkout": "Stripe checkout could not be started"
 }

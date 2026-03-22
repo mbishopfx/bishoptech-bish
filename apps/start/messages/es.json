@@ -663,5 +663,9 @@
   "org_settings_general_save_button": "Guardar",
   "settings_security_mfa_description": "Usa una app autenticadora para agregar un segundo paso al iniciar sesión.",
   "settings_security_mfa_scan_instructions": "Escanea este código QR en tu app autenticadora. Si no puedes escanearlo, \"copia\" el código manualmente. Luego introduce el código de 6 dígitos para finalizar la configuración.",
-  "common_reset_failed": "No pudimos restablecer la contraseña con ese código. Solicita uno nuevo e intenta otra vez."
+  "common_reset_failed": "No pudimos restablecer la contraseña con ese código. Solicita uno nuevo e intenta otra vez.",
+  "pricing_manage_billing": "Gestionar en portal de facturación",
+  "pricing_subscribe": "Suscribirse",
+  "pricing_error_billing_portal": "No se pudo abrir el portal de facturación",
+  "pricing_error_checkout": "No se pudo iniciar el proceso de pago de Stripe"
 }

@@ -663,5 +663,9 @@
   "org_settings_general_save_button": "שמירה",
   "settings_security_mfa_description": "השתמשו באפליקציית מאמת כדי להוסיף שלב שני בהתחברות.",
   "settings_security_mfa_scan_instructions": "סרקו את קוד ה-QR הזה באפליקציית המאמת. אם אי אפשר לסרוק, \"העתיקו\" את הקוד ידנית. לאחר מכן הזינו קוד בן 6 ספרות כדי להשלים את ההגדרה.",
-  "common_reset_failed": "לא הצלחנו לאפס את הסיסמה עם הקוד הזה. בקשו קוד חדש ונסו שוב."
+  "common_reset_failed": "לא הצלחנו לאפס את הסיסמה עם הקוד הזה. בקשו קוד חדש ונסו שוב.",
+  "pricing_manage_billing": "ניהול בחשבון חיוב",
+  "pricing_subscribe": "הירשם",
+  "pricing_error_billing_portal": "לא ניתן היה לפתוח את חשבון החיוב",
+  "pricing_error_checkout": "לא ניתן היה להתחיל את התשלום של Stripe"
 }

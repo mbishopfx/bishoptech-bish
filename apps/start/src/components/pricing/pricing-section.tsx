@@ -5,17 +5,19 @@ import {
   enterprisePlan,
   selfHostingPlan,
 } from '@/lib/shared/pricing'
-import { PricingCard  } from './pricing-card'
-import type {PricingPlanActionOverride} from './pricing-card';
+import { PricingCard } from './pricing-card'
+import type { PricingPlanActionOverride } from './pricing-card'
 import { DashedBorderFrame } from './pricing-decorative'
+import { PricingOrgSwitcher } from './pricing-org-switcher'
 
 type PricingSectionProps = {
   heading?: string
   summary?: string
   locale?: string
-  resolvePlanAction?: (planName: string) => PricingPlanActionOverride | undefined
+  resolvePlanAction?: (
+    planName: string,
+  ) => PricingPlanActionOverride | undefined
 }
-
 
 export function PricingSection({
   heading = 'Simple, Transparent Plans',
@@ -101,6 +103,9 @@ export function PricingSection({
           >
             {summary}
           </p>
+          <div className="mt-4">
+            <PricingOrgSwitcher className="w-64" />
+          </div>
         </div>
 
         <div className="relative mx-auto w-full max-w-[1400px] max-md:px-4 max-md:py-4 max-lg:p-4 lg:p-12">
