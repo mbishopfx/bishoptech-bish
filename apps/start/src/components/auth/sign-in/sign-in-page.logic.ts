@@ -2,11 +2,13 @@
 
 import { useServerFn } from '@tanstack/react-start'
 import { useNavigate } from '@tanstack/react-router'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { m } from '@/paraglide/messages.js'
 import { authClient } from '@/lib/frontend/auth/auth-client'
 import { getInvitationEmailForAuth } from '@/lib/frontend/auth/invitation.functions'
+import { useAppAuth } from '@/lib/frontend/auth/use-auth'
 import {
+  getAbsoluteAppURL,
   getDefaultAuthDisplayName,
   normalizeEmailAddress,
   OTP_EXPIRES_IN_SECONDS,
@@ -29,6 +31,7 @@ export type SignInPageLogicResult = {
   isSignUp: boolean
   invitationEmail: string
   invitationLookupLoading: boolean
+  socialAuthCallbackURL?: string
   pendingVerificationEmail: string
   pendingMfaEmail: string
   verificationMessage: string
@@ -53,8 +56,10 @@ type InvitationAcceptanceResponse = {
   member?: { organizationId?: string }
 }
 
-
-function readAuthErrorMessage(error: { message?: string; code?: string } | null | undefined, fallback: string) {
+function readAuthErrorMessage(
+  error: { message?: string; code?: string } | null | undefined,
+  fallback: string,
+) {
   if (!error) return fallback
 
   if (error.code === 'TOO_MANY_ATTEMPTS') {
@@ -69,7 +74,10 @@ function readRecord(value: unknown): Record<string, unknown> | null {
   return value as Record<string, unknown>
 }
 
-function readBooleanField(source: Record<string, unknown> | null, keys: Array<string>): boolean | null {
+function readBooleanField(
+  source: Record<string, unknown> | null,
+  keys: Array<string>,
+): boolean | null {
   if (!source) return null
   for (const key of keys) {
     const value = source[key]
@@ -102,22 +110,34 @@ export function useSignInPageLogic(
   invitationId?: string,
 ): SignInPageLogicResult {
   const navigate = useNavigate()
+  const { user, isAnonymous, loading: authSessionLoading } = useAppAuth()
   const getInvitationEmailForAuthFn = useServerFn(getInvitationEmailForAuth)
   const [isSignUp, setIsSignUp] = useState(initialMode === 'sign-up')
   const [view, setView] = useState<SignInPageView>('auth-form')
   const [invitationEmail, setInvitationEmail] = useState('')
   const [invitationLookupLoading, setInvitationLookupLoading] = useState(false)
   const [pendingVerificationEmail, setPendingVerificationEmail] = useState('')
-  const [pendingVerificationPassword, setPendingVerificationPassword] = useState('')
+  const [pendingVerificationPassword, setPendingVerificationPassword] =
+    useState('')
   const [pendingMfaEmail, setPendingMfaEmail] = useState('')
   const [verificationMessage, setVerificationMessage] = useState('')
   const [otpSentAt, setOtpSentAt] = useState<number | null>(null)
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const lastAutoAcceptedInvitationIdRef = useRef<string | null>(null)
 
   const clearError = useCallback(() => {
     setError('')
   }, [])
+
+  const socialAuthCallbackURL = useMemo(() => {
+    if (!invitationId) return undefined
+    const callbackSearch = new URLSearchParams({
+      redirect: redirectTarget,
+      invitationId,
+    })
+    return getAbsoluteAppURL(`/auth/sign-up?${callbackSearch.toString()}`)
+  }, [invitationId, redirectTarget])
 
   useEffect(() => {
     if (!invitationId) {
@@ -140,7 +160,9 @@ export function useSignInPageLogic(
         if (result.status === 'available') {
           setInvitationEmail(result.email)
           setError((currentError) =>
-            currentError === m.auth_invitation_use_invited_email() ? '' : currentError,
+            currentError === m.auth_invitation_use_invited_email()
+              ? ''
+              : currentError,
           )
           return
         }
@@ -223,12 +245,16 @@ export function useSignInPageLogic(
       invitationResult?.member?.organizationId
 
     if (organizationId) {
-      const { error: setActiveError } = await authClient.organization.setActive({
-        organizationId,
-      })
+      const { error: setActiveError } = await authClient.organization.setActive(
+        {
+          organizationId,
+        },
+      )
 
       if (setActiveError) {
-        setError(readAuthErrorMessage(setActiveError, m.auth_error_unexpected()))
+        setError(
+          readAuthErrorMessage(setActiveError, m.auth_error_unexpected()),
+        )
         return false
       }
     }
@@ -237,29 +263,52 @@ export function useSignInPageLogic(
     return true
   }, [invitationId, navigate, redirectTarget])
 
-  const attemptCredentialSignIn = useCallback(async (email: string, password: string) => {
-    let requiresTwoFactor = false
+  useEffect(() => {
+    if (!invitationId) return
+    if (authSessionLoading || isAnonymous || !user?.id) return
+    if (lastAutoAcceptedInvitationIdRef.current === invitationId) return
 
-    const result = await authClient.signIn.email(
-      {
-        email,
-        password,
-      },
-      {
-        onSuccess(context) {
-          requiresTwoFactor =
-            requiresTwoFactor ||
-            requiresTwoFactorVerification(context) ||
-            requiresTwoFactorVerification(context.data)
+    lastAutoAcceptedInvitationIdRef.current = invitationId
+    void finalizeAuthenticatedNavigation().then((navigated) => {
+      if (!navigated) {
+        lastAutoAcceptedInvitationIdRef.current = null
+      }
+    })
+  }, [
+    authSessionLoading,
+    finalizeAuthenticatedNavigation,
+    invitationId,
+    isAnonymous,
+    user?.id,
+  ])
+
+  const attemptCredentialSignIn = useCallback(
+    async (email: string, password: string) => {
+      let requiresTwoFactor = false
+
+      const result = await authClient.signIn.email(
+        {
+          email,
+          password,
         },
-      },
-    )
+        {
+          onSuccess(context) {
+            requiresTwoFactor =
+              requiresTwoFactor ||
+              requiresTwoFactorVerification(context) ||
+              requiresTwoFactorVerification(context.data)
+          },
+        },
+      )
 
-    return {
-      ...result,
-      requiresTwoFactor: requiresTwoFactor || requiresTwoFactorVerification(result),
-    }
-  }, [])
+      return {
+        ...result,
+        requiresTwoFactor:
+          requiresTwoFactor || requiresTwoFactorVerification(result),
+      }
+    },
+    [],
+  )
 
   const handleToggleMode = useCallback(() => {
     setIsSignUp((prev) => !prev)
@@ -538,6 +587,7 @@ export function useSignInPageLogic(
     isSignUp,
     invitationEmail,
     invitationLookupLoading,
+    socialAuthCallbackURL,
     pendingVerificationEmail,
     pendingMfaEmail,
     verificationMessage,

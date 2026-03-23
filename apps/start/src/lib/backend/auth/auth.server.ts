@@ -35,7 +35,6 @@ import {
 } from './default-organization'
 import {
   sendAuthOtpEmail,
-  sendAuthVerificationLinkEmail,
   sendOrganizationInvitationEmail,
 } from './auth-email.server'
 import type { Subscription as BetterAuthStripeSubscription } from '@better-auth/stripe'
@@ -315,19 +314,6 @@ const auth = betterAuth({
     maxPasswordLength: 128,
     requireEmailVerification: true,
     revokeSessionsOnPasswordReset: true,
-  },
-  emailVerification: {
-    async sendVerificationEmail({ user, url }, request) {
-      const acceptLanguageHeader = request?.headers.get('accept-language')
-      void sendAuthVerificationLinkEmail({
-        to: user.email,
-        verifyUrl: url,
-        userId: user.id,
-        fallbackAcceptLanguageHeader: acceptLanguageHeader,
-      }).catch((error) => {
-        console.error('Failed to send verification-link email', error)
-      })
-    },
   },
   ...(googleClientId && googleClientSecret
     ? {

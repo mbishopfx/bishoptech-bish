@@ -18,13 +18,16 @@ function readRecord(value: unknown): Record<string, unknown> | null {
 }
 
 function readString(value: unknown): string | null {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null
+  return typeof value === 'string' && value.trim().length > 0
+    ? value.trim()
+    : null
 }
 
 function readInvitationViewModel(value: unknown): InvitationViewModel {
   const root = readRecord(value)
   const invitation = readRecord(root?.invitation)
-  const organization = readRecord(root?.organization) ?? readRecord(invitation?.organization)
+  const organization =
+    readRecord(root?.organization) ?? readRecord(invitation?.organization)
   const inviter = readRecord(root?.inviter) ?? readRecord(invitation?.inviter)
   const inviterUser = readRecord(inviter?.user)
 
@@ -52,6 +55,7 @@ function readInvitationViewModel(value: unknown): InvitationViewModel {
 export type AcceptInvitationPageLogicResult = {
   user: ReturnType<typeof useAppAuth>['user']
   authLoading: boolean
+  isAnonymous: boolean
   invitation: InvitationViewModel | null
   invitationError: string | null
   actionLoading: 'accept' | 'reject' | null
@@ -70,20 +74,20 @@ export function useAcceptInvitationPageLogic(
   invitationId: string,
 ): AcceptInvitationPageLogicResult {
   const navigate = useNavigate()
-  const { user, loading: authLoading } = useAppAuth()
+  const { user, loading: authLoading, isAnonymous } = useAppAuth()
   const [invitation, setInvitation] = useState<InvitationViewModel | null>(null)
   const [invitationError, setInvitationError] = useState<string | null>(null)
-  const [actionLoading, setActionLoading] = useState<'accept' | 'reject' | null>(
-    null,
-  )
+  const [actionLoading, setActionLoading] = useState<
+    'accept' | 'reject' | null
+  >(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const [actionSuccess, setActionSuccess] = useState(false)
+  const authenticatedUserId = !isAnonymous ? user?.id : null
 
   useEffect(() => {
-    if (!user || !invitationId) return
+    if (!authenticatedUserId || !invitationId) return
     let cancelled = false
     setInvitationError(null)
-    setActionError(null)
     authClient.organization
       .getInvitation({ query: { id: invitationId } })
       .then(({ data, error }) => {
@@ -106,7 +110,7 @@ export function useAcceptInvitationPageLogic(
     return () => {
       cancelled = true
     }
-  }, [user, invitationId])
+  }, [authenticatedUserId, invitationId])
 
   const handleAccept = async () => {
     if (!invitationId) return
@@ -124,11 +128,12 @@ export function useAcceptInvitationPageLogic(
         invitation?: { organizationId?: string }
         member?: { organizationId?: string }
       }
-      const orgId = res?.invitation?.organizationId ?? res?.member?.organizationId
+      const orgId =
+        res?.invitation?.organizationId ?? res?.member?.organizationId
       if (orgId) {
         await authClient.organization.setActive({ organizationId: orgId })
       }
-      
+
       setActionSuccess(true)
       setTimeout(() => {
         navigate({ to: '/chat' })
@@ -167,6 +172,7 @@ export function useAcceptInvitationPageLogic(
   return {
     user,
     authLoading,
+    isAnonymous,
     invitation,
     invitationError,
     actionLoading,

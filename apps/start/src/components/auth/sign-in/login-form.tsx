@@ -24,6 +24,10 @@ export type LoginFormProps = {
   isInvitationEmailLocked?: boolean
   /** Blocks submission until the invitation lookup finishes. */
   isInvitationLookupLoading?: boolean
+  /**
+   * Optional callback URL for social providers.
+   */
+  socialAuthCallbackURL?: string
   onToggleMode: () => void
   onSubmit: (email: string, password: string) => Promise<void>
   isLoading: boolean
@@ -36,6 +40,7 @@ export function LoginForm({
   initialEmail,
   isInvitationEmailLocked = false,
   isInvitationLookupLoading = false,
+  socialAuthCallbackURL,
   onToggleMode,
   onSubmit,
   isLoading: parentIsLoading,
@@ -55,15 +60,15 @@ export function LoginForm({
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true)
     try {
-      await authClient.signIn.social(
-        { provider: 'google' },
-        {
-          onError: (ctx) => {
-            setEmailError(ctx.error?.message ?? m.auth_error_google())
-            setIsGoogleLoading(false)
-          },
+      const request = socialAuthCallbackURL
+        ? { provider: 'google' as const, callbackURL: socialAuthCallbackURL }
+        : { provider: 'google' as const }
+      await authClient.signIn.social(request, {
+        onError: (ctx) => {
+          setEmailError(ctx.error?.message ?? m.auth_error_google())
+          setIsGoogleLoading(false)
         },
-      )
+      })
     } catch {
       setIsGoogleLoading(false)
     }
@@ -72,15 +77,15 @@ export function LoginForm({
   const handleGithubSignIn = async () => {
     setIsGithubLoading(true)
     try {
-      await authClient.signIn.social(
-        { provider: 'github' },
-        {
-          onError: (ctx) => {
-            setEmailError(ctx.error?.message ?? m.auth_error_github())
-            setIsGithubLoading(false)
-          },
+      const request = socialAuthCallbackURL
+        ? { provider: 'github' as const, callbackURL: socialAuthCallbackURL }
+        : { provider: 'github' as const }
+      await authClient.signIn.social(request, {
+        onError: (ctx) => {
+          setEmailError(ctx.error?.message ?? m.auth_error_github())
+          setIsGithubLoading(false)
         },
-      )
+      })
     } catch {
       setIsGithubLoading(false)
     }

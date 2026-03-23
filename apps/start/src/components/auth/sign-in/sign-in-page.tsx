@@ -30,6 +30,7 @@ export function SignInPage({
     isSignUp,
     invitationEmail,
     invitationLookupLoading,
+    socialAuthCallbackURL,
     pendingVerificationEmail,
     pendingMfaEmail,
     verificationMessage,
@@ -114,6 +115,7 @@ export function SignInPage({
               initialEmail={invitationEmail}
               isInvitationEmailLocked={!!invitationEmail}
               isInvitationLookupLoading={invitationLookupLoading}
+              socialAuthCallbackURL={socialAuthCallbackURL}
               error={error}
               onForgotPassword={handleShowForgotPassword}
             />

@@ -26,10 +26,13 @@ export type AcceptInvitationPageProps = {
  * right after account creation. Authenticated users stay on this screen so
  * they can review the invitation before explicitly accepting or declining it.
  */
-export function AcceptInvitationPage({ invitationId }: AcceptInvitationPageProps) {
+export function AcceptInvitationPage({
+  invitationId,
+}: AcceptInvitationPageProps) {
   const {
     user,
     authLoading,
+    isAnonymous,
     invitation,
     invitationError,
     actionLoading,
@@ -39,7 +42,7 @@ export function AcceptInvitationPage({ invitationId }: AcceptInvitationPageProps
     handleReject,
   } = useAcceptInvitationPageLogic(invitationId)
 
-  if (!authLoading && !user) {
+  if (!authLoading && (!user || isAnonymous)) {
     return (
       <Navigate
         to="/auth/sign-up"
@@ -54,7 +57,9 @@ export function AcceptInvitationPage({ invitationId }: AcceptInvitationPageProps
   if (authLoading) {
     return (
       <div className="relative z-10 flex min-h-[40vh] items-center justify-center p-8">
-        <p className="text-foreground-secondary">{m.auth_invitation_loading()}</p>
+        <p className="text-foreground-secondary">
+          {m.auth_invitation_loading()}
+        </p>
       </div>
     )
   }
@@ -98,9 +103,15 @@ export function AcceptInvitationPage({ invitationId }: AcceptInvitationPageProps
                 className="flex flex-col items-center pb-2 pt-4 text-center"
               >
                 <div className="relative mb-4 inline-flex">
-                  <Avatar className="border border-border-base/60 shadow-sm" size="xl">
+                  <Avatar
+                    className="border border-border-base/60 shadow-sm"
+                    size="xl"
+                  >
                     <AvatarFallback
-                      seed={invitation?.organizationName ?? m.layout_organization_tooltip_name()}
+                      seed={
+                        invitation?.organizationName ??
+                        m.layout_organization_tooltip_name()
+                      }
                       name={invitation?.organizationName ?? 'O'}
                       className="text-xl"
                     />
@@ -142,15 +153,24 @@ export function AcceptInvitationPage({ invitationId }: AcceptInvitationPageProps
               >
                 <div className="mb-4 flex items-center justify-center">
                   {invitation ? (
-                    <Avatar className="border border-border-base/60 shadow-sm" size="xl">
+                    <Avatar
+                      className="border border-border-base/60 shadow-sm"
+                      size="xl"
+                    >
                       <AvatarFallback
-                        seed={invitation.organizationName ?? m.layout_organization_tooltip_name()}
+                        seed={
+                          invitation.organizationName ??
+                          m.layout_organization_tooltip_name()
+                        }
                         name={invitation.organizationName ?? 'O'}
                         className="text-xl"
                       />
                     </Avatar>
                   ) : (
-                    <div className="size-12 animate-pulse rounded-full bg-foreground-secondary/20" aria-hidden="true" />
+                    <div
+                      className="size-12 animate-pulse rounded-full bg-foreground-secondary/20"
+                      aria-hidden="true"
+                    />
                   )}
                 </div>
 
@@ -161,18 +181,27 @@ export function AcceptInvitationPage({ invitationId }: AcceptInvitationPageProps
                   {invitation ? (
                     <>
                       <h2 className="text-xl font-bold text-foreground-primary">
-                        {invitation.organizationName ?? m.auth_invitation_title_fallback()}
+                        {invitation.organizationName ??
+                          m.auth_invitation_title_fallback()}
                       </h2>
                       {invitation.inviterLabel ? (
                         <p className="mt-2 text-sm text-foreground-tertiary">
-                          {m.auth_invitation_invited_by({ inviter: invitation.inviterLabel })}
+                          {m.auth_invitation_invited_by({
+                            inviter: invitation.inviterLabel,
+                          })}
                         </p>
                       ) : null}
                     </>
                   ) : (
                     <div className="mt-2 flex flex-col items-center space-y-2">
-                      <div className="h-[1.75rem] w-48 animate-pulse rounded-md bg-foreground-secondary/30" aria-hidden="true" />
-                      <div className="h-[1.25rem] w-32 animate-pulse rounded-md bg-foreground-secondary/20" aria-hidden="true" />
+                      <div
+                        className="h-[1.75rem] w-48 animate-pulse rounded-md bg-foreground-secondary/30"
+                        aria-hidden="true"
+                      />
+                      <div
+                        className="h-[1.25rem] w-32 animate-pulse rounded-md bg-foreground-secondary/20"
+                        aria-hidden="true"
+                      />
                     </div>
                   )}
                 </div>
@@ -203,16 +232,16 @@ export function AcceptInvitationPage({ invitationId }: AcceptInvitationPageProps
               onClick={handleReject}
               disabled={!!actionLoading}
             >
-              {actionLoading === 'reject' ? m.auth_invitation_declining() : m.auth_invitation_decline()}
+              {actionLoading === 'reject'
+                ? m.auth_invitation_declining()
+                : m.auth_invitation_decline()}
             </Button>
             <Button
               type="button"
               variant="default"
               size="large"
               onClick={handleAccept}
-              disabled={
-                !!actionLoading || !invitation || !!invitationError
-              }
+              disabled={!!actionLoading || !invitation || !!invitationError}
             >
               {m.auth_invitation_join()}
             </Button>
