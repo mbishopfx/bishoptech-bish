@@ -4,9 +4,6 @@
   "workspaces": {
     "": {
       "name": "Rift",
-      "dependencies": {
-        "resend": "^6.9.3",
-      },
       "devDependencies": {
         "@effect/language-service": "^0.75.1",
         "@eslint/eslintrc": "^3.3.3",
@@ -36,8 +33,8 @@
         "@rift/tailwind-config": "workspace:*",
         "@rift/ui": "workspace:*",
         "@rift/utils": "workspace:*",
-        "@rocicorp/zero": "^0.26.0",
-        "@rocicorp/zero-virtual": "^0.4.0",
+        "@rocicorp/zero": "^1.0.0",
+        "@rocicorp/zero-virtual": "^0.4.2",
         "@streamdown/code": "^1.1.0",
         "@streamdown/math": "^1.0.2",
         "@streamdown/mermaid": "^1.0.2",
@@ -162,6 +159,7 @@
   "trustedDependencies": [
     "@tailwindcss/oxide",
     "esbuild",
+    "@rocicorp/zero-sqlite3",
     "unrs-resolver",
   ],
   "packages": {
@@ -935,11 +933,11 @@
 
     "@rocicorp/resolver": ["@rocicorp/resolver@1.0.2", "", {}, "sha512-TfjMTQp9cNNqNtHFfa+XHEGdA7NnmDRu+ZJH4YF3dso0Xk/b9DMhg/sl+b6CR4ThFZArXXDsG1j8Mwl34wcOZQ=="],
 
-    "@rocicorp/zero": ["@rocicorp/zero@0.26.0", "", { "dependencies": { "@badrap/valita": "0.3.11", "@databases/escape-identifier": "^1.0.3", "@databases/sql": "^3.3.0", "@dotenvx/dotenvx": "^1.39.0", "@drdgvhbh/postgres-error-codes": "^0.0.6", "@fastify/cors": "^10.0.0", "@fastify/websocket": "^11.0.0", "@google-cloud/precise-date": "^4.0.0", "@opentelemetry/api": "^1.9.0", "@opentelemetry/api-logs": "^0.203.0", "@opentelemetry/auto-instrumentations-node": "^0.62.0", "@opentelemetry/exporter-metrics-otlp-http": "^0.203.0", "@opentelemetry/resources": "^2.0.1", "@opentelemetry/sdk-metrics": "^2.0.1", "@opentelemetry/sdk-node": "^0.203.0", "@opentelemetry/sdk-trace-node": "^2.0.1", "@postgresql-typed/oids": "^0.2.0", "@rocicorp/lock": "^1.0.4", "@rocicorp/logger": "^5.4.0", "@rocicorp/resolver": "^1.0.2", "@rocicorp/zero-sqlite3": "^1.0.15", "@standard-schema/spec": "^1.0.0", "@types/basic-auth": "^1.1.8", "basic-auth": "^2.0.1", "chalk": "^5.3.0", "chalk-template": "^1.1.0", "chokidar": "^4.0.1", "cloudevents": "^10.0.0", "command-line-args": "^6.0.1", "command-line-usage": "^7.0.3", "compare-utf8": "^0.1.1", "defu": "^6.1.4", "eventemitter3": "^5.0.1", "fastify": "^5.0.0", "is-in-subnet": "^4.0.1", "jose": "^5.9.3", "js-xxhash": "^4.0.0", "json-custom-numbers": "^3.1.1", "kasi": "^1.1.0", "nanoid": "^5.1.2", "parse-prometheus-text-format": "^1.1.1", "pg-format": "npm:pg-format-fix@^1.0.5", "postgres": "3.4.7", "prettier": "^3.5.3", "semver": "^7.5.4", "tsx": "^4.21.0", "url-pattern": "^1.0.3", "urlpattern-polyfill": "^10.1.0", "ws": "^8.18.1" }, "peerDependencies": { "@op-engineering/op-sqlite": ">=15", "expo-sqlite": ">=15" }, "optionalPeers": ["@op-engineering/op-sqlite", "expo-sqlite"], "bin": { "zero-out": "out/zero/src/zero-out.js", "ast-to-zql": "out/zero/src/ast-to-zql.js", "zero-cache": "out/zero/src/cli.js", "analyze-query": "out/zero/src/analyze-query.js", "zero-cache-dev": "out/zero/src/zero-cache-dev.js", "transform-query": "out/zero/src/transform-query.js", "zero-build-schema": "out/zero/src/build-schema.js", "zero-deploy-permissions": "out/zero/src/deploy-permissions.js" } }, "sha512-ZN6BawrqjL5vG+43+DgMrF6LGp1tUybj9JKpXwuJ8w8QXA5rOZATNBHgZfoX4eVFQGUO669mMEOu8tMIyGG1zA=="],
+    "@rocicorp/zero": ["@rocicorp/zero@1.0.0", "", { "dependencies": { "@badrap/valita": "0.3.11", "@databases/escape-identifier": "^1.0.3", "@databases/sql": "^3.3.0", "@dotenvx/dotenvx": "^1.39.0", "@drdgvhbh/postgres-error-codes": "^0.0.6", "@fastify/cors": "^10.0.0", "@fastify/websocket": "^11.0.0", "@google-cloud/precise-date": "^4.0.0", "@opentelemetry/api": "^1.9.0", "@opentelemetry/api-logs": "^0.203.0", "@opentelemetry/auto-instrumentations-node": "^0.62.0", "@opentelemetry/exporter-metrics-otlp-http": "^0.203.0", "@opentelemetry/resources": "^2.0.1", "@opentelemetry/sdk-metrics": "^2.0.1", "@opentelemetry/sdk-node": "^0.203.0", "@opentelemetry/sdk-trace-node": "^2.0.1", "@postgresql-typed/oids": "^0.2.0", "@rocicorp/lock": "^1.0.4", "@rocicorp/logger": "^5.4.0", "@rocicorp/resolver": "^1.0.2", "@rocicorp/zero-sqlite3": "^1.0.15", "@standard-schema/spec": "^1.0.0", "@types/basic-auth": "^1.1.8", "@types/ws": "^8.5.12", "basic-auth": "^2.0.1", "chalk": "^5.3.0", "chalk-template": "^1.1.0", "chokidar": "^4.0.1", "cloudevents": "^10.0.0", "command-line-args": "^6.0.1", "command-line-usage": "^7.0.3", "compare-utf8": "^0.1.1", "defu": "^6.1.4", "eventemitter3": "^5.0.1", "fastify": "^5.0.0", "is-in-subnet": "^4.0.1", "jose": "^5.9.3", "js-xxhash": "^4.0.0", "json-custom-numbers": "^3.1.1", "kasi": "^1.1.0", "nanoid": "^5.1.2", "parse-prometheus-text-format": "^1.1.1", "pg-format": "npm:pg-format-fix@^1.0.5", "postgres": "3.4.7", "prettier": "^3.8.1", "semver": "^7.5.4", "tsx": "^4.21.0", "url-pattern": "^1.0.3", "urlpattern-polyfill": "^10.1.0", "ws": "^8.18.1" }, "peerDependencies": { "@op-engineering/op-sqlite": ">=15", "expo-sqlite": ">=15" }, "optionalPeers": ["@op-engineering/op-sqlite", "expo-sqlite"], "bin": { "zero-out": "out/zero/src/zero-out.js", "ast-to-zql": "out/zero/src/ast-to-zql.js", "zero-cache": "out/zero/src/cli.js", "analyze-query": "out/zero/src/analyze-query.js", "zero-cache-dev": "out/zero/src/zero-cache-dev.js", "transform-query": "out/zero/src/transform-query.js", "zero-build-schema": "out/zero/src/build-schema.js", "zero-deploy-permissions": "out/zero/src/deploy-permissions.js" } }, "sha512-kZNyLiMYBpNcchZuEM5Om4bcUGEHaFscHeTnEtamgGCqPeAUkZRNYCMg9321Kn3rRwLqkqhMhueW5tpjmGtmdw=="],
 
     "@rocicorp/zero-sqlite3": ["@rocicorp/zero-sqlite3@1.0.15", "", { "dependencies": { "bindings": "^1.5.0", "prebuild-install": "^7.1.1" }, "bin": { "zero-sqlite3": "shell.js" } }, "sha512-o4ezzTgNQvOM23X/mBRN4LAo0i7XkIDAL3Obg7FaJLFTuwJyYwqE45aqk9vg8/0mlBw2U+DEUGLP1q/Pf+VgYQ=="],
 
-    "@rocicorp/zero-virtual": ["@rocicorp/zero-virtual@0.4.0", "", { "peerDependencies": { "@rocicorp/zero": ">=0.25.0 <0.27.0", "@tanstack/react-virtual": "^3.13.0", "@tanstack/virtual-core": "^3.13.0", "react": "^18.0.0 || ^19.0.0", "react-dom": "^18.0.0 || ^19.0.0" } }, "sha512-xMnHI9B5hE55cxTtjFfd+osZsWPmMpZpVo0M3BAEbLLkJfporvmsuayuSCWyJG+x2IjkSjYXIt6r2imzK1Y1FQ=="],
+    "@rocicorp/zero-virtual": ["@rocicorp/zero-virtual@0.4.2", "", { "peerDependencies": { "@rocicorp/zero": ">=0.25.0 <2.0.0", "@tanstack/react-virtual": "^3.13.0", "@tanstack/virtual-core": "^3.13.0", "react": "^18.0.0 || ^19.0.0", "react-dom": "^18.0.0 || ^19.0.0" } }, "sha512-laPe+RgKWIKj8MZPNHjx9IFwDpVTfEjvQZwh51hEy8M1S04OJJYRFa7pZzUw0KcNyT+WKQqD6C9Y6DyX0DuOLA=="],
 
     "@rolldown/pluginutils": ["@rolldown/pluginutils@1.0.0-rc.3", "", {}, "sha512-eybk3TjzzzV97Dlj5c+XrBFW57eTNhzod66y9HrBlzJ6NsCrWCp/2kaPS3K9wJmurBC0Tdw4yPjXKZqlznim3Q=="],
 
@@ -1292,6 +1290,8 @@
     "@types/webidl-conversions": ["@types/webidl-conversions@7.0.3", "", {}, "sha512-CiJJvcRtIgzadHCYXw7dqEnMNRjhGZlYK05Mj9OyktqV8uVT8fD2BFOB7S1uwBE3Kj2Z+4UyPmFw/Ixgw/LAlA=="],
 
     "@types/whatwg-url": ["@types/whatwg-url@13.0.0", "", { "dependencies": { "@types/webidl-conversions": "*" } }, "sha512-N8WXpbE6Wgri7KUSvrmQcqrMllKZ9uxkYWMt+mCSGwNc0Hsw9VQTW7ApqI4XNrx6/SaM2QQJCzMPDEXE058s+Q=="],
+
+    "@types/ws": ["@types/ws@8.18.1", "", { "dependencies": { "@types/node": "*" } }, "sha512-ThVF6DCVhA8kUGy+aazFQ4kXQ7E1Ty7A3ypFOe0IcJV8O/M511G99AW24irKrW56Wt44yG9+ij8FaqoBGkuBXg=="],
 
     "@typescript-eslint/eslint-plugin": ["@typescript-eslint/eslint-plugin@8.57.0", "", { "dependencies": { "@eslint-community/regexpp": "^4.12.2", "@typescript-eslint/scope-manager": "8.57.0", "@typescript-eslint/type-utils": "8.57.0", "@typescript-eslint/utils": "8.57.0", "@typescript-eslint/visitor-keys": "8.57.0", "ignore": "^7.0.5", "natural-compare": "^1.4.0", "ts-api-utils": "^2.4.0" }, "peerDependencies": { "@typescript-eslint/parser": "^8.57.0", "eslint": "^8.57.0 || ^9.0.0 || ^10.0.0", "typescript": ">=4.8.4 <6.0.0" } }, "sha512-qeu4rTHR3/IaFORbD16gmjq9+rEs9fGKdX0kF6BKSfi+gCuG3RCKLlSBYzn/bGsY9Tj7KE/DAQStbp8AHJGHEQ=="],
 

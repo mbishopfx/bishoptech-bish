@@ -7,7 +7,7 @@
 .chat-streamdown {
   font-size: 16px;
   line-height: 28px;
-  color: #fcfcfc;
+  color: var(--foreground-primary);
 }
 
 /* --- Headings (aligned with Next streamdown H1–H6) --- */

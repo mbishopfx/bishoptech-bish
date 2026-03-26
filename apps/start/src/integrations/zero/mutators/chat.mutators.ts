@@ -17,6 +17,7 @@ import {
   
 } from '@/lib/shared/chat-branching/branch-resolver'
 import type {BranchSelection} from '@/lib/shared/chat-branching/branch-resolver';
+import { isOrgMember, requireOrgContext } from '../org-access'
 
 /**
  * Client-callable mutators only. Thread and message creation are server-only:
@@ -35,6 +36,11 @@ const archiveThreadArgs = z.object({
 
 const deleteThreadArgs = z.object({
   threadId: z.string(),
+})
+
+const setThreadPinnedArgs = z.object({
+  threadId: z.string(),
+  pinned: z.boolean(),
 })
 
 const selectBranchChildArgs = z.object({
@@ -139,6 +145,47 @@ type BranchMutatorTx = any
 type BranchMutatorCtx = {
   readonly userID: string
   readonly organizationId?: string
+  readonly isAnonymous?: boolean
+}
+
+async function loadScopedOwnedThread(input: {
+  readonly tx: any
+  readonly ctx: {
+    readonly userID: string
+    readonly organizationId?: string
+    readonly isAnonymous?: boolean
+  }
+  readonly threadId: string
+}) {
+  const scoped = requireOrgContext(
+    {
+      organizationId: input.ctx.organizationId,
+      userID: input.ctx.userID,
+      isAnonymous: input.ctx.isAnonymous ?? false,
+    },
+    'Organization context is required to pin threads',
+  )
+
+  const organization = await input.tx.run(
+    zql.organization
+      .where('id', scoped.organizationId)
+      .whereExists('members', isOrgMember(scoped.userID))
+      .one(),
+  )
+
+  if (!organization) {
+    return null
+  }
+
+  const thread = await input.tx.run(
+    zql.thread
+      .where('threadId', input.threadId)
+      .where('userId', scoped.userID)
+      .where('ownerOrgId', scoped.organizationId)
+      .one(),
+  )
+
+  return thread ?? null
 }
 
 async function loadValidatedBranchThread(input: {
@@ -259,6 +306,22 @@ export const chatMutatorDefinitions = {
         id: thread.id,
         visibility: 'archived',
         updatedAt: Date.now(),
+      })
+    }),
+
+    setPinned: defineMutator(setThreadPinnedArgs, async ({ tx, args, ctx }) => {
+      const thread = await loadScopedOwnedThread({
+        tx,
+        ctx,
+        threadId: args.threadId,
+      })
+      if (!thread || thread.pinned === args.pinned) {
+        return
+      }
+
+      await tx.mutate.thread.update({
+        id: thread.id,
+        pinned: args.pinned,
       })
     }),
 

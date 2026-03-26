@@ -19,6 +19,8 @@ import {
   Link2,
   MessageCircle,
   Pencil,
+  Pin,
+  PinOff,
   Search,
   Trash2,
 } from 'lucide-react'
@@ -39,6 +41,8 @@ import { useAppAuth } from '@/lib/frontend/auth/use-auth'
 import { useOrgBillingSummary } from '@/lib/frontend/billing/use-org-billing'
 import { m } from '@/paraglide/messages.js'
 import { openChatSearchCommand } from './chat-search-command'
+import { resolveChatSidebarDateGroup } from './chat-sidebar-date-groups'
+import type { ChatSidebarDateGroupKey } from './chat-sidebar-date-groups'
 import { buildRenderableHistoryItems } from './chat-sidebar-history-items'
 import { ChatSidebarUpgradeCta } from './chat-sidebar-upgrade-cta'
 import { resolveChatSidebarBottomPanelVisibility } from './chat-sidebar.logic'
@@ -49,17 +53,19 @@ export const CHAT_AREA_KEY = 'default' as const
 export const CHAT_SIDEBAR_PAGE_SIZE = 100
 
 const THREAD_ROW_HEIGHT = 36
+const GROUP_HEADER_HEIGHT = 24
 const THREAD_ROW_OVERSCAN = 8
 const HISTORY_SCROLL_STATE_KEY = 'chatSidebarHistory'
 const OPTIMISTIC_THREAD_CREATED_EVENT = 'chat:thread-created'
 const THREAD_ROW_SHELL_CLASS =
   'min-h-[2.25rem] pr-3 [contain-intrinsic-size:0_2.25rem]'
+const GROUP_HEADER_CLASS =
+  'pointer-events-none flex h-6 items-center pl-3 pr-3 text-sm text-foreground-secondary'
 
 export const isChatPath = (pathname: string) =>
   isAreaPath(pathname, ['/', CHAT_HREF])
 
 const CHAT_SIDEBAR_TITLE = () => m.chat_sidebar_title()
-const CHAT_HISTORY_SECTION_NAME = () => m.chat_sidebar_history_section()
 
 type OptimisticThread = {
   readonly threadId: string
@@ -68,6 +74,7 @@ type OptimisticThread = {
 }
 
 type ThreadHistoryCursor = {
+  readonly pinned: boolean
   readonly updatedAt: number
   readonly threadId: string
 }
@@ -79,12 +86,50 @@ type ThreadHistoryRow = QueryResultType<
 type ThreadItemRow = {
   readonly threadId: string
   readonly title: string
+  readonly pinned: boolean
+  readonly updatedAt: number
   readonly generationStatus?: ThreadHistoryRow['generationStatus']
 }
 
 type ThreadHistoryListContext = {
   readonly organizationId: string
   readonly revision: number
+}
+
+type ThreadHistoryGroupKey = ChatSidebarDateGroupKey | 'pinned'
+
+const THREAD_HISTORY_GROUP_ORDER: readonly ThreadHistoryGroupKey[] = [
+  'pinned',
+  'today',
+  'yesterday',
+  'last_7_days',
+  'last_30_days',
+  'older',
+]
+
+function getHistoryGroupLabel(groupKey: ThreadHistoryGroupKey) {
+  switch (groupKey) {
+    case 'pinned':
+      return m.chat_sidebar_group_pinned()
+    case 'today':
+      return m.chat_sidebar_group_today()
+    case 'yesterday':
+      return m.chat_sidebar_group_yesterday()
+    case 'last_7_days':
+      return m.chat_sidebar_group_last_7_days()
+    case 'last_30_days':
+      return m.chat_sidebar_group_last_30_days()
+    case 'older':
+      return m.chat_sidebar_group_older()
+  }
+}
+
+function getThreadHistoryGroupKey(thread: ThreadItemRow): ThreadHistoryGroupKey {
+  return thread.pinned ? 'pinned' : resolveChatSidebarDateGroup(thread.updatedAt)
+}
+
+function getThreadHistoryGroupRank(groupKey: ThreadHistoryGroupKey): number {
+  return THREAD_HISTORY_GROUP_ORDER.indexOf(groupKey)
 }
 
 /** Static sections only. Dynamic history is rendered as a dedicated virtualized pane. */
@@ -151,6 +196,7 @@ function buildThreadItem({
   cancelEditingThread,
   handleCopyThreadLink,
   handleDeleteThread,
+  handleSetThreadPinned,
   isPersisted,
 }: {
   thread: ThreadItemRow
@@ -163,6 +209,7 @@ function buildThreadItem({
   cancelEditingThread: () => void
   handleCopyThreadLink: (threadId: string) => Promise<void>
   handleDeleteThread: (threadId: string) => Promise<void>
+  handleSetThreadPinned: (threadId: string, pinned: boolean) => Promise<void>
   isPersisted: boolean
 }): NavItemType {
   const status = thread.generationStatus
@@ -240,6 +287,16 @@ function buildThreadItem({
             <Copy />
             {m.chat_sidebar_copy_link()}
           </ContextMenuItem>
+          <ContextMenuItem
+            onClick={() => {
+              void handleSetThreadPinned(thread.threadId, !thread.pinned)
+            }}
+          >
+            {thread.pinned ? <PinOff /> : <Pin />}
+            {thread.pinned
+              ? m.chat_sidebar_unpin()
+              : m.chat_sidebar_pin()}
+          </ContextMenuItem>
           <ContextMenuSeparator />
           <ContextMenuItem
             variant="destructive"
@@ -269,6 +326,20 @@ function ThreadHistorySkeletonRow({ style }: { style: CSSProperties }) {
           <div className="h-3 w-[72%] rounded bg-surface-inverse/10" />
         </div>
       </div>
+    </div>
+  )
+}
+
+function ThreadHistoryGroupHeaderRow({
+  label,
+  style,
+}: {
+  label: string
+  style: CSSProperties
+}) {
+  return (
+    <div style={style} className="absolute left-0 top-0 w-full">
+      <div className={GROUP_HEADER_CLASS}>{label}</div>
     </div>
   )
 }
@@ -345,6 +416,9 @@ function ChatSidebarHistory({
   const [editingThreadId, setEditingThreadId] = useState<string | null>(null)
   const [editingTitle, setEditingTitle] = useState('')
   const [contextMenuResetToken, setContextMenuResetToken] = useState(0)
+  const [discoveredHistoryGroups, setDiscoveredHistoryGroups] = useState<
+    readonly ThreadHistoryGroupKey[]
+  >([])
   const activeThreadId = useMemo(() => getActiveThreadId(pathname), [pathname])
   const listContextParams = useMemo<ThreadHistoryListContext>(
     () => ({
@@ -406,6 +480,7 @@ function ChatSidebarHistory({
     getRowKey: useCallback((thread: ThreadHistoryRow) => thread.threadId, []),
     toStartRow: useCallback(
       (thread) => ({
+        pinned: thread.pinned,
         updatedAt: thread.updatedAt,
         threadId: thread.threadId,
       }),
@@ -417,7 +492,12 @@ function ChatSidebarHistory({
 
   const virtualItems = virtualizer.getVirtualItems()
   const renderableHistoryItems = useMemo(
-    () => buildRenderableHistoryItems({ virtualItems, rowAt }),
+    () =>
+      buildRenderableHistoryItems({
+        virtualItems,
+        rowAt,
+        getGroupKey: (thread) => getThreadHistoryGroupKey(thread),
+      }),
     [rowAt, virtualItems],
   )
   const visibleThreads = useMemo(
@@ -445,6 +525,26 @@ function ChatSidebarHistory({
       ),
     [optimisticThreads, persistedVisibleThreadIds],
   )
+  const visibleGroupHeaders = useMemo(
+    () =>
+      renderableHistoryItems.filter(
+        (
+          item,
+        ): item is Extract<
+          (typeof renderableHistoryItems)[number],
+          { kind: 'header' }
+        > => item.kind === 'header',
+      ),
+    [renderableHistoryItems],
+  )
+  const effectiveDiscoveredGroups = useMemo(
+    () =>
+      THREAD_HISTORY_GROUP_ORDER.filter((groupKey) =>
+        discoveredHistoryGroups.includes(groupKey) ||
+        visibleGroupHeaders.some((header) => header.groupKey === groupKey),
+      ),
+    [discoveredHistoryGroups, visibleGroupHeaders],
+  )
 
   useEffect(() => {
     if (editingThreadId) {
@@ -458,6 +558,10 @@ function ChatSidebarHistory({
       }
     }
   }, [editingThreadId])
+
+  useEffect(() => {
+    setDiscoveredHistoryGroups([])
+  }, [activeOrganizationId, historyRevision])
 
   useEffect(() => {
     const resetContextMenus = () => {
@@ -477,6 +581,29 @@ function ChatSidebarHistory({
       document.removeEventListener('visibilitychange', onVisibilityChange)
     }
   }, [])
+
+  useEffect(() => {
+    if (visibleGroupHeaders.length === 0) {
+      return
+    }
+
+    /**
+     * Preserve the set of groups the user has already scrolled through so the
+     * header spacing remains stable after a label leaves the viewport.
+     */
+    setDiscoveredHistoryGroups((current) => {
+      const next = new Set<ThreadHistoryGroupKey>(current)
+      for (const header of visibleGroupHeaders) {
+        next.add(header.groupKey as ThreadHistoryGroupKey)
+      }
+
+      if (next.size === current.length) {
+        return current
+      }
+
+      return THREAD_HISTORY_GROUP_ORDER.filter((groupKey) => next.has(groupKey))
+    })
+  }, [visibleGroupHeaders])
 
   useEffect(() => {
     syncThreadGenerationStatuses(
@@ -597,7 +724,6 @@ function ChatSidebarHistory({
           }),
           CACHE_CHAT_NAV,
         )
-        setHistoryRevision((previous) => previous + 1)
         toast.success(m.chat_sidebar_thread_deleted())
         if (activeThreadId === threadId) {
           navigate({ to: CHAT_HREF })
@@ -612,6 +738,19 @@ function ChatSidebarHistory({
       }
     },
     [activeOrganizationId, activeThreadId, navigate, z],
+  )
+
+  const handleSetThreadPinned = useCallback(
+    async (threadId: string, pinned: boolean) => {
+      try {
+        await z.mutate(mutators.threads.setPinned({ threadId, pinned })).client
+        setDiscoveredHistoryGroups([])
+      } catch (error) {
+        console.error('Failed to update thread pin state:', error)
+        toast.error(m.chat_sidebar_thread_pin_failed())
+      }
+    },
+    [z],
   )
 
   const handleCopyThreadLink = useCallback(async (threadId: string) => {
@@ -632,6 +771,7 @@ function ChatSidebarHistory({
         cancelEditingThread,
         handleCopyThreadLink,
         handleDeleteThread,
+        handleSetThreadPinned,
         isPersisted,
       })
 
@@ -659,18 +799,34 @@ function ChatSidebarHistory({
       editingTitle,
       handleCopyThreadLink,
       handleDeleteThread,
+      handleSetThreadPinned,
       pathname,
       preloadThreadMessages,
       startEditingThread,
       submitRenameThread,
     ],
   )
+  const getGroupOffsetBefore = useCallback(
+    (groupKey: ThreadHistoryGroupKey) =>
+      effectiveDiscoveredGroups.filter(
+        (discoveredGroupKey) =>
+          getThreadHistoryGroupRank(discoveredGroupKey) <
+          getThreadHistoryGroupRank(groupKey),
+      ).length * GROUP_HEADER_HEIGHT,
+    [effectiveDiscoveredGroups],
+  )
+  const getGroupOffsetThrough = useCallback(
+    (groupKey: ThreadHistoryGroupKey) =>
+      effectiveDiscoveredGroups.filter(
+        (discoveredGroupKey) =>
+          getThreadHistoryGroupRank(discoveredGroupKey) <=
+          getThreadHistoryGroupRank(groupKey),
+      ).length * GROUP_HEADER_HEIGHT,
+    [effectiveDiscoveredGroups],
+  )
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="mb-2 shrink-0 pl-3 pr-3 text-sm text-foreground-secondary">
-        {CHAT_HISTORY_SECTION_NAME()}
-      </div>
       {pinnedOptimisticThreads.length > 0 ? (
         <div className="shrink-0 pr-3">
           {pinnedOptimisticThreads.map((thread) =>
@@ -678,6 +834,8 @@ function ChatSidebarHistory({
               {
                 threadId: thread.threadId,
                 title: thread.title,
+                pinned: false,
+                updatedAt: thread.createdAt,
                 generationStatus: undefined,
               },
               { position: 'relative' },
@@ -692,9 +850,26 @@ function ChatSidebarHistory({
         complete ? null : (
           <div
             className="relative"
-            style={{ height: virtualizer.getTotalSize() }}
+            style={{
+              height:
+                virtualizer.getTotalSize() +
+                effectiveDiscoveredGroups.length * GROUP_HEADER_HEIGHT,
+            }}
           >
             {renderableHistoryItems.map((item) => {
+              if (item.kind === 'header') {
+                const groupKey = item.groupKey as ThreadHistoryGroupKey
+                const start = item.start + getGroupOffsetBefore(groupKey)
+
+                return (
+                  <ThreadHistoryGroupHeaderRow
+                    key={item.key}
+                    label={getHistoryGroupLabel(groupKey)}
+                    style={{ transform: `translateY(${start}px)` }}
+                  />
+                )
+              }
+
               if (item.kind === 'skeleton') {
                 return (
                   <ThreadHistorySkeletonRow
@@ -704,9 +879,12 @@ function ChatSidebarHistory({
                 )
               }
 
+              const start =
+                item.start + getGroupOffsetThrough(getThreadHistoryGroupKey(item.thread))
+
               return renderRow(
                 item.thread,
-                { transform: `translateY(${item.start}px)` },
+                { transform: `translateY(${start}px)` },
                 true,
               )
             })}

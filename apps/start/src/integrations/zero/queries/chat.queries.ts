@@ -12,6 +12,7 @@ const orgScopedThreadByIdArgs = z.object({
  * Zero can continue the query without materializing the entire thread set.
  */
 export const threadHistoryCursor = z.object({
+  pinned: z.boolean(),
   updatedAt: z.number(),
   threadId: z.string(),
 })
@@ -40,6 +41,7 @@ export const chatQueryDefinitions = {
         .where('userId', ctx.userID)
         .where('ownerOrgId', args.organizationId)
         .where('visibility', 'visible')
+        .orderBy('pinned', orderDirection)
         .orderBy('updatedAt', orderDirection)
         .orderBy('threadId', orderDirection)
         .limit(args.limit)

@@ -22,6 +22,12 @@ export type RenderableHistoryItem<TRow extends ThreadIdentity> =
       readonly start: number
       readonly thread: TRow
     }
+  | {
+      readonly kind: 'header'
+      readonly key: string
+      readonly start: number
+      readonly groupKey: string
+    }
 
 /**
  * `useZeroVirtualizer` can briefly surface the permalink row alongside its
@@ -32,11 +38,14 @@ export type RenderableHistoryItem<TRow extends ThreadIdentity> =
 export function buildRenderableHistoryItems<TRow extends ThreadIdentity>({
   virtualItems,
   rowAt,
+  getGroupKey,
 }: {
   virtualItems: readonly HistoryVirtualItem[]
   rowAt: (index: number) => TRow | undefined
+  getGroupKey: (row: TRow) => string
 }): RenderableHistoryItem<TRow>[] {
   const seenThreadIds = new Set<string>()
+  const visibleGroupKeys = new Set<string>()
   const renderableItems: RenderableHistoryItem<TRow>[] = []
 
   for (const virtualItem of virtualItems) {
@@ -55,6 +64,17 @@ export function buildRenderableHistoryItems<TRow extends ThreadIdentity>({
     }
 
     seenThreadIds.add(thread.threadId)
+    const groupKey = getGroupKey(thread)
+    if (!visibleGroupKeys.has(groupKey)) {
+      visibleGroupKeys.add(groupKey)
+      renderableItems.push({
+        kind: 'header',
+        key: `header:${groupKey}:${thread.threadId}`,
+        start: virtualItem.start,
+        groupKey,
+      })
+    }
+
     renderableItems.push({
       kind: 'thread',
       key: thread.threadId,
