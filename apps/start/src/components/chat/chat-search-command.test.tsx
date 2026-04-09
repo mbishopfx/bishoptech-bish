@@ -118,6 +118,9 @@ describe('ChatSearchCommand', () => {
     searchChatThreadsMock.mockReturnValueOnce(deferred.promise)
 
     render(<ChatSearchCommand />)
+    await act(async () => {
+      await Promise.resolve()
+    })
     expect(useHotkeyMock).toHaveBeenCalledWith(
       'Mod+K',
       expect.any(Function),
@@ -129,6 +132,9 @@ describe('ChatSearchCommand', () => {
 
     act(() => {
       openChatSearchCommand()
+    })
+    await act(async () => {
+      await vi.dynamicImportSettled()
     })
     fireEvent.change(screen.getByLabelText('query'), {
       target: { value: 'stale query' },
@@ -143,7 +149,7 @@ describe('ChatSearchCommand', () => {
     expect(screen.getByTestId('item-count').textContent).toBe('0')
 
     fireEvent.click(screen.getByRole('button', { name: 'close' }))
-    expect(screen.getByTestId('dialog-open').textContent).toBe('false')
+    expect(screen.queryByTestId('dialog-open')).toBeNull()
 
     await act(async () => {
       deferred.resolve([
@@ -159,7 +165,7 @@ describe('ChatSearchCommand', () => {
       await Promise.resolve()
     })
 
-    expect(screen.getByTestId('item-count').textContent).toBe('0')
+    expect(screen.queryByTestId('item-count')).toBeNull()
   })
 
   it('builds unique command values when multiple results share the same title', async () => {
@@ -183,9 +189,15 @@ describe('ChatSearchCommand', () => {
     ])
 
     render(<ChatSearchCommand />)
+    await act(async () => {
+      await Promise.resolve()
+    })
 
     act(() => {
       openChatSearchCommand()
+    })
+    await act(async () => {
+      await vi.dynamicImportSettled()
     })
     fireEvent.change(screen.getByLabelText('query'), {
       target: { value: 'duplicate' },

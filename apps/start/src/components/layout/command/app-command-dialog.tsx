@@ -1,9 +1,9 @@
 'use client'
 
-import { useState  } from 'react'
-import type {ReactNode} from 'react';
+import { useState } from 'react'
+import type { ReactNode } from 'react'
 import { Command as CommandPrimitive } from 'cmdk'
-import { Search } from 'lucide-react'
+import Search from 'lucide-react/dist/esm/icons/search'
 import { CommandDialog } from '@rift/ui/command'
 import { Kbd, KbdGroup } from '@rift/ui/kbd'
 import { cn } from '@rift/utils'
@@ -92,7 +92,8 @@ export function AppCommandDialog({
         ...group,
         items: group.items.filter((item) => {
           const searchableValue = (
-            item.value ?? `${item.title} ${item.subtitle ?? ''} ${item.meta ?? ''}`
+            item.value ??
+            `${item.title} ${item.subtitle ?? ''} ${item.meta ?? ''}`
           )
             .trim()
             .toLocaleLowerCase()
@@ -113,9 +114,12 @@ export function AppCommandDialog({
   const visibleGroups = [...visibleActionGroups, ...visibleThreadGroups]
 
   const hasVisibleItems = visibleGroups.some((group) => group.items.length > 0)
-  const showLoadingState = isLoading && shouldShowThreadGroups && visibleThreadGroups.length === 0
+  const showLoadingState =
+    isLoading && shouldShowThreadGroups && visibleThreadGroups.length === 0
   const shouldRenderGroups = !showLoadingState && hasVisibleItems
-  const [navigationMode, setNavigationMode] = useState<'pointer' | 'keyboard'>('pointer')
+  const [navigationMode, setNavigationMode] = useState<'pointer' | 'keyboard'>(
+    'pointer',
+  )
 
   return (
     <CommandDialog
@@ -173,7 +177,9 @@ export function AppCommandDialog({
               }}
             >
               {showLoadingState ? (
-                <div className="px-3 py-8 text-sm text-foreground-secondary">{loadingText ?? emptyText}</div>
+                <div className="px-3 py-8 text-sm text-foreground-secondary">
+                  {loadingText ?? emptyText}
+                </div>
               ) : null}
 
               {!showLoadingState && showEmptyState && !hasVisibleItems ? (
@@ -205,7 +211,10 @@ export function AppCommandDialog({
                           {group.items.map((item) => (
                             <CommandPrimitive.Item
                               key={item.id}
-                              value={item.value ?? `${item.title} ${item.subtitle ?? ''} ${item.meta ?? ''}`}
+                              value={
+                                item.value ??
+                                `${item.title} ${item.subtitle ?? ''} ${item.meta ?? ''}`
+                              }
                               onSelect={item.onSelect}
                               className={cn(
                                 // Match sidebar interaction language: compact radius + soft neutral hover/active fills.
@@ -233,20 +242,21 @@ export function AppCommandDialog({
                                   {item.subtitle ? (
                                     <div className="mt-0.5 line-clamp-1 text-xs text-foreground-secondary">
                                       {item.subtitleHighlightQuery
-                                        ? getSearchHighlightSegments(item.subtitle, item.subtitleHighlightQuery).map(
-                                            (segment, index) => (
-                                              <span
-                                                key={`${item.id}:subtitle:${index}:${segment.text}`}
-                                                className={
-                                                  segment.isMatch
-                                                    ? CHAT_SEARCH_HIGHLIGHT_CLASS_NAME
-                                                    : undefined
-                                                }
-                                              >
-                                                {segment.text}
-                                              </span>
-                                            ),
-                                          )
+                                        ? getSearchHighlightSegments(
+                                            item.subtitle,
+                                            item.subtitleHighlightQuery,
+                                          ).map((segment, index) => (
+                                            <span
+                                              key={`${item.id}:subtitle:${index}:${segment.text}`}
+                                              className={
+                                                segment.isMatch
+                                                  ? CHAT_SEARCH_HIGHLIGHT_CLASS_NAME
+                                                  : undefined
+                                              }
+                                            >
+                                              {segment.text}
+                                            </span>
+                                          ))
                                         : item.subtitle}
                                     </div>
                                   ) : null}

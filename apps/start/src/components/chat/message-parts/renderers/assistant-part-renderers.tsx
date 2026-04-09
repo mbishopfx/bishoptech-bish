@@ -1,8 +1,4 @@
-import { Streamdown  } from 'streamdown'
-import type {PluginConfig} from 'streamdown';
-import { code } from '@streamdown/code'
-import { math } from '@streamdown/math'
-import { mermaid } from '@streamdown/mermaid'
+import { Streamdown } from 'streamdown'
 import {
   streamdownStaticComponents,
   streamdownStreamingComponents,
@@ -11,14 +7,16 @@ import type {
   AssistantPartRenderContext,
   AssistantPartRenderer,
 } from '../types'
+import { useStreamdownPlugins } from './use-streamdown-plugins'
 
-const streamdownPlugins = { code, mermaid, math } as PluginConfig
-
-function renderTextPart({
-  part,
+function AssistantTextPart({
   isMessageStreaming,
-}: AssistantPartRenderContext) {
-  if (part.type !== 'text') return null
+  text,
+}: {
+  isMessageStreaming: boolean
+  text: string
+}) {
+  const streamdownPlugins = useStreamdownPlugins()
 
   return (
     <Streamdown
@@ -33,8 +31,22 @@ function renderTextPart({
       }
       className="chat-streamdown min-w-0 max-w-full break-words [&>*:first-child]:mt-0 [&>*:last-child]:mb-0"
     >
-      {part.text || '\u00a0'}
+      {text || '\u00a0'}
     </Streamdown>
+  )
+}
+
+function renderTextPart({
+  part,
+  isMessageStreaming,
+}: AssistantPartRenderContext) {
+  if (part.type !== 'text') return null
+
+  return (
+    <AssistantTextPart
+      isMessageStreaming={isMessageStreaming}
+      text={part.text}
+    />
   )
 }
 

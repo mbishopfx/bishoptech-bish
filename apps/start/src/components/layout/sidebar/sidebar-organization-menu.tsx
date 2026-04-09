@@ -1,11 +1,7 @@
 import { authClient } from '@/lib/frontend/auth/auth-client'
 import { useActiveOrganization } from '@/lib/frontend/auth/active-organization'
 import { useAppAuth } from '@/lib/frontend/auth/use-auth'
-import { useOrgBillingSummary } from '@/lib/frontend/billing/use-org-billing'
-import {
-  coerceWorkspacePlanId,
-  getWorkspacePlan,
-} from '@/lib/shared/access-control'
+import { waitForPageSettled } from '@/lib/frontend/performance/page-settled'
 import { isAdminRole } from '@/lib/shared/auth/roles'
 import { ORG_SETTINGS_HREF } from '@/routes/(app)/_layout/organization/settings/-organization-settings-nav'
 import { Avatar, AvatarFallback, AvatarImage } from '@rift/ui/avatar'
@@ -24,7 +20,8 @@ import { SidebarGroupTooltip } from '@rift/ui/tooltip'
 import { useDirection } from '@rift/ui/direction'
 import { Check, Plus, Settings } from 'lucide-react'
 import { useNavigate, Link } from '@tanstack/react-router'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import type { ComponentType } from 'react'
 import { m } from '@/paraglide/messages.js'
 
 type SidebarOrganization = {
@@ -38,15 +35,18 @@ type SidebarOrganizationMenuProps = {
 }
 
 const MAX_ORGANIZATIONS_PER_USER = 10
+let sidebarOrganizationBillingSummaryModulePromise:
+  | Promise<ComponentType>
+  | undefined
 
-function formatMemberCountLabel(memberCount: number | null): string {
-  if (memberCount == null) {
-    return ''
-  }
+function loadSidebarOrganizationBillingSummary() {
+  sidebarOrganizationBillingSummaryModulePromise ??= import(
+    './sidebar-organization-billing-summary'
+  ).then(({ SidebarOrganizationBillingSummary }) =>
+    SidebarOrganizationBillingSummary
+  )
 
-  return memberCount === 1
-    ? m.layout_organization_member_count_one()
-    : m.layout_organization_member_count_other({ count: memberCount })
+  return sidebarOrganizationBillingSummaryModulePromise
 }
 
 /**
@@ -60,9 +60,10 @@ export function SidebarOrganizationMenu({
     useAppAuth()
   const { activeOrganization, loading: activeOrganizationLoading } =
     useActiveOrganization()
-  const { entitlement, loading: billingLoading } = useOrgBillingSummary()
   const navigate = useNavigate()
   const direction = useDirection()
+  const [OrganizationBillingSummary, setOrganizationBillingSummary] =
+    useState<ComponentType | null>(null)
   const [organizations, setOrganizations] = useState<SidebarOrganization[]>([])
   const [organizationsLoading, setOrganizationsLoading] = useState(false)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -118,6 +119,42 @@ export function SidebarOrganizationMenu({
   useEffect(() => {
     void loadOrganizations()
   }, [loadOrganizations])
+
+  useEffect(() => {
+    if (OrganizationBillingSummary) {
+      return
+    }
+
+    let cancelled = false
+
+    const loadSummary = async () => {
+      const SummaryComponent = await loadSidebarOrganizationBillingSummary()
+      if (cancelled) {
+        return
+      }
+
+      setOrganizationBillingSummary(() => SummaryComponent)
+    }
+
+    if (isMenuOpen) {
+      void loadSummary()
+      return () => {
+        cancelled = true
+      }
+    }
+
+    void waitForPageSettled().then(() => {
+      if (cancelled) {
+        return
+      }
+
+      void loadSummary()
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [OrganizationBillingSummary, isMenuOpen])
 
   /**
    * Only owners/admins should see and use the settings entrypoint.
@@ -270,21 +307,6 @@ export function SidebarOrganizationMenu({
     [creatingOrganization, resetCreateOrganizationDialog],
   )
 
-  const planLabel = useMemo(() => {
-    if (billingLoading && !entitlement?.planId) {
-      return ''
-    }
-
-    const plan = getWorkspacePlan(coerceWorkspacePlanId(entitlement?.planId))
-    return plan.name
-  }, [billingLoading, entitlement?.planId])
-
-  const memberCountLabel = formatMemberCountLabel(
-    entitlement?.activeMemberCount ?? null,
-  )
-  const subtitle = memberCountLabel
-    ? `${planLabel} · ${memberCountLabel}`
-    : planLabel
   const createOrganizationNameTrimmed = createOrganizationName.trim()
   const hasReachedOrganizationLimit =
     organizations.length >= MAX_ORGANIZATIONS_PER_USER
@@ -389,7 +411,9 @@ export function SidebarOrganizationMenu({
                       m.layout_organization_tooltip_name()}
                   </p>
                   <p className="text-sm text-foreground-secondary">
-                    {subtitle}
+                    {OrganizationBillingSummary ? (
+                      <OrganizationBillingSummary />
+                    ) : null}
                   </p>
                 </div>
               </div>

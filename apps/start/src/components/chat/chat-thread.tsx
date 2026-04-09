@@ -1,14 +1,14 @@
 // Renders chat messages and keeps scroll pinned to the latest user message.
 import { memo, useCallback, useMemo } from 'react'
 import type { RefObject } from 'react'
-import { isReasoningUIPart  } from 'ai'
-import type {UIMessage} from 'ai';
+import { isReasoningUIPart } from 'ai'
+import type { UIMessage } from 'ai'
 import { useChatMessageActions, useChatMessages } from './chat-context'
 import { ChatMessage } from './chat-message'
 import { usePinToLastUserMessage } from '@rift/chat-scroll'
 import { ChatWelcomeScreen } from './chat-welcome-screen'
 import { setComposerDraft } from './composer-draft-store'
-import { ReasoningMotionIcon } from './message-parts/components/reasoning'
+import { ReasoningMotionIcon } from './message-parts/components/reasoning-motion-icon'
 import { useChatSearchReveal } from './use-chat-search-reveal'
 import { m } from '@/paraglide/messages.js'
 
@@ -41,7 +41,8 @@ function areBranchSelectorsEqual(
   if (!previous || !next) return previous == null && next == null
   if (previous.parentMessageId !== next.parentMessageId) return false
   if (previous.selectedMessageId !== next.selectedMessageId) return false
-  if (previous.optionMessageIds.length !== next.optionMessageIds.length) return false
+  if (previous.optionMessageIds.length !== next.optionMessageIds.length)
+    return false
   for (let index = 0; index < previous.optionMessageIds.length; index += 1) {
     if (previous.optionMessageIds[index] !== next.optionMessageIds[index]) {
       return false
@@ -135,15 +136,13 @@ export function ChatThread() {
     activeThreadId,
     hasHydratedActiveThread,
     branchSelectorsByAnchorMessageId,
-  } =
-    useChatMessages()
+  } = useChatMessages()
   const {
     regenerateMessage,
     editMessage,
     selectBranchVersion,
     revealMessageBranch,
-  } =
-    useChatMessageActions()
+  } = useChatMessageActions()
   const { disableInitialAlignment } = useChatSearchReveal({
     activeThreadId,
     canResolveReveal: hasHydratedActiveThread,
@@ -180,12 +179,9 @@ export function ChatThread() {
   const showThinking =
     isStreaming && !hasVisibleAssistantContent(lastAssistantMessage)
 
-  const handleSuggestionClick = useCallback(
-    (prompt: string) => {
-      setComposerDraft(prompt)
-    },
-    [],
-  )
+  const handleSuggestionClick = useCallback((prompt: string) => {
+    setComposerDraft(prompt)
+  }, [])
 
   const findScrollParent = useCallback((node: HTMLElement | null) => {
     let current: HTMLElement | null = node?.parentElement ?? null
@@ -193,7 +189,9 @@ export function ChatThread() {
       const style = window.getComputedStyle(current)
       const overflowY = style.overflowY
       const isScrollableOverflow =
-        overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'overlay'
+        overflowY === 'auto' ||
+        overflowY === 'scroll' ||
+        overflowY === 'overlay'
       if (isScrollableOverflow && current.scrollHeight > current.clientHeight) {
         return current
       }
@@ -334,7 +332,7 @@ export function ChatThread() {
               </div>
             </div>
             {/*
-            */}
+             */}
             <div aria-hidden className="h-8" />
           </div>
         </div>

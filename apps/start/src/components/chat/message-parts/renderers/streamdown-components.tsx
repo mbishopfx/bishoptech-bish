@@ -1,7 +1,5 @@
 import { isValidElement, memo } from 'react'
 import type { HTMLAttributes, ReactNode } from 'react'
-import { bundledLanguages  } from 'shiki'
-import type {BundledLanguage} from 'shiki';
 import type { Components } from 'streamdown'
 import { cn } from '@rift/utils'
 import {
@@ -15,6 +13,7 @@ import {
   CodeBlockLineWrapButton,
   CodeBlockTitle,
 } from '../components/code-block'
+import type { CodeBlockLanguage } from '../components/code-block'
 import {
   TableBlock,
   TableBlockCopyButton,
@@ -26,7 +25,7 @@ import {
 import { m } from '@/paraglide/messages.js'
 
 const LANGUAGE_CLASS_PREFIX = 'language-'
-const FALLBACK_LANGUAGE: BundledLanguage = 'markdown'
+const FALLBACK_LANGUAGE: CodeBlockLanguage = 'text'
 const LANGUAGE_ALIASES: Record<string, string> = {
   js: 'javascript',
   ts: 'typescript',
@@ -35,7 +34,6 @@ const LANGUAGE_ALIASES: Record<string, string> = {
   shell: 'bash',
   yml: 'yaml',
 }
-const SUPPORTED_LANGUAGES = new Set(Object.keys(bundledLanguages))
 
 function toTextContent(children: ReactNode): string {
   if (typeof children === 'string') return children
@@ -44,7 +42,7 @@ function toTextContent(children: ReactNode): string {
   return children.map((child) => toTextContent(child)).join('')
 }
 
-function extractLanguage(className?: string): BundledLanguage {
+function extractLanguage(className?: string): CodeBlockLanguage {
   if (!className) return FALLBACK_LANGUAGE
 
   const token = className
@@ -58,13 +56,12 @@ function extractLanguage(className?: string): BundledLanguage {
   if (!rawLanguage) return FALLBACK_LANGUAGE
 
   const normalized = LANGUAGE_ALIASES[rawLanguage] ?? rawLanguage
-  if (!SUPPORTED_LANGUAGES.has(normalized)) return FALLBACK_LANGUAGE
-
-  return normalized as BundledLanguage
+  return normalized as CodeBlockLanguage
 }
 
 function toLanguageLabel(language: string): string {
-  if (!language || language === FALLBACK_LANGUAGE) return m.chat_code_block_language_text_fallback()
+  if (!language || language === FALLBACK_LANGUAGE)
+    return m.chat_code_block_language_text_fallback()
   return language
 }
 
@@ -75,7 +72,7 @@ const RenderedCodeBlock = memo(function RenderedCodeBlock({
   language,
 }: {
   code: string
-  language: BundledLanguage
+  language: CodeBlockLanguage
 }) {
   return (
     <CodeBlock className="my-4" code={code} language={language}>
@@ -113,8 +110,8 @@ const RenderedCodeBlock = memo(function RenderedCodeBlock({
 }, areRenderedCodeBlocksEqual)
 
 function areRenderedCodeBlocksEqual(
-  previous: { code: string; language: BundledLanguage },
-  next: { code: string; language: BundledLanguage },
+  previous: { code: string; language: CodeBlockLanguage },
+  next: { code: string; language: CodeBlockLanguage },
 ): boolean {
   return previous.code === next.code && previous.language === next.language
 }
@@ -181,9 +178,15 @@ const RenderedTableBlock = memo(function RenderedTableBlock({
   return (
     <TableBlock className="my-4" label={m.chat_table_block_label()}>
       <TableBlockFloatingControls>
-        <TableBlockCopyButton aria-label={m.chat_table_block_copy_tsv_aria_label()} />
-        <TableBlockDownloadButton aria-label={m.chat_table_block_download_csv_aria_label()} />
-        <TableBlockFullscreenButton aria-label={m.chat_table_block_toggle_fullscreen_aria_label()} />
+        <TableBlockCopyButton
+          aria-label={m.chat_table_block_copy_tsv_aria_label()}
+        />
+        <TableBlockDownloadButton
+          aria-label={m.chat_table_block_download_csv_aria_label()}
+        />
+        <TableBlockFullscreenButton
+          aria-label={m.chat_table_block_toggle_fullscreen_aria_label()}
+        />
       </TableBlockFloatingControls>
       <TableBlockTable className={cn(className)} {...props}>
         {children}
@@ -198,7 +201,10 @@ function areRenderedTablesEqual(
 ): boolean {
   if (previous.className !== next.className) return false
   if (previous.children === next.children) return true
-  return toTableContentSignature(previous.children) === toTableContentSignature(next.children)
+  return (
+    toTableContentSignature(previous.children) ===
+    toTableContentSignature(next.children)
+  )
 }
 
 const Table: NonNullable<Components['table']> = ({

@@ -1,28 +1,38 @@
 import { Schema } from 'effect'
+import {
+  isSingularityAccessError as isSingularityAccessErrorTag,
+  isSingularityDomainError as isSingularityDomainErrorTag,
+  SINGULARITY_FORBIDDEN_ERROR_TAG,
+  SINGULARITY_MISSING_ORGANIZATION_ERROR_TAG,
+  SINGULARITY_NOT_FOUND_ERROR_TAG,
+  SINGULARITY_PERSISTENCE_ERROR_TAG,
+  SINGULARITY_UNAUTHORIZED_ERROR_TAG,
+  SINGULARITY_VALIDATION_ERROR_TAG,
+} from '@/ee/singularity/shared/errors'
 
 export class SingularityUnauthorizedError extends Schema.TaggedErrorClass<SingularityUnauthorizedError>()(
-  'SingularityUnauthorizedError',
+  SINGULARITY_UNAUTHORIZED_ERROR_TAG,
   {
     message: Schema.String,
   },
 ) {}
 
 export class SingularityMissingOrganizationError extends Schema.TaggedErrorClass<SingularityMissingOrganizationError>()(
-  'SingularityMissingOrganizationError',
+  SINGULARITY_MISSING_ORGANIZATION_ERROR_TAG,
   {
     message: Schema.String,
   },
 ) {}
 
 export class SingularityForbiddenError extends Schema.TaggedErrorClass<SingularityForbiddenError>()(
-  'SingularityForbiddenError',
+  SINGULARITY_FORBIDDEN_ERROR_TAG,
   {
     message: Schema.String,
   },
 ) {}
 
 export class SingularityValidationError extends Schema.TaggedErrorClass<SingularityValidationError>()(
-  'SingularityValidationError',
+  SINGULARITY_VALIDATION_ERROR_TAG,
   {
     message: Schema.String,
     field: Schema.optional(Schema.String),
@@ -30,7 +40,7 @@ export class SingularityValidationError extends Schema.TaggedErrorClass<Singular
 ) {}
 
 export class SingularityNotFoundError extends Schema.TaggedErrorClass<SingularityNotFoundError>()(
-  'SingularityNotFoundError',
+  SINGULARITY_NOT_FOUND_ERROR_TAG,
   {
     message: Schema.String,
     organizationId: Schema.optional(Schema.String),
@@ -38,7 +48,7 @@ export class SingularityNotFoundError extends Schema.TaggedErrorClass<Singularit
 ) {}
 
 export class SingularityPersistenceError extends Schema.TaggedErrorClass<SingularityPersistenceError>()(
-  'SingularityPersistenceError',
+  SINGULARITY_PERSISTENCE_ERROR_TAG,
   {
     message: Schema.String,
     organizationId: Schema.optional(Schema.String),
@@ -51,6 +61,7 @@ export function isSingularityAccessError(error: unknown): boolean {
     error instanceof SingularityUnauthorizedError
     || error instanceof SingularityMissingOrganizationError
     || error instanceof SingularityForbiddenError
+    || isSingularityAccessErrorTag(error)
   )
 }
 
@@ -60,5 +71,6 @@ export function isSingularityDomainError(error: unknown): boolean {
     || error instanceof SingularityValidationError
     || error instanceof SingularityNotFoundError
     || error instanceof SingularityPersistenceError
+    || isSingularityDomainErrorTag(error)
   )
 }

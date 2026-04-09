@@ -1,6 +1,6 @@
 import { Outlet, createFileRoute, redirect } from '@tanstack/react-router'
 import { DashboardLayout } from '@/components/layout'
-import { isSingularityAccessError } from '@/ee/singularity/backend/domain/errors'
+import { isSingularityAccessError } from '@/ee/singularity/shared/errors'
 import { assertSingularityAccess } from '@/ee/singularity/frontend/singularity.functions'
 
 export const Route = createFileRoute('/(ee)/singularity/_layout')({

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
+import { waitForPageSettled } from '@/lib/frontend/performance/page-settled'
 import { initClientPostHog } from '@/lib/frontend/observability/posthog'
 import type { PublicPostHogConfig } from '@/lib/shared/observability/posthog-config'
 
@@ -10,7 +11,19 @@ export function PostHogClientBootstrap({
   readonly config?: PublicPostHogConfig
 }) {
   useEffect(() => {
-    void initClientPostHog(config)
+    let cancelled = false
+
+    void waitForPageSettled().then(() => {
+      if (cancelled) {
+        return
+      }
+
+      void initClientPostHog(config)
+    })
+
+    return () => {
+      cancelled = true
+    }
   }, [config])
 
   return null

@@ -1,3 +1,12 @@
+import {
+  Suspense,
+  lazy,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
+import type { ComponentType } from 'react'
 import { ThemeToggle } from '@rift/ui/theme-toggle'
 import {
   CHAT_AREA_KEY,
@@ -7,9 +16,7 @@ import {
   SETTINGS_AREA_KEY,
 } from '@/components/layout/sidebar/app-sidebar-nav.config'
 import { SidebarAreaPanel } from '@/components/layout/sidebar/sidebar-area-panel'
-import {
-  ORG_SETTINGS_AREA_KEY,
-} from '@/routes/(app)/_layout/organization/settings/-organization-settings-nav'
+import { ORG_SETTINGS_AREA_KEY } from '@/routes/(app)/_layout/organization/settings/-organization-settings-nav'
 import { UserProfileAvatar } from '@/components/layout/user-profile-avatar'
 import { Button } from '@rift/ui/button'
 import { directionClass, useDirection } from '@rift/ui/direction'
@@ -18,12 +25,14 @@ import { cn } from '@rift/utils'
 import { useAppAuth } from '@/lib/frontend/auth/use-auth'
 import { Link, useRouterState } from '@tanstack/react-router'
 import { isSingularityOrganizationId } from '@/ee/singularity/shared/singularity'
-import type { ComponentType } from 'react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { waitForPageSettled } from '@/lib/frontend/performance/page-settled'
 import { SidebarChatThreadPreloader } from './sidebar/sidebar-chat-thread-preloader'
-import { SidebarOrganizationMenu } from './sidebar/sidebar-organization-menu'
-import { SidebarUsageMeter } from './sidebar/sidebar-usage-meter'
 import { usePageSidebarVisibility } from './page-sidebar-visibility-context'
+
+const SidebarOrganizationMenu = lazy(async () => ({
+  default: (await import('./sidebar/sidebar-organization-menu'))
+    .SidebarOrganizationMenu,
+}))
 
 const SIDEBAR_GROUPS_WIDTH = 64
 const SIDEBAR_AREAS_WIDTH = 240
@@ -40,12 +49,37 @@ export const AppSidebar: ComponentType = () => {
   })
   const lastResolvedPathnameRef = useRef(initialPathname)
   const [isTransitionReady, setIsTransitionReady] = useState(false)
+  const [DeferredSidebarUsageMeter, setDeferredSidebarUsageMeter] =
+    useState<ComponentType | null>(null)
 
   useEffect(() => {
     if (resolvedPathname) {
       lastResolvedPathnameRef.current = resolvedPathname
     }
   }, [resolvedPathname])
+
+  useEffect(() => {
+    if (DeferredSidebarUsageMeter) {
+      return
+    }
+
+    let cancelled = false
+
+    void waitForPageSettled()
+      .then(() => import('./sidebar/sidebar-usage-meter'))
+      .then(({ SidebarUsageMeter }) => {
+        if (cancelled) {
+          return
+        }
+
+        setDeferredSidebarUsageMeter(() => SidebarUsageMeter)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [DeferredSidebarUsageMeter])
+
   const pathname =
     resolvedPathname ?? lastResolvedPathnameRef.current ?? initialPathname
   const currentArea = getCurrentArea(pathname)
@@ -83,12 +117,7 @@ export const AppSidebar: ComponentType = () => {
       cancelAnimationFrame(frame)
     }
   }, [effectiveCurrentArea, isTransitionReady])
-  const {
-    user,
-    loading,
-    isAnonymous,
-    activeOrganizationId,
-  } = useAppAuth()
+  const { user, loading, isAnonymous, activeOrganizationId } = useAppAuth()
   const { isChatPageSidebarCollapsed } = usePageSidebarVisibility()
   const direction = useDirection()
   const canAccessSingularity = isSingularityOrganizationId(activeOrganizationId)
@@ -142,13 +171,19 @@ export const AppSidebar: ComponentType = () => {
         <nav
           className={cn(
             'relative z-10 flex h-full flex-col items-center justify-between border-r-2 border-border-base p-2',
-            isTransitionReady ? 'transition-colors duration-300' : 'transition-none',
+            isTransitionReady
+              ? 'transition-colors duration-300'
+              : 'transition-none',
           )}
         >
           <div className="flex flex-col items-center gap-3 pt-1">
-            <SidebarOrganizationMenu
-              isOrgAreaActive={effectiveCurrentArea === ORG_SETTINGS_AREA_KEY}
-            />
+            <Suspense
+              fallback={<div className="size-10 rounded-full" aria-hidden />}
+            >
+              <SidebarOrganizationMenu
+                isOrgAreaActive={effectiveCurrentArea === ORG_SETTINGS_AREA_KEY}
+              />
+            </Suspense>
             {Object.entries(NAV_AREAS)
               .filter(([key]) =>
                 key === SINGULARITY_AREA_KEY ? canAccessSingularity : true,
@@ -186,7 +221,11 @@ export const AppSidebar: ComponentType = () => {
               })}
           </div>
           <div className="flex flex-col items-center gap-3">
-            <SidebarUsageMeter />
+            {DeferredSidebarUsageMeter ? (
+              <DeferredSidebarUsageMeter />
+            ) : (
+              <div className="size-11" aria-hidden />
+            )}
             <ThemeToggle />
             <UserProfileAvatar
               user={user ?? undefined}
@@ -199,7 +238,9 @@ export const AppSidebar: ComponentType = () => {
         <div
           className={cn(
             'size-full overflow-hidden',
-            isTransitionReady ? 'transition-opacity duration-300' : 'transition-none',
+            isTransitionReady
+              ? 'transition-opacity duration-300'
+              : 'transition-none',
             showAreaPanel ? '' : 'pointer-events-none opacity-0',
             directionClass(direction, {
               ltr: 'pl-0 pr-2',

@@ -21,8 +21,7 @@ const config = defineConfig(({ command }) => {
   const posthogProjectId = readTrimmedEnv('POSTHOG_PROJECT_ID')
   const posthogPersonalApiKey = readTrimmedEnv('POSTHOG_PERSONAL_API_KEY')
   const posthogRelease =
-    readTrimmedEnv('RAILWAY_GIT_COMMIT_SHA')
-    ?? readTrimmedEnv('GITHUB_SHA')
+    readTrimmedEnv('RAILWAY_GIT_COMMIT_SHA') ?? readTrimmedEnv('GITHUB_SHA')
   const posthogHost = readTrimmedEnv('POSTHOG_HOST') ?? DEFAULT_POSTHOG_HOST
 
   return {
@@ -76,27 +75,31 @@ const config = defineConfig(({ command }) => {
       devtools(),
       tsconfigPaths({ projects: ['./tsconfig.json'] }),
       tailwindcss(),
-      ...(
-        !isDevServer &&
-        posthogProjectId &&
-        posthogPersonalApiKey &&
-        posthogRelease
-          ? [
-              posthogRollupPlugin({
-                host: posthogHost,
-                personalApiKey: posthogPersonalApiKey,
-                projectId: posthogProjectId,
-                sourcemaps: {
-                  enabled: true,
-                  releaseName: 'rift-start',
-                  releaseVersion: posthogRelease,
-                },
-              }),
-            ]
-          : []
-      ),
+      ...(!isDevServer &&
+      posthogProjectId &&
+      posthogPersonalApiKey &&
+      posthogRelease
+        ? [
+            posthogRollupPlugin({
+              host: posthogHost,
+              personalApiKey: posthogPersonalApiKey,
+              projectId: posthogProjectId,
+              sourcemaps: {
+                enabled: true,
+                releaseName: 'rift-start',
+                releaseVersion: posthogRelease,
+              },
+            }),
+          ]
+        : []),
       tanstackStart(),
-      nitro({ preset: 'bun' }),
+      nitro({
+        preset: 'bun',
+        compressPublicAssets: {
+          gzip: true,
+          brotli: true,
+        },
+      }),
       viteReact({
         babel: {
           plugins: ['babel-plugin-react-compiler'],

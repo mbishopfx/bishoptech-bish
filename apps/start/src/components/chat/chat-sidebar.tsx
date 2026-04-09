@@ -12,18 +12,16 @@ import { useZero } from '@rocicorp/zero/react'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { Button, buttonVariants } from '@rift/ui/button'
 import { cn, copyToClipboard } from '@rift/utils'
-import {
-  AlertTriangle,
-  Copy,
-  Globe,
-  Link2,
-  MessageCircle,
-  Pencil,
-  Pin,
-  PinOff,
-  Search,
-  Trash2,
-} from 'lucide-react'
+import AlertTriangle from 'lucide-react/dist/esm/icons/alert-triangle'
+import Copy from 'lucide-react/dist/esm/icons/copy'
+import Globe from 'lucide-react/dist/esm/icons/globe'
+import Link2 from 'lucide-react/dist/esm/icons/link-2'
+import MessageCircle from 'lucide-react/dist/esm/icons/message-circle'
+import Pencil from 'lucide-react/dist/esm/icons/pencil'
+import Pin from 'lucide-react/dist/esm/icons/pin'
+import PinOff from 'lucide-react/dist/esm/icons/pin-off'
+import Search from 'lucide-react/dist/esm/icons/search'
+import Trash2 from 'lucide-react/dist/esm/icons/trash-2'
 import { SidebarGroupTooltip } from '@rift/ui/tooltip'
 import { ContextMenuItem, ContextMenuSeparator } from '@rift/ui/context-menu'
 import { Spinner } from '@rift/ui/spinner'
@@ -117,8 +115,12 @@ function getHistoryGroupLabel(groupKey: ThreadHistoryGroupKey) {
   }
 }
 
-function getThreadHistoryGroupKey(thread: ThreadItemRow): ThreadHistoryGroupKey {
-  return thread.pinned ? 'pinned' : resolveChatSidebarDateGroup(thread.updatedAt)
+function getThreadHistoryGroupKey(
+  thread: ThreadItemRow,
+): ThreadHistoryGroupKey {
+  return thread.pinned
+    ? 'pinned'
+    : resolveChatSidebarDateGroup(thread.updatedAt)
 }
 
 function getThreadHistoryGroupRank(groupKey: ThreadHistoryGroupKey): number {
@@ -286,9 +288,7 @@ function buildThreadItem({
             }}
           >
             {thread.pinned ? <PinOff /> : <Pin />}
-            {thread.pinned
-              ? m.chat_sidebar_unpin()
-              : m.chat_sidebar_pin()}
+            {thread.pinned ? m.chat_sidebar_unpin() : m.chat_sidebar_pin()}
           </ContextMenuItem>
           <ContextMenuSeparator />
           <ContextMenuItem
@@ -518,9 +518,10 @@ function ChatSidebarHistory({
   )
   const effectiveDiscoveredGroups = useMemo(
     () =>
-      THREAD_HISTORY_GROUP_ORDER.filter((groupKey) =>
-        discoveredHistoryGroups.includes(groupKey) ||
-        visibleGroupHeaders.some((header) => header.groupKey === groupKey),
+      THREAD_HISTORY_GROUP_ORDER.filter(
+        (groupKey) =>
+          discoveredHistoryGroups.includes(groupKey) ||
+          visibleGroupHeaders.some((header) => header.groupKey === groupKey),
       ),
     [discoveredHistoryGroups, visibleGroupHeaders],
   )
@@ -791,7 +792,8 @@ function ChatSidebarHistory({
               }
 
               const start =
-                item.start + getGroupOffsetThrough(getThreadHistoryGroupKey(item.thread))
+                item.start +
+                getGroupOffsetThrough(getThreadHistoryGroupKey(item.thread))
 
               return renderRow(
                 item.thread,
@@ -811,17 +813,14 @@ export function ChatSidebarContent({ pathname }: { pathname: string }) {
   const { entitlement, loading: billingLoading } = useOrgBillingSummary()
   const normalizedOrganizationId = activeOrganizationId?.trim() || undefined
   const staticSections = useMemo(() => getStaticSections(), [])
-  const {
-    shouldShowLoginButton,
-    shouldShowUpgradeCta,
-    shouldShowBottomPanel,
-  } = resolveChatSidebarBottomPanelVisibility({
-    loading,
-    user,
-    isAnonymous,
-    billingLoading,
-    planId: entitlement?.planId,
-  })
+  const { shouldShowLoginButton, shouldShowUpgradeCta, shouldShowBottomPanel } =
+    resolveChatSidebarBottomPanelVisibility({
+      loading,
+      user,
+      isAnonymous,
+      billingLoading,
+      planId: entitlement?.planId,
+    })
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col">

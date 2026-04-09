@@ -1,5 +1,5 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
-import { isSingularityAccessError } from '@/ee/singularity/backend/domain/errors'
+import { isSingularityAccessError } from '@/ee/singularity/shared/errors'
 import { SingularityOrgDetailPage } from '@/ee/singularity/components/singularity-org-detail-page'
 import { getSingularityOrganizationProfile } from '@/ee/singularity/frontend/singularity.functions'
 
