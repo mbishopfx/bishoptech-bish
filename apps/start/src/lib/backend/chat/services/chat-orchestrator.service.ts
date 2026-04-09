@@ -33,7 +33,7 @@ import type { ChatRequestWideEvent } from '../observability/wide-event'
 import { buildChatApiErrorEnvelope } from '../http/error-response'
 import { canUseReasoningControls } from '@/utils/app-feature-flags'
 import type { OrgAiPolicy } from '@/lib/shared/model-policy/types'
-import { resolveEffectiveChatMode } from '@/lib/shared/chat-modes'
+import { isChatModeId, resolveEffectiveChatMode } from '@/lib/shared/chat-modes'
 import type {ResolvedChatAccessPolicy} from '@/lib/backend/access-control';
 import {
   runDetachedObserved,
@@ -263,6 +263,23 @@ export class ChatOrchestratorService extends ServiceMap.Service<
             maxRequests: accessPolicy.rateLimit.maxRequests,
           })
 
+          const bootstrapThreadModeId =
+            modeId && isChatModeId(modeId) ? modeId : undefined
+          const bootstrapEffectiveMode = resolveEffectiveChatMode({
+            orgEnforcedModeId: orgPolicy?.enforcedModeId,
+            requestModeId: modeId,
+            threadModeId: bootstrapThreadModeId,
+          })
+          const bootstrapDisabledToolKeys =
+            disabledToolKeys !== undefined && modelId
+              ? yield* toolPolicy.sanitizeThreadDisabledToolKeys({
+                  modelId,
+                  mode: bootstrapEffectiveMode,
+                  orgPolicy,
+                  disabledToolKeys,
+                })
+              : undefined
+
           const threadAccess = yield* threads.assertThreadAccess({
             userId,
             threadId,
@@ -271,6 +288,7 @@ export class ChatOrchestratorService extends ServiceMap.Service<
             requestedModelId: modelId,
             requestedModeId: modeId,
             requestedContextWindowMode: contextWindowMode,
+            requestedDisabledToolKeys: bootstrapDisabledToolKeys,
             organizationId,
           })
 

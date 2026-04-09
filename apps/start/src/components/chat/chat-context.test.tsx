@@ -18,9 +18,16 @@ type UseAIChatResult = {
 const navigateMock = vi.fn()
 const zeroMutateMock = vi.fn(() => ({
   client: Promise.resolve(),
+  server: Promise.resolve({ type: 'ok' }),
 }))
 const useQueryMock = vi.fn()
+const threadGenerationStatuses = new Map<
+  string,
+  'pending' | 'generation' | 'completed' | 'failed' | undefined
+>()
+let threadStatusesVersion = 0
 const sessions = new Map<string, UseAIChatResult>()
+let defaultSendMessageImplementation: () => Promise<void> = async () => undefined
 const queryState = {
   orgPolicyRow: undefined as unknown,
   threadRow: undefined as
@@ -62,7 +69,7 @@ const useAIChatMock = vi.fn((input: { id: string }) => {
     messages: [],
     status: 'ready',
     error: null,
-    sendMessage: vi.fn(async () => undefined),
+    sendMessage: vi.fn(() => defaultSendMessageImplementation()),
     regenerate: vi.fn(async () => undefined),
     setMessages: vi.fn(),
     resumeStream: vi.fn(async () => undefined),
@@ -89,8 +96,9 @@ vi.mock('@ai-sdk/react', () => ({
 
 vi.mock('./thread-status-store', () => ({
   subscribeThreadStatuses: () => () => undefined,
-  getThreadStatusesVersion: () => 0,
-  getThreadGenerationStatus: () => undefined,
+  getThreadStatusesVersion: () => threadStatusesVersion,
+  getThreadGenerationStatus: (threadId: string | undefined) =>
+    (threadId ? threadGenerationStatuses.get(threadId) : undefined),
   setThreadGenerationStatus: vi.fn(),
 }))
 
@@ -136,6 +144,10 @@ vi.mock('@/integrations/zero', () => ({
   },
   mutators: {
     threads: {
+      create: (args: Record<string, unknown>) => ({
+        __mutator: 'create',
+        args,
+      }),
       selectBranchChild: (args: Record<string, unknown>) => ({
         __mutator: 'selectBranchChild',
         args,
@@ -170,6 +182,20 @@ function Consumer() {
       }}
     >
       send
+    </button>
+  )
+}
+
+function ConsumerWithCaughtError() {
+  const { sendMessage } = useChat()
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        void sendMessage({ text: 'hello' } as never).catch(() => undefined)
+      }}
+    >
+      send-safe
     </button>
   )
 }
@@ -285,6 +311,9 @@ describe('ChatProvider', () => {
     useAIChatMock.mockClear()
     navigateMock.mockClear()
     zeroMutateMock.mockClear()
+    threadGenerationStatuses.clear()
+    threadStatusesVersion = 0
+    defaultSendMessageImplementation = async () => undefined
     useQueryMock.mockImplementation(
       (query: { __type?: string; args?: Record<string, unknown> }) => {
         if (query?.__type === 'orgPolicy') {
@@ -314,6 +343,7 @@ describe('ChatProvider', () => {
     queryState.orgPolicyRow = undefined
     queryState.threadRow = undefined
     queryState.storedMessages = []
+    vi.spyOn(Date, 'now').mockReturnValue(1_700_000_000_000)
     vi.spyOn(crypto, 'randomUUID').mockReturnValue(mockedThreadId)
   })
 
@@ -333,10 +363,129 @@ describe('ChatProvider', () => {
 
     expect(newThread?.sendMessage).toHaveBeenCalledTimes(1)
     expect(composer?.sendMessage).toHaveBeenCalledTimes(0)
+    expect(zeroMutateMock).toHaveBeenCalledWith({
+      __mutator: 'create',
+      args: {
+        threadId: mockedThreadId,
+        createdAt: 1_700_000_000_000,
+        modelId: 'meta/llama-4-maverick',
+        modeId: undefined,
+        contextWindowMode: 'standard',
+        disabledToolKeys: [],
+      },
+    })
     expect(navigateMock).toHaveBeenCalledWith({
       to: '/chat/$threadId',
       params: { threadId: mockedThreadId },
     })
+  })
+
+  it('aborts first-send navigation when optimistic thread creation fails locally', async () => {
+    zeroMutateMock.mockReturnValueOnce({
+      client: Promise.reject(new Error('create failed')),
+      server: Promise.resolve({ type: 'error' }),
+    })
+
+    const view = render(
+      <ChatProvider threadId={undefined}>
+        <ConsumerWithCaughtError />
+      </ChatProvider>,
+    )
+
+    await act(async () => {
+      fireEvent.click(view.getByRole('button', { name: 'send-safe' }))
+      await Promise.resolve()
+    })
+
+    expect(navigateMock).not.toHaveBeenCalled()
+    expect(sessions.get(`chat-ui:${mockedThreadId}`)?.sendMessage).toBeUndefined()
+  })
+
+  it('does not auto-resume a newly bootstrapped thread while the first send is in flight', async () => {
+    threadGenerationStatuses.set(mockedThreadId, 'pending')
+    threadStatusesVersion += 1
+
+    let resolveFirstSend: (() => void) | undefined
+    defaultSendMessageImplementation = () =>
+      new Promise<void>((resolve) => {
+        resolveFirstSend = resolve
+      })
+
+    const view = render(
+      <ChatProvider threadId={undefined}>
+        <ConsumerWithCaughtError />
+      </ChatProvider>,
+    )
+
+    await act(async () => {
+      fireEvent.click(view.getByRole('button', { name: 'send-safe' }))
+      await Promise.resolve()
+    })
+
+    const newThread = sessions.get(`chat-ui:${mockedThreadId}`)
+
+    expect(newThread?.sendMessage).toHaveBeenCalledTimes(1)
+    expect(newThread?.resumeStream).not.toHaveBeenCalled()
+
+    resolveFirstSend?.()
+    await act(async () => {
+      await Promise.resolve()
+    })
+  })
+
+  it('re-allows auto-resume after a bootstrap send fails', async () => {
+    threadGenerationStatuses.set(mockedThreadId, 'pending')
+    threadStatusesVersion += 1
+    defaultSendMessageImplementation = async () => {
+      throw new Error('network failed')
+    }
+
+    const view = render(
+      <ChatProvider threadId={undefined}>
+        <ConsumerWithCaughtError />
+      </ChatProvider>,
+    )
+
+    await act(async () => {
+      fireEvent.click(view.getByRole('button', { name: 'send-safe' }))
+      await Promise.resolve()
+    })
+
+    const newThread = sessions.get(`chat-ui:${mockedThreadId}`)
+    expect(newThread?.resumeStream).not.toHaveBeenCalled()
+
+    threadStatusesVersion += 1
+    view.rerender(
+      <ChatProvider threadId={undefined}>
+        <ConsumerWithCaughtError />
+      </ChatProvider>,
+    )
+
+    await act(async () => {
+      await Promise.resolve()
+    })
+
+    expect(newThread?.resumeStream).toHaveBeenCalledTimes(1)
+  })
+
+  it('auto-resumes an existing pending thread when no bootstrap send is in progress', async () => {
+    const threadId = 'thread-pending'
+    threadGenerationStatuses.set(threadId, 'pending')
+    threadStatusesVersion += 1
+
+    render(
+      <ChatProvider threadId={threadId}>
+        <Consumer />
+      </ChatProvider>,
+    )
+
+    await act(async () => {
+      await Promise.resolve()
+    })
+
+    expect(sessions.get(`chat-ui:${threadId}`)?.resumeStream).toHaveBeenCalledTimes(
+      1,
+    )
   })
 
   it('keeps chat sessions isolated per thread when route threadId changes', async () => {

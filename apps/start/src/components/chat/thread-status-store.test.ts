@@ -16,4 +16,18 @@ describe('thread-status-store', () => {
     expect(getThreadGenerationStatus('deep-linked-thread')).toBe('generation')
     expect(getThreadGenerationStatus('visible-thread')).toBe('pending')
   })
+
+  it('prunes threads when their status becomes undefined', () => {
+    setThreadGenerationStatus('ephemeral-thread', 'pending')
+    expect(getThreadGenerationStatus('ephemeral-thread')).toBe('pending')
+
+    setThreadGenerationStatus('ephemeral-thread', undefined)
+    expect(getThreadGenerationStatus('ephemeral-thread')).toBeUndefined()
+
+    syncThreadGenerationStatuses([
+      { threadId: 'synced-thread', generationStatus: 'generation' },
+      { threadId: 'synced-thread', generationStatus: undefined },
+    ])
+    expect(getThreadGenerationStatus('synced-thread')).toBeUndefined()
+  })
 })

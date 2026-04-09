@@ -56,7 +56,6 @@ const THREAD_ROW_HEIGHT = 36
 const GROUP_HEADER_HEIGHT = 24
 const THREAD_ROW_OVERSCAN = 8
 const HISTORY_SCROLL_STATE_KEY = 'chatSidebarHistory'
-const OPTIMISTIC_THREAD_CREATED_EVENT = 'chat:thread-created'
 const THREAD_ROW_SHELL_CLASS =
   'min-h-[2.25rem] pr-3 [contain-intrinsic-size:0_2.25rem]'
 const GROUP_HEADER_CLASS =
@@ -66,12 +65,6 @@ export const isChatPath = (pathname: string) =>
   isAreaPath(pathname, ['/', CHAT_HREF])
 
 const CHAT_SIDEBAR_TITLE = () => m.chat_sidebar_title()
-
-type OptimisticThread = {
-  readonly threadId: string
-  readonly title: string
-  readonly createdAt: number
-}
 
 type ThreadHistoryCursor = {
   readonly pinned: boolean
@@ -409,9 +402,6 @@ function ChatSidebarHistory({
   const editingInputRef = useRef<HTMLInputElement>(null)
   const [scrollState, setScrollState] =
     useHistoryScrollState<ThreadHistoryCursor>(HISTORY_SCROLL_STATE_KEY)
-  const [optimisticThreads, setOptimisticThreads] = useState<
-    readonly OptimisticThread[]
-  >([])
   const [historyRevision] = useState(0)
   const [editingThreadId, setEditingThreadId] = useState<string | null>(null)
   const [editingTitle, setEditingTitle] = useState('')
@@ -514,17 +504,6 @@ function ChatSidebarHistory({
         .map((item) => item.thread),
     [renderableHistoryItems],
   )
-  const persistedVisibleThreadIds = useMemo(
-    () => new Set(visibleThreads.map((thread) => thread.threadId)),
-    [visibleThreads],
-  )
-  const pinnedOptimisticThreads = useMemo(
-    () =>
-      optimisticThreads.filter(
-        (thread) => !persistedVisibleThreadIds.has(thread.threadId),
-      ),
-    [optimisticThreads, persistedVisibleThreadIds],
-  )
   const visibleGroupHeaders = useMemo(
     () =>
       renderableHistoryItems.filter(
@@ -613,55 +592,6 @@ function ChatSidebarHistory({
       })),
     )
   }, [visibleThreads])
-
-  useEffect(() => {
-    if (persistedVisibleThreadIds.size === 0) {
-      return
-    }
-
-    /**
-     * Optimistic placeholders should disappear permanently once the real thread
-     * row has materialized from Zero. Keeping them around risks re-pinning an
-     * outdated copy when the user revisits the thread from another scroll state.
-     */
-    setOptimisticThreads((current) => {
-      const next = current.filter(
-        (thread) => !persistedVisibleThreadIds.has(thread.threadId),
-      )
-      return next.length === current.length ? current : next
-    })
-  }, [persistedVisibleThreadIds])
-
-  useEffect(() => {
-    const onOptimisticThread = (event: Event) => {
-      const custom = event as CustomEvent<OptimisticThread>
-      const payload = custom.detail
-      if (
-        typeof payload.threadId !== 'string' ||
-        typeof payload.title !== 'string' ||
-        typeof payload.createdAt !== 'number'
-      ) {
-        return
-      }
-
-      setOptimisticThreads((previous) => {
-        if (previous.some((thread) => thread.threadId === payload.threadId)) {
-          return previous
-        }
-        return [payload, ...previous].sort(
-          (left, right) => right.createdAt - left.createdAt,
-        )
-      })
-    }
-
-    window.addEventListener(OPTIMISTIC_THREAD_CREATED_EVENT, onOptimisticThread)
-    return () => {
-      window.removeEventListener(
-        OPTIMISTIC_THREAD_CREATED_EVENT,
-        onOptimisticThread,
-      )
-    }
-  }, [])
 
   const preloadThreadMessages = useCallback(
     (threadId: string) => {
@@ -827,27 +757,8 @@ function ChatSidebarHistory({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      {pinnedOptimisticThreads.length > 0 ? (
-        <div className="shrink-0 pr-3">
-          {pinnedOptimisticThreads.map((thread) =>
-            renderRow(
-              {
-                threadId: thread.threadId,
-                title: thread.title,
-                pinned: false,
-                updatedAt: thread.createdAt,
-                generationStatus: undefined,
-              },
-              { position: 'relative' },
-              false,
-            ),
-          )}
-        </div>
-      ) : null}
       <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto">
-        {rowsEmpty &&
-        pinnedOptimisticThreads.length === 0 &&
-        complete ? null : (
+        {rowsEmpty && complete ? null : (
           <div
             className="relative"
             style={{

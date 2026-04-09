@@ -277,7 +277,7 @@ export function ChatThread() {
       aria-live="polite"
       aria-label={m.chat_thread_messages_aria_label()}
     >
-      {messages.length === 0 && !activeThreadId && (
+      {messages.length === 0 && (
         <>
           <div className="relative z-10 flex h-full min-h-0 w-full flex-1 items-center justify-center px-4 py-9">
             <div className="mx-auto flex w-full max-w-2xl translate-y-10 items-center md:translate-y-12">

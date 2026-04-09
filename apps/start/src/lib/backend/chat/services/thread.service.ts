@@ -9,6 +9,7 @@ import type {
 } from '@/lib/shared/ai-catalog/types'
 import { isChatModeId  } from '@/lib/shared/chat-modes'
 import type {ChatModeId} from '@/lib/shared/chat-modes';
+import { buildBootstrapThreadRecord, DEFAULT_THREAD_TITLE } from '@/lib/shared/chat'
 import {
   MessagePersistenceError,
   ThreadForbiddenError,
@@ -43,6 +44,7 @@ export type ThreadServiceShape = {
     readonly requestedModelId?: string
     readonly requestedModeId?: string
     readonly requestedContextWindowMode?: AiContextWindowMode
+    readonly requestedDisabledToolKeys?: readonly string[]
     readonly organizationId?: string
   }) => Effect.Effect<
     {
@@ -159,34 +161,21 @@ export class ThreadService extends ServiceMap.Service<
             const db = yield* loadDb({ requestId, threadId: 'new-thread' })
             const now = Date.now()
             const threadId = crypto.randomUUID()
+            const bootstrapThread = buildBootstrapThreadRecord({
+              threadId,
+              createdAt: now,
+              userId,
+              modelId,
+              modeId,
+              contextWindowMode,
+              organizationId,
+              disabledToolKeys: [],
+            })
 
-            // Use a UUID primary key for the SQL row and a public threadId for routing.
             yield* Effect.tryPromise({
               try: async () => {
                 await db.transaction(async (tx) => {
-                  await tx.mutate.thread.insert({
-                    id: crypto.randomUUID(),
-                    threadId,
-                    title: 'Nuevo Chat',
-                    createdAt: now,
-                    updatedAt: now,
-                    lastMessageAt: now,
-                    generationStatus: 'pending',
-                    visibility: 'visible',
-                    userSetTitle: false,
-                    userId,
-                    model: modelId,
-                    reasoningEffort: undefined,
-                    modeId,
-                    contextWindowMode:
-                      contextWindowMode ?? DEFAULT_CONTEXT_WINDOW_MODE,
-                    pinned: false,
-                    allowAttachments: true,
-                    activeChildByParent: {},
-                    branchVersion: 1,
-                    ownerOrgId: organizationId,
-                    disabledToolKeys: [],
-                  })
+                  await tx.mutate.thread.insert(bootstrapThread)
                 })
               },
               catch: (error) =>
@@ -211,6 +200,7 @@ export class ThreadService extends ServiceMap.Service<
           requestedModelId,
           requestedModeId,
           requestedContextWindowMode,
+          requestedDisabledToolKeys,
           organizationId,
         }: {
           readonly userId: string
@@ -220,6 +210,7 @@ export class ThreadService extends ServiceMap.Service<
           readonly requestedModelId?: string
           readonly requestedModeId?: string
           readonly requestedContextWindowMode?: AiContextWindowMode
+          readonly requestedDisabledToolKeys?: readonly string[]
           readonly organizationId?: string
         }) =>
           Effect.gen(function* () {
@@ -255,32 +246,19 @@ export class ThreadService extends ServiceMap.Service<
                       : undefined
 
                   try {
+                    const bootstrapThread = buildBootstrapThreadRecord({
+                      threadId,
+                      createdAt: now,
+                      userId,
+                      modelId: normalizedRequestedModelId,
+                      modeId: normalizedRequestedModeId,
+                      contextWindowMode: requestedContextWindowMode,
+                      organizationId,
+                      disabledToolKeys: requestedDisabledToolKeys ?? [],
+                    })
                     await db.transaction(async (tx) => {
                       // Uses deterministic IDs so first-message bootstrap can be retried safely.
-                      await tx.mutate.thread.insert({
-                        id: threadId,
-                        threadId,
-                        title: 'Nuevo Chat',
-                        createdAt: now,
-                        updatedAt: now,
-                        lastMessageAt: now,
-                        generationStatus: 'pending',
-                        visibility: 'visible',
-                        userSetTitle: false,
-                        userId,
-                        model: normalizedRequestedModelId,
-                        reasoningEffort: undefined,
-                        modeId: normalizedRequestedModeId,
-                        contextWindowMode:
-                          requestedContextWindowMode ??
-                          DEFAULT_CONTEXT_WINDOW_MODE,
-                        pinned: false,
-                        allowAttachments: true,
-                        activeChildByParent: {},
-                        branchVersion: 1,
-                        ownerOrgId: organizationId,
-                        disabledToolKeys: [],
-                      })
+                      await tx.mutate.thread.insert(bootstrapThread)
                     })
                   } catch {
                     // Another writer may have created this thread concurrently.
@@ -768,6 +746,7 @@ User message: ${trimmedMessage}`,
         requestedModelId,
         requestedModeId,
         requestedContextWindowMode,
+        requestedDisabledToolKeys,
         organizationId: _organizationId,
       }: {
         readonly userId: string
@@ -777,6 +756,7 @@ User message: ${trimmedMessage}`,
         readonly requestedModelId?: string
         readonly requestedModeId?: string
         readonly requestedContextWindowMode?: AiContextWindowMode
+        readonly requestedDisabledToolKeys?: readonly string[]
         readonly organizationId?: string
       }) {
         let thread = getMemoryState().threads.get(threadId)
@@ -803,7 +783,7 @@ User message: ${trimmedMessage}`,
                 : undefined,
             contextWindowMode:
               requestedContextWindowMode ?? DEFAULT_CONTEXT_WINDOW_MODE,
-            disabledToolKeys: [],
+            disabledToolKeys: [...new Set(requestedDisabledToolKeys ?? [])],
           }
           if (!created.modelId) {
             return yield* Effect.fail(
@@ -937,7 +917,6 @@ User message: ${trimmedMessage}`,
     ),
   })
 }
-const DEFAULT_THREAD_TITLE = 'Nuevo Chat'
 const TITLE_GENERATION_MODEL = 'meta/llama-4-maverick'
 const MAX_USER_MESSAGE_LENGTH = 200
 const MAX_TITLE_WORDS = 8

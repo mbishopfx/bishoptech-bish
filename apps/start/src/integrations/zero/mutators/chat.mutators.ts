@@ -11,6 +11,7 @@ import {
   
 } from '@/lib/shared/model-policy/types'
 import type {OrgAiPolicy} from '@/lib/shared/model-policy/types';
+import { buildBootstrapThreadRecord } from '@/lib/shared/chat'
 import { zql } from '../zql'
 import {
   ROOT_BRANCH_PARENT_KEY
@@ -20,11 +21,21 @@ import type {BranchSelection} from '@/lib/shared/chat-branching/branch-resolver'
 import { isOrgMember, requireOrgContext } from '../org-access'
 
 /**
- * Client-callable mutators only. Thread and message creation are server-only:
- * the chat backend uses the Zero DB adapter (tx.mutate.*) in-process and
- * does not invoke mutators by name. All mutators here use ctx.userID for
- * ownership; no mutator trusts caller-provided user IDs.
+ * Client-callable mutators only. All mutators here use ctx.userID for
+ * ownership; no mutator trusts caller-provided user IDs. The one exception to
+ * the older "server-only creation" rule is bootstrap thread creation: the
+ * client now inserts the thread optimistically through Zero so the sidebar can
+ * render from a single query-backed source of truth.
  */
+const createThreadArgs = z.object({
+  threadId: z.string().trim().min(1),
+  createdAt: z.number().int().nonnegative(),
+  modelId: z.string().trim().min(1),
+  modeId: z.string().optional(),
+  contextWindowMode: z.enum(['standard', 'max']).optional(),
+  disabledToolKeys: z.array(z.string()),
+})
+
 const renameThreadArgs = z.object({
   threadId: z.string(),
   title: z.string().trim().min(1).max(160),
@@ -266,6 +277,81 @@ async function validateBranchSelection(
 
 export const chatMutatorDefinitions = {
   threads: {
+    create: defineMutator(createThreadArgs, async ({ tx, args, ctx }) => {
+      const existing = await tx.run(
+        zql.thread.where('threadId', args.threadId).one(),
+      )
+      if (existing) {
+        if (existing.userId !== ctx.userID) {
+          throw new Error('thread_create_conflict_owner')
+        }
+        if (
+          !isThreadVisibleInContext({
+            threadOwnerOrgId: existing.ownerOrgId,
+            contextOrganizationId: ctx.organizationId,
+          })
+        ) {
+          throw new Error('thread_create_conflict_context')
+        }
+        return
+      }
+
+      const orgPolicyRow = ctx.organizationId
+        ? await tx.run(
+            zql.orgAiPolicy.where('organizationId', ctx.organizationId).one(),
+          )
+        : undefined
+      const orgPolicy = buildOrgToolPolicy({
+        organizationId: ctx.organizationId,
+        policyRow: orgPolicyRow,
+      })
+      const threadModeId =
+        typeof args.modeId === 'string' && isChatModeId(args.modeId)
+          ? args.modeId
+          : undefined
+      const mode = resolveEffectiveChatMode({
+        orgEnforcedModeId: orgPolicy?.enforcedModeId,
+        threadModeId,
+      })
+      const disabledToolKeys = sanitizeThreadDisabledToolKeys({
+        modelId: args.modelId,
+        mode,
+        orgPolicy,
+        disabledToolKeys: args.disabledToolKeys,
+      })
+
+      try {
+        await tx.mutate.thread.insert(
+          buildBootstrapThreadRecord({
+            threadId: args.threadId,
+            createdAt: args.createdAt,
+            userId: ctx.userID,
+            modelId: args.modelId,
+            modeId: threadModeId,
+            contextWindowMode: args.contextWindowMode,
+            organizationId: ctx.organizationId,
+            disabledToolKeys,
+          }),
+        )
+      } catch (error) {
+        const current = await tx.run(
+          zql.thread.where('threadId', args.threadId).one(),
+        )
+        if (
+          current &&
+          current.userId === ctx.userID &&
+          isThreadVisibleInContext({
+            threadOwnerOrgId: current.ownerOrgId,
+            contextOrganizationId: ctx.organizationId,
+          })
+        ) {
+          return
+        }
+
+        throw error
+      }
+    }),
+
     rename: defineMutator(renameThreadArgs, async ({ tx, args, ctx }) => {
       const thread = await tx.run(zql.thread.where('threadId', args.threadId).one())
       if (!thread || thread.userId !== ctx.userID) {

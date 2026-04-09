@@ -549,23 +549,8 @@ function buildBranchCost(
   }
 }
 
-const DEFAULT_THREAD_TITLE = 'Nuevo Chat'
-const OPTIMISTIC_THREAD_CREATED_EVENT = 'chat:thread-created'
 const PENDING_REGEN_BRANCH_PREFIX = '__pending_regen_branch__'
 const PENDING_EDIT_BRANCH_PREFIX = '__pending_edit_branch__'
-
-function emitOptimisticThreadCreated(threadId: string): void {
-  if (typeof window === 'undefined') return
-  window.dispatchEvent(
-    new CustomEvent(OPTIMISTIC_THREAD_CREATED_EVENT, {
-      detail: {
-        threadId,
-        title: DEFAULT_THREAD_TITLE,
-        createdAt: Date.now(),
-      },
-    }),
-  )
-}
 
 function findRegenerationAnchorMessageId(input: {
   readonly messages: readonly ChatUIMessage[]
@@ -654,6 +639,9 @@ export function ChatProvider({
   const inFlightThreadRef = useRef<Promise<string> | null>(null)
   // First send after optimistic creation can ask server to create-if-missing.
   const createIfMissingRef = useRef(false)
+  // Tracks the bootstrap request window so auto-resume does not compete with
+  // the initial POST before the server can observe the optimistic thread.
+  const bootstrapSendInFlightRef = useRef(false)
   const [provisionalThreadId, setProvisionalThreadId] = useState<
     string | undefined
   >(undefined)
@@ -1353,6 +1341,7 @@ export function ChatProvider({
 
     if (!activeThreadId) {
       createIfMissingRef.current = false
+      bootstrapSendInFlightRef.current = false
       setPendingBranchSelector(null)
       setOptimisticBranchStateByThreadId({})
       previousThreadIdRef.current = activeThreadId
@@ -1399,6 +1388,10 @@ export function ChatProvider({
   useEffect(() => {
     if (!activeThreadId) return
     if (status === 'submitted' || status === 'streaming') return
+    // Bootstrap sends already own the first stream request. Resuming in the
+    // same window can race the POST before the thread exists server-side and
+    // surface a false "thread not found" error while generation continues.
+    if (bootstrapSendInFlightRef.current) return
     if (resumeAttemptedThreadIdRef.current === activeThreadId) return
 
     const generationStatus = getThreadGenerationStatus(activeThreadId)
@@ -1631,7 +1624,29 @@ export function ChatProvider({
             inFlightThreadRef.current ??
             (async () => {
               const newThreadId = crypto.randomUUID()
-              emitOptimisticThreadCreated(newThreadId)
+              const createdAt = Date.now()
+              const write = z.mutate(
+                mutators.threads.create({
+                  threadId: newThreadId,
+                  createdAt,
+                  modelId: selectedModelIdRef.current,
+                  modeId: draftModeId,
+                  contextWindowMode: selectedContextWindowModeRef.current,
+                  disabledToolKeys: [...draftDisabledToolKeys],
+                }),
+              )
+              await write.client
+
+              void write.server
+                .then((serverRes) => {
+                  if (serverRes.type === 'error') {
+                    console.error('Failed to reconcile bootstrap thread:', serverRes)
+                  }
+                })
+                .catch((error) => {
+                  console.error('Failed to reconcile bootstrap thread:', error)
+                })
+
               branchVersionByThreadIdRef.current[newThreadId] = 1
               setThreadDisabledToolKeysById((current) => ({
                 ...current,
@@ -1646,9 +1661,11 @@ export function ChatProvider({
                 [newThreadId]: selectedContextWindowModeRef.current,
               }))
 
-              // Server can still create the same thread during first send if this
-              // request has not yet created it in upstream Postgres.
+              // The chat request still carries create-if-missing so the server
+              // can safely win the race if it receives the first send before
+              // the mutator commit has landed upstream.
               createIfMissingRef.current = true
+              bootstrapSendInFlightRef.current = true
 
               return newThreadId
             })().finally(() => {
@@ -1719,6 +1736,8 @@ export function ChatProvider({
             : new Error('Failed to send message'),
         )
         throw sendError
+      } finally {
+        bootstrapSendInFlightRef.current = false
       }
     },
     [
@@ -1731,6 +1750,7 @@ export function ChatProvider({
       navigate,
       uploadPermission.minimumPlanId,
       visibleModels,
+      z,
     ],
   )
 

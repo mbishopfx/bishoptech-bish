@@ -29,7 +29,11 @@ export function syncThreadGenerationStatuses(
     const currentStatus = threadStatuses.get(thread.threadId)
 
     if (currentStatus === nextStatus) continue
-    threadStatuses.set(thread.threadId, nextStatus)
+    if (nextStatus === undefined) {
+      threadStatuses.delete(thread.threadId)
+    } else {
+      threadStatuses.set(thread.threadId, nextStatus)
+    }
     changed = true
   }
 
@@ -54,7 +58,11 @@ export function setThreadGenerationStatus(
     return
   }
 
-  threadStatuses.set(threadId, generationStatus)
+  if (generationStatus === undefined) {
+    threadStatuses.delete(threadId)
+  } else {
+    threadStatuses.set(threadId, generationStatus)
+  }
   notify()
 }
 

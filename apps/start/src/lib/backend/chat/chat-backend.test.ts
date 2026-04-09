@@ -160,6 +160,36 @@ describe('chat-backend scaffold', () => {
     expect(getMemoryState().threads.get(result.threadId)?.modeId).toBeUndefined()
   })
 
+  it('uses deterministic bootstrap identity for create-if-missing threads', async () => {
+    const threadId = 'thread-bootstrap-deterministic'
+
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const threads = yield* ThreadService
+        return yield* threads.assertThreadAccess({
+          userId: 'user-deterministic',
+          threadId,
+          requestId: 'req-deterministic',
+          createIfMissing: true,
+          requestedModelId: 'openai/gpt-5-mini',
+          requestedModeId: 'study',
+          requestedContextWindowMode: 'max',
+          requestedDisabledToolKeys: ['tool-a', 'tool-a', 'tool-b'],
+        })
+      }).pipe(Effect.provide(TestChatLayer)),
+    )
+
+    expect(result.dbId).toBe(threadId)
+    expect(result.threadId).toBe(threadId)
+    expect(result.modeId).toBe('study')
+    expect(result.contextWindowMode).toBe('max')
+    expect(result.disabledToolKeys).toEqual(['tool-a', 'tool-b'])
+    expect(getMemoryState().threads.get(threadId)?.disabledToolKeys).toEqual([
+      'tool-a',
+      'tool-b',
+    ])
+  })
+
   it('streams and persists assistant message on finish', async () => {
     const result = await Effect.runPromise(
       Effect.gen(function* () {
