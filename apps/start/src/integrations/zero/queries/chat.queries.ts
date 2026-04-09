@@ -4,7 +4,7 @@ import { zql } from '../zql'
 
 const orgScopedThreadByIdArgs = z.object({
   threadId: z.string(),
-  organizationId: z.string().trim().min(1),
+  organizationId: z.string().trim().min(1).optional(),
 })
 
 /**
@@ -18,7 +18,7 @@ export const threadHistoryCursor = z.object({
 })
 
 const threadHistoryPageArgs = z.object({
-  organizationId: z.string().trim().min(1),
+  organizationId: z.string().trim().min(1).optional(),
   limit: z.number().int().positive(),
   start: threadHistoryCursor.nullable().optional(),
   dir: z.enum(['forward', 'backward']),
@@ -37,14 +37,18 @@ export const chatQueryDefinitions = {
      */
     historyPage: defineQuery(threadHistoryPageArgs, ({ args, ctx }) => {
       const orderDirection = args.dir === 'forward' ? 'desc' : 'asc'
+      const organizationId = args.organizationId?.trim()
       let q = zql.thread
         .where('userId', ctx.userID)
-        .where('ownerOrgId', args.organizationId)
         .where('visibility', 'visible')
         .orderBy('pinned', orderDirection)
         .orderBy('updatedAt', orderDirection)
         .orderBy('threadId', orderDirection)
         .limit(args.limit)
+
+      if (organizationId) {
+        q = q.where('ownerOrgId', organizationId)
+      }
 
       if (args.start) {
         q = q.start(args.start, { inclusive: args.inclusive ?? false })
@@ -52,13 +56,17 @@ export const chatQueryDefinitions = {
 
       return q
     }),
-    byId: defineQuery(orgScopedThreadByIdArgs, ({ args, ctx }) =>
-      zql.thread
+    byId: defineQuery(orgScopedThreadByIdArgs, ({ args, ctx }) => {
+      const organizationId = args.organizationId?.trim()
+      let q = zql.thread
         .where('threadId', args.threadId)
         .where('userId', ctx.userID)
-        .where('ownerOrgId', args.organizationId)
-        .one(),
-    ),
+      if (organizationId) {
+        q = q.where('ownerOrgId', organizationId)
+      }
+
+      return q.one()
+    }),
   },
   messages: {
     /** Messages in a thread, always scoped to the authenticated user context. */

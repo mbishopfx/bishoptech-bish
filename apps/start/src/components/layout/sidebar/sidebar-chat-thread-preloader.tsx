@@ -18,7 +18,7 @@ export function SidebarChatThreadPreloader() {
   useEffect(() => {
     const { cleanup } = z.preload(
       queries.threads.historyPage({
-        organizationId: activeOrganizationId?.trim() ?? '__missing_org__',
+        organizationId: activeOrganizationId?.trim() || undefined,
         limit: CHAT_SIDEBAR_PAGE_SIZE,
         start: null,
         dir: 'forward',

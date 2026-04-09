@@ -667,7 +667,7 @@ export function ChatProvider({
   const [threadRow] = useQuery(
     queries.threads.byId({
       threadId: activeThreadId ?? '',
-      organizationId: activeOrganizationId?.trim() ?? '__missing_org__',
+      organizationId: activeOrganizationId?.trim() || undefined,
     }),
     CACHE_CHAT_NAV,
   )

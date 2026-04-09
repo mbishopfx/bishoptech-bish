@@ -92,7 +92,7 @@ type ThreadItemRow = {
 }
 
 type ThreadHistoryListContext = {
-  readonly organizationId: string
+  readonly organizationId?: string
   readonly revision: number
 }
 
@@ -401,7 +401,7 @@ function ChatSidebarHistory({
   activeOrganizationId,
 }: {
   pathname: string
-  activeOrganizationId: string
+  activeOrganizationId?: string
 }) {
   const navigate = useNavigate()
   const z = useZero()
@@ -898,8 +898,7 @@ function ChatSidebarHistory({
 export function ChatSidebarContent({ pathname }: { pathname: string }) {
   const { activeOrganizationId, isAnonymous, loading, user } = useAppAuth()
   const { entitlement, loading: billingLoading } = useOrgBillingSummary()
-  const normalizedOrganizationId =
-    activeOrganizationId?.trim() ?? '__missing_org__'
+  const normalizedOrganizationId = activeOrganizationId?.trim() || undefined
   const staticSections = useMemo(() => getStaticSections(), [])
   const {
     shouldShowLoginButton,

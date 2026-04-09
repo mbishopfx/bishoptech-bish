@@ -4,6 +4,8 @@ import { schema } from './schema'
 import { mutators } from './mutators'
 import type { ZeroContext } from './schema'
 import { useAppAuth } from '@/lib/frontend/auth/use-auth'
+import { resolveZeroAuthSnapshot } from './zero-auth'
+import type { ZeroAuthSnapshot } from './zero-auth'
 
 const cacheURL = import.meta.env.VITE_ZERO_CACHE_URL
 
@@ -11,10 +13,10 @@ const cacheURL = import.meta.env.VITE_ZERO_CACHE_URL
  * Zero identity derives from Better Auth sessions.
  * Anonymous users are provisioned with Better Auth anonymous sessions.
  */
-function useZeroAuth(): { userID: string; context: ZeroContext } {
+function useZeroAuth(): { ready: boolean; userID?: string; context?: ZeroContext } {
   const { user, loading, activeOrganizationId, isAnonymous, signInAnonymously } =
     useAppAuth()
-  const lastAuthenticatedUserIDRef = useRef<string | null>(null)
+  const lastSnapshotRef = useRef<ZeroAuthSnapshot | null>(null)
   const anonymousBootstrapRef = useRef(false)
 
   useEffect(() => {
@@ -25,35 +27,37 @@ function useZeroAuth(): { userID: string; context: ZeroContext } {
     })
   }, [loading, signInAnonymously, user])
 
-  const userID = useMemo(() => {
-    const currentUserID = user?.id
-    if (currentUserID) {
-      lastAuthenticatedUserIDRef.current = currentUserID
-      return currentUserID
+  return useMemo(() => {
+    const resolved = resolveZeroAuthSnapshot({
+      userId: user?.id,
+      isAnonymous,
+      activeOrganizationId,
+      loading,
+      lastSnapshot: lastSnapshotRef.current,
+    })
+
+    if (resolved.snapshot) {
+      lastSnapshotRef.current = resolved.snapshot
+      return {
+        ready: true,
+        userID: resolved.snapshot.userID,
+        context: resolved.snapshot.context,
+      }
     }
 
-    if (loading && lastAuthenticatedUserIDRef.current) {
-      return lastAuthenticatedUserIDRef.current
-    }
-
-    return 'anonymous-bootstrap'
-  }, [loading, user?.id])
-
-  const context = useMemo<ZeroContext>(() => {
-    const organizationId = activeOrganizationId?.trim()
-    return organizationId
-      ? { userID, organizationId, isAnonymous }
-      : { userID, isAnonymous }
-  }, [activeOrganizationId, isAnonymous, userID])
-
-  return { userID, context }
+    return { ready: false }
+  }, [activeOrganizationId, isAnonymous, loading, user?.id])
 }
 
 export default function ZeroProvider({ children }: { children: React.ReactNode }) {
-  const { userID, context } = useZeroAuth()
+  const { ready, userID, context } = useZeroAuth()
 
   if (!cacheURL) {
     return <>{children}</>
+  }
+
+  if (!ready || !userID || !context) {
+    return null
   }
 
   return (
