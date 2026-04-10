@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   buildRenderableHistoryItems,
+  resolveRenderableHistoryGroups,
 } from './chat-sidebar-history-items'
 import type { HistoryVirtualItem } from './chat-sidebar-history-items'
 
@@ -11,7 +12,7 @@ type ThreadRow = {
 }
 
 describe('buildRenderableHistoryItems', () => {
-  it('keeps unique thread rows, group headers, and loading skeletons in order', () => {
+  it('keeps unique thread rows and group headers while trimming boundary skeletons', () => {
     const rows = new Map<number, ThreadRow>([
       [1, { threadId: 'thread-1', title: 'First', groupKey: 'today' }],
       [2, { threadId: 'thread-2', title: 'Second', groupKey: 'yesterday' }],
@@ -29,7 +30,6 @@ describe('buildRenderableHistoryItems', () => {
     })
 
     expect(items).toEqual([
-      { kind: 'skeleton', key: 'skeleton-0', start: 0 },
       {
         kind: 'header',
         key: 'header:today:thread-1',
@@ -54,6 +54,24 @@ describe('buildRenderableHistoryItems', () => {
         start: 72,
         thread: { threadId: 'thread-2', title: 'Second', groupKey: 'yesterday' },
       },
+    ])
+  })
+
+  it('keeps skeleton rows when the visible window has not resolved any threads yet', () => {
+    const virtualItems: HistoryVirtualItem[] = [
+      { key: 'skeleton-0', index: 0, start: 0 },
+      { key: 'skeleton-1', index: 1, start: 36 },
+    ]
+
+    const items = buildRenderableHistoryItems({
+      virtualItems,
+      rowAt: () => undefined,
+      getGroupKey: () => 'today',
+    })
+
+    expect(items).toEqual([
+      { kind: 'skeleton', key: 'skeleton-0', start: 0 },
+      { kind: 'skeleton', key: 'skeleton-1', start: 36 },
     ])
   })
 
@@ -146,5 +164,15 @@ describe('buildRenderableHistoryItems', () => {
         thread: rows.get(42),
       },
     ])
+  })
+
+  it('preserves prior group offsets without carrying groups past the last visible one', () => {
+    expect(
+      resolveRenderableHistoryGroups({
+        orderedGroupKeys: ['pinned', 'today', 'yesterday', 'older'] as const,
+        discoveredGroupKeys: ['pinned', 'today', 'older'],
+        visibleGroupKeys: ['today'],
+      }),
+    ).toEqual(['pinned', 'today'])
   })
 })

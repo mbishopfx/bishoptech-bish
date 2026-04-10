@@ -41,7 +41,10 @@ import { m } from '@/paraglide/messages.js'
 import { openChatSearchCommand } from './chat-search-command'
 import { resolveChatSidebarDateGroup } from './chat-sidebar-date-groups'
 import type { ChatSidebarDateGroupKey } from './chat-sidebar-date-groups'
-import { buildRenderableHistoryItems } from './chat-sidebar-history-items'
+import {
+  buildRenderableHistoryItems,
+  resolveRenderableHistoryGroups,
+} from './chat-sidebar-history-items'
 import { ChatSidebarUpgradeCta } from './chat-sidebar-upgrade-cta'
 import { resolveChatSidebarBottomPanelVisibility } from './chat-sidebar.logic'
 import { syncThreadGenerationStatuses } from './thread-status-store'
@@ -84,7 +87,7 @@ type ThreadItemRow = {
 
 type ThreadHistoryListContext = {
   readonly organizationId?: string
-  readonly revision: number
+  readonly ownerId: string
 }
 
 type ThreadHistoryGroupKey = ChatSidebarDateGroupKey | 'pinned'
@@ -121,10 +124,6 @@ function getThreadHistoryGroupKey(
   return thread.pinned
     ? 'pinned'
     : resolveChatSidebarDateGroup(thread.updatedAt)
-}
-
-function getThreadHistoryGroupRank(groupKey: ThreadHistoryGroupKey): number {
-  return THREAD_HISTORY_GROUP_ORDER.indexOf(groupKey)
 }
 
 /** Static sections only. Dynamic history is rendered as a dedicated virtualized pane. */
@@ -392,9 +391,11 @@ function ThreadRenameInput({
 function ChatSidebarHistory({
   pathname,
   activeOrganizationId,
+  historyOwnerId,
 }: {
   pathname: string
   activeOrganizationId?: string
+  historyOwnerId: string
 }) {
   const navigate = useNavigate()
   const z = useZero()
@@ -402,20 +403,19 @@ function ChatSidebarHistory({
   const editingInputRef = useRef<HTMLInputElement>(null)
   const [scrollState, setScrollState] =
     useHistoryScrollState<ThreadHistoryCursor>(HISTORY_SCROLL_STATE_KEY)
-  const [historyRevision] = useState(0)
   const [editingThreadId, setEditingThreadId] = useState<string | null>(null)
   const [editingTitle, setEditingTitle] = useState('')
   const [contextMenuResetToken, setContextMenuResetToken] = useState(0)
   const [discoveredHistoryGroups, setDiscoveredHistoryGroups] = useState<
     readonly ThreadHistoryGroupKey[]
   >([])
-  const activeThreadId = useMemo(() => getActiveThreadId(pathname), [pathname])
+  const activeThreadId = getActiveThreadId(pathname)
   const listContextParams = useMemo<ThreadHistoryListContext>(
     () => ({
       organizationId: activeOrganizationId,
-      revision: historyRevision,
+      ownerId: historyOwnerId,
     }),
-    [activeOrganizationId, historyRevision],
+    [activeOrganizationId, historyOwnerId],
   )
 
   const getPageQuery = useCallback(
@@ -463,7 +463,12 @@ function ChatSidebarHistory({
     listContextParams,
     scrollState,
     onScrollStateChange: setScrollState,
-    permalinkID: activeThreadId,
+    /**
+     * The sidebar is a recent-history nav, not a permalink-scoped detail list.
+     * Passing the active route thread into Zero Virtual switches `/chat/:id`
+     * onto a different bootstrap path than `/chat`, which is where the reload
+     * flicker/placeholder/gap bugs come from.
+     */
     estimateSize: useCallback(() => THREAD_ROW_HEIGHT, []),
     overscan: THREAD_ROW_OVERSCAN,
     getScrollElement: useCallback(() => listRef.current, []),
@@ -486,45 +491,63 @@ function ChatSidebarHistory({
       buildRenderableHistoryItems({
         virtualItems,
         rowAt,
-        getGroupKey: (thread) => getThreadHistoryGroupKey(thread),
+        getGroupKey: getThreadHistoryGroupKey,
       }),
     [rowAt, virtualItems],
   )
-  const visibleThreads = useMemo(
-    () =>
-      renderableHistoryItems
-        .filter(
-          (
-            item,
-          ): item is Extract<
-            (typeof renderableHistoryItems)[number],
-            { kind: 'thread' }
-          > => item.kind === 'thread',
-        )
-        .map((item) => item.thread),
-    [renderableHistoryItems],
-  )
-  const visibleGroupHeaders = useMemo(
-    () =>
-      renderableHistoryItems.filter(
-        (
-          item,
-        ): item is Extract<
-          (typeof renderableHistoryItems)[number],
-          { kind: 'header' }
-        > => item.kind === 'header',
-      ),
-    [renderableHistoryItems],
-  )
-  const effectiveDiscoveredGroups = useMemo(
-    () =>
-      THREAD_HISTORY_GROUP_ORDER.filter(
-        (groupKey) =>
-          discoveredHistoryGroups.includes(groupKey) ||
-          visibleGroupHeaders.some((header) => header.groupKey === groupKey),
-      ),
-    [discoveredHistoryGroups, visibleGroupHeaders],
-  )
+  const {
+    visibleThreads,
+    visibleGroupHeaders,
+    effectiveDiscoveredGroups,
+    groupOffsetBeforeByKey,
+    groupOffsetThroughByKey,
+  } = useMemo(() => {
+    const visibleThreads: ThreadItemRow[] = []
+    const visibleGroupHeaders: Extract<
+      (typeof renderableHistoryItems)[number],
+      { kind: 'header' }
+    >[] = []
+
+    for (const item of renderableHistoryItems) {
+      if (item.kind === 'thread') {
+        visibleThreads.push(item.thread)
+      } else if (item.kind === 'header') {
+        visibleGroupHeaders.push(item)
+      }
+    }
+
+    const visibleGroupKeys = visibleGroupHeaders.map(
+      (header) => header.groupKey as ThreadHistoryGroupKey,
+    )
+    const effectiveDiscoveredGroups = resolveRenderableHistoryGroups({
+      orderedGroupKeys: THREAD_HISTORY_GROUP_ORDER,
+      discoveredGroupKeys: discoveredHistoryGroups,
+      visibleGroupKeys,
+    })
+    const groupOffsetBeforeByKey = new Map<ThreadHistoryGroupKey, number>()
+    const groupOffsetThroughByKey = new Map<ThreadHistoryGroupKey, number>()
+
+    /**
+     * Headers live outside the virtual row model, so each visible thread needs
+     * a deterministic offset based on the groups already discovered above it.
+     * Precomputing those offsets keeps render math readable and avoids
+     * repeatedly filtering the same group list for every row.
+     */
+    let headerOffset = 0
+    for (const groupKey of effectiveDiscoveredGroups) {
+      groupOffsetBeforeByKey.set(groupKey, headerOffset)
+      headerOffset += GROUP_HEADER_HEIGHT
+      groupOffsetThroughByKey.set(groupKey, headerOffset)
+    }
+
+    return {
+      visibleThreads,
+      visibleGroupHeaders,
+      effectiveDiscoveredGroups,
+      groupOffsetBeforeByKey,
+      groupOffsetThroughByKey,
+    }
+  }, [discoveredHistoryGroups, renderableHistoryItems])
 
   useEffect(() => {
     if (editingThreadId) {
@@ -541,7 +564,7 @@ function ChatSidebarHistory({
 
   useEffect(() => {
     setDiscoveredHistoryGroups([])
-  }, [activeOrganizationId, historyRevision])
+  }, [activeOrganizationId, historyOwnerId])
 
   useEffect(() => {
     const resetContextMenus = () => {
@@ -737,25 +760,6 @@ function ChatSidebarHistory({
       submitRenameThread,
     ],
   )
-  const getGroupOffsetBefore = useCallback(
-    (groupKey: ThreadHistoryGroupKey) =>
-      effectiveDiscoveredGroups.filter(
-        (discoveredGroupKey) =>
-          getThreadHistoryGroupRank(discoveredGroupKey) <
-          getThreadHistoryGroupRank(groupKey),
-      ).length * GROUP_HEADER_HEIGHT,
-    [effectiveDiscoveredGroups],
-  )
-  const getGroupOffsetThrough = useCallback(
-    (groupKey: ThreadHistoryGroupKey) =>
-      effectiveDiscoveredGroups.filter(
-        (discoveredGroupKey) =>
-          getThreadHistoryGroupRank(discoveredGroupKey) <=
-          getThreadHistoryGroupRank(groupKey),
-      ).length * GROUP_HEADER_HEIGHT,
-    [effectiveDiscoveredGroups],
-  )
-
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto">
@@ -771,7 +775,8 @@ function ChatSidebarHistory({
             {renderableHistoryItems.map((item) => {
               if (item.kind === 'header') {
                 const groupKey = item.groupKey as ThreadHistoryGroupKey
-                const start = item.start + getGroupOffsetBefore(groupKey)
+                const start =
+                  item.start + (groupOffsetBeforeByKey.get(groupKey) ?? 0)
 
                 return (
                   <ThreadHistoryGroupHeaderRow
@@ -793,7 +798,9 @@ function ChatSidebarHistory({
 
               const start =
                 item.start +
-                getGroupOffsetThrough(getThreadHistoryGroupKey(item.thread))
+                (groupOffsetThroughByKey.get(
+                  getThreadHistoryGroupKey(item.thread),
+                ) ?? 0)
 
               return renderRow(
                 item.thread,
@@ -812,6 +819,8 @@ export function ChatSidebarContent({ pathname }: { pathname: string }) {
   const { activeOrganizationId, isAnonymous, loading, user } = useAppAuth()
   const { entitlement, loading: billingLoading } = useOrgBillingSummary()
   const normalizedOrganizationId = activeOrganizationId?.trim() || undefined
+  // Avoid mounting the virtualized history list until auth resolves
+  const shouldRenderHistory = !loading && user != null
   const staticSections = useMemo(() => getStaticSections(), [])
   const { shouldShowLoginButton, shouldShowUpgradeCta, shouldShowBottomPanel } =
     resolveChatSidebarBottomPanelVisibility({
@@ -837,10 +846,13 @@ export function ChatSidebarContent({ pathname }: { pathname: string }) {
           pathname={pathname}
         />
         <div className="mt-8 flex min-h-0 flex-1 flex-col">
-          <ChatSidebarHistory
-            pathname={pathname}
-            activeOrganizationId={normalizedOrganizationId}
-          />
+          {shouldRenderHistory ? (
+            <ChatSidebarHistory
+              pathname={pathname}
+              activeOrganizationId={normalizedOrganizationId}
+              historyOwnerId={user.id}
+            />
+          ) : null}
         </div>
       </div>
       {shouldShowBottomPanel ? (

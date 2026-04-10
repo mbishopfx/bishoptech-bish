@@ -13,9 +13,13 @@ import { useAppAuth } from '@/lib/frontend/auth/use-auth'
  */
 export function SidebarChatThreadPreloader() {
   const z = useZero()
-  const { activeOrganizationId } = useAppAuth()
+  const { activeOrganizationId, loading, user } = useAppAuth()
 
   useEffect(() => {
+    if (loading || user == null) {
+      return
+    }
+
     const { cleanup } = z.preload(
       queries.threads.historyPage({
         organizationId: activeOrganizationId?.trim() || undefined,
@@ -27,7 +31,7 @@ export function SidebarChatThreadPreloader() {
       CACHE_CHAT_NAV,
     )
     return cleanup
-  }, [activeOrganizationId, z])
+  }, [activeOrganizationId, loading, user?.id, z])
 
   return null
 }

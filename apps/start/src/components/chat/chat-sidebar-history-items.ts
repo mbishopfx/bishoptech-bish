@@ -29,6 +29,28 @@ export type RenderableHistoryItem<TRow extends ThreadIdentity> =
       readonly groupKey: string
     }
 
+function trimBoundarySkeletons<TRow extends ThreadIdentity>(
+  items: readonly RenderableHistoryItem<TRow>[],
+): RenderableHistoryItem<TRow>[] {
+  let startIndex = 0
+  let endIndex = items.length
+
+  while (startIndex < endIndex && items[startIndex]?.kind === 'skeleton') {
+    startIndex += 1
+  }
+
+  while (
+    endIndex > startIndex
+    && items[endIndex - 1]?.kind === 'skeleton'
+  ) {
+    endIndex -= 1
+  }
+
+  return startIndex === 0 && endIndex === items.length
+    ? [...items]
+    : items.slice(startIndex, endIndex)
+}
+
 /**
  * `useZeroVirtualizer` can briefly surface the permalink row alongside its
  * neighboring page windows while a thread-focused sidebar view is restoring.
@@ -83,5 +105,41 @@ export function buildRenderableHistoryItems<TRow extends ThreadIdentity>({
     })
   }
 
-  return renderableItems
+  return renderableItems.some((item) => item.kind === 'thread')
+    ? trimBoundarySkeletons(renderableItems)
+    : renderableItems
+}
+
+export function resolveRenderableHistoryGroups<TGroupKey extends string>({
+  orderedGroupKeys,
+  discoveredGroupKeys,
+  visibleGroupKeys,
+}: {
+  orderedGroupKeys: readonly TGroupKey[]
+  discoveredGroupKeys: readonly TGroupKey[]
+  visibleGroupKeys: readonly TGroupKey[]
+}): TGroupKey[] {
+  if (visibleGroupKeys.length === 0) {
+    return []
+  }
+
+  const visibleGroupKeySet = new Set(visibleGroupKeys)
+  const discoveredGroupKeySet = new Set(discoveredGroupKeys)
+  let lastVisibleGroupIndex = -1
+
+  orderedGroupKeys.forEach((groupKey, index) => {
+    if (visibleGroupKeySet.has(groupKey)) {
+      lastVisibleGroupIndex = index
+    }
+  })
+
+  if (lastVisibleGroupIndex === -1) {
+    return []
+  }
+
+  return orderedGroupKeys.filter(
+    (groupKey, index) =>
+      index <= lastVisibleGroupIndex
+      && (visibleGroupKeySet.has(groupKey) || discoveredGroupKeySet.has(groupKey)),
+  )
 }
