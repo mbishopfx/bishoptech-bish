@@ -1,6 +1,7 @@
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 import type { StripeManagedWorkspacePlanId } from '@/lib/shared/access-control'
+import { isSelfHosted } from '@/utils/app-feature-flags'
 
 const CheckoutPlanSchema = z.enum(['plus', 'pro', 'scale'])
 
@@ -23,6 +24,10 @@ const OpenBillingPortalInputSchema = z.object({}).optional()
 export const startWorkspaceSubscriptionCheckout = createServerFn({ method: 'POST' })
   .inputValidator((input: unknown) => StartSubscriptionCheckoutInputSchema.parse(input))
   .handler(async ({ data }) => {
+    if (isSelfHosted) {
+      throw new Error('Cloud billing is disabled for this self-hosted instance.')
+    }
+
     const { startWorkspaceSubscriptionCheckoutAction } = await import('./billing.server')
     return startWorkspaceSubscriptionCheckoutAction({
       planId: data.planId as StripeManagedWorkspacePlanId,
@@ -33,6 +38,10 @@ export const startWorkspaceSubscriptionCheckout = createServerFn({ method: 'POST
 export const changeWorkspaceSubscription = createServerFn({ method: 'POST' })
   .inputValidator((input: unknown) => ChangeWorkspaceSubscriptionInputSchema.parse(input))
   .handler(async ({ data }) => {
+    if (isSelfHosted) {
+      throw new Error('Cloud billing is disabled for this self-hosted instance.')
+    }
+
     const { changeWorkspaceSubscriptionAction } = await import('./billing.server')
     return changeWorkspaceSubscriptionAction({
       targetPlanId: data.targetPlanId,
@@ -43,6 +52,10 @@ export const changeWorkspaceSubscription = createServerFn({ method: 'POST' })
 export const openWorkspaceBillingPortal = createServerFn({ method: 'POST' })
   .inputValidator((input: unknown) => OpenBillingPortalInputSchema.parse(input))
   .handler(async () => {
+    if (isSelfHosted) {
+      throw new Error('Cloud billing is disabled for this self-hosted instance.')
+    }
+
     const { openWorkspaceBillingPortalAction } = await import('./billing.server')
     return openWorkspaceBillingPortalAction()
   })

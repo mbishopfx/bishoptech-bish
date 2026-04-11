@@ -30,6 +30,7 @@ export function InviteMembersDialog() {
     submitButtonDisabled,
     submitError,
     submitSuccess,
+    inviteLinks,
     handleSubmit,
   } = useInviteMembersDialogLogic()
 
@@ -95,6 +96,22 @@ export function InviteMembersDialog() {
           <Plus aria-hidden className="size-4" />
           Add another
         </Button>
+
+        {inviteLinks.length > 0 ? (
+          <div className="space-y-2 rounded-xl border border-border-base bg-surface-raised/60 p-3">
+            <p className="text-sm text-foreground-secondary">
+              Copy these signup links and share them directly with teammates.
+            </p>
+            {inviteLinks.map((link) => (
+              <Input
+                key={link}
+                readOnly
+                value={link}
+                onFocus={(event) => event.currentTarget.select()}
+              />
+            ))}
+          </div>
+        ) : null}
       </div>
     </FormDialog>
   )

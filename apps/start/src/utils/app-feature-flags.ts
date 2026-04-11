@@ -5,6 +5,8 @@
  * environment variable.
  */
 type AppFeatureFlags = {
+  readonly instanceMode: 'cloud' | 'self_hosted'
+  readonly selfHostSource: string
   readonly enableEmbedding: boolean
   readonly enableReasoningControls: boolean
   readonly enableAdvancedProviderTools: boolean
@@ -13,11 +15,6 @@ type AppFeatureFlags = {
   readonly disableRedis: boolean
 }
 
-/**
- * Reads a boolean value from import.meta.env.
- * Works for both client (Vite build) and server (Nitro build).
- * Only VITE_ prefixed vars are exposed to the client.
- */
 function readBooleanEnv(key: string, defaultValue: boolean): boolean {
   const value = (import.meta.env as Record<string, string | undefined>)[key]
   if (value === 'true') return true
@@ -25,7 +22,16 @@ function readBooleanEnv(key: string, defaultValue: boolean): boolean {
   return defaultValue
 }
 
+const APP_INSTANCE_MODE: 'cloud' | 'self_hosted' =
+  import.meta.env.VITE_APP_INSTANCE_MODE === 'self_hosted'
+    ? 'self_hosted'
+    : 'cloud'
+
 const APP_FEATURE_FLAGS: AppFeatureFlags = Object.freeze({
+  instanceMode: APP_INSTANCE_MODE,
+  selfHostSource: (import.meta.env.VITE_SELF_HOST_SOURCE ?? '')
+    .trim()
+    .toLowerCase(),
   enableEmbedding: readBooleanEnv('VITE_ENABLE_EMBEDDING', true),
   enableReasoningControls: true,
   enableAdvancedProviderTools: true,
@@ -45,6 +51,9 @@ const APP_FEATURE_FLAGS: AppFeatureFlags = Object.freeze({
  * Import constants derived from this object to avoid call-site drift.
  */
 export const APP_FEATURES = APP_FEATURE_FLAGS
+export const appInstanceMode = APP_FEATURE_FLAGS.instanceMode
+export const selfHostSource = APP_FEATURE_FLAGS.selfHostSource
+export const isSelfHosted = APP_FEATURE_FLAGS.instanceMode === 'self_hosted'
 export const isEmbeddingFeatureEnabled = APP_FEATURE_FLAGS.enableEmbedding
 export const canUseReasoningControls =
   APP_FEATURE_FLAGS.enableReasoningControls

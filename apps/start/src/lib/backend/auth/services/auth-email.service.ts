@@ -16,16 +16,14 @@ import {
 import type { OtpEmailKind } from '@/lib/backend/auth/services/auth-email.templates'
 import { resolveAccountLocale } from '@/lib/backend/auth/services/auth-locale.service'
 
-function requireEmailEnv(name: string): string {
+function readEmailEnv(name: string): string | null {
   const value = process.env[name]?.trim()
-  if (!value) {
-    throw new Error(`Missing required environment variable ${name}.`)
-  }
-  return value
+  return value && value.length > 0 ? value : null
 }
 
-const resendClient = new Resend(requireEmailEnv('RESEND_API_KEY'))
-const fromAddress = requireEmailEnv('RESEND_FROM_EMAIL')
+const resendApiKey = readEmailEnv('RESEND_API_KEY')
+const fromAddress = readEmailEnv('RESEND_FROM_EMAIL')
+const resendClient = resendApiKey ? new Resend(resendApiKey) : null
 
 export type SendAuthEmailInput = {
   to: string
@@ -35,6 +33,12 @@ export type SendAuthEmailInput = {
 }
 
 export async function sendAuthEmail(input: SendAuthEmailInput): Promise<void> {
+  if (!resendClient || !fromAddress) {
+    throw new Error(
+      'Auth email delivery is disabled because RESEND_API_KEY or RESEND_FROM_EMAIL is not configured.',
+    )
+  }
+
   await resendClient.emails.send({
     from: fromAddress,
     to: input.to,

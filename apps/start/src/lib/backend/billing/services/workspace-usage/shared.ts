@@ -3,6 +3,7 @@ import { getCatalogModel } from '@/lib/shared/ai-catalog'
 import { getWorkspacePlan } from '@/lib/shared/access-control'
 import type { WorkspacePlanId } from '@/lib/shared/access-control'
 import { estimatePromptTokens } from '@/lib/shared/chat-contracts'
+import { isSelfHosted } from '@/utils/app-feature-flags'
 
 export const CHAT_USAGE_FEATURE_KEY = 'chat_message' as const
 export const RESERVATION_TTL_MS = 15 * 60 * 1000
@@ -100,9 +101,25 @@ const BASE_USAGE_POLICY_TEMPLATES: Record<
     minReserveNanoUsd: MIN_RESERVE_NANO_USD,
     enabled: true,
   },
+  self_hosted: {
+    targetMarginRatioBps: 0,
+    reserveHeadroomRatioBps: 0,
+    minReserveNanoUsd: 0,
+    enabled: false,
+  },
 }
 
 export function resolveDefaultUsagePolicyTemplate(planId: PaidPlanId): UsagePolicyTemplate {
+  if (isSelfHosted) {
+    return {
+      ...BASE_USAGE_POLICY_TEMPLATES[planId],
+      enabled: false,
+      targetMarginRatioBps: 0,
+      planId,
+      featureKey: CHAT_USAGE_FEATURE_KEY,
+    }
+  }
+
   const base = BASE_USAGE_POLICY_TEMPLATES[planId]
 
   return {

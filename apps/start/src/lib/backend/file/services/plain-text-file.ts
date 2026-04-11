@@ -21,10 +21,27 @@ export function isDirectTextExtractionFile(
   file: Pick<File, 'name' | 'type'>,
 ): boolean {
   const mimeType = normalizeMimeType(file.type)
-  if (mimeType === 'text/plain' || mimeType === 'text/markdown') return true
+  if (
+    mimeType === 'text/plain' ||
+    mimeType === 'text/markdown' ||
+    mimeType === 'text/x-markdown' ||
+    mimeType === 'text/csv' ||
+    mimeType === 'text/html' ||
+    mimeType === 'application/xml'
+  ) {
+    return true
+  }
 
   const extension = getFileExtension(file.name)
-  return extension === 'txt' || extension === 'md' || extension === 'markdown'
+  return (
+    extension === 'txt' ||
+    extension === 'md' ||
+    extension === 'markdown' ||
+    extension === 'csv' ||
+    extension === 'html' ||
+    extension === 'htm' ||
+    extension === 'xml'
+  )
 }
 
 /**

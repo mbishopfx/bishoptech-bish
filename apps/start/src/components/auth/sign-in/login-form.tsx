@@ -14,6 +14,7 @@ import {
   normalizeEmailAddress,
 } from '@/components/auth/auth-shared'
 import { authClient } from '@/lib/frontend/auth/auth-client'
+import { isSelfHosted } from '@/utils/app-feature-flags'
 
 export type LoginFormProps = {
   /** When true, shows sign-up fields (confirm password) and sign-up copy. */
@@ -366,55 +367,59 @@ export function LoginForm({
             </motion.div>
           </form>
 
-          <motion.div
-            variants={staggerChildVariants}
-            className="my-6 flex items-center gap-3"
-          >
-            <div className="h-px flex-1 bg-border-base" />
-            <span className="text-sm text-foreground-secondary">
-              {m.auth_login_divider()}
-            </span>
-            <div className="h-px flex-1 bg-border-base" />
-          </motion.div>
+      {!isSelfHosted ? (
+            <>
+              <motion.div
+                variants={staggerChildVariants}
+                className="my-6 flex items-center gap-3"
+              >
+                <div className="h-px flex-1 bg-border-base" />
+                <span className="text-sm text-foreground-secondary">
+                  {m.auth_login_divider()}
+                </span>
+                <div className="h-px flex-1 bg-border-base" />
+              </motion.div>
 
-          <motion.div variants={staggerChildVariants} className="space-y-3">
-            <Button
-              type="button"
-              variant="outline"
-              size="big"
-              onClick={handleGoogleSignIn}
-              disabled={
-                isGoogleLoading || isGithubLoading || isInteractionDisabled
-              }
-            >
-              <GoogleIcon className="mr-2.5 size-5" />
-              {isGoogleLoading
-                ? isSignUp
-                  ? m.auth_login_submitting_google_sign_up()
-                  : m.auth_login_submitting_google()
-                : isSignUp
-                  ? m.auth_login_sign_up_google()
-                  : m.auth_login_sign_in_google()}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="big"
-              onClick={handleGithubSignIn}
-              disabled={
-                isGithubLoading || isGoogleLoading || isInteractionDisabled
-              }
-            >
-              <GitHubIcon className="mr-2.5 size-5" />
-              {isGithubLoading
-                ? isSignUp
-                  ? m.auth_login_submitting_github_sign_up()
-                  : m.auth_login_submitting_github()
-                : isSignUp
-                  ? m.auth_login_sign_up_github()
-                  : m.auth_login_sign_in_github()}
-            </Button>
-          </motion.div>
+              <motion.div variants={staggerChildVariants} className="space-y-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="big"
+                  onClick={handleGoogleSignIn}
+                  disabled={
+                    isGoogleLoading || isGithubLoading || isInteractionDisabled
+                  }
+                >
+                  <GoogleIcon className="mr-2.5 size-5" />
+                  {isGoogleLoading
+                    ? isSignUp
+                      ? m.auth_login_submitting_google_sign_up()
+                      : m.auth_login_submitting_google()
+                    : isSignUp
+                      ? m.auth_login_sign_up_google()
+                      : m.auth_login_sign_in_google()}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="big"
+                  onClick={handleGithubSignIn}
+                  disabled={
+                    isGithubLoading || isGoogleLoading || isInteractionDisabled
+                  }
+                >
+                  <GitHubIcon className="mr-2.5 size-5" />
+                  {isGithubLoading
+                    ? isSignUp
+                      ? m.auth_login_submitting_github_sign_up()
+                      : m.auth_login_submitting_github()
+                    : isSignUp
+                      ? m.auth_login_sign_up_github()
+                      : m.auth_login_sign_in_github()}
+                </Button>
+              </motion.div>
+            </>
+          ) : null}
         </div>
       </div>
 
@@ -432,10 +437,6 @@ export function LoginForm({
             </>
           ) : (
             <>
-              {m.auth_form_no_account()}{' '}
-              <Button type="button" onClick={onToggleMode} variant="link">
-                {m.auth_login_sign_up()}
-              </Button>
             </>
           )}
         </p>

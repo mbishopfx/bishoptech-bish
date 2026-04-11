@@ -1,9 +1,11 @@
 import { Effect } from 'effect'
+import { getRequestHeaders } from '@tanstack/react-start/server'
 import type {
   AuthenticatedServerAuthContext,
 } from './auth-context'
 import { extractServerAuthContext } from './auth-context'
 import { getSessionFromHeaders } from '@/lib/backend/auth/services/server-session.service'
+import { isSelfHosted } from '@/utils/app-feature-flags'
 
 export type OrgAuthenticatedServerAuthContext =
   AuthenticatedServerAuthContext & {
@@ -18,10 +20,8 @@ export const getServerAuthContext = Effect.fn(
 )(
   () =>
     Effect.tryPromise({
-      try: async () => {
-        const headers = new Headers()
-        return extractServerAuthContext(await getSessionFromHeaders(headers))
-      },
+      try: () =>
+        getSessionFromHeaders(getRequestHeaders()).then(extractServerAuthContext),
       catch: (error) => error,
     }).pipe(Effect.orDie),
 )
@@ -76,6 +76,21 @@ export const requireNonAnonymousUserAuth = Effect.fn(
           : Effect.succeed(context),
       ),
     ),
+)
+
+/**
+ * Self-hosted deployments never allow anonymous sessions into app or data APIs,
+ * while cloud keeps the existing guest experience. This helper centralizes
+ * that policy so chat and Zero routes do not each need to replicate it.
+ */
+export const requireAppUserAuth = Effect.fn('ServerAuth.requireAppUserAuth')(
+  <TUnauthorized>(input: {
+    readonly headers: Headers
+    readonly onUnauthorized: () => TUnauthorized
+  }): Effect.Effect<AuthenticatedServerAuthContext, TUnauthorized> =>
+    isSelfHosted
+      ? requireNonAnonymousUserAuth(input)
+      : requireUserAuth(input),
 )
 
 /**

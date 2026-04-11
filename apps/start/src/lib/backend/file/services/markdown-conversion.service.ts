@@ -1,5 +1,6 @@
 import { Effect, Layer, ServiceMap } from 'effect'
 import { FileConversionError } from '../domain/errors'
+import { getServerInstanceCapabilities } from '@/lib/backend/self-host/instance-settings.service'
 
 const DEFAULT_WORKER_TIMEOUT_MS = 20_000
 
@@ -39,15 +40,16 @@ export class MarkdownConversionService extends ServiceMap.Service<
     convertFromUrl: Effect.fn('MarkdownConversionService.convertFromUrl')(
       ({ fileUrl, fileName, requestId }) =>
         Effect.gen(function* () {
+          const capabilities = getServerInstanceCapabilities()
           const workerUrl = readRequiredEnv('CF_MARKDOWN_WORKER_URL')
           const workerToken = readRequiredEnv('CF_MARKDOWN_WORKER_TOKEN')
-          if (!workerUrl || !workerToken) {
+          if (!capabilities.markdownWorkerAvailable || !workerUrl || !workerToken) {
             return yield* Effect.fail(
               new FileConversionError({
                 message:
-                  'Markdown conversion is not configured. Missing CF_MARKDOWN_WORKER_URL or CF_MARKDOWN_WORKER_TOKEN.',
+                  'Markdown conversion is disabled because CF_MARKDOWN_WORKER_URL or CF_MARKDOWN_WORKER_TOKEN is missing.',
                 requestId,
-                statusCode: 500,
+                statusCode: 503,
               }),
             )
           }

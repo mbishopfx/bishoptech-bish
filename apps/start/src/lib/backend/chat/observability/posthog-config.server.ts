@@ -1,5 +1,6 @@
 import { DEFAULT_POSTHOG_HOST } from '@/lib/shared/observability/posthog-config'
 import type { PublicPostHogConfig } from '@/lib/shared/observability/posthog-config'
+import { isSelfHosted } from '@/utils/app-feature-flags'
 
 function readTrimmedEnv(name: string): string | undefined {
   const value = process.env[name]?.trim()
@@ -13,7 +14,7 @@ function readTrimmedEnv(name: string): string | undefined {
  */
 export function getPublicPostHogConfig(): PublicPostHogConfig {
   return {
-    apiKey: readTrimmedEnv('POSTHOG_PROJECT_API_KEY'),
+    apiKey: !isSelfHosted ? readTrimmedEnv('POSTHOG_PROJECT_API_KEY') : undefined,
     apiHost: readTrimmedEnv('POSTHOG_HOST') ?? DEFAULT_POSTHOG_HOST,
     environment:
       readTrimmedEnv('RAILWAY_ENVIRONMENT_NAME')
@@ -28,6 +29,10 @@ export function getPostHogSourceMapConfig(): {
   readonly projectId?: string
   readonly personalApiKey?: string
 } {
+  if (isSelfHosted) {
+    return {}
+  }
+
   return {
     projectId: readTrimmedEnv('POSTHOG_PROJECT_ID'),
     personalApiKey: readTrimmedEnv('POSTHOG_PERSONAL_API_KEY'),

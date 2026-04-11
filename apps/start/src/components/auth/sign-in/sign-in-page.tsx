@@ -9,6 +9,7 @@ import { LegalLinks } from './legal-links'
 import { ForgotPassword } from '@/components/auth/forgot-password'
 import { OtpStep } from '@/components/auth/otp-step'
 import { menuCardContainerVariants } from '@/lib/shared/animations'
+import { isSelfHosted } from '@/utils/app-feature-flags'
 
 export type SignInPageProps = {
   redirectTarget: string
@@ -55,11 +56,13 @@ export function SignInPage({
     <div className="relative grid w-full place-items-center">
       <AnimatePresence initial={false}>
         {view === 'forgot-password' ? (
-          <ForgotPassword
-            key="forgot-password"
-            redirectTarget={redirectTarget}
-            onBackToLogin={handleBackToLogin}
-          />
+          !isSelfHosted ? (
+            <ForgotPassword
+              key="forgot-password"
+              redirectTarget={redirectTarget}
+              onBackToLogin={handleBackToLogin}
+            />
+          ) : null
         ) : view === 'email-verification' ? (
           <OtpStep
             key="email-verification"
@@ -117,7 +120,7 @@ export function SignInPage({
               isInvitationLookupLoading={invitationLookupLoading}
               socialAuthCallbackURL={socialAuthCallbackURL}
               error={error}
-              onForgotPassword={handleShowForgotPassword}
+              onForgotPassword={!isSelfHosted ? handleShowForgotPassword : undefined}
             />
             <LegalLinks isSignUp={isSignUp} />
           </motion.div>

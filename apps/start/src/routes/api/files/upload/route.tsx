@@ -20,6 +20,8 @@ import {
   FileUploadOrchestratorService,
   handleFileRouteFailure,
 } from '@/lib/backend/file'
+import { getServerInstanceCapabilities } from '@/lib/backend/self-host/instance-settings.service'
+import { isDirectTextExtractionFile } from '@/lib/backend/file/services/plain-text-file'
 
 export const Route = createFileRoute('/api/files/upload')({
   server: {
@@ -94,6 +96,21 @@ export const Route = createFileRoute('/api/files/upload')({
                 message: `File exceeds limit of ${Math.floor(uploadPolicy.maxSizeBytes / (1024 * 1024))}MB`,
                 requestId,
                 issue: 'file_too_large',
+              }),
+            )
+          }
+
+          if (
+            surface === 'attachment' &&
+            !getServerInstanceCapabilities().markdownWorkerAvailable &&
+            !isDirectTextExtractionFile(input)
+          ) {
+            return yield* Effect.fail(
+              new FileInvalidRequestError({
+                message:
+                  'This self-hosted instance only accepts direct text attachments until the markdown worker is configured.',
+                requestId,
+                issue: 'markdown_worker_disabled',
               }),
             )
           }

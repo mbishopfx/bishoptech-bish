@@ -7,6 +7,7 @@ import { m } from '@/paraglide/messages.js'
 import { authClient } from '@/lib/frontend/auth/auth-client'
 import { getInvitationEmailForAuth } from '@/lib/frontend/auth/invitation.functions'
 import { useAppAuth } from '@/lib/frontend/auth/use-auth'
+import { isSelfHosted } from '@/utils/app-feature-flags'
 import {
   getAbsoluteAppURL,
   getDefaultAuthDisplayName,
@@ -357,7 +358,7 @@ export function useSignInPageLogic(
       setIsLoading(false)
 
       if (result.error) {
-        if (result.error.status === 403) {
+        if (!isSelfHosted && result.error.status === 403) {
           const otpResult = await authClient.emailOtp.sendVerificationOtp({
             email: normalizedEmail,
             type: 'email-verification',
@@ -430,9 +431,17 @@ export function useSignInPageLogic(
         return
       }
 
-      openEmailVerificationStep(normalizedEmail, password, '')
+      if (!isSelfHosted) {
+        openEmailVerificationStep(normalizedEmail, password, '')
+        return
+      }
+
+      const navigated = await finalizeAuthenticatedNavigation()
+      if (!navigated) {
+        setIsLoading(false)
+      }
     },
-    [openEmailVerificationStep, validateInvitationEmail],
+    [finalizeAuthenticatedNavigation, openEmailVerificationStep, validateInvitationEmail],
   )
 
   const handleAuthSubmit = useCallback(

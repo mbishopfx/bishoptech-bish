@@ -12,6 +12,7 @@ import { Mail, MoreHorizontal } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { m } from '@/paraglide/messages.js'
 import type { ConnectedLoginMethodViewModel } from './security-page.logic'
+import { isSelfHosted } from '@/utils/app-feature-flags'
 
 export type ConnectedLoginMethodsProps = {
   connectedLoginMethods: Array<ConnectedLoginMethodViewModel>
@@ -135,66 +136,81 @@ export function ConnectedLoginMethods({
         </DropdownMenu>
       </li>
 
-      {socialRows.map((row) => {
-        const connectedMethod = row.connectedMethod
-        return (
-        <li key={row.providerId} className="flex items-center justify-between gap-4 px-4 py-3">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="flex size-6 shrink-0 items-center justify-center">{row.icon}</div>
-            <div className="min-w-0">
-              <p className="text-sm font-medium text-foreground-strong">{row.providerLabel}</p>
-              <p className="truncate text-sm text-foreground-tertiary">
-                {row.connectedMethod
-                  ? m.settings_security_login_methods_connected_provider_help()
-                  : m.settings_security_login_methods_connect_provider_help({
-                      provider: row.providerLabel,
-                    })}
-              </p>
-            </div>
-          </div>
-          {connectedMethod ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
+      {!isSelfHosted
+        ? socialRows.map((row) => {
+            const connectedMethod = row.connectedMethod
+
+            return (
+              <li
+                key={row.providerId}
+                className="flex items-center justify-between gap-4 px-4 py-3"
+              >
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="flex size-6 shrink-0 items-center justify-center">
+                    {row.icon}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-foreground-strong">
+                      {row.providerLabel}
+                    </p>
+                    <p className="truncate text-sm text-foreground-tertiary">
+                      {row.connectedMethod
+                        ? m.settings_security_login_methods_connected_provider_help()
+                        : m.settings_security_login_methods_connect_provider_help({
+                            provider: row.providerLabel,
+                          })}
+                    </p>
+                  </div>
+                </div>
+                {connectedMethod ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger
+                      render={
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="iconSmall"
+                          className="size-8 rounded-md"
+                          aria-label={m.settings_security_login_methods_action_manage()}
+                          disabled={!canEdit || unlinkingLoginMethodId != null || isLoading}
+                        >
+                          <MoreHorizontal className="size-4" aria-hidden />
+                        </Button>
+                      }
+                    />
+                    <DropdownMenuContent
+                      align="end"
+                      sideOffset={6}
+                      className="w-40 min-w-0"
+                    >
+                      <DropdownMenuItem
+                        onClick={() => {
+                          void onUnlinkMethod(connectedMethod)
+                        }}
+                        disabled={!canEdit || unlinkingLoginMethodId != null}
+                        variant="destructive"
+                      >
+                        {unlinkingLoginMethodId === connectedMethod.methodId
+                          ? m.settings_security_login_methods_unlink_loading()
+                          : m.settings_security_login_methods_unlink_button()}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : (
                   <Button
                     type="button"
-                    variant="ghost"
-                    size="iconSmall"
-                    className="size-8 rounded-md"
-                    aria-label={m.settings_security_login_methods_action_manage()}
-                disabled={!canEdit || unlinkingLoginMethodId != null || isLoading}
+                    onClick={() => {
+                      void onConnectProvider(row.providerId)
+                    }}
+                    disabled={!canEdit || linkingProviderId != null || isLoading}
                   >
-                    <MoreHorizontal className="size-4" aria-hidden />
+                    {m.settings_security_login_methods_action_connect()}
                   </Button>
-                }
-              />
-              <DropdownMenuContent align="end" sideOffset={6} className="w-40 min-w-0">
-                <DropdownMenuItem
-                  onClick={() => {
-                    void onUnlinkMethod(connectedMethod)
-                  }}
-                  disabled={!canEdit || unlinkingLoginMethodId != null}
-                  variant="destructive"
-                >
-                  {unlinkingLoginMethodId === connectedMethod.methodId
-                    ? m.settings_security_login_methods_unlink_loading()
-                    : m.settings_security_login_methods_unlink_button()}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            <Button
-              type="button"
-              onClick={() => {
-                void onConnectProvider(row.providerId)
-              }}
-              disabled={!canEdit || linkingProviderId != null || isLoading}
-            >
-              {m.settings_security_login_methods_action_connect()}
-            </Button>
-          )}
-        </li>
-      )})}
+                )}
+              </li>
+            )
+          })
+        : null}
     </ul>
   )
 }

@@ -7,7 +7,7 @@ import { Effect, Schema } from 'effect'
 import { schema } from '@/integrations/zero/schema'
 import type { Schema as ZeroSchema, ZeroContext } from '@/integrations/zero/schema'
 import { queries } from '@/integrations/zero/queries'
-import { requireUserAuth } from '@/lib/backend/server-effect/http/server-auth'
+import { requireAppUserAuth } from '@/lib/backend/server-effect/http/server-auth'
 import { ServerRuntime } from '@/lib/backend/server-effect'
 
 class ZeroQueryUnauthorizedError extends Schema.TaggedErrorClass<ZeroQueryUnauthorizedError>()(
@@ -33,7 +33,7 @@ export const Route = createFileRoute('/api/zero/query')({
     handlers: {
       POST: async ({ request }) => {
         const program = Effect.gen(function* () {
-          const authContext = yield* requireUserAuth({
+          const authContext = yield* requireAppUserAuth({
             headers: request.headers,
             onUnauthorized: () =>
               new ZeroQueryUnauthorizedError({ message: 'Unauthorized' }),

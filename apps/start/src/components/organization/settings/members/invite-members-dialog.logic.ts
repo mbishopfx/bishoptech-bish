@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { authClient } from '@/lib/frontend/auth/auth-client'
+import { isSelfHosted } from '@/utils/app-feature-flags'
 
 export const INVITE_BATCH_MAX = 10
 
@@ -34,6 +35,7 @@ export type InviteMembersDialogLogicResult = {
   submitButtonDisabled: boolean
   submitError: string | null
   submitSuccess: string | null
+  inviteLinks: string[]
   handleSubmit: () => Promise<void>
 }
 
@@ -44,12 +46,14 @@ export function useInviteMembersDialogLogic(): InviteMembersDialogLogicResult {
   ])
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null)
+  const [inviteLinks, setInviteLinks] = useState<string[]>([])
 
   const resetEntries = () => setInviteEntries([createEntry()])
 
   const clearFeedback = () => {
     setSubmitError(null)
     setSubmitSuccess(null)
+    setInviteLinks([])
   }
 
   const onDialogOpenChange = (open: boolean) => {
@@ -99,6 +103,7 @@ export function useInviteMembersDialogLogic(): InviteMembersDialogLogicResult {
     }
 
     const errors: string[] = []
+    const createdLinks: string[] = []
     let invited = 0
 
     try {
@@ -111,6 +116,20 @@ export function useInviteMembersDialogLogic(): InviteMembersDialogLogicResult {
         if (response.error?.message) {
           errors.push(`${invite.email}: ${response.error.message}`)
           continue
+        }
+
+        const invitationId =
+          response.data &&
+          typeof response.data === 'object' &&
+          'id' in response.data &&
+          typeof response.data.id === 'string'
+            ? response.data.id
+            : null
+
+        if (isSelfHosted && invitationId) {
+          createdLinks.push(
+            `${window.location.origin}/auth/sign-up?invitationId=${encodeURIComponent(invitationId)}`,
+          )
         }
 
         invited += 1
@@ -131,11 +150,18 @@ export function useInviteMembersDialogLogic(): InviteMembersDialogLogicResult {
 
     const successMessage =
       toInvite.length === 1
-        ? 'Invitation sent.'
-        : `${toInvite.length} invitations sent.`
+        ? isSelfHosted
+          ? 'Invitation created. Copy the signup link below.'
+          : 'Invitation sent.'
+        : isSelfHosted
+          ? `${toInvite.length} invitations created. Copy the signup links below.`
+          : `${toInvite.length} invitations sent.`
     setSubmitSuccess(successMessage)
-    setInviteDialogOpen(false)
-    resetEntries()
+    setInviteLinks(createdLinks)
+    if (!isSelfHosted) {
+      setInviteDialogOpen(false)
+      resetEntries()
+    }
     toast.success(successMessage)
   }
 
@@ -149,6 +175,7 @@ export function useInviteMembersDialogLogic(): InviteMembersDialogLogicResult {
     submitButtonDisabled,
     submitError,
     submitSuccess,
+    inviteLinks,
     handleSubmit,
   }
 }

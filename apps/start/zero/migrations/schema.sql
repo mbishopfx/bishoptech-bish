@@ -7,6 +7,52 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
 -- Execution order: Run db:reset (Better Auth migrate first, then zero-dev-reset)
 -- so user/organization/member/invitation exist before this schema runs.
 
+-- instance_settings
+CREATE TABLE IF NOT EXISTS instance_settings (
+  id TEXT PRIMARY KEY,
+  setup_completed_at TIMESTAMPTZ,
+  first_admin_user_id TEXT,
+  signup_policy TEXT NOT NULL DEFAULT 'invite_only',
+  signup_secret_hash TEXT,
+  public_app_locked BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE instance_settings
+ADD COLUMN IF NOT EXISTS setup_completed_at TIMESTAMPTZ;
+ALTER TABLE instance_settings
+ADD COLUMN IF NOT EXISTS first_admin_user_id TEXT;
+ALTER TABLE instance_settings
+ADD COLUMN IF NOT EXISTS signup_policy TEXT NOT NULL DEFAULT 'invite_only';
+ALTER TABLE instance_settings
+ADD COLUMN IF NOT EXISTS signup_secret_hash TEXT;
+ALTER TABLE instance_settings
+ADD COLUMN IF NOT EXISTS public_app_locked BOOLEAN NOT NULL DEFAULT TRUE;
+ALTER TABLE instance_settings
+ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE instance_settings
+ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+DO $$
+BEGIN
+  ALTER TABLE instance_settings
+  ADD CONSTRAINT instance_settings_signup_policy_check
+  CHECK (signup_policy IN ('invite_only', 'shared_secret', 'open'));
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END
+$$;
+INSERT INTO instance_settings (
+  id,
+  signup_policy,
+  public_app_locked
+)
+VALUES (
+  'default',
+  'invite_only',
+  TRUE
+)
+ON CONFLICT (id) DO NOTHING;
+
 -- threads
 CREATE TABLE IF NOT EXISTS threads (
   id TEXT PRIMARY KEY,

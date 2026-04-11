@@ -6,11 +6,18 @@ import {
   shouldProvisionDefaultOrganization,
 } from '@/lib/backend/auth/domain/default-organization.helpers'
 import { sqlJson } from '@/lib/backend/server-effect/services/upstream-postgres.service'
+import {
+  resolveWorkspaceEffectiveFeatures,
+} from '@/lib/shared/access-control'
+import { buildDisabledUsagePolicy } from '@/lib/backend/billing/services/workspace-usage/shared'
+import { isSelfHosted } from '@/utils/app-feature-flags'
 
 type OrganizationCountsRow = {
   activeMemberCount: number
   pendingInvitationCount: number
 }
+
+const SELF_HOSTED_DEFAULT_SEAT_COUNT = 100_000
 
 export function slugifyOrganizationName(input: string): string {
   return input
@@ -79,6 +86,19 @@ export const ensureOrganizationBillingBaselineEffect = Effect.fn(
       const sql = yield* PgClient.PgClient
       const now = Date.now()
       const billingAccountId = `billing_${organizationId}`
+      const subscriptionId = `subscription_${organizationId}`
+      const isSelfHostedWorkspace = isSelfHosted
+      const defaultPlanId = isSelfHostedWorkspace ? 'self_hosted' : 'free'
+      const defaultSeatCount = isSelfHostedWorkspace ? SELF_HOSTED_DEFAULT_SEAT_COUNT : 1
+      const defaultSubscriptionStatus = isSelfHostedWorkspace ? 'active' : 'inactive'
+      const defaultEffectiveFeatures = isSelfHostedWorkspace
+        ? resolveWorkspaceEffectiveFeatures({
+            planId: 'self_hosted',
+          })
+        : {}
+      const defaultUsagePolicy = isSelfHostedWorkspace
+        ? buildDisabledUsagePolicy('self_hosted')
+        : {}
 
       yield* sql.withTransaction(
         Effect.gen(function* () {
@@ -106,6 +126,57 @@ export const ensureOrganizationBillingBaselineEffect = Effect.fn(
           `
 
           yield* sql`
+            insert into org_subscription (
+              id,
+              organization_id,
+              billing_account_id,
+              provider_subscription_id,
+              plan_id,
+              billing_interval,
+              seat_count,
+              status,
+              current_period_start,
+              current_period_end,
+              cancel_at_period_end,
+              scheduled_plan_id,
+              scheduled_seat_count,
+              scheduled_change_effective_at,
+              pending_change_reason,
+              metadata,
+              created_at,
+              updated_at
+            )
+            values (
+              ${subscriptionId},
+              ${organizationId},
+              ${billingAccountId},
+              null,
+              ${defaultPlanId},
+              null,
+              ${defaultSeatCount},
+              ${defaultSubscriptionStatus},
+              null,
+              null,
+              false,
+              null,
+              null,
+              null,
+              null,
+              ${sqlJson(sql, {
+                source: isSelfHostedWorkspace ? 'self_hosted_bootstrap' : 'default_baseline',
+              })},
+              ${now},
+              ${now}
+            )
+            on conflict (id) do update
+            set plan_id = excluded.plan_id,
+                seat_count = excluded.seat_count,
+                status = excluded.status,
+                metadata = excluded.metadata,
+                updated_at = excluded.updated_at
+          `
+
+          yield* sql`
             insert into org_entitlement_snapshot (
               organization_id,
               plan_id,
@@ -124,22 +195,35 @@ export const ensureOrganizationBillingBaselineEffect = Effect.fn(
             )
             values (
               ${organizationId},
-              'free',
+              ${defaultPlanId},
               'manual',
-              'inactive',
-              1,
+              ${defaultSubscriptionStatus},
+              ${defaultSeatCount},
               ${counts.activeMemberCount},
               ${counts.pendingInvitationCount},
-              ${counts.activeMemberCount > 1
-                || (counts.activeMemberCount + counts.pendingInvitationCount) > 1},
-              ${sqlJson(sql, {})},
-              ${sqlJson(sql, {})},
+              ${counts.activeMemberCount > defaultSeatCount
+                || (counts.activeMemberCount + counts.pendingInvitationCount) > defaultSeatCount},
+              ${sqlJson(sql, defaultEffectiveFeatures)},
+              ${sqlJson(sql, defaultUsagePolicy)},
               'ok',
               null,
               ${now},
               1
             )
-            on conflict (organization_id) do nothing
+            on conflict (organization_id) do update
+            set plan_id = excluded.plan_id,
+                billing_provider = excluded.billing_provider,
+                subscription_status = excluded.subscription_status,
+                seat_count = excluded.seat_count,
+                active_member_count = excluded.active_member_count,
+                pending_invitation_count = excluded.pending_invitation_count,
+                is_over_seat_limit = excluded.is_over_seat_limit,
+                effective_features = excluded.effective_features,
+                usage_policy = excluded.usage_policy,
+                usage_sync_status = excluded.usage_sync_status,
+                usage_sync_error = excluded.usage_sync_error,
+                computed_at = excluded.computed_at,
+                version = excluded.version
           `
         }),
       )

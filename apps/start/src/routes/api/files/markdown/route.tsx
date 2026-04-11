@@ -12,6 +12,8 @@ import {
   MarkdownConversionService,
   handleFileRouteFailure,
 } from '@/lib/backend/file'
+import { getServerInstanceCapabilities } from '@/lib/backend/self-host/instance-settings.service'
+import { isDirectTextExtractionFile } from '@/lib/backend/file/services/plain-text-file'
 
 const SUPPORTED_MIME_TYPES = new Set([
   'application/pdf',
@@ -134,6 +136,19 @@ export const Route = createFileRoute('/api/files/markdown')({
             return jsonResponse(
               { error: 'File type is not supported for markdown conversion' },
               400,
+            )
+          }
+
+          if (
+            !getServerInstanceCapabilities().markdownWorkerAvailable &&
+            !isDirectTextExtractionFile({ name, type: contentType } as Pick<File, 'name' | 'type'>)
+          ) {
+            return jsonResponse(
+              {
+                error:
+                  'Markdown conversion is disabled for binary documents because the Cloudflare markdown worker is not configured.',
+              },
+              503,
             )
           }
 

@@ -6,6 +6,7 @@ import {
   multiSessionClient,
   organizationClient, twoFactorClient 
 } from 'better-auth/client/plugins'
+import { isSelfHosted } from '@/utils/app-feature-flags'
 
 function resolveAuthClientBaseURL(): string {
   const trimTrailingSlash = (s: string) => s.replace(/\/+$/, '')
@@ -36,13 +37,17 @@ export const authClient = createAuthClient({
   baseURL,
   plugins: [
     organizationClient(),
-    stripeClient({
-      subscription: true,
-    }),
-    anonymousClient(),
+    ...(!isSelfHosted
+      ? [
+          stripeClient({
+            subscription: true,
+          }),
+        ]
+      : []),
+    ...(!isSelfHosted ? [anonymousClient()] : []),
     multiSessionClient(),
     twoFactorClient(),
-    emailOTPClient(),
+    ...(!isSelfHosted ? [emailOTPClient()] : []),
   ],
 })
 

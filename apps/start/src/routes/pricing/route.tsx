@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { z } from 'zod'
 import { PricingPageLayout } from '@/components/pricing/pricing-page-layout'
 import { PricingPage } from '@/components/pricing/pricing-page'
+import { isSelfHosted } from '@/utils/app-feature-flags'
 
 /**
  * Pricing page route. Renders outside the dashboard layout at /pricing.
@@ -20,7 +21,19 @@ function PricingRouteComponent() {
 
   return (
     <PricingPageLayout>
-      <PricingPage checkoutIntent={search} />
+      {!isSelfHosted ? (
+        <PricingPage checkoutIntent={search} />
+      ) : (
+        <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 rounded-3xl border border-border-base bg-surface-raised/70 px-6 py-10">
+          <h1 className="text-3xl font-semibold text-foreground-strong">
+            Self-hosted instance
+          </h1>
+          <p className="text-base text-foreground-secondary">
+            Cloud billing and plan upgrades are disabled in self-hosted mode.
+            This deployment already runs with the self-hosted capability profile.
+          </p>
+        </div>
+      )}
     </PricingPageLayout>
   )
 }

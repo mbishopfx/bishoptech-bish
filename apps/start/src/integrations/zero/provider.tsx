@@ -1,11 +1,13 @@
 import { ZeroProvider as ZeroProviderBase } from '@rocicorp/zero/react'
 import { useEffect, useMemo, useRef } from 'react'
+import { useLocation } from '@tanstack/react-router'
 import { schema } from './schema'
 import { mutators } from './mutators'
 import type { ZeroContext } from './schema'
 import { useAppAuth } from '@/lib/frontend/auth/use-auth'
 import { resolveZeroAuthSnapshot } from './zero-auth'
 import type { ZeroAuthSnapshot } from './zero-auth'
+import { isSelfHosted } from '@/utils/app-feature-flags'
 
 const cacheURL = import.meta.env.VITE_ZERO_CACHE_URL
 
@@ -20,7 +22,7 @@ function useZeroAuth(): { ready: boolean; userID?: string; context?: ZeroContext
   const anonymousBootstrapRef = useRef(false)
 
   useEffect(() => {
-    if (loading || user || anonymousBootstrapRef.current) return
+    if (isSelfHosted || loading || user || anonymousBootstrapRef.current) return
     anonymousBootstrapRef.current = true
     void signInAnonymously().finally(() => {
       anonymousBootstrapRef.current = false
@@ -51,8 +53,22 @@ function useZeroAuth(): { ready: boolean; userID?: string; context?: ZeroContext
 
 export default function ZeroProvider({ children }: { children: React.ReactNode }) {
   const { ready, userID, context } = useZeroAuth()
+  const location = useLocation()
+
+  const isPublicSelfHostedRoute =
+    isSelfHosted &&
+    (
+      location.pathname === '/' ||
+      location.pathname === '/setup' ||
+      location.pathname === '/pricing' ||
+      location.pathname.startsWith('/auth')
+    )
 
   if (!cacheURL) {
+    return <>{children}</>
+  }
+
+  if (isPublicSelfHostedRoute && (!ready || !userID || !context)) {
     return <>{children}</>
   }
 

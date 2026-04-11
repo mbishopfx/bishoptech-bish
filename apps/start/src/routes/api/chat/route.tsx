@@ -4,7 +4,7 @@ import { Effect, Schema } from 'effect'
 import { resolveAccessContext, resolveChatAccessPolicy } from '@/lib/backend/access-control'
 import {
   getServerAuthContextFromHeaders,
-  requireUserAuth,
+  requireAppUserAuth,
 } from '@/lib/backend/server-effect/http/server-auth'
 import { canUseOrganizationProviderKeys } from '@/utils/app-feature-flags'
 import {
@@ -39,7 +39,7 @@ export const Route = createFileRoute('/api/chat')({
         })
 
         const program = Effect.gen(function* () {
-          const authContext = yield* requireUserAuth({
+          const authContext = yield* requireAppUserAuth({
             headers: request.headers,
             onUnauthorized: () =>
               new UnauthorizedError({
@@ -135,7 +135,7 @@ export const Route = createFileRoute('/api/chat')({
 
         // Build one Effect program so auth/validation/orchestration share the same error model.
         const program = Effect.gen(function* () {
-          const authContext = yield* requireUserAuth({
+          const authContext = yield* requireAppUserAuth({
             headers: request.headers,
             onUnauthorized: () =>
               new UnauthorizedError({

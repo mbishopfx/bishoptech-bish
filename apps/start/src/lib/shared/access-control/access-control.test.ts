@@ -102,6 +102,18 @@ describe('access-control', () => {
     })
   })
 
+  it('keeps self-hosted workspaces on the full capability matrix', () => {
+    expect(getPlanEffectiveFeatures('self_hosted')).toEqual({
+      byok: true,
+      providerPolicy: true,
+      compliancePolicy: true,
+      toolPolicy: true,
+      verifiedDomains: true,
+      singleSignOn: true,
+      directoryProvisioning: true,
+    })
+  })
+
   it('returns the minimum plan for locked workspace features', () => {
     expect(
       getWorkspaceFeatureAccessState({

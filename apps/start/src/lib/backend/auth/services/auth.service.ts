@@ -46,6 +46,14 @@ import {
   reassignAnonymousAppDataEffect,
   runAuthSqlEffect,
 } from '@/lib/backend/auth/services/auth-sql.service'
+import {
+  getSelfHostedInstanceSettings,
+  hasPendingSelfHostedInvitationForEmail,
+  verifySelfHostedSetupToken,
+  verifySelfHostedSignupSecret,
+} from '@/lib/backend/self-host/instance-settings.service'
+import { APIError, createAuthMiddleware } from 'better-auth/api'
+import { isSelfHosted } from '@/utils/app-feature-flags'
 
 async function syncWorkspaceSubscription(input: {
   subscription: BetterAuthStripeSubscription
@@ -92,14 +100,13 @@ const authBaseURL = resolveAuthBaseURL()
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY?.trim()
 const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET?.trim()
 const isTestRuntime = process.env.NODE_ENV === 'test' || process.env.VITEST === 'true'
-
 function buildOrganizationSlug(input: { name: string; userId: string }): string {
   const base = slugifyOrganizationName(input.name) || 'workspace'
   return `${base}-${input.userId.slice(0, 8)}`
 }
 
 const stripePlugin
-  = stripeSecretKey && stripeWebhookSecret
+  = !isSelfHosted && stripeSecretKey && stripeWebhookSecret
     ? stripe({
         stripeClient: new Stripe(stripeSecretKey),
         stripeWebhookSecret,
@@ -162,6 +169,116 @@ const stripePlugin
         },
       })
     : null
+
+function readStringRecordValue(record: unknown, key: string): string | null {
+  if (!record || typeof record !== 'object') return null
+  const value = (record as Record<string, unknown>)[key]
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null
+}
+
+function isSelfHostedSocialPath(path: string): boolean {
+  return (
+    path === '/sign-in/social' ||
+    path === '/link-social' ||
+    path.startsWith('/callback/') ||
+    path.startsWith('/oauth2/callback/')
+  )
+}
+
+function isSelfHostedEmailDeliveryPath(path: string): boolean {
+  return (
+    path === '/verify-email' ||
+    path === '/request-password-reset' ||
+    path.startsWith('/reset-password') ||
+    path.startsWith('/email-otp/') ||
+    path === '/forget-password/email-otp'
+  )
+}
+
+const selfHostedAuthGuard = createAuthMiddleware(async (ctx) => {
+  if (!isSelfHosted) {
+    return
+  }
+
+  const path = ctx.path ?? ''
+
+  if (isSelfHostedSocialPath(path)) {
+    throw APIError.from('FORBIDDEN', {
+      code: 'SELF_HOSTED_SOCIAL_AUTH_DISABLED',
+      message: 'Social auth is disabled for self-hosted instances.',
+    })
+  }
+
+  if (isSelfHostedEmailDeliveryPath(path)) {
+    throw APIError.from('FORBIDDEN', {
+      code: 'SELF_HOSTED_EMAIL_DELIVERY_DISABLED',
+      message:
+        'Email verification and password recovery are disabled for self-hosted instances.',
+    })
+  }
+
+  if (path !== '/sign-up/email') {
+    return
+  }
+
+  const email = readStringRecordValue(ctx.body, 'email')
+  if (!email) {
+    throw APIError.from('BAD_REQUEST', {
+      code: 'SELF_HOSTED_SIGNUP_EMAIL_REQUIRED',
+      message: 'A valid email address is required to sign up.',
+    })
+  }
+
+  const setupToken =
+    ctx.headers?.get('x-rift-setup-token')?.trim() ??
+    readStringRecordValue(ctx.body, 'selfHostedSetupToken')
+  const signupSecret =
+    ctx.headers?.get('x-rift-signup-secret')?.trim() ??
+    readStringRecordValue(ctx.body, 'selfHostedSignupSecret')
+  const settings = await getSelfHostedInstanceSettings()
+
+  if (settings.setupCompletedAt == null) {
+    if (!setupToken || !verifySelfHostedSetupToken(setupToken)) {
+      throw APIError.from('UNAUTHORIZED', {
+        code: 'SELF_HOSTED_SETUP_REQUIRED',
+        message:
+          'This self-hosted instance has not been claimed yet. Complete setup first.',
+      })
+    }
+
+    return
+  }
+
+  if (settings.signupPolicy === 'open') {
+    return
+  }
+
+  if (settings.signupPolicy === 'shared_secret') {
+    if (
+      !signupSecret ||
+      !settings.signupSecretHash ||
+      !verifySelfHostedSignupSecret({
+        secret: signupSecret,
+        hash: settings.signupSecretHash,
+      })
+    ) {
+      throw APIError.from('FORBIDDEN', {
+        code: 'SELF_HOSTED_SIGNUP_SECRET_INVALID',
+        message: 'A valid shared signup secret is required for this instance.',
+      })
+    }
+
+    return
+  }
+
+  const hasInvitation = await hasPendingSelfHostedInvitationForEmail(email)
+  if (!hasInvitation) {
+    throw APIError.from('FORBIDDEN', {
+      code: 'SELF_HOSTED_INVITE_ONLY',
+      message: 'This self-hosted instance currently accepts invite-only signups.',
+    })
+  }
+})
 
 /**
  * Serializes default-org provisioning and anonymous-link migration by user.
@@ -316,17 +433,17 @@ export const auth = betterAuth({
       },
     },
     changeEmail: {
-      enabled: true,
+      enabled: !isSelfHosted,
     },
   },
   emailAndPassword: {
     enabled: true,
     minPasswordLength: 8,
     maxPasswordLength: 128,
-    requireEmailVerification: true,
+    requireEmailVerification: !isSelfHosted,
     revokeSessionsOnPasswordReset: true,
   },
-  ...(googleClientId && googleClientSecret
+  ...(!isSelfHosted && googleClientId && googleClientSecret
     ? {
         socialProviders: {
           google: {
@@ -337,24 +454,28 @@ export const auth = betterAuth({
       }
     : {}),
   plugins: [
-    emailOTP({
-      overrideDefaultEmailVerification: true,
-      sendVerificationOnSignUp: true,
-      otpLength: 6,
-      expiresIn: 5 * 60,
-      allowedAttempts: 5,
-      storeOTP: 'hashed',
-      async sendVerificationOTP({ email, otp, type }) {
-        void sendAuthOtpEmail({
-          to: email,
-          otp,
-          kind: type,
-          expiresInMinutes: 5,
-        }).catch((error) => {
-          console.error(`Failed to send ${type} OTP`, error)
-        })
-      },
-    }),
+    ...(!isSelfHosted
+      ? [
+          emailOTP({
+            overrideDefaultEmailVerification: true,
+            sendVerificationOnSignUp: true,
+            otpLength: 6,
+            expiresIn: 5 * 60,
+            allowedAttempts: 5,
+            storeOTP: 'hashed',
+            async sendVerificationOTP({ email, otp, type }) {
+              void sendAuthOtpEmail({
+                to: email,
+                otp,
+                kind: type,
+                expiresInMinutes: 5,
+              }).catch((error) => {
+                console.error(`Failed to send ${type} OTP`, error)
+              })
+            },
+          }),
+        ]
+      : []),
     organizationPlugin({
       allowUserToCreateOrganization: async (user) => !user.isAnonymous,
       /**
@@ -364,7 +485,7 @@ export const auth = betterAuth({
       organizationLimit: 10,
       membershipLimit: async (_user, organization): Promise<number> =>
         getOrganizationSeatLimit(organization.id),
-      requireEmailVerificationOnInvitation: true,
+      requireEmailVerificationOnInvitation: !isSelfHosted,
       organizationHooks: {
         afterCreateOrganization: async ({ organization, user }) => {
           await ensureOrganizationBillingBaseline(organization.id)
@@ -417,6 +538,10 @@ export const auth = betterAuth({
         },
       },
       sendInvitationEmail: async (data) => {
+        if (isSelfHosted) {
+          return
+        }
+
         const inviteLink = `${authBaseURL}/auth/accept-invitation/${data.id}`
         const inviterName = data.inviter.user.name || data.inviter.user.email || 'A team member'
         const orgName = data.organization.name || 'the organization'
@@ -432,32 +557,36 @@ export const auth = betterAuth({
     }),
     ...(stripePlugin ? [stripePlugin] : []),
     ...(isTestRuntime ? [testUtils()] : []),
-    anonymous({
-      generateName: () => 'Human',
-      onLinkAccount: async ({ anonymousUser, newUser }) => {
-        /**
-         * Reassign app-owned rows so guest chat history survives account upgrade.
-         */
-        const fromUserId = anonymousUser.user.id
-        const toUserId = newUser.user.id
-        await withUserProvisioningLock(
-          toUserId,
-          Effect.gen(function* () {
-            const targetOrganizationId = yield* ensureDefaultOrganizationForUserWithinLockEffect({
-              userId: toUserId,
-              name: newUser.user.name,
-              email: newUser.user.email,
-            })
+    ...(!isSelfHosted
+      ? [
+          anonymous({
+            generateName: () => 'Human',
+            onLinkAccount: async ({ anonymousUser, newUser }) => {
+              /**
+               * Reassign app-owned rows so guest chat history survives account upgrade.
+               */
+              const fromUserId = anonymousUser.user.id
+              const toUserId = newUser.user.id
+              await withUserProvisioningLock(
+                toUserId,
+                Effect.gen(function* () {
+                  const targetOrganizationId = yield* ensureDefaultOrganizationForUserWithinLockEffect({
+                    userId: toUserId,
+                    name: newUser.user.name,
+                    email: newUser.user.email,
+                  })
 
-            yield* reassignAnonymousAppDataEffect({
-              fromUserId,
-              toUserId,
-              targetOrganizationId,
-            })
-          })
-        )
-      },
-    }),
+                  yield* reassignAnonymousAppDataEffect({
+                    fromUserId,
+                    toUserId,
+                    targetOrganizationId,
+                  })
+                })
+              )
+            },
+          }),
+        ]
+      : []),
     multiSession({
       /**
        * Allow users to stay signed in from multiple devices/browsers
@@ -489,5 +618,8 @@ export const auth = betterAuth({
           domain: process.env.BETTER_AUTH_COOKIE_DOMAIN.trim(),
         }
       : { enabled: true },
+  },
+  hooks: {
+    before: selfHostedAuthGuard,
   },
 })

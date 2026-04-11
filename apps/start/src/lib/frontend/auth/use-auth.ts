@@ -1,6 +1,7 @@
 import { useCallback } from 'react'
 import { authClient } from './auth-client'
 import type { AppSession } from './auth-client'
+import { isSelfHosted } from '@/utils/app-feature-flags'
 
 export type AppAuthSession = AppSession
 export type AppAuthUser = AppSession['user']
@@ -44,6 +45,7 @@ export function useAppAuth() {
   }, [sessionQuery])
 
   const signInAnonymously = useCallback(async () => {
+    if (isSelfHosted) return
     await authClient.signIn.anonymous()
     await sessionQuery.refetch()
   }, [sessionQuery])

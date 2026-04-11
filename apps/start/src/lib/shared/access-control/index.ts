@@ -1,9 +1,22 @@
+import { isSelfHosted } from '@/utils/app-feature-flags'
 import { AI_CATALOG } from '@/lib/shared/ai-catalog'
 
-export type WorkspacePlanId = 'free' | 'plus' | 'pro' | 'scale' | 'enterprise'
+export type WorkspacePlanId =
+  | 'free'
+  | 'plus'
+  | 'pro'
+  | 'scale'
+  | 'enterprise'
+  | 'self_hosted'
 export type PaidWorkspacePlanId = Exclude<WorkspacePlanId, 'free'>
-export type SelfServeWorkspacePlanId = Exclude<WorkspacePlanId, 'enterprise'>
-export type StripeManagedWorkspacePlanId = Exclude<PaidWorkspacePlanId, 'enterprise'>
+export type SelfServeWorkspacePlanId = Exclude<
+  WorkspacePlanId,
+  'enterprise' | 'self_hosted'
+>
+export type StripeManagedWorkspacePlanId = Exclude<
+  PaidWorkspacePlanId,
+  'enterprise' | 'self_hosted'
+>
 export type WorkspaceFeatureId =
   | 'byok'
   | 'providerPolicy'
@@ -118,6 +131,14 @@ export const WORKSPACE_PLANS: readonly WorkspacePlan[] = [
     features: ['Directory provisioning', 'Custom onboarding', 'Manual billing support'],
     monthlyPriceUsd: 0,
   },
+  {
+    id: 'self_hosted',
+    name: 'Self-Hosted',
+    description: 'Unlimited self-managed deployment with cloud-only controls disabled.',
+    includedSeats: 100_000,
+    features: ['Self-managed infrastructure', 'Unlimited usage', 'Manual instance control'],
+    monthlyPriceUsd: 0,
+  },
 ] as const
 
 /**
@@ -174,11 +195,13 @@ export function isPaidWorkspacePlan(
 export function isStripeManagedWorkspacePlan(
   plan: WorkspacePlan,
 ): plan is WorkspacePlan & { id: StripeManagedWorkspacePlanId } {
-  return plan.id !== 'free' && plan.id !== 'enterprise'
+  return plan.id !== 'free' && plan.id !== 'enterprise' && plan.id !== 'self_hosted'
 }
 
 export function isWorkspacePlanId(value: string | null | undefined): value is WorkspacePlanId {
-  return WORKSPACE_PLANS.some((plan) => plan.id === value)
+  return WORKSPACE_PLANS.some((plan) =>
+    plan.id === value && (plan.id !== 'self_hosted' || isSelfHosted),
+  )
 }
 
 export function coerceWorkspacePlanId(value: string | null | undefined): WorkspacePlanId {

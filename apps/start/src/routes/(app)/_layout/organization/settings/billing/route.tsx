@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { ContentPage } from '@/components/layout'
 import { BillingPage } from '@/components/organization/settings/billing'
 import { useAppAuth } from '@/lib/frontend/auth/use-auth'
+import { isSelfHosted } from '@/utils/app-feature-flags'
 
 /**
  * Workspace billing and credits configuration page.
@@ -14,6 +15,20 @@ export const Route = createFileRoute(
 
 function BillingRoutePage() {
   const { activeOrganizationId } = useAppAuth()
+
+  if (isSelfHosted) {
+    return (
+      <ContentPage
+        title="Billing"
+        description="This workspace is running in self-hosted mode."
+      >
+        <p className="text-sm text-foreground-secondary">
+          Stripe checkout, pricing upgrades, and the billing portal are disabled
+          for self-hosted deployments.
+        </p>
+      </ContentPage>
+    )
+  }
 
   if (!activeOrganizationId) {
     return (
