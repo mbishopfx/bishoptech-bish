@@ -93,7 +93,9 @@ export function OtpStep({
     return () => clearInterval(intervalId)
   }, [otpExpiresInSeconds, otpSentAt])
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (
+    event: React.SyntheticEvent<HTMLFormElement>,
+  ) => {
     event.preventDefault()
     await onSubmit(otp.trim())
   }

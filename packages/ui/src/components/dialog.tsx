@@ -273,7 +273,9 @@ export function FormDialog({
         ? `success:${typeof visibleSuccess === "string" ? visibleSuccess : "node"}`
         : "help"
 
-  const onFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const onFormSubmit = async (
+    e: React.SyntheticEvent<HTMLFormElement>,
+  ) => {
     e.preventDefault()
     if (handleSubmit == null) return
     setSaving(true)

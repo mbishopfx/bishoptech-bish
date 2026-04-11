@@ -92,7 +92,7 @@ export function LoginForm({
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault()
     const normalizedEmail = normalizeEmailAddress(email)
 

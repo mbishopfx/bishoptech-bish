@@ -15,6 +15,8 @@ import { m } from '@/paraglide/messages.js'
 import { selfHostSource } from '@/utils/app-feature-flags'
 import { useSetupPageLogic } from './setup-page.logic'
 
+const SETUP_TOKEN_INPUT_ID = 'setup-token'
+
 export function SetupPage() {
   const isRailwaySelfHost = selfHostSource === 'railway'
   const {
@@ -28,6 +30,7 @@ export function SetupPage() {
     success,
     isVerifyingToken,
     isSubmittingAccount,
+    isRedirectingToChat,
     setSetupToken,
     setName,
     setEmail,
@@ -37,9 +40,25 @@ export function SetupPage() {
     handleSubmit,
   } = useSetupPageLogic()
 
+  if (isRedirectingToChat) {
+    return (
+      <div className="relative grid w-full place-items-center">
+        <motion.div
+          className="w-full max-w-md rounded-3xl bg-surface-strong/30 p-8 text-center shadow-[0_0_1px_rgba(0,0,0,0.40),0_0_2px_rgba(0,0,0,0.05),0_10px_10px_rgba(0,0,0,0.25)] backdrop-blur-xl transition-colors duration-200 dark:bg-surface-strong/50"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+        >
+          <p className="text-sm text-black/70 dark:text-white/60">
+            Redirecting to chat...
+          </p>
+        </motion.div>
+      </div>
+    )
+  }
+
   return (
     <div className="relative grid w-full place-items-center">
-      <AnimatePresence mode="wait" initial={false}>
+      <AnimatePresence initial={false}>
         <motion.div
           key={`setup-step-${step}`}
           className="col-start-1 row-start-1 relative z-10 w-full max-w-md"
@@ -90,7 +109,7 @@ export function SetupPage() {
                       {m.setup_setup_token_label()}
                     </Label>
                     <Input
-                      id="setup-token"
+                      id={SETUP_TOKEN_INPUT_ID}
                       name="setup-token"
                       type="password"
                       variant="alt"

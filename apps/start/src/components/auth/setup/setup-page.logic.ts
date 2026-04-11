@@ -1,9 +1,7 @@
 'use client'
 
 import { useServerFn } from '@tanstack/react-start'
-import type { FormEvent } from 'react'
-import { useCallback, useState } from 'react'
-import { authClient } from '@/lib/frontend/auth/auth-client'
+import { useCallback, useEffect, useState } from 'react'
 import {
   runSelfHostedSetup,
   verifySelfHostedSetupAccess,
@@ -24,13 +22,18 @@ export type SetupPageLogicResult = {
   success: string
   isVerifyingToken: boolean
   isSubmittingAccount: boolean
+  isRedirectingToChat: boolean
   setSetupToken: (value: string) => void
   setName: (value: string) => void
   setEmail: (value: string) => void
   setPassword: (value: string) => void
   setConfirmPassword: (value: string) => void
-  handleVerifyToken: (event: FormEvent<HTMLFormElement>) => Promise<void>
-  handleSubmit: (event: FormEvent<HTMLFormElement>) => Promise<void>
+  handleVerifyToken: (
+    event: React.SyntheticEvent<HTMLFormElement>,
+  ) => Promise<void>
+  handleSubmit: (
+    event: React.SyntheticEvent<HTMLFormElement>,
+  ) => Promise<void>
 }
 
 type StructuredSetupError = {
@@ -43,6 +46,52 @@ type StructuredSetupError = {
 function readStructuredSetupError(value: unknown): StructuredSetupError | null {
   if (!value || typeof value !== 'object') return null
   return value as StructuredSetupError
+}
+
+function readPreHydrationInputValue(inputId: string): string {
+  if (typeof window === 'undefined') return ''
+
+  const input = document.getElementById(inputId)
+  return input instanceof HTMLInputElement ? input.value : ''
+}
+
+const SETUP_TOKEN_SEARCH_PARAM_KEYS = ['setupToken', 'setup-token', 'token'] as const
+
+function readSetupTokenFromURL(): string {
+  if (typeof window === 'undefined') return ''
+
+  const searchParams = new URLSearchParams(window.location.search)
+  for (const key of SETUP_TOKEN_SEARCH_PARAM_KEYS) {
+    const value = searchParams.get(key)?.trim()
+    if (value) {
+      return value
+    }
+  }
+
+  return ''
+}
+
+function removeSetupTokenFromURL(): void {
+  if (typeof window === 'undefined') return
+
+  const url = new URL(window.location.href)
+  let changed = false
+
+  for (const key of SETUP_TOKEN_SEARCH_PARAM_KEYS) {
+    if (url.searchParams.has(key)) {
+      url.searchParams.delete(key)
+      changed = true
+    }
+  }
+
+  if (!changed) return
+
+  const nextPath =
+    url.pathname +
+    (url.search ? url.search : '') +
+    (url.hash ? url.hash : '')
+
+  window.history.replaceState(window.history.state, '', nextPath)
 }
 
 /**
@@ -89,7 +138,14 @@ export function useSetupPageLogic(): SetupPageLogicResult {
   const verifySetupAccess = useServerFn(verifySelfHostedSetupAccess)
   const runSetup = useServerFn(runSelfHostedSetup)
   const [step, setStep] = useState<SetupStep>(1)
-  const [setupToken, setSetupTokenState] = useState('')
+  const [setupToken, setSetupTokenState] = useState(() => {
+    const tokenFromURL = readSetupTokenFromURL()
+    if (tokenFromURL) {
+      return tokenFromURL
+    }
+
+    return readPreHydrationInputValue('setup-token')
+  })
   const [name, setNameState] = useState('')
   const [email, setEmailState] = useState('')
   const [password, setPasswordState] = useState('')
@@ -98,6 +154,11 @@ export function useSetupPageLogic(): SetupPageLogicResult {
   const [success, setSuccess] = useState('')
   const [isVerifyingToken, setIsVerifyingToken] = useState(false)
   const [isSubmittingAccount, setIsSubmittingAccount] = useState(false)
+  const [isRedirectingToChat, setIsRedirectingToChat] = useState(false)
+
+  useEffect(() => {
+    removeSetupTokenFromURL()
+  }, [])
 
   const setSetupToken = useCallback((value: string) => {
     setSetupTokenState(value)
@@ -125,7 +186,7 @@ export function useSetupPageLogic(): SetupPageLogicResult {
   }, [])
 
   const handleVerifyToken = useCallback(
-    async (event: FormEvent<HTMLFormElement>) => {
+    async (event: React.SyntheticEvent<HTMLFormElement>) => {
       event.preventDefault()
       setError('')
       setSuccess('')
@@ -151,7 +212,7 @@ export function useSetupPageLogic(): SetupPageLogicResult {
   )
 
   const handleSubmit = useCallback(
-    async (event: FormEvent<HTMLFormElement>) => {
+    async (event: React.SyntheticEvent<HTMLFormElement>) => {
       event.preventDefault()
       setError('')
       setSuccess('')
@@ -173,7 +234,7 @@ export function useSetupPageLogic(): SetupPageLogicResult {
       setIsSubmittingAccount(true)
 
       try {
-        const result = await runSetup({
+        await runSetup({
           data: {
             name,
             email,
@@ -182,22 +243,10 @@ export function useSetupPageLogic(): SetupPageLogicResult {
           },
         })
 
-        const signInResult = await authClient.signIn.email({
-          email: result.email,
-          password,
-        })
-
-        if (signInResult.error) {
-          setSuccess(
-            m.setup_success_manual_sign_in({
-              email: result.email,
-            }),
-          )
-          return
-        }
-
-        window.location.assign('/chat')
+        setIsRedirectingToChat(true)
+        window.location.replace('/chat')
       } catch (setupError) {
+        setIsRedirectingToChat(false)
         setError(
           normalizeSetupErrorMessage(setupError, m.setup_error_finish()),
         )
@@ -219,6 +268,7 @@ export function useSetupPageLogic(): SetupPageLogicResult {
     success,
     isVerifyingToken,
     isSubmittingAccount,
+    isRedirectingToChat,
     setSetupToken,
     setName,
     setEmail,

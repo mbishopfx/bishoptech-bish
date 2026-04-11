@@ -1,4 +1,6 @@
 import { Effect } from 'effect'
+import { splitSetCookieString } from 'cookie-es'
+import { setResponseHeader } from '@tanstack/start-server-core'
 import { auth } from '@/lib/backend/auth/services/auth.service'
 import { getServerAuthContext } from '@/lib/backend/server-effect/http/server-auth'
 import {
@@ -224,9 +226,24 @@ export async function runSelfHostedSetupAction(
       publicAppLocked: true,
     })
 
+    const signInResult = await auth.api.signInEmail({
+      body: {
+        email: input.email,
+        password: input.password,
+      },
+      headers: new Headers(),
+      returnHeaders: true,
+    })
+
+    const setCookieHeader = signInResult.headers.get('set-cookie')
+    if (!setCookieHeader) {
+      throw new Error(m.setup_error_finish())
+    }
+
+    setResponseHeader('set-cookie', splitSetCookieString(setCookieHeader))
+
     return {
       ok: true,
-      email: input.email,
     }
   })
 }

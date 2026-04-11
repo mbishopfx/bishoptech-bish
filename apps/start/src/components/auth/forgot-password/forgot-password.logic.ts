@@ -48,11 +48,13 @@ export type ForgotPasswordLogicResult = {
   setSuccessMessage: (value: string) => void
   isLoading: boolean
   otpExpiresInSeconds: number
-  handleEmailSubmit: (event: React.FormEvent<HTMLFormElement>) => Promise<void>
+  handleEmailSubmit: (
+    event: React.SyntheticEvent<HTMLFormElement>,
+  ) => Promise<void>
   handleOtpSubmit: (value: string) => Promise<void>
   handleResendOtp: () => Promise<void>
   handlePasswordReset: (
-    event: React.FormEvent<HTMLFormElement>,
+    event: React.SyntheticEvent<HTMLFormElement>,
   ) => Promise<void>
 }
 
@@ -71,7 +73,7 @@ export function useForgotPasswordLogic(
   const [isLoading, setIsLoading] = useState(false)
 
   const handleEmailSubmit = useCallback(
-    async (event: React.FormEvent<HTMLFormElement>) => {
+    async (event: React.SyntheticEvent<HTMLFormElement>) => {
       event.preventDefault()
       const normalizedEmail = normalizeEmailAddress(email)
 
@@ -153,7 +155,7 @@ export function useForgotPasswordLogic(
   }, [email])
 
   const handlePasswordReset = useCallback(
-    async (event: React.FormEvent<HTMLFormElement>) => {
+    async (event: React.SyntheticEvent<HTMLFormElement>) => {
       event.preventDefault()
       const normalizedEmail = normalizeEmailAddress(email)
 

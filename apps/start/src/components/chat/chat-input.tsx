@@ -269,7 +269,7 @@ export function ChatInput() {
   }, [files])
 
   const handleSubmit = useCallback(
-    async (e: React.FormEvent<HTMLFormElement>) => {
+    async (e: React.SyntheticEvent<HTMLFormElement>) => {
       e.preventDefault()
       const text = getComposerDraftValue().trim()
       if (!text || isSendBlocked) return
