@@ -1,7 +1,15 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "envMode": "strict",
-  "globalEnv": ["NODE_ENV"],
+  "globalEnv": [
+    "NODE_ENV",
+    "VITE_APP_INSTANCE_MODE",
+    "VITE_BETTER_AUTH_URL",
+    "VITE_SELF_HOST_SOURCE",
+    "VITE_ZERO_CACHE_URL",
+    "VITE_ENABLE_ORGANIZATION_PROVIDER_KEYS",
+    "VITE_DISABLE_REDIS"
+  ],
   "globalDependencies": [".env", ".env.*"],
   "globalPassThroughEnv": [
     "ZERO_UPSTREAM_DB",
@@ -10,7 +18,6 @@
     "WORKOS_COOKIE_PASSWORD",
     "WORKOS_REDIRECT_URI",
     "WORKOS_WEBHOOK_SECRET",
-    "VITE_ZERO_CACHE_URL",
     "ZERO_QUERY_URL",
     "ZERO_MUTATE_URL",
     "UPLOAD_STORAGE_PROVIDER",
