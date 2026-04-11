@@ -1,27 +1,14 @@
 import type { UploadResponseBody } from '@/lib/shared/upload/upload.model'
 import type { UploadValidationPolicy } from '@/lib/shared/upload/upload-validation'
+import { createHmac, timingSafeEqual } from 'node:crypto'
 import {
   CHAT_ATTACHMENT_UPLOAD_POLICY,
   getUploadValidationError,
 } from '@/lib/shared/upload/upload-validation'
-
-const R2_ENV_KEYS = [
-  'R2_ACCOUNT_ID',
-  'R2_ACCESS_KEY_ID',
-  'R2_SECRET_ACCESS_KEY',
-  'R2_BUCKET_NAME',
-  'R2_PUBLIC_BASE_URL',
-] as const
-
-type R2EnvKey = (typeof R2_ENV_KEYS)[number]
-
-type R2Config = {
-  accountId: string
-  accessKeyId: string
-  secretAccessKey: string
-  bucket: string
-  publicBaseUrl: string
-}
+import {
+  resolveUploadStorageConfig,
+  type UploadStorageConfig,
+} from './storage-config'
 
 type S3WriteOptions = {
   type?: string
@@ -30,6 +17,7 @@ type S3WriteOptions = {
 
 type BunS3ClientLike = {
   write: (path: string, data: File, options?: S3WriteOptions) => Promise<number>
+  file: (path: string) => Blob
 }
 
 type BunRuntimeLike = {
@@ -43,15 +31,15 @@ type BunRuntimeLike = {
 }
 
 const UPLOAD_PREFIX = 'uploads'
-let cachedR2Config: R2Config | null = null
-let cachedR2Client: BunS3ClientLike | null = null
+let cachedUploadStorageConfig: UploadStorageConfig | null = null
+let cachedUploadClient: BunS3ClientLike | null = null
 
-export class R2UploadServiceError extends Error {
+export class UploadServiceError extends Error {
   readonly statusCode: number
 
   constructor(message: string, statusCode: number) {
     super(message)
-    this.name = 'R2UploadServiceError'
+    this.name = 'UploadServiceError'
     this.statusCode = statusCode
   }
 }
@@ -59,7 +47,7 @@ export class R2UploadServiceError extends Error {
 function getBunRuntime(): BunRuntimeLike {
   const bunRuntime = (globalThis as { Bun?: BunRuntimeLike }).Bun
   if (!bunRuntime?.S3Client) {
-    throw new R2UploadServiceError(
+    throw new UploadServiceError(
       'Bun runtime with S3 bindings is required for uploads',
       500,
     )
@@ -67,51 +55,36 @@ function getBunRuntime(): BunRuntimeLike {
   return bunRuntime
 }
 
-function readRequiredEnv(key: R2EnvKey): string | null {
-  const value = process.env[key]
-  if (!value) return null
-  const trimmed = value.trim()
-  return trimmed.length > 0 ? trimmed : null
-}
-
-function getR2Config(): R2Config {
-  if (cachedR2Config) return cachedR2Config
-
-  const missing = R2_ENV_KEYS.filter((key) => !readRequiredEnv(key))
-  if (missing.length > 0) {
-    throw new R2UploadServiceError(
-      `R2 upload requires env variables: missing ${missing.join(', ')}`,
+function getUploadStorageConfig(): UploadStorageConfig {
+  if (cachedUploadStorageConfig) return cachedUploadStorageConfig
+  try {
+    cachedUploadStorageConfig = resolveUploadStorageConfig()
+  } catch (error) {
+    throw new UploadServiceError(
+      error instanceof Error
+        ? error.message
+        : 'Storage configuration is invalid',
       500,
     )
   }
-
-  cachedR2Config = {
-    accountId: readRequiredEnv('R2_ACCOUNT_ID') as string,
-    accessKeyId: readRequiredEnv('R2_ACCESS_KEY_ID') as string,
-    secretAccessKey: readRequiredEnv('R2_SECRET_ACCESS_KEY') as string,
-    bucket: readRequiredEnv('R2_BUCKET_NAME') as string,
-    publicBaseUrl: readRequiredEnv('R2_PUBLIC_BASE_URL') as string,
-  }
-
-  return cachedR2Config
+  return cachedUploadStorageConfig
 }
 
-function getR2Client(): BunS3ClientLike {
-  if (cachedR2Client) return cachedR2Client
+function getUploadClient(): BunS3ClientLike {
+  if (cachedUploadClient) return cachedUploadClient
 
-  const config = getR2Config()
-  const endpoint = `https://${config.accountId}.r2.cloudflarestorage.com`
+  const config = getUploadStorageConfig()
   const bunRuntime = getBunRuntime()
 
-  cachedR2Client = new bunRuntime.S3Client({
+  cachedUploadClient = new bunRuntime.S3Client({
     bucket: config.bucket,
-    region: 'auto',
-    endpoint,
+    region: config.region,
+    endpoint: config.endpoint,
     accessKeyId: config.accessKeyId,
     secretAccessKey: config.secretAccessKey,
   })
 
-  return cachedR2Client
+  return cachedUploadClient
 }
 
 function sanitizeSegment(segment: string): string {
@@ -141,13 +114,72 @@ function buildPublicFileUrl(fileKey: string, publicBaseUrl: string): string {
   return `${publicBaseUrl.replace(/\/$/, '')}/${fileKey}`
 }
 
+function readUploadSigningSecret(): string | null {
+  const raw = process.env.BETTER_AUTH_SECRET
+  if (!raw) return null
+  const trimmed = raw.trim()
+  return trimmed.length > 0 ? trimmed : null
+}
+
+function signStorageKey(key: string, secret: string): string {
+  return createHmac('sha256', secret).update(key).digest('hex')
+}
+
+export function verifyStorageKeySignature(input: {
+  key: string
+  signature: string
+}): boolean {
+  const secret = readUploadSigningSecret()
+  if (!secret) return false
+  const expected = signStorageKey(input.key, secret)
+
+  const providedBuffer = Buffer.from(input.signature, 'utf8')
+  const expectedBuffer = Buffer.from(expected, 'utf8')
+  if (providedBuffer.length !== expectedBuffer.length) return false
+  return timingSafeEqual(providedBuffer, expectedBuffer)
+}
+
+function buildProxyFileUrl(fileKey: string, publicBaseUrl: string): string {
+  const secret = readUploadSigningSecret()
+  if (!secret) {
+    throw new UploadServiceError(
+      'BETTER_AUTH_SECRET is required to generate signed proxy file URLs',
+      500,
+    )
+  }
+
+  const url = new URL(publicBaseUrl)
+  url.searchParams.set('key', fileKey)
+  url.searchParams.set('sig', signStorageKey(fileKey, secret))
+  return url.toString()
+}
+
 function buildContentDisposition(fileName: string): string {
   const normalized = fileName.trim()
   const safeName = normalized.length > 0 ? normalized.replace(/["\\]/g, '_') : 'upload'
   return `inline; filename="${safeName}"`
 }
 
-export class R2UploadService {
+export class UploadService {
+  /**
+   * Fetches an object from the configured S3-compatible backend and returns it
+   * as a web `Response` payload.
+   */
+  readObjectByKey(params: {
+    key: string
+  }): Response {
+    const config = getUploadStorageConfig()
+    const objectFile = getUploadClient().file(params.key)
+
+    return new Response(objectFile, {
+      status: 200,
+      headers: {
+        'Cache-Control': 'private, max-age=300',
+        'x-rift-storage-provider': config.provider,
+      },
+    })
+  }
+
   async upload(params: {
     userId: string
     file: File
@@ -158,7 +190,7 @@ export class R2UploadService {
 
     const validationError = getUploadValidationError(file, validationPolicy)
     if (validationError) {
-      throw new R2UploadServiceError(
+      throw new UploadServiceError(
         validationError === 'File is empty'
           ? 'Uploaded file is empty'
           : validationError,
@@ -166,20 +198,23 @@ export class R2UploadService {
       )
     }
 
-    const r2Config = getR2Config()
+    const config = getUploadStorageConfig()
     const key = buildObjectKey(params.userId, file.name)
     const contentType = hasPdfExtension(file.name)
       ? 'application/pdf'
       : file.type || 'application/octet-stream'
 
-    await getR2Client().write(key, file, {
+    await getUploadClient().write(key, file, {
       type: contentType,
       contentDisposition: buildContentDisposition(file.name),
     })
 
     return {
       key,
-      url: buildPublicFileUrl(key, r2Config.publicBaseUrl),
+      url:
+        config.publicUrlMode === 'proxy_query'
+          ? buildProxyFileUrl(key, config.publicBaseUrl)
+          : buildPublicFileUrl(key, config.publicBaseUrl),
       name: file.name,
       size: file.size,
       contentType,
@@ -187,4 +222,4 @@ export class R2UploadService {
   }
 }
 
-export const r2UploadService = new R2UploadService()
+export const uploadService = new UploadService()

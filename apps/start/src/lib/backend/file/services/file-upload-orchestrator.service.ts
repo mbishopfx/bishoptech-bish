@@ -9,8 +9,8 @@ import {
   normalizeMarkdownForStorage,
 } from '@/lib/backend/chat/services/rag/attachment-content.pipeline'
 import {
-  R2UploadServiceError,
-  r2UploadService,
+  UploadServiceError,
+  uploadService,
 } from '@/lib/backend/upload/upload.service'
 import {
   AVATAR_UPLOAD_POLICY,
@@ -83,7 +83,7 @@ export class FileUploadOrchestratorService extends ServiceMap.Service<
           const mode = processingMode ?? 'attachment'
           const uploaded = yield* Effect.tryPromise({
             try: () =>
-              r2UploadService.upload({
+              uploadService.upload({
                 userId,
                 file,
                 validationPolicy:
@@ -92,7 +92,7 @@ export class FileUploadOrchestratorService extends ServiceMap.Service<
                     : CHAT_ATTACHMENT_UPLOAD_POLICY,
               }),
             catch: (error) => {
-              if (error instanceof R2UploadServiceError) {
+              if (error instanceof UploadServiceError) {
                 return new FileUploadStorageError({
                   message: error.message,
                   requestId,

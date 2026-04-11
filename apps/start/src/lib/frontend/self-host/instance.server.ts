@@ -2,6 +2,7 @@ import { Effect } from 'effect'
 import { splitSetCookieString } from 'cookie-es'
 import { setResponseHeader } from '@tanstack/start-server-core'
 import { auth } from '@/lib/backend/auth/services/auth.service'
+import { isUploadStorageConfigured } from '@/lib/backend/upload/storage-config'
 import { getServerAuthContext } from '@/lib/backend/server-effect/http/server-auth'
 import {
   completeSelfHostedSetup,
@@ -69,13 +70,7 @@ function resolveSelfHostedSetupHealth() {
       {
         id: 'bucket',
         label: 'Object storage',
-        status:
-          process.env.R2_BUCKET_NAME?.trim() &&
-            process.env.R2_PUBLIC_BASE_URL?.trim() &&
-            process.env.R2_ACCESS_KEY_ID?.trim() &&
-            process.env.R2_SECRET_ACCESS_KEY?.trim()
-            ? 'enabled'
-            : 'missing',
+        status: isUploadStorageConfigured() ? 'enabled' : 'missing',
       },
       {
         id: 'setup_token',

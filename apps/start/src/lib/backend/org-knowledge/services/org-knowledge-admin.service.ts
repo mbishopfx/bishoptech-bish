@@ -14,8 +14,8 @@ import {
 } from '@/lib/shared/org-knowledge'
 import { ORG_KNOWLEDGE_UPLOAD_POLICY } from '@/lib/shared/upload/upload-validation'
 import {
-  R2UploadServiceError,
-  r2UploadService,
+  UploadServiceError,
+  uploadService,
 } from '@/lib/backend/upload/upload.service'
 import { OrgKnowledgePersistenceError } from '../domain/errors'
 import { OrgKnowledgeRepositoryService } from './org-knowledge-repository.service'
@@ -72,7 +72,7 @@ export class OrgKnowledgeAdminService extends ServiceMap.Service<
             Effect.gen(function* () {
               const uploaded = yield* Effect.tryPromise({
                 try: () =>
-                  r2UploadService.upload({
+                  uploadService.upload({
                     userId,
                     file,
                     validationPolicy: ORG_KNOWLEDGE_UPLOAD_POLICY,
@@ -80,7 +80,7 @@ export class OrgKnowledgeAdminService extends ServiceMap.Service<
                 catch: (error) =>
                   new OrgKnowledgePersistenceError({
                     message:
-                      error instanceof R2UploadServiceError
+                      error instanceof UploadServiceError
                         ? error.message
                         : 'Failed to upload organization knowledge file',
                     requestId,

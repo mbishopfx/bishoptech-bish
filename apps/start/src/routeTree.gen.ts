@@ -25,6 +25,7 @@ import { Route as ApiZeroQueryRouteRouteImport } from './routes/api/zero/query/r
 import { Route as ApiZeroMutateRouteRouteImport } from './routes/api/zero/mutate/route'
 import { Route as ApiOrgModelPolicyRouteRouteImport } from './routes/api/org/model-policy/route'
 import { Route as ApiFilesUploadRouteRouteImport } from './routes/api/files/upload/route'
+import { Route as ApiFilesObjectRouteRouteImport } from './routes/api/files/object/route'
 import { Route as ApiFilesMarkdownRouteRouteImport } from './routes/api/files/markdown/route'
 import { Route as eeSingularityLayoutRouteRouteImport } from './routes/(ee)/singularity/_layout/route'
 import { Route as appLayoutSettingsRouteRouteImport } from './routes/(app)/_layout/settings/route'
@@ -129,6 +130,11 @@ const ApiOrgModelPolicyRouteRoute = ApiOrgModelPolicyRouteRouteImport.update({
 const ApiFilesUploadRouteRoute = ApiFilesUploadRouteRouteImport.update({
   id: '/api/files/upload',
   path: '/api/files/upload',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiFilesObjectRouteRoute = ApiFilesObjectRouteRouteImport.update({
+  id: '/api/files/object',
+  path: '/api/files/object',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiFilesMarkdownRouteRoute = ApiFilesMarkdownRouteRouteImport.update({
@@ -290,6 +296,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof appLayoutSettingsRouteRouteWithChildren
   '/singularity': typeof eeSingularityLayoutRouteRouteWithChildren
   '/api/files/markdown': typeof ApiFilesMarkdownRouteRoute
+  '/api/files/object': typeof ApiFilesObjectRouteRoute
   '/api/files/upload': typeof ApiFilesUploadRouteRoute
   '/api/org/model-policy': typeof ApiOrgModelPolicyRouteRoute
   '/api/zero/mutate': typeof ApiZeroMutateRouteRoute
@@ -329,6 +336,7 @@ export interface FileRoutesByTo {
   '/auth/sign-up': typeof AuthSignUpRouteRoute
   '/organization': typeof appLayoutOrganizationRouteRouteWithChildren
   '/api/files/markdown': typeof ApiFilesMarkdownRouteRoute
+  '/api/files/object': typeof ApiFilesObjectRouteRoute
   '/api/files/upload': typeof ApiFilesUploadRouteRoute
   '/api/org/model-policy': typeof ApiOrgModelPolicyRouteRoute
   '/api/zero/mutate': typeof ApiZeroMutateRouteRoute
@@ -371,6 +379,7 @@ export interface FileRoutesById {
   '/(app)/_layout/settings': typeof appLayoutSettingsRouteRouteWithChildren
   '/(ee)/singularity/_layout': typeof eeSingularityLayoutRouteRouteWithChildren
   '/api/files/markdown': typeof ApiFilesMarkdownRouteRoute
+  '/api/files/object': typeof ApiFilesObjectRouteRoute
   '/api/files/upload': typeof ApiFilesUploadRouteRoute
   '/api/org/model-policy': typeof ApiOrgModelPolicyRouteRoute
   '/api/zero/mutate': typeof ApiZeroMutateRouteRoute
@@ -415,6 +424,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/singularity'
     | '/api/files/markdown'
+    | '/api/files/object'
     | '/api/files/upload'
     | '/api/org/model-policy'
     | '/api/zero/mutate'
@@ -454,6 +464,7 @@ export interface FileRouteTypes {
     | '/auth/sign-up'
     | '/organization'
     | '/api/files/markdown'
+    | '/api/files/object'
     | '/api/files/upload'
     | '/api/org/model-policy'
     | '/api/zero/mutate'
@@ -495,6 +506,7 @@ export interface FileRouteTypes {
     | '/(app)/_layout/settings'
     | '/(ee)/singularity/_layout'
     | '/api/files/markdown'
+    | '/api/files/object'
     | '/api/files/upload'
     | '/api/org/model-policy'
     | '/api/zero/mutate'
@@ -534,6 +546,7 @@ export interface RootRouteChildren {
   ApiChatRouteRoute: typeof ApiChatRouteRoute
   eeSingularityLayoutRouteRoute: typeof eeSingularityLayoutRouteRouteWithChildren
   ApiFilesMarkdownRouteRoute: typeof ApiFilesMarkdownRouteRoute
+  ApiFilesObjectRouteRoute: typeof ApiFilesObjectRouteRoute
   ApiFilesUploadRouteRoute: typeof ApiFilesUploadRouteRoute
   ApiOrgModelPolicyRouteRoute: typeof ApiOrgModelPolicyRouteRoute
   ApiZeroMutateRouteRoute: typeof ApiZeroMutateRouteRoute
@@ -653,6 +666,13 @@ declare module '@tanstack/react-router' {
       path: '/api/files/upload'
       fullPath: '/api/files/upload'
       preLoaderRoute: typeof ApiFilesUploadRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/files/object': {
+      id: '/api/files/object'
+      path: '/api/files/object'
+      fullPath: '/api/files/object'
+      preLoaderRoute: typeof ApiFilesObjectRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/files/markdown': {
@@ -1002,6 +1022,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiChatRouteRoute: ApiChatRouteRoute,
   eeSingularityLayoutRouteRoute: eeSingularityLayoutRouteRouteWithChildren,
   ApiFilesMarkdownRouteRoute: ApiFilesMarkdownRouteRoute,
+  ApiFilesObjectRouteRoute: ApiFilesObjectRouteRoute,
   ApiFilesUploadRouteRoute: ApiFilesUploadRouteRoute,
   ApiOrgModelPolicyRouteRoute: ApiOrgModelPolicyRouteRoute,
   ApiZeroMutateRouteRoute: ApiZeroMutateRouteRoute,

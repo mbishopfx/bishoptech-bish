@@ -17,12 +17,29 @@ To build this application for production:
 bun --bun run build
 ```
 
-## File Markdown Conversion (Cloudflare Worker)
+## File Upload + Markdown Conversion
 
 This app can convert supported uploaded files (PDF, images, Office docs, HTML/XML, CSV, ODF, Numbers) to markdown before sending chat requests, so models without native file handling can still answer from document context.
 
 Required server environment variables:
 
+- `UPLOAD_STORAGE_PROVIDER`: `cloudflare_r2` (default) or `s3_compatible`.
+- Cloudflare R2 mode (`UPLOAD_STORAGE_PROVIDER=cloudflare_r2`):
+  - `R2_ACCOUNT_ID`
+  - `R2_ACCESS_KEY_ID`
+  - `R2_SECRET_ACCESS_KEY`
+  - `R2_BUCKET_NAME`
+  - `R2_PUBLIC_BASE_URL` (public bucket domain such as `https://pub-<id>.r2.dev` or your custom CDN/domain)
+- S3-compatible mode (`UPLOAD_STORAGE_PROVIDER=s3_compatible`, includes Railway buckets):
+  - `S3_ENDPOINT` (or Railway `ENDPOINT`)
+  - `S3_ACCESS_KEY_ID` (or Railway `ACCESS_KEY_ID`)
+  - `S3_SECRET_ACCESS_KEY` (or Railway `SECRET_ACCESS_KEY`)
+  - `S3_BUCKET_NAME` (or Railway `BUCKET`)
+  - `S3_REGION` (or Railway `REGION`, defaults to `auto`)
+  - `S3_PUBLIC_BASE_URL` (optional override when serving files from an external public domain)
+  - If omitted in `s3_compatible`, the app defaults to `${BETTER_AUTH_URL}/api/files/object` (signed first-party proxy).
+
+Markdown worker (separate from storage provider):
 - `CF_MARKDOWN_WORKER_URL`: URL for your Worker (base URL or `/convert` endpoint).
 - `CF_MARKDOWN_WORKER_TOKEN`: shared secret used to authenticate app -> Worker calls.
 - `BYOK_ENCRYPTION_KEY_B64` (required when org BYOK is enabled): base64-encoded 32-byte key used for AES-256-GCM encryption of org provider API keys at rest.

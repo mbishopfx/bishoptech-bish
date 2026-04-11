@@ -12,6 +12,7 @@ import {
   MarkdownConversionService,
   handleFileRouteFailure,
 } from '@/lib/backend/file'
+import { readUploadPublicBaseUrl } from '@/lib/backend/upload/storage-config'
 import { getServerInstanceCapabilities } from '@/lib/backend/self-host/instance-settings.service'
 import { isDirectTextExtractionFile } from '@/lib/backend/file/services/plain-text-file'
 
@@ -85,13 +86,6 @@ function isSupportedUpload(fileName: string, contentType: string): boolean {
   return SUPPORTED_EXTENSIONS.has(normalizedName.slice(dot + 1))
 }
 
-function readRequiredEnv(name: string): string | null {
-  const raw = process.env[name]
-  if (!raw) return null
-  const trimmed = raw.trim()
-  return trimmed.length > 0 ? trimmed : null
-}
-
 /**
  * Markdown conversion route:
  * 1) validates request ownership and type constraints,
@@ -158,7 +152,7 @@ export const Route = createFileRoute('/api/files/markdown')({
             return jsonResponse({ error: 'File key is not owned by the user' }, 403)
           }
 
-          const publicBaseUrl = readRequiredEnv('R2_PUBLIC_BASE_URL')
+          const publicBaseUrl = readUploadPublicBaseUrl()
           if (publicBaseUrl && !url.startsWith(publicBaseUrl.replace(/\/$/, ''))) {
             return jsonResponse(
               { error: 'File URL does not match configured storage domain' },
