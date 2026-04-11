@@ -23,7 +23,8 @@ import { createHash } from 'node:crypto'
 import { spawnSync } from 'node:child_process'
 import { readdir, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { Pool, type PoolClient } from 'pg'
+import { Pool } from 'pg'
+import type { PoolClient } from 'pg'
 
 const appDir = join(import.meta.dir, '..')
 const authConfigPath = join(appDir, 'src/lib/backend/auth/auth.server.ts')

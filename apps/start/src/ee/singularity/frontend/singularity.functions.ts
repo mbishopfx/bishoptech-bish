@@ -1,9 +1,7 @@
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
-import {
-  MANUAL_BILLING_INTERVALS,
-  type ManualBillingInterval,
-} from '@/lib/backend/billing/services/workspace-billing/shared'
+import { MANUAL_BILLING_INTERVALS } from '@/lib/backend/billing/services/workspace-billing/shared'
+import type { ManualBillingInterval } from '@/lib/backend/billing/services/workspace-billing/shared'
 import {
   isWorkspacePlanId,
   WORKSPACE_FEATURE_IDS,

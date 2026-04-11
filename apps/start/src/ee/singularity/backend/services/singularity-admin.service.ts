@@ -24,10 +24,8 @@ import {
   asRecord,
 } from '@/lib/backend/billing/services/workspace-billing/shared'
 import type { ManualBillingInterval } from '@/lib/backend/billing/services/workspace-billing/shared'
-import {
-  withBillingTransactionEffect,
-  type BillingSqlClient,
-} from '@/lib/backend/billing/services/sql'
+import { withBillingTransactionEffect } from '@/lib/backend/billing/services/sql'
+import type { BillingSqlClient } from '@/lib/backend/billing/services/sql'
 import type {
   SingularityOrganizationDetail,
   SingularityOrganizationListItem,

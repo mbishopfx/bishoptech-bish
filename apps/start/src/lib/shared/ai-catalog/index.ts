@@ -11,6 +11,7 @@ import { XAI_MODELS } from './providers/xai'
 import { ZAI_MODELS } from './providers/zai'
 import type { AiModelCatalogEntry } from './types'
 import type { CatalogProviderId, ProviderToolIdByProvider } from './provider-tools'
+
 export {
   DEFAULT_CONTEXT_WINDOW_MODE,
   resolveContextWindowForMode,

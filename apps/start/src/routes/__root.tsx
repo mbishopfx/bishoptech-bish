@@ -12,6 +12,34 @@ import { getLocale } from '@/paraglide/runtime.js'
 import { PostHogClientBootstrap } from '@/components/app/posthog-client-bootstrap'
 import { getPublicPostHogConfigFn } from '@/lib/frontend/observability/posthog.functions'
 
+/**
+ * Applies the stored or system theme before the stylesheet paints.
+ */
+const THEME_INIT_SCRIPT = `
+(() => {
+  const storageKey = 'theme';
+  const root = document.documentElement;
+
+  try {
+    const stored = localStorage.getItem(storageKey);
+    const theme = stored === 'light' || stored === 'dark' || stored === 'system'
+      ? stored
+      : 'system';
+    const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const resolved = theme === 'system' ? (systemDark ? 'dark' : 'light') : theme;
+
+    root.classList.toggle('dark', resolved === 'dark');
+    root.style.colorScheme = resolved;
+  } catch {
+    const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const resolved = systemDark ? 'dark' : 'light';
+
+    root.classList.toggle('dark', resolved === 'dark');
+    root.style.colorScheme = resolved;
+  }
+})();
+`
+
 export const Route = createRootRoute({
   loader: async () => ({
     posthog: await getPublicPostHogConfigFn(),
@@ -45,8 +73,9 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   const direction = getLocaleDirection(locale)
 
   return (
-    <html lang={locale} dir={direction}>
+    <html lang={locale} dir={direction} suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         <HeadContent />
       </head>
       <body>

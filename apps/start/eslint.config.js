@@ -157,8 +157,11 @@ export default [
     },
   },
   {
-    // Paraglide generates JS artifacts that are not hand-edited and can violate
-    // strict TS parser assumptions used by project-aware lint rules.
-    ignores: ['eslint.config.js', 'prettier.config.js', 'src/paraglide/**'],
+    ignores: [
+      'eslint.config.js',
+      'prettier.config.js',
+      'src/paraglide/**',
+      '.output/**',
+    ],
   },
 ]

@@ -3,10 +3,8 @@ import { Effect } from 'effect'
 import { getServerAuthContextFromHeaders } from '@/lib/backend/server-effect/http/server-auth'
 import type { ManualBillingInterval } from '@/lib/backend/billing/services/workspace-billing/shared'
 import type { WorkspacePlanId } from '@/lib/shared/access-control'
-import {
-  requireSingularityAdminAuth,
-  type SingularityAdminAuthContext,
-} from '../backend/auth/singularity-auth.server'
+import { requireSingularityAdminAuth } from '../backend/auth/singularity-auth.server'
+import type { SingularityAdminAuthContext } from '../backend/auth/singularity-auth.server'
 import { handleSingularityActionFailure } from '../backend/http/action-failure'
 import { SingularityAdminService } from '../backend/services/singularity-admin.service'
 import { SingularityRuntime } from '../backend/runtime/singularity-runtime'

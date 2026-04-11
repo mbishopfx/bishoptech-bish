@@ -13,6 +13,10 @@ import {
 const THEME_STORAGE_KEY = 'theme'
 type Theme = 'light' | 'dark' | 'system'
 
+function getInitialTheme(): Theme {
+  return getStoredTheme() ?? 'system'
+}
+
 function getSystemDark(): boolean {
   if (typeof window === 'undefined') return false
   return window.matchMedia('(prefers-color-scheme: dark)').matches
@@ -38,6 +42,7 @@ function applyResolved(resolved: 'light' | 'dark') {
   const root = document.documentElement
   if (resolved === 'dark') root.classList.add('dark')
   else root.classList.remove('dark')
+  root.style.colorScheme = resolved
 }
 
 export type ThemeContextValue = {
@@ -55,11 +60,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     () => getSystemDark(),
     () => false,
   )
-  const [theme, setThemeState] = useState<Theme>('system')
+  const [theme, setThemeState] = useState<Theme>(getInitialTheme)
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    setThemeState(getStoredTheme() ?? 'system')
+    setThemeState(getInitialTheme())
     setMounted(true)
   }, [])
 
