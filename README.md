@@ -23,25 +23,16 @@ Rift is built around TanStack Start for full-stack delivery, Rocicorp Zero for s
 ## Features
 
 - Nested chat branches system with deterministic branch resolution and conflict handling
- 
+
 - BYOK controls (Bring Your Own Key) with organization-level enforcement
-  
 - Native provider tools routing and policy-aware tool gating
-  
 - ZDR (Zero Data Retention) compliance at provider level
-  
 - Team management via organizations, members, invitations, and role-based setting
-  
 - Stream resumability with Redis-backed resume lifecycle for reconnecting clients
-  
 - Sync-based architecture
-  
 - Organization-level model, tool, and compliance policy controls
-  
 - File uploads + markdown conversion pipeline supporting PDF, HTML/XML, Office, OpenDocument, CSV, and related document formats
-  
 - Vector retrieval pipeline (Qdrant) for attachment-aware RAG
-  
 - React Native mobile app currently in development (coming soon)
 
 ## Tech Stack
@@ -90,6 +81,24 @@ From repository root:
 bun install
 bun run dev
 ```
+
+### Setting up the Markdown Converter Worker (Required for file attachments)
+
+Rift uses a Cloudflare Worker to convert uploaded files (PDFs, documents, etc.) to markdown. To set it up:
+
+```bash
+bun setup:markdown-worker
+```
+
+This interactive script will:
+
+1. Check prerequisites (Node.js, wrangler CLI)
+2. Authenticate with your Cloudflare account
+3. Deploy the worker to Cloudflare
+4. Generate and save a secure API token
+5. Output the environment variables to add to your `.env` file
+
+**Note:** You'll need a Cloudflare account. The worker runs on Cloudflare's free tier.
 
 Useful commands:
 

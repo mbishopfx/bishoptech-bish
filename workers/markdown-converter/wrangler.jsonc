@@ -1,9 +1,9 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "markdown-converter-worker",
+  "name": "rift-markdown-converter",
   "main": "src/index.ts",
   "compatibility_date": "2026-02-25",
   "ai": {
-    "binding": "AI"
-  }
+    "binding": "AI",
+  },
 }

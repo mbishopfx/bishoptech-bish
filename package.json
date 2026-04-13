@@ -15,7 +15,8 @@
     "lint": "turbo run lint",
     "clean": "turbo run clean",
     "worker:dev": "bun run --cwd workers/markdown-converter dev",
-    "worker:deploy": "bun run --cwd workers/markdown-converter deploy"
+    "worker:deploy": "bun run --cwd workers/markdown-converter deploy",
+    "setup:markdown-worker": "bash scripts/setup-markdown-converter.sh"
   },
   "devDependencies": {
     "@effect/language-service": "^0.75.1",
