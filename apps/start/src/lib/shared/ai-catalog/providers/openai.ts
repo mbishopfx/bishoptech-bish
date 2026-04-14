@@ -87,47 +87,6 @@ export const OPENAI_MODELS: readonly AiModelCatalogEntry<'openai'>[] = [
     },
   },
   {
-    id: 'openai/gpt-5.4-pro',
-    providerId: 'openai',
-    providers: ['openai', 'gateway'],
-    name: 'GPT-5.4 Pro',
-    description:
-      'GPT-5.4 Pro uses more compute to think harder and provide consistently better answers. It\'s designed to tackle tough problems.',
-    contextWindow: 200000,
-    zeroDataRetention: false,
-    capabilities: {
-      supportsTools: true,
-      supportsStreaming: true,
-      supportsReasoning: true,
-      supportsImageInput: true,
-      supportsFileInput: true,
-      supportsPdfInput: true,
-    },
-    providerToolIds: [],
-    reasoningEfforts: ['medium', 'high', 'xhigh'],
-    defaultReasoningEffort: 'medium',
-    providerOptionsByReasoning: {
-      medium: openaiReasoningOptions('medium'),
-      high: openaiReasoningOptions('high'),
-      xhigh: openaiReasoningOptions('xhigh'),
-    },
-    defaultProviderOptions: openaiDefaultProviderOptions(),
-    defaultMaxOutputTokens: 128000,
-    pricing: {
-      inputPerToken: '0.00003',
-      outputPerToken: '0.00018',
-      webSearchPerRequest: '10',
-      inputTiers: [
-        { cost: '0.00003', min: 0, max: 272001 },
-        { cost: '0.00006', min: 272000 },
-      ],
-      outputTiers: [
-        { cost: '0.00018', min: 0, max: 272001 },
-        { cost: '0.00027', min: 272000 },
-      ],
-    },
-  },
-  {
     id: 'openai/gpt-5.3-codex',
     providerId: 'openai',
     providers: ['openai', 'azure', 'gateway'],

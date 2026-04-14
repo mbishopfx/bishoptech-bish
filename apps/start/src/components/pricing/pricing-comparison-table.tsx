@@ -84,16 +84,6 @@ const comparisonSections: ComparisonSection[] = [
         ],
       },
       {
-        label: 'Image generation',
-        values: [
-          'Included',
-          'Higher limits',
-          'Highest limits',
-          'Custom',
-          'Custom',
-        ],
-      },
-      {
         label: 'Chat history',
         values: [
           'Unlimited',
@@ -104,7 +94,7 @@ const comparisonSections: ComparisonSection[] = [
         ],
       },
       {
-        label: 'Access on web, iOS, Android',
+        label: 'Access on iOS, Android (Coming soon)',
         values: [true, true, true, true, true],
       },
       {
@@ -137,7 +127,7 @@ const comparisonSections: ComparisonSection[] = [
         ],
       },
       {
-        label: 'Memory & projects',
+        label: 'Memory & projects (Coming soon)',
         values: [true, true, true, true, true],
       },
       {
@@ -163,10 +153,6 @@ const comparisonSections: ComparisonSection[] = [
       {
         label: 'Audit logs',
         values: [false, false, false, true, true],
-      },
-      {
-        label: 'Context window',
-        values: ['Standard', 'Expanded', 'Expanded', 'Custom', 'Custom'],
       },
       {
         label: 'Deployment',
@@ -242,7 +228,7 @@ export function PricingComparisonTable(props: {
 
       <section
         aria-label="Pricing comparison"
-        className="mx-auto mt-16 w-full max-w-[1400px]"
+        className="mx-auto mt-16 hidden w-full max-w-[1400px] lg:block"
       >
         <div className="relative mx-auto w-full max-md:px-4 max-md:py-4 max-lg:p-4 lg:p-12">
           <DashedBorderFrame>
@@ -270,7 +256,9 @@ export function PricingComparisonTable(props: {
                           <CardDashedBorder />
                           <div className="flex w-full">
                             <div className="w-[280px] flex-shrink-0 px-6 pb-3 pt-6">
-                              <span className="sr-only">Feature comparison</span>
+                              <span className="sr-only">
+                                Feature comparison
+                              </span>
                             </div>
                             <div
                               className="grid flex-1 gap-0"
@@ -279,10 +267,13 @@ export function PricingComparisonTable(props: {
                               }}
                             >
                               {comparisonPlans.map((plan) => {
-                                const actionOverride = props.resolvePlanAction?.(plan)
-                                const buttonText = actionOverride?.buttonText ?? plan.buttonText
+                                const actionOverride =
+                                  props.resolvePlanAction?.(plan)
+                                const buttonText =
+                                  actionOverride?.buttonText ?? plan.buttonText
                                 const href = actionOverride?.href ?? plan.href
-                                const isDisabled = actionOverride?.disabled ?? false
+                                const isDisabled =
+                                  actionOverride?.disabled ?? false
                                 const handleSelect = actionOverride?.onSelect
 
                                 return (
@@ -317,9 +308,7 @@ export function PricingComparisonTable(props: {
                                           className="mt-auto"
                                           asChild
                                         >
-                                          <a href={href}>
-                                            {buttonText}
-                                          </a>
+                                          <a href={href}>{buttonText}</a>
                                         </Button>
                                       ) : isDisabled ? (
                                         <Button
@@ -338,9 +327,7 @@ export function PricingComparisonTable(props: {
                                           className="mt-auto"
                                           asChild
                                         >
-                                          <Link to={href}>
-                                            {buttonText}
-                                          </Link>
+                                          <Link to={href}>{buttonText}</Link>
                                         </Button>
                                       )}
                                     </div>
