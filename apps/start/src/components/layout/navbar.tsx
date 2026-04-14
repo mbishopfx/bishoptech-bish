@@ -31,7 +31,7 @@ export function Navbar({ dict }: NavbarProps) {
                 className="flex items-center"
                 aria-label={dict?.goHome ?? 'Go to home'}
               >
-                <AppLogo className="h-8 w-auto text-foreground-strong" />
+                <AppLogo className="h-8 w-auto" />
                 <span className="sr-only">RIFT</span>
               </Link>
               <nav

@@ -31,14 +31,32 @@ const THEME_INIT_SCRIPT = `
 
     root.classList.toggle('dark', resolved === 'dark');
     root.style.colorScheme = resolved;
+    setFavicon(resolved === 'dark');
   } catch {
     const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     const resolved = systemDark ? 'dark' : 'light';
 
     root.classList.toggle('dark', resolved === 'dark');
     root.style.colorScheme = resolved;
+    setFavicon(resolved === 'dark');
   }
 })();
+
+function setFavicon(isDark) {
+  const suffix = isDark ? '' : '-light';
+  const icons = [
+    { selector: 'link[rel="icon"][type="image/x-icon"]', href: '/favicon' + suffix + '.ico' },
+    { selector: 'link[rel="icon"][sizes="32x32"]', href: '/favicon' + suffix + '-32x32.png' },
+    { selector: 'link[rel="icon"][sizes="16x16"]', href: '/favicon' + suffix + '-16x16.png' },
+    { selector: 'link[rel="apple-touch-icon"]', href: '/apple-touch-icon' + suffix + '.png' },
+  ];
+  icons.forEach(({ selector, href }) => {
+    const link = document.querySelector(selector);
+    if (link) {
+      link.setAttribute('href', href);
+    }
+  });
+}
 `
 
 const DEFAULT_META = {
@@ -133,6 +151,32 @@ export const Route = createRootRoute({
         {
           rel: 'canonical',
           href: canonicalUrl,
+        },
+        {
+          rel: 'icon',
+          type: 'image/x-icon',
+          href: '/favicon.ico',
+        },
+        {
+          rel: 'icon',
+          type: 'image/png',
+          sizes: '32x32',
+          href: '/favicon-32x32.png',
+        },
+        {
+          rel: 'icon',
+          type: 'image/png',
+          sizes: '16x16',
+          href: '/favicon-16x16.png',
+        },
+        {
+          rel: 'apple-touch-icon',
+          sizes: '180x180',
+          href: '/apple-touch-icon.png',
+        },
+        {
+          rel: 'manifest',
+          href: '/manifest.json',
         },
       ],
     }
