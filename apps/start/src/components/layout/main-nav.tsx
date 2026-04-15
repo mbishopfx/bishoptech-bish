@@ -5,12 +5,7 @@ import type {
   PropsWithChildren,
   SetStateAction,
 } from 'react'
-import {
-  createContext,
-  useEffect,
-  useMemo,
-  useState,
-} from 'react'
+import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 
 import { cn } from '@rift/utils'
 import { directionClass, useDirection } from '@rift/ui/direction'
@@ -24,10 +19,15 @@ type SideNavContextValue = {
   setIsOpen: Dispatch<SetStateAction<boolean>>
 }
 
-export const SideNavContext = createContext<SideNavContextValue>({
-  isOpen: false,
-  setIsOpen: () => {},
-})
+export const SideNavContext = createContext<SideNavContextValue | null>(null)
+
+export function useSideNav() {
+  const context = useContext(SideNavContext)
+  if (!context) {
+    throw new Error('useSideNav must be used within MainNav')
+  }
+  return context
+}
 
 type MainNavProps = PropsWithChildren<{
   sidebar: ComponentType
@@ -87,14 +87,14 @@ export function MainNav({ children, sidebar: Sidebar }: MainNavProps) {
       </div>
       <div
         className={cn(
-          'bg-surface-strong pb-[var(--page-bottom-margin)] pt-[var(--page-top-margin)] [--page-bottom-margin:0px] [--page-top-margin:0px] h-screen md:[--page-top-margin:0.5rem] min-w-0',
+          'bg-surface-base md:bg-surface-strong [--page-bottom-margin:0px] [--page-top-margin:0px] min-w-0 h-dvh md:h-screen pb-0 pt-0 md:pb-[var(--page-bottom-margin)] md:pt-[var(--page-top-margin)] md:[--page-top-margin:0.5rem]',
           directionClass(direction, {
             ltr: 'md:pr-2 md:pl-0',
             rtl: 'md:pl-2 md:pr-0',
           }),
         )}
       >
-        <div className="relative h-full overflow-y-auto border-x border-t border-border-light pt-px md:rounded-t-xl md:bg-surface-base">
+        <div className="relative h-full overflow-y-auto bg-surface-base md:border-x md:border-t md:border-border-light md:pt-px md:rounded-t-xl">
           <SideNavContext.Provider value={contextValue}>
             {children}
           </SideNavContext.Provider>

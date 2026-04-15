@@ -1,13 +1,7 @@
-import {
-  Suspense,
-  lazy,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react'
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react'
 import type { ComponentType } from 'react'
 import { ThemeToggle } from '@rift/ui/theme-toggle'
+import { useMediaQuery } from '@rift/ui/hooks/useMediaQuery'
 import {
   CHAT_AREA_KEY,
   getCurrentArea,
@@ -41,6 +35,7 @@ const SIDEBAR_CONTENT_GAP = 8
 let lastKnownAppSidebarArea: string | null = null
 
 export const AppSidebar: ComponentType = () => {
+  const { isMobile } = useMediaQuery()
   const resolvedPathname = useRouterState({
     select: (state) => state.resolvedLocation?.pathname,
   })
@@ -133,7 +128,8 @@ export const AppSidebar: ComponentType = () => {
    * does not shrink the icon rail itself.
    */
   const sidebarWidth =
-    (showAreaPanel ? SIDEBAR_WIDTH : SIDEBAR_GROUPS_WIDTH) + SIDEBAR_CONTENT_GAP
+    (showAreaPanel ? SIDEBAR_WIDTH : SIDEBAR_GROUPS_WIDTH) +
+    (isMobile ? 0 : SIDEBAR_CONTENT_GAP)
   const sidebarStyle = useMemo(
     () =>
       ({
@@ -149,7 +145,7 @@ export const AppSidebar: ComponentType = () => {
     // Sidebar Page BG
     <div
       className={cn(
-        'h-full w-[var(--sidebar-width)] grid grid-cols-[var(--sidebar-groups-width)_1fr] bg-surface-strong',
+        'h-full w-[var(--sidebar-width)] grid grid-cols-[var(--sidebar-groups-width)_1fr] bg-surface-base md:bg-surface-strong',
         isTransitionReady
           ? 'transition-[width] duration-300'
           : 'transition-none',
@@ -161,16 +157,16 @@ export const AppSidebar: ComponentType = () => {
           attached to whichever sidebar surface is currently visible. */}
       <div
         className={cn(
-          'relative mt-2 col-span-2 grid h-[calc(100%-0.5rem)] grid-cols-[var(--sidebar-groups-width)_1fr] overflow-hidden rounded-tr-xl border border-l-0 border-border-base bg-surface-overlay',
+          'relative col-span-2 grid h-full md:h-[calc(100%-0.5rem)] grid-cols-[var(--sidebar-groups-width)_1fr] overflow-hidden bg-surface-base md:mt-2 md:rounded-tr-xl md:border md:border-l-0 md:border-border-base md:bg-surface-overlay',
           directionClass(direction, {
-            ltr: 'mr-2',
-            rtl: 'ml-2',
+            ltr: 'md:mr-2',
+            rtl: 'md:ml-2',
           }),
         )}
       >
         <nav
           className={cn(
-            'relative z-10 flex h-full flex-col items-center justify-between border-r-2 border-border-base p-2',
+            'relative z-10 flex h-full flex-col items-center justify-between p-2 md:border-r-2 md:border-border-base',
             isTransitionReady
               ? 'transition-colors duration-300'
               : 'transition-none',
@@ -243,18 +239,18 @@ export const AppSidebar: ComponentType = () => {
               : 'transition-none',
             showAreaPanel ? '' : 'pointer-events-none opacity-0',
             directionClass(direction, {
-              ltr: 'pl-0 pr-2',
-              rtl: 'pr-0 pl-2',
+              ltr: 'md:pl-0 md:pr-2',
+              rtl: 'md:pr-0 md:pl-2',
             }),
           )}
         >
           <div className="scrollbar-hide relative z-0 flex h-full min-h-0 w-[calc(var(--sidebar-areas-width)-0.5rem)] flex-col overflow-y-auto overflow-x-hidden">
             <div
               className={cn(
-                'relative flex min-h-0 flex-1 flex-col overflow-hidden pt-3 pb-3 text-foreground-secondary',
+                'relative flex min-h-0 flex-1 flex-col overflow-hidden py-2 text-foreground-secondary md:pt-3 md:pb-3',
                 directionClass(direction, {
-                  ltr: 'pl-3 pr-0',
-                  rtl: 'pr-3 pl-0',
+                  ltr: 'pl-2 pr-0 md:pl-3 md:pr-0',
+                  rtl: 'pr-2 pl-0 md:pr-3 md:pl-0',
                 }),
               )}
             >

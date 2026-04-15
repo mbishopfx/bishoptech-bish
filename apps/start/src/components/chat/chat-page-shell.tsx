@@ -3,6 +3,8 @@
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { Button } from '@rift/ui/button'
 import { useHotkey } from '@tanstack/react-hotkeys'
+import { useMediaQuery } from '@rift/ui/hooks/useMediaQuery'
+import { useSideNav } from '@/components/layout/main-nav'
 import { usePageSidebarVisibility } from '@/components/layout/page-sidebar-visibility-context'
 import { m } from '@/paraglide/messages.js'
 import { ChatInput } from './chat-input'
@@ -13,13 +15,33 @@ import { ChatThread } from './chat-thread'
  * Keeping a single component prevents subtle layout drift between routes.
  */
 export function ChatPageShell() {
+  const { isMobile } = useMediaQuery()
+  const { isOpen: isMobileNavOpen, setIsOpen: setIsMobileNavOpen } =
+    useSideNav()
   const { isChatPageSidebarCollapsed, setIsChatPageSidebarCollapsed } =
     usePageSidebarVisibility()
+
+  const toggleSidebar = () => {
+    if (isMobile) {
+      setIsMobileNavOpen((current) => !current)
+      return
+    }
+
+    setIsChatPageSidebarCollapsed((current) => !current)
+  }
+
+  const isSidebarExpanded = isMobile
+    ? isMobileNavOpen
+    : !isChatPageSidebarCollapsed
+
+  const toggleLabel = isSidebarExpanded
+    ? m.layout_collapse_page_sidebar_aria_label()
+    : m.layout_expand_page_sidebar_aria_label()
 
   useHotkey(
     'Control+B',
     () => {
-      setIsChatPageSidebarCollapsed((current) => !current)
+      toggleSidebar()
     },
     {
       ignoreInputs: true,
@@ -27,13 +49,9 @@ export function ChatPageShell() {
     },
   )
 
-  const toggleLabel = isChatPageSidebarCollapsed
-    ? m.layout_expand_page_sidebar_aria_label()
-    : m.layout_collapse_page_sidebar_aria_label()
-
   return (
     <div className="relative flex min-h-full flex-1 flex-col overflow-visible">
-      <div className="pointer-events-none sticky top-0 z-30 h-0 overflow-visible px-4 pt-3">
+      <div className="pointer-events-none sticky top-0 z-30 h-0 overflow-visible px-2 pt-2 md:px-4 md:pt-3">
         <div className="flex w-full items-center justify-start gap-2">
           <div className="pointer-events-auto">
             <Button
@@ -42,14 +60,12 @@ export function ChatPageShell() {
               size="iconSmall"
               aria-label={toggleLabel}
               title={toggleLabel}
-              onClick={() => {
-                setIsChatPageSidebarCollapsed((current) => !current)
-              }}
+              onClick={toggleSidebar}
             >
-              {isChatPageSidebarCollapsed ? (
-                <PanelLeftOpen className="size-4" aria-hidden />
-              ) : (
+              {isSidebarExpanded ? (
                 <PanelLeftClose className="size-4" aria-hidden />
+              ) : (
+                <PanelLeftOpen className="size-4" aria-hidden />
               )}
             </Button>
           </div>
@@ -57,7 +73,7 @@ export function ChatPageShell() {
       </div>
 
       <div
-        className="flex-1 min-h-0 overflow-x-hidden px-4"
+        className="flex-1 min-h-0 overflow-x-hidden px-2 md:px-4"
         style={{ scrollbarGutter: 'stable' }}
       >
         <div className="h-full">
@@ -65,9 +81,9 @@ export function ChatPageShell() {
         </div>
       </div>
 
-      <div className="sticky bottom-0 z-40 overflow-visible px-4 pb-[max(env(safe-area-inset-bottom),0.75rem)] pt-4">
-        <div className="mx-auto w-full max-w-2xl -mb-[max(env(safe-area-inset-bottom),0.75rem)] rounded-t-[30px] bg-surface-base pb-[max(env(safe-area-inset-bottom),0.75rem)]">
-            <ChatInput />
+      <div className="sticky bottom-0 z-40 overflow-visible px-0 md:px-4 pb-[max(env(safe-area-inset-bottom),0.75rem)] pt-2 md:pt-4">
+        <div className="w-full md:mx-auto md:max-w-2xl -mb-[max(env(safe-area-inset-bottom),0.75rem)] bg-surface-base md:rounded-t-[30px] pb-[max(env(safe-area-inset-bottom),0.75rem)]">
+          <ChatInput />
         </div>
       </div>
     </div>
