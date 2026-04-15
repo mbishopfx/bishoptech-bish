@@ -1,6 +1,13 @@
 'use client'
 
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from 'react'
 import type { ReactNode } from 'react'
 import { useQuery } from '@rocicorp/zero/react'
 import { useServerFn } from '@tanstack/react-start'
@@ -8,6 +15,7 @@ import { useAppAuth } from '@/lib/frontend/auth/use-auth'
 import { queries } from '@/integrations/zero'
 import { getOrgUsageSummary } from './org-usage-summary.functions'
 import type { OrgUsageSummary } from './org-usage-summary.server'
+import { isSelfHosted } from '@/utils/app-feature-flags'
 
 function asError(error: unknown): Error {
   return error instanceof Error ? error : new Error(String(error))
@@ -15,19 +23,19 @@ function asError(error: unknown): Error {
 
 function getErrorTag(error: unknown): string | null {
   if (
-    typeof error === 'object'
-    && error !== null
-    && '_tag' in error
-    && typeof (error as { _tag: unknown })._tag === 'string'
+    typeof error === 'object' &&
+    error !== null &&
+    '_tag' in error &&
+    typeof (error as { _tag: unknown })._tag === 'string'
   ) {
     return (error as { _tag: string })._tag
   }
 
   if (
-    typeof error === 'object'
-    && error !== null
-    && 'name' in error
-    && typeof (error as { name: unknown }).name === 'string'
+    typeof error === 'object' &&
+    error !== null &&
+    'name' in error &&
+    typeof (error as { name: unknown }).name === 'string'
   ) {
     return (error as { name: string }).name
   }
@@ -38,9 +46,11 @@ function getErrorTag(error: unknown): string | null {
 function isTerminalRefreshError(error: unknown): boolean {
   const tag = getErrorTag(error)
 
-  return tag === 'WorkspaceBillingForbiddenError'
-    || tag === 'WorkspaceBillingUnauthorizedError'
-    || tag === 'WorkspaceBillingMissingOrgContextError'
+  return (
+    tag === 'WorkspaceBillingForbiddenError' ||
+    tag === 'WorkspaceBillingUnauthorizedError' ||
+    tag === 'WorkspaceBillingMissingOrgContextError'
+  )
 }
 
 const REFRESH_RETRY_DELAY_MS = 30_000
@@ -67,7 +77,7 @@ export function getNextUsageLabelTickAt(
   const totalMinutes = Math.ceil(remainingMs / 60_000)
   return totalMinutes <= 1
     ? timestampMs
-    : timestampMs - ((totalMinutes - 1) * 60_000)
+    : timestampMs - (totalMinutes - 1) * 60_000
 }
 
 type UsageSummaryRow = {
@@ -101,7 +111,9 @@ type UsageSummaryContainerRow = {
   members?: CurrentMemberRow[]
 }
 
-function toSummary(row: UsageSummaryContainerRow | null | undefined): OrgUsageSummary | null {
+function toSummary(
+  row: UsageSummaryContainerRow | null | undefined,
+): OrgUsageSummary | null {
   const summary = row?.usageSummaries?.[0]
 
   if (!summary) {
@@ -117,7 +129,9 @@ function toSummary(row: UsageSummaryContainerRow | null | undefined): OrgUsageSu
   }
 }
 
-function toEntitlementComputedAt(row: UsageSummaryContainerRow | null | undefined): number | null {
+function toEntitlementComputedAt(
+  row: UsageSummaryContainerRow | null | undefined,
+): number | null {
   const computedAt = row?.entitlementSnapshots?.[0]?.computedAt
   return typeof computedAt === 'number' ? computedAt : null
 }
@@ -145,32 +159,36 @@ export function resolveOrgUsageSummaryState(input: {
   liveSummaryRow: UsageSummaryContainerRow | null
   ensuredSummary: EnsuredOrgUsageSummary | null
 }): ResolvedOrgUsageSummary {
-  const liveSummary = input.liveSummaryRow?.id === input.activeOrganizationId
-    ? toSummary(input.liveSummaryRow)
-    : null
-  const ensuredSummary = input.ensuredSummary?.organizationId === input.activeOrganizationId
-    ? input.ensuredSummary.summary
-    : null
-  const summary = liveSummary == null
-    ? ensuredSummary
-    : ensuredSummary == null
-      ? liveSummary
-      : liveSummary.updatedAt >= ensuredSummary.updatedAt
+  const liveSummary =
+    input.liveSummaryRow?.id === input.activeOrganizationId
+      ? toSummary(input.liveSummaryRow)
+      : null
+  const ensuredSummary =
+    input.ensuredSummary?.organizationId === input.activeOrganizationId
+      ? input.ensuredSummary.summary
+      : null
+  const summary =
+    liveSummary == null
+      ? ensuredSummary
+      : ensuredSummary == null
         ? liveSummary
-        : ensuredSummary
+        : liveSummary.updatedAt >= ensuredSummary.updatedAt
+          ? liveSummary
+          : ensuredSummary
   const summaryUpdatedAt = summary?.updatedAt ?? null
-  const entitlementComputedAt = input.liveSummaryRow?.id === input.activeOrganizationId
-    ? toEntitlementComputedAt(input.liveSummaryRow)
-    : null
+  const entitlementComputedAt =
+    input.liveSummaryRow?.id === input.activeOrganizationId
+      ? toEntitlementComputedAt(input.liveSummaryRow)
+      : null
 
   return {
     summary,
     summaryUpdatedAt,
     entitlementComputedAt,
     stale:
-      summaryUpdatedAt != null
-      && entitlementComputedAt != null
-      && summaryUpdatedAt < entitlementComputedAt,
+      summaryUpdatedAt != null &&
+      entitlementComputedAt != null &&
+      summaryUpdatedAt < entitlementComputedAt,
   }
 }
 
@@ -186,17 +204,20 @@ type OrgUsageSummaryContextValue = {
   } | null
 }
 
-const OrgUsageSummaryContext = createContext<OrgUsageSummaryContextValue | null>(null)
+const OrgUsageSummaryContext =
+  createContext<OrgUsageSummaryContextValue | null>(null)
 
 /**
  * Usage stays reactive through Zero while a server refresh fills gaps on org
  * switches and refreshes the per-user projection whenever reset boundaries or
  * entitlement snapshots move ahead of the latest visible summary.
  */
-export function OrgUsageSummaryProvider({ children }: { children: ReactNode }) {
+function OrgUsageSummaryProviderCloud({ children }: { children: ReactNode }) {
   const { activeOrganizationId } = useAppAuth()
   const getOrgUsageSummaryFn = useServerFn(getOrgUsageSummary)
-  const [summaryRow, summaryResult] = useQuery(queries.orgBilling.currentUsageSummary())
+  const [summaryRow, summaryResult] = useQuery(
+    queries.orgBilling.currentUsageSummary(),
+  )
   const activeOrganizationIdRef = useRef(activeOrganizationId)
   activeOrganizationIdRef.current = activeOrganizationId
   const missingLiveSummaryRefreshOrgIdRef = useRef<string | null>(null)
@@ -207,15 +228,18 @@ export function OrgUsageSummaryProvider({ children }: { children: ReactNode }) {
    */
   const terminalRefreshOrgIdRef = useRef<string | null>(null)
   const requestIdRef = useRef(0)
-  const [ensuredSummary, setEnsuredSummary] = useState<EnsuredOrgUsageSummary | null>(null)
+  const [ensuredSummary, setEnsuredSummary] =
+    useState<EnsuredOrgUsageSummary | null>(null)
   const [ensuring, setEnsuring] = useState(false)
   const [nowMs, setNowMs] = useState(() => Date.now())
   const [retryAtMs, setRetryAtMs] = useState<number | null>(null)
   const [lastRefreshError, setLastRefreshError] = useState<Error | null>(null)
-  const liveSummaryRow = (summaryRow as UsageSummaryContainerRow | null | undefined) ?? null
-  const liveSummary = liveSummaryRow?.id === activeOrganizationId
-    ? toSummary(liveSummaryRow)
-    : null
+  const liveSummaryRow =
+    (summaryRow as UsageSummaryContainerRow | null | undefined) ?? null
+  const liveSummary =
+    liveSummaryRow?.id === activeOrganizationId
+      ? toSummary(liveSummaryRow)
+      : null
   const resolvedSummary = resolveOrgUsageSummaryState({
     activeOrganizationId,
     liveSummaryRow,
@@ -223,12 +247,14 @@ export function OrgUsageSummaryProvider({ children }: { children: ReactNode }) {
   })
   const summary = resolvedSummary.summary
   const summaryRefreshAt = summary == null ? null : getNextRefreshAt(summary)
-  const currentMemberAccess = liveSummaryRow?.id === activeOrganizationId
-    ? liveSummaryRow?.members?.[0]?.access ?? null
-    : null
-  const entitlementRow = liveSummaryRow?.id === activeOrganizationId
-    ? liveSummaryRow?.entitlementSnapshots?.[0]
-    : undefined
+  const currentMemberAccess =
+    liveSummaryRow?.id === activeOrganizationId
+      ? (liveSummaryRow?.members?.[0]?.access ?? null)
+      : null
+  const entitlementRow =
+    liveSummaryRow?.id === activeOrganizationId
+      ? liveSummaryRow?.entitlementSnapshots?.[0]
+      : undefined
   const entitlement = entitlementRow
     ? {
         activeMemberCount:
@@ -248,6 +274,8 @@ export function OrgUsageSummaryProvider({ children }: { children: ReactNode }) {
    * active org even if an older request resolves later.
    */
   const refresh = useCallback(async () => {
+    if (isSelfHosted) return
+
     const organizationId = activeOrganizationIdRef.current
     if (!organizationId) return
 
@@ -258,8 +286,8 @@ export function OrgUsageSummaryProvider({ children }: { children: ReactNode }) {
     try {
       const next = await getOrgUsageSummaryFn({ data: undefined })
       if (
-        requestId !== requestIdRef.current
-        || activeOrganizationIdRef.current !== organizationId
+        requestId !== requestIdRef.current ||
+        activeOrganizationIdRef.current !== organizationId
       ) {
         return
       }
@@ -274,8 +302,8 @@ export function OrgUsageSummaryProvider({ children }: { children: ReactNode }) {
       setLastRefreshError(null)
     } catch (nextError) {
       if (
-        requestId !== requestIdRef.current
-        || activeOrganizationIdRef.current !== organizationId
+        requestId !== requestIdRef.current ||
+        activeOrganizationIdRef.current !== organizationId
       ) {
         return
       }
@@ -322,9 +350,12 @@ export function OrgUsageSummaryProvider({ children }: { children: ReactNode }) {
       return
     }
 
-    const timeoutId = window.setTimeout(() => {
-      setNowMs(Date.now())
-    }, Math.max(250, nextTickAt - Date.now() + 250))
+    const timeoutId = window.setTimeout(
+      () => {
+        setNowMs(Date.now())
+      },
+      Math.max(250, nextTickAt - Date.now() + 250),
+    )
 
     return () => {
       window.clearTimeout(timeoutId)
@@ -333,11 +364,11 @@ export function OrgUsageSummaryProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (
-      summaryRefreshAt == null
-      || ensuring
-      || summaryRefreshAt > Date.now()
-      || terminalRefreshOrgIdRef.current === activeOrganizationIdRef.current
-      || (retryAtMs != null && retryAtMs > Date.now())
+      summaryRefreshAt == null ||
+      ensuring ||
+      summaryRefreshAt > Date.now() ||
+      terminalRefreshOrgIdRef.current === activeOrganizationIdRef.current ||
+      (retryAtMs != null && retryAtMs > Date.now())
     ) {
       return
     }
@@ -347,16 +378,19 @@ export function OrgUsageSummaryProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (
-      summaryRefreshAt == null
-      || terminalRefreshOrgIdRef.current === activeOrganizationIdRef.current
-      || (retryAtMs != null && retryAtMs > Date.now())
+      summaryRefreshAt == null ||
+      terminalRefreshOrgIdRef.current === activeOrganizationIdRef.current ||
+      (retryAtMs != null && retryAtMs > Date.now())
     ) {
       return
     }
 
-    const timeoutId = window.setTimeout(() => {
-      void refresh()
-    }, Math.max(250, summaryRefreshAt - Date.now() + 250))
+    const timeoutId = window.setTimeout(
+      () => {
+        void refresh()
+      },
+      Math.max(250, summaryRefreshAt - Date.now() + 250),
+    )
 
     return () => {
       window.clearTimeout(timeoutId)
@@ -368,9 +402,12 @@ export function OrgUsageSummaryProvider({ children }: { children: ReactNode }) {
       return
     }
 
-    const timeoutId = window.setTimeout(() => {
-      void refresh()
-    }, Math.max(250, retryAtMs - Date.now()))
+    const timeoutId = window.setTimeout(
+      () => {
+        void refresh()
+      },
+      Math.max(250, retryAtMs - Date.now()),
+    )
 
     return () => {
       window.clearTimeout(timeoutId)
@@ -379,13 +416,13 @@ export function OrgUsageSummaryProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (
-      !activeOrganizationId
-      || summaryResult.type !== 'complete'
-      || liveSummary != null
-      || ensuring
-      || terminalRefreshOrgIdRef.current === activeOrganizationId
-      || (retryAtMs != null && retryAtMs > Date.now())
-      || missingLiveSummaryRefreshOrgIdRef.current === activeOrganizationId
+      !activeOrganizationId ||
+      summaryResult.type !== 'complete' ||
+      liveSummary != null ||
+      ensuring ||
+      terminalRefreshOrgIdRef.current === activeOrganizationId ||
+      (retryAtMs != null && retryAtMs > Date.now()) ||
+      missingLiveSummaryRefreshOrgIdRef.current === activeOrganizationId
     ) {
       return
     }
@@ -403,19 +440,25 @@ export function OrgUsageSummaryProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (
-      !activeOrganizationId
-      || !resolvedSummary.stale
-      || ensuring
-      || terminalRefreshOrgIdRef.current === activeOrganizationId
-      || (retryAtMs != null && retryAtMs > Date.now())
-      || staleSummaryRefreshOrgIdRef.current === activeOrganizationId
+      !activeOrganizationId ||
+      !resolvedSummary.stale ||
+      ensuring ||
+      terminalRefreshOrgIdRef.current === activeOrganizationId ||
+      (retryAtMs != null && retryAtMs > Date.now()) ||
+      staleSummaryRefreshOrgIdRef.current === activeOrganizationId
     ) {
       return
     }
 
     staleSummaryRefreshOrgIdRef.current = activeOrganizationId
     void refresh()
-  }, [activeOrganizationId, ensuring, refresh, resolvedSummary.stale, retryAtMs])
+  }, [
+    activeOrganizationId,
+    ensuring,
+    refresh,
+    resolvedSummary.stale,
+    retryAtMs,
+  ])
 
   useEffect(() => {
     if (!lastRefreshError) {
@@ -431,9 +474,9 @@ export function OrgUsageSummaryProvider({ children }: { children: ReactNode }) {
         summary,
         nowMs,
         loading:
-          activeOrganizationId != null
-          && summary == null
-          && (ensuring || summaryResult.type !== 'complete'),
+          activeOrganizationId != null &&
+          summary == null &&
+          (ensuring || summaryResult.type !== 'complete'),
         currentMemberAccess,
         entitlement,
       }}
@@ -443,11 +486,38 @@ export function OrgUsageSummaryProvider({ children }: { children: ReactNode }) {
   )
 }
 
+const SELF_HOSTED_ORG_USAGE_CONTEXT: OrgUsageSummaryContextValue = {
+  summary: null,
+  nowMs: 0,
+  loading: false,
+  currentMemberAccess: null,
+  entitlement: null,
+}
+
+export function OrgUsageSummaryProvider({ children }: { children: ReactNode }) {
+  if (isSelfHosted) {
+    return (
+      <OrgUsageSummaryContext.Provider
+        value={{
+          ...SELF_HOSTED_ORG_USAGE_CONTEXT,
+          nowMs: Date.now(),
+        }}
+      >
+        {children}
+      </OrgUsageSummaryContext.Provider>
+    )
+  }
+
+  return <OrgUsageSummaryProviderCloud>{children}</OrgUsageSummaryProviderCloud>
+}
+
 export function useOrgUsageSummary() {
   const value = useContext(OrgUsageSummaryContext)
 
   if (!value) {
-    throw new Error('useOrgUsageSummary must be used inside OrgUsageSummaryProvider')
+    throw new Error(
+      'useOrgUsageSummary must be used inside OrgUsageSummaryProvider',
+    )
   }
 
   return value

@@ -5,6 +5,7 @@ import { Link } from '@tanstack/react-router'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@rift/ui/tooltip'
 import { cn } from '@rift/utils'
 import { m } from '@/paraglide/messages.js'
+import { isSelfHosted } from '@/utils/app-feature-flags'
 import { useAppAuth } from '@/lib/frontend/auth/use-auth'
 import {
   OrgUsageSummaryProvider,
@@ -35,9 +36,8 @@ function UsageRing({
   fillStroke,
   minVisiblePercent = 0,
 }: UsageBarProps) {
-  const normalizedPercent = percent > 0
-    ? Math.max(percent, minVisiblePercent)
-    : 0
+  const normalizedPercent =
+    percent > 0 ? Math.max(percent, minVisiblePercent) : 0
   const circumference = 2 * Math.PI * radius
   const dashOffset = circumference * (1 - normalizedPercent / 100)
 
@@ -62,7 +62,9 @@ function UsageRing({
         strokeDasharray={circumference}
         initial={reducedMotion ? false : { strokeDashoffset: circumference }}
         animate={{ strokeDashoffset: dashOffset }}
-        transition={reducedMotion ? { duration: 0 } : { duration: 0.22, ease: 'easeOut' }}
+        transition={
+          reducedMotion ? { duration: 0 } : { duration: 0.22, ease: 'easeOut' }
+        }
       />
     </>
   )
@@ -117,14 +119,16 @@ function SidebarUsageMeterView(input: {
   summary: ReturnType<typeof useOrgUsageSummary>['summary']
   nowMs: number
   loading: boolean
-  currentMemberAccess: ReturnType<typeof useOrgUsageSummary>['currentMemberAccess']
+  currentMemberAccess: ReturnType<
+    typeof useOrgUsageSummary
+  >['currentMemberAccess']
 }) {
   const reducedMotion = useReducedMotion()
   const { summary, nowMs, loading, currentMemberAccess } = input
   const model = buildSidebarUsageMeterModel(summary, nowMs)
   const isOverSeatRestricted =
-    currentMemberAccess?.status === 'restricted'
-    && currentMemberAccess.reasonCode === 'seat_limit_downgrade'
+    currentMemberAccess?.status === 'restricted' &&
+    currentMemberAccess.reasonCode === 'seat_limit_downgrade'
   const hasUsageData = summary != null || isOverSeatRestricted
   const trackStroke = 'rgba(59, 130, 246, 0.18)'
   const fillStroke = isOverSeatRestricted
@@ -185,17 +189,16 @@ function SidebarUsageMeterView(input: {
 
   return (
     <Tooltip>
-      <TooltipTrigger
-        render={meter}
-        tabIndex={0}
-      />
+      <TooltipTrigger render={meter} tabIndex={0} />
       <TooltipContent
         side="inline-end"
         sideOffset={8}
         className="min-w-56 rounded-lg px-3 py-3 text-xs"
       >
         <div className="space-y-3">
-          <div className="font-medium text-sm text-white">{m.org_billing_sidebar_title()}</div>
+          <div className="font-medium text-sm text-white">
+            {m.org_billing_sidebar_title()}
+          </div>
           <div className="space-y-3 text-white/80">
             <UsageTooltipBar
               label={usageLabel}
@@ -203,8 +206,12 @@ function SidebarUsageMeterView(input: {
               footerLabel={usageFooterLabel}
               footerValue={usageFooterValue}
               percent={usagePercent}
-              fillClassName={isOverSeatRestricted ? 'bg-rose-500' : 'bg-[#3b82f6]'}
-              trackClassName={isOverSeatRestricted ? 'bg-rose-500/20' : 'bg-[#3b82f6]/20'}
+              fillClassName={
+                isOverSeatRestricted ? 'bg-rose-500' : 'bg-[#3b82f6]'
+              }
+              trackClassName={
+                isOverSeatRestricted ? 'bg-rose-500/20' : 'bg-[#3b82f6]/20'
+              }
             />
             {isOverSeatRestricted ? (
               <p className="text-white/65">
@@ -238,6 +245,10 @@ function AnonymousSidebarUsageMeterContent() {
 
 export function SidebarUsageMeter() {
   const { isAnonymous, user } = useAppAuth()
+
+  if (isSelfHosted) {
+    return null
+  }
 
   if (isAnonymous && user?.id) {
     return <AnonymousSidebarUsageMeterContent />

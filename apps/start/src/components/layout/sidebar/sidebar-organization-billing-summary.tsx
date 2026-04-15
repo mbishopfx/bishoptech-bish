@@ -1,4 +1,5 @@
 import { m } from '@/paraglide/messages.js'
+import { isSelfHosted } from '@/utils/app-feature-flags'
 import { useOrgBillingSummary } from '@/lib/frontend/billing/use-org-billing'
 import {
   coerceWorkspacePlanId,
@@ -16,6 +17,10 @@ function formatMemberCountLabel(memberCount: number | null): string {
 }
 
 export function SidebarOrganizationBillingSummary() {
+  if (isSelfHosted) {
+    return 'Self-hosted'
+  }
+
   const { entitlement, loading } = useOrgBillingSummary()
 
   if (loading && !entitlement?.planId) {
@@ -27,7 +32,5 @@ export function SidebarOrganizationBillingSummary() {
     entitlement?.activeMemberCount ?? null,
   )
 
-  return memberCountLabel
-    ? `${plan.name} · ${memberCountLabel}`
-    : plan.name
+  return memberCountLabel ? `${plan.name} · ${memberCountLabel}` : plan.name
 }
