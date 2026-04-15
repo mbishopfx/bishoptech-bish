@@ -25,6 +25,7 @@ type BunRuntimeLike = {
     endpoint: string
     accessKeyId: string
     secretAccessKey: string
+    virtualHostedStyle?: boolean
   }) => BunS3ClientLike
 }
 
@@ -80,6 +81,7 @@ function getUploadClient(): BunS3ClientLike {
     endpoint: config.endpoint,
     accessKeyId: config.accessKeyId,
     secretAccessKey: config.secretAccessKey,
+    virtualHostedStyle: config.virtualHostedStyle,
   })
 
   return cachedUploadClient
@@ -159,22 +161,89 @@ function buildContentDisposition(fileName: string): string {
   return `inline; filename="${safeName}"`
 }
 
+function formatUploadError(error: unknown): {
+  readonly name: string
+  readonly message: string
+  readonly stack?: string
+} {
+  if (error instanceof Error) {
+    return {
+      name: error.name,
+      message: error.message,
+      stack: error.stack,
+    }
+  }
+
+  return {
+    name: 'UnknownError',
+    message: String(error),
+  }
+}
+
+function toSafeStorageDebug(config: UploadStorageConfig) {
+  return {
+    provider: config.provider,
+    bucket: config.bucket,
+    endpoint: config.endpoint,
+    region: config.region,
+    publicUrlMode: config.publicUrlMode,
+    virtualHostedStyle: config.virtualHostedStyle,
+  }
+}
+
 export class UploadService {
   /**
    * Fetches an object from the configured S3-compatible backend and returns it
    * as a web `Response` payload.
    */
-  readObjectByKey(params: { key: string }): Response {
+  async readObjectByKey(params: {
+    key: string
+    requestId?: string
+  }): Promise<Response> {
     const config = getUploadStorageConfig()
-    const objectFile = getUploadClient().file(params.key)
 
-    return new Response(objectFile, {
-      status: 200,
-      headers: {
+    try {
+      const objectFile = getUploadClient().file(params.key)
+      const body = await objectFile.arrayBuffer()
+
+      const headers = new Headers({
         'Cache-Control': 'private, max-age=300',
         'x-rift-storage-provider': config.provider,
-      },
-    })
+      })
+
+      if (objectFile.type) {
+        headers.set('Content-Type', objectFile.type)
+      }
+
+      console.info('[rift:file-proxy.read.ok]', {
+        requestId: params.requestId,
+        key: params.key,
+        storage: toSafeStorageDebug(config),
+        contentType: objectFile.type || null,
+        sizeBytes: body.byteLength,
+      })
+
+      return new Response(body, {
+        status: 200,
+        headers,
+      })
+    } catch (error) {
+      const formatted = formatUploadError(error)
+
+      console.error('[rift:file-proxy.read.failed]', {
+        requestId: params.requestId,
+        key: params.key,
+        storage: toSafeStorageDebug(config),
+        errorName: formatted.name,
+        errorMessage: formatted.message,
+        errorStack: formatted.stack,
+      })
+
+      throw new UploadServiceError(
+        `Failed to read object from storage: ${formatted.message}`,
+        502,
+      )
+    }
   }
 
   async upload(params: {

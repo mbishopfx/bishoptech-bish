@@ -11,6 +11,7 @@ export type UploadStorageConfig = {
   readonly region: string
   readonly publicBaseUrl: string
   readonly publicUrlMode: 'path' | 'proxy_query'
+  readonly virtualHostedStyle: boolean
 }
 
 export class UploadStorageConfigError extends Error {
@@ -38,6 +39,43 @@ function readEnv(keys: readonly string[]): string | null {
   }
 
   return null
+}
+
+function readBooleanEnv(keys: readonly string[]): boolean | null {
+  for (const key of keys) {
+    const rawValue = process.env[key]
+    if (!rawValue) continue
+    const normalized = rawValue.trim().toLowerCase()
+
+    if (
+      normalized === 'true' ||
+      normalized === '1' ||
+      normalized === 'yes' ||
+      normalized === 'on'
+    ) {
+      return true
+    }
+
+    if (
+      normalized === 'false' ||
+      normalized === '0' ||
+      normalized === 'no' ||
+      normalized === 'off'
+    ) {
+      return false
+    }
+  }
+
+  return null
+}
+
+function inferVirtualHostedStyleDefault(endpoint: string): boolean {
+  try {
+    const hostname = new URL(endpoint).hostname
+    return hostname === 'storage.railway.app'
+  } catch {
+    return false
+  }
 }
 
 export function resolveUploadStorageProvider(): UploadStorageProvider {
@@ -97,6 +135,7 @@ function resolveCloudflareR2Config(): UploadStorageConfig {
     region: 'auto',
     publicBaseUrl: publicBaseUrl as string,
     publicUrlMode: 'path',
+    virtualHostedStyle: false,
   }
 }
 
@@ -117,12 +156,12 @@ function isProxyObjectBaseUrl(url: string): boolean {
 function resolveS3CompatibleConfig(): UploadStorageConfig {
   const endpoint = readEnv(['S3_ENDPOINT', 'ENDPOINT'])
   const accessKeyId = readEnv(['S3_ACCESS_KEY_ID', 'ACCESS_KEY_ID'])
-  const secretAccessKey = readEnv([
-    'S3_SECRET_ACCESS_KEY',
-    'SECRET_ACCESS_KEY',
-  ])
+  const secretAccessKey = readEnv(['S3_SECRET_ACCESS_KEY', 'SECRET_ACCESS_KEY'])
   const bucket = readEnv(['S3_BUCKET_NAME', 'BUCKET'])
   const region = readEnv(['S3_REGION', 'REGION']) ?? 'auto'
+  const virtualHostedStyle =
+    readBooleanEnv(['S3_VIRTUAL_HOSTED_STYLE']) ??
+    (endpoint ? inferVirtualHostedStyleDefault(endpoint) : false)
   const configuredPublicBaseUrl = readEnv(['S3_PUBLIC_BASE_URL'])
   const appBaseUrl = resolveAppBaseUrl()
   const publicBaseUrl =
@@ -155,6 +194,7 @@ function resolveS3CompatibleConfig(): UploadStorageConfig {
     publicUrlMode: isProxyObjectBaseUrl(publicBaseUrl as string)
       ? 'proxy_query'
       : 'path',
+    virtualHostedStyle,
   }
 }
 
