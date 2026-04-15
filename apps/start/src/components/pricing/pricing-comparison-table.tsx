@@ -4,9 +4,9 @@ import { Check } from 'lucide-react'
 import { Button } from '@rift/ui/button'
 import { cn } from '@rift/utils'
 import {
-  enterprisePlan,
-  mainPlans,
-  selfHostingPlan,
+  getEnterprisePlan,
+  getMainPlans,
+  getSelfHostingPlan,
 } from '@/lib/shared/pricing'
 import type { LandingPlan } from '@/lib/shared/pricing'
 import {
@@ -15,6 +15,7 @@ import {
   GradientBackground,
 } from './pricing-decorative'
 import type { PricingPlanActionOverride } from './pricing-card'
+import { m } from '@/paraglide/messages.js'
 
 type ComparisonCell = string | boolean
 
@@ -38,139 +39,154 @@ type ComparisonPlan = Pick<
  * sticky header to keep the horizontal width focused on the tiers users are
  * actually choosing between at upgrade time.
  */
-const comparisonPlans: ComparisonPlan[] = [
-  ...mainPlans
-    .filter((plan) => plan.name !== 'Free')
-    .map(({ name, buttonText, href, gradientId, workspacePlanId }) => ({
-      workspacePlanId,
-      name,
-      buttonText,
-      href,
-      gradientId,
-    })),
-  {
-    workspacePlanId: enterprisePlan.workspacePlanId,
-    name: enterprisePlan.name,
-    buttonText: enterprisePlan.buttonText,
-    href: enterprisePlan.href,
-    gradientId: enterprisePlan.gradientId,
-  },
-  {
-    workspacePlanId: selfHostingPlan.workspacePlanId,
-    name: selfHostingPlan.name,
-    buttonText: selfHostingPlan.buttonText,
-    href: selfHostingPlan.href,
-    gradientId: selfHostingPlan.gradientId,
-  },
-]
+function getComparisonPlans(): ComparisonPlan[] {
+  const mainPlans = getMainPlans()
+  const enterprisePlan = getEnterprisePlan()
+  const selfHostingPlan = getSelfHostingPlan()
 
-/**
- * The matrix focuses on meaningful differences between paid tiers. Plus is the
- * baseline paid plan, Scale is the high-headroom option, and the custom plans
- * keep their tailored deployment and security language.
- */
-const comparisonSections: ComparisonSection[] = [
-  {
-    title: 'Essentials',
-    rows: [
-      {
-        label: 'Monthly limits',
-        values: [
-          'Expanded',
-          '5x Plus',
-          '10x Plus',
-          'Custom usage',
-          'Custom usage',
-        ],
-      },
-      {
-        label: 'Chat history',
-        values: [
-          'Unlimited',
-          'Unlimited',
-          'Unlimited',
-          'Unlimited',
-          'Unlimited',
-        ],
-      },
-      {
-        label: 'Access on iOS, Android (Coming soon)',
-        values: [true, true, true, true, true],
-      },
-      {
-        label: 'Priority support',
-        values: [false, true, true, true, true],
-      },
-    ],
-  },
-  {
-    title: 'Workspace',
-    rows: [
-      {
-        label: 'Model access',
-        values: [
-          'All models',
-          'All models',
-          'All models',
-          'Custom catalog',
-          'Custom deployment',
-        ],
-      },
-      {
-        label: 'File storage',
-        values: [
-          'Included',
-          'Higher limits',
-          'Highest limits',
-          'Custom',
-          'Custom',
-        ],
-      },
-      {
-        label: 'Memory & projects (Coming soon)',
-        values: [true, true, true, true, true],
-      },
-      {
-        label: 'Team management',
-        values: [true, true, true, true, true],
-      },
-      {
-        label: 'SSO',
-        values: [false, false, true, true, true],
-      },
-      {
-        label: 'Directory Sync',
-        values: [false, false, false, true, true],
-      },
-      {
-        label: 'SIEM',
-        values: [false, false, false, true, true],
-      },
-      {
-        label: 'Usage Analytics',
-        values: [false, false, false, true, true],
-      },
-      {
-        label: 'Audit logs',
-        values: [false, false, false, true, true],
-      },
-      {
-        label: 'Deployment',
-        values: [
-          'Rift cloud',
-          'Rift cloud',
-          'Rift cloud',
-          'Rift cloud',
-          'Private infrastructure',
-        ],
-      },
-      {
-        label: 'Technical onboarding',
-        values: [false, false, false, true, true],
-      },
-    ],
-  },
-]
+  return [
+    ...mainPlans
+      .filter((plan) => plan.name !== m.pricing_plan_free_name())
+      .map(({ name, buttonText, href, gradientId, workspacePlanId }) => ({
+        workspacePlanId,
+        name,
+        buttonText,
+        href,
+        gradientId,
+      })),
+    {
+      workspacePlanId: enterprisePlan.workspacePlanId,
+      name: enterprisePlan.name,
+      buttonText: enterprisePlan.buttonText,
+      href: enterprisePlan.href,
+      gradientId: enterprisePlan.gradientId,
+    },
+    {
+      workspacePlanId: selfHostingPlan.workspacePlanId,
+      name: selfHostingPlan.name,
+      buttonText: selfHostingPlan.buttonText,
+      href: selfHostingPlan.href,
+      gradientId: selfHostingPlan.gradientId,
+    },
+  ]
+}
+
+function getComparisonSections(): ComparisonSection[] {
+  return [
+    {
+      title: m.pricing_comparison_section_essentials(),
+      rows: [
+        {
+          label: m.pricing_comparison_row_monthly_limits(),
+          values: [
+            m.pricing_comparison_value_expanded(),
+            m.pricing_comparison_value_5x_plus(),
+            m.pricing_comparison_value_10x_plus(),
+            m.pricing_comparison_value_custom_usage(),
+            m.pricing_comparison_value_custom_usage(),
+          ],
+        },
+        {
+          label: m.pricing_comparison_row_chat_history(),
+          values: [
+            m.pricing_comparison_value_unlimited(),
+            m.pricing_comparison_value_unlimited(),
+            m.pricing_comparison_value_unlimited(),
+            m.pricing_comparison_value_unlimited(),
+            m.pricing_comparison_value_unlimited(),
+          ],
+        },
+        {
+          label: m.pricing_comparison_row_mobile_apps(),
+          values: [true, true, true, true, true],
+        },
+        {
+          label: m.pricing_comparison_row_priority_support(),
+          values: [false, true, true, true, true],
+        },
+      ],
+    },
+    {
+      title: m.pricing_comparison_section_workspace(),
+      rows: [
+        {
+          label: m.pricing_comparison_row_model_access(),
+          values: [
+            m.pricing_comparison_value_all_models(),
+            m.pricing_comparison_value_all_models(),
+            m.pricing_comparison_value_all_models(),
+            m.pricing_comparison_value_custom_catalog(),
+            m.pricing_comparison_value_custom_deployment(),
+          ],
+        },
+        {
+          label: m.pricing_comparison_row_file_storage(),
+          values: [
+            m.pricing_comparison_value_included(),
+            m.pricing_comparison_value_higher_limits(),
+            m.pricing_comparison_value_highest_limits(),
+            m.pricing_comparison_value_custom(),
+            m.pricing_comparison_value_custom(),
+          ],
+        },
+        {
+          label: m.pricing_comparison_row_memory_projects(),
+          values: [true, true, true, true, true],
+        },
+        {
+          label: m.pricing_comparison_row_team_mgmt(),
+          values: [true, true, true, true, true],
+        },
+        {
+          label: m.pricing_comparison_row_byok(),
+          values: [true, true, true, true, true],
+        },
+        {
+          label: m.pricing_comparison_row_zdr_ai_providers(),
+          values: [true, true, true, true, true],
+        },
+        {
+          label: m.pricing_comparison_row_org_policies(),
+          values: [true, true, true, true, true],
+        },
+        {
+          label: m.pricing_comparison_row_sso(),
+          values: [false, false, false, true, true],
+        },
+        {
+          label: m.pricing_comparison_row_directory_sync(),
+          values: [false, false, false, true, true],
+        },
+        {
+          label: m.pricing_comparison_row_siem(),
+          values: [false, false, false, true, true],
+        },
+        {
+          label: m.pricing_comparison_row_usage_analytics(),
+          values: [false, false, false, true, true],
+        },
+        {
+          label: m.pricing_comparison_row_audit_logs(),
+          values: [false, false, false, true, true],
+        },
+        {
+          label: m.pricing_comparison_row_deployment(),
+          values: [
+            m.pricing_comparison_value_rift_cloud(),
+            m.pricing_comparison_value_rift_cloud(),
+            m.pricing_comparison_value_rift_cloud(),
+            m.pricing_comparison_value_rift_cloud(),
+            m.pricing_comparison_value_private_infrastructure(),
+          ],
+        },
+        {
+          label: m.pricing_comparison_row_tech_onboarding(),
+          values: [false, false, false, true, true],
+        },
+      ],
+    },
+  ]
+}
 
 /**
  * Renders a comparison cell value. String values wrap to multiple lines;
@@ -207,6 +223,8 @@ export function PricingComparisonTable(props: {
     plan: Pick<LandingPlan, 'name' | 'workspacePlanId'>,
   ) => PricingPlanActionOverride | undefined
 }) {
+  const comparisonPlans = getComparisonPlans()
+  const comparisonSections = getComparisonSections()
   return (
     <>
       <style>{`

@@ -69,9 +69,9 @@ describe('access-control', () => {
   it('enables BYOK on plus without unlocking advanced policy settings', () => {
     expect(getPlanEffectiveFeatures('plus')).toEqual({
       byok: true,
-      providerPolicy: false,
-      compliancePolicy: false,
-      toolPolicy: false,
+      providerPolicy: true,
+      compliancePolicy: true,
+      toolPolicy: true,
       verifiedDomains: false,
       singleSignOn: false,
       directoryProvisioning: false,
@@ -85,7 +85,7 @@ describe('access-control', () => {
       compliancePolicy: true,
       toolPolicy: true,
       verifiedDomains: true,
-      singleSignOn: true,
+      singleSignOn: false,
       directoryProvisioning: false,
     })
   })
@@ -133,8 +133,8 @@ describe('access-control', () => {
         feature: 'singleSignOn',
       }),
     ).toMatchObject({
-      allowed: true,
-      minimumPlanId: 'pro',
+      allowed: false,
+      minimumPlanId: 'enterprise',
     })
   })
 
@@ -142,8 +142,12 @@ describe('access-control', () => {
     process.env.STRIPE_PRICE_PLUS_MONTHLY = 'price_plus_test'
     process.env.STRIPE_PRICE_PRO_MONTHLY = 'price_pro_test'
 
-    expect(resolveWorkspacePlanIdFromStripePriceId('price_plus_test')).toBe('plus')
-    expect(resolveWorkspacePlanIdFromStripePriceId('price_pro_test')).toBe('pro')
+    expect(resolveWorkspacePlanIdFromStripePriceId('price_plus_test')).toBe(
+      'plus',
+    )
+    expect(resolveWorkspacePlanIdFromStripePriceId('price_pro_test')).toBe(
+      'pro',
+    )
     expect(resolveWorkspacePlanIdFromStripePriceId('price_unknown')).toBeNull()
   })
 })

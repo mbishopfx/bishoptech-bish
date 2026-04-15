@@ -16,7 +16,7 @@ import {
   openWorkspaceBillingPortal,
 } from '@/lib/frontend/billing/billing.functions'
 import { useOrgBillingSummary } from '@/lib/frontend/billing/use-org-billing'
-import { mainPlans } from '@/lib/shared/pricing'
+import { getMainPlans } from '@/lib/shared/pricing'
 import type { LandingPlan } from '@/lib/shared/pricing'
 import {
   coerceWorkspacePlanId,
@@ -31,7 +31,7 @@ import type {
 } from '@/lib/shared/access-control'
 import { m } from '@/paraglide/messages.js'
 
-const PAID_PLAN_CARDS = mainPlans.filter(
+const PAID_PLAN_CARDS = getMainPlans().filter(
   (plan) => plan.workspacePlanId != null && plan.workspacePlanId !== 'free',
 )
 
@@ -208,9 +208,11 @@ export function isDowngradeSelection(input: {
   const currentPlanRank = getWorkspacePlanRank(input.currentPlanId)
   const targetPlanRank = getWorkspacePlanRank(input.targetPlanId)
 
-  return targetPlanRank < currentPlanRank
-    || (targetPlanRank === currentPlanRank
-      && input.selectedSeatCount < input.currentSeatCount)
+  return (
+    targetPlanRank < currentPlanRank ||
+    (targetPlanRank === currentPlanRank &&
+      input.selectedSeatCount < input.currentSeatCount)
+  )
 }
 
 export function resolveBillingPlanCardActionState(input: {
@@ -231,7 +233,8 @@ export function resolveBillingPlanCardActionState(input: {
     return 'subscribe'
   }
 
-  return getWorkspacePlanRank(input.targetPlanId) > getWorkspacePlanRank(input.currentPlanId)
+  return getWorkspacePlanRank(input.targetPlanId) >
+    getWorkspacePlanRank(input.currentPlanId)
     ? 'upgrade'
     : 'downgrade'
 }
@@ -249,15 +252,15 @@ export function resolveBillingPlanChangeActionState(input: {
   scheduledSeatCount?: number | null
 }): BillingPlanChangeActionState {
   if (
-    input.scheduledPlanId === input.targetPlanId
-    && input.scheduledSeatCount === input.selectedSeatCount
+    input.scheduledPlanId === input.targetPlanId &&
+    input.scheduledSeatCount === input.selectedSeatCount
   ) {
     return 'scheduled'
   }
 
   if (
-    input.currentPlanId === input.targetPlanId
-    && input.currentSeatCount === input.selectedSeatCount
+    input.currentPlanId === input.targetPlanId &&
+    input.currentSeatCount === input.selectedSeatCount
   ) {
     return 'current'
   }
@@ -290,11 +293,16 @@ export function useBillingPageLogic(): BillingPageLogicResult {
   const openPortal = useServerFn(openWorkspaceBillingPortal)
   const reconcileBilling = useServerFn(reconcileActiveWorkspaceBilling)
   const mutateSubscription = useServerFn(changeWorkspaceSubscription)
-  const [dialogErrorMessage, setDialogErrorMessage] = useState<string | null>(null)
+  const [dialogErrorMessage, setDialogErrorMessage] = useState<string | null>(
+    null,
+  )
   const [pendingActionKey, setPendingActionKey] = useState<string | null>(null)
-  const [dialogPlanId, setDialogPlanId] = useState<StripeManagedWorkspacePlanId | null>(null)
+  const [dialogPlanId, setDialogPlanId] =
+    useState<StripeManagedWorkspacePlanId | null>(null)
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
-  const [shouldReconcileOnMount] = useState(() => consumeBillingReconcileOnReturnFlag())
+  const [shouldReconcileOnMount] = useState(() =>
+    consumeBillingReconcileOnReturnFlag(),
+  )
   const billingActionInFlightRef = useRef(false)
   const billingManagementUiState = resolveBillingManagementUiState({
     activeOrganizationId,
@@ -316,7 +324,8 @@ export function useBillingPageLogic(): BillingPageLogicResult {
     entitlement?.planId ?? subscription?.planId,
   )
   const currentPlan = getWorkspacePlan(currentPlanId)
-  const currentSeatCount = subscription?.seatCount ?? entitlement?.seatCount ?? 1
+  const currentSeatCount =
+    subscription?.seatCount ?? entitlement?.seatCount ?? 1
   const activeMembers = entitlement?.activeMemberCount ?? 0
   const currentPeriodEndLabel = formatUnixDate(subscription?.currentPeriodEnd)
   const billingCycleLabel = formatBillingCycleDateRange(
@@ -336,13 +345,12 @@ export function useBillingPageLogic(): BillingPageLogicResult {
     scheduledSeatCount: subscription?.scheduledSeatCount ?? null,
     effectiveAtLabel: scheduledChangeDateLabel,
   })
-  const seatUsagePercent = currentSeatCount > 0
-    ? Math.min(100, (activeMembers / currentSeatCount) * 100)
-    : 0
+  const seatUsagePercent =
+    currentSeatCount > 0
+      ? Math.min(100, (activeMembers / currentSeatCount) * 100)
+      : 0
   const actionsDisabled =
-    loading
-    || !canManageBilling
-    || pendingActionKey != null
+    loading || !canManageBilling || pendingActionKey != null
   const scheduledCancel = isScheduledCancelToFree({
     scheduledPlanId,
     cancelAtPeriodEnd: subscription?.cancelAtPeriodEnd,
@@ -405,9 +413,7 @@ export function useBillingPageLogic(): BillingPageLogicResult {
       markBillingReconcileOnReturnIfNeeded(result.url)
       window.location.assign(result.url)
     } catch (cause) {
-      toast.error(
-        getErrorMessage(cause, m.pricing_error_billing_portal()),
-      )
+      toast.error(getErrorMessage(cause, m.pricing_error_billing_portal()))
     } finally {
       billingActionInFlightRef.current = false
       setPendingActionKey(null)
@@ -505,8 +511,8 @@ export function useBillingPageLogic(): BillingPageLogicResult {
             helpText: scheduledCancel
               ? m.org_billing_cancel_to_free_scheduled_help({
                   effectiveDate:
-                    scheduledChangeDateLabel
-                    ?? m.org_billing_summary_description_fallback(),
+                    scheduledChangeDateLabel ??
+                    m.org_billing_summary_description_fallback(),
                 })
               : m.org_billing_cancel_to_free_help(),
             buttonText: scheduledCancel
@@ -526,7 +532,7 @@ export function useBillingPageLogic(): BillingPageLogicResult {
       scheduledPlanId,
       scheduledSeatCount:
         dialogPlanId != null && scheduledPlanId === dialogPlanId
-          ? subscription?.scheduledSeatCount ?? null
+          ? (subscription?.scheduledSeatCount ?? null)
           : null,
       billingCycleEndLabel: currentPeriodEndLabel,
       submitError: dialogErrorMessage,

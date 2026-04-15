@@ -6,6 +6,7 @@
  * in pricing-icons.tsx.
  */
 
+import { m } from '@/paraglide/messages.js'
 import type { WorkspacePlanId } from '@/lib/shared/access-control'
 
 /** Icon identifiers for feature list items. Matches icons in pricing-icons.tsx. */
@@ -55,127 +56,177 @@ export type LandingPlan = {
 }
 
 /** Main pricing plans: Free, $7.99, $50, $100 - displayed in a row */
-export const mainPlans: LandingPlan[] = [
-  {
-    workspacePlanId: 'free',
-    name: 'Free',
-    priceAmount: 0,
-    currency: 'USD',
-    usdPriceAmount: 0,
-    billingPeriodLabel: 'mo',
-    billingPeriodLabelEn: 'mo',
-    description: 'Try Rift with the essentials for everyday AI tasks.',
-    featureIntro: 'Includes:',
-    features: [
-      { text: 'A small monthly message allowance', iconId: 'message' },
-      { text: 'Core model access', iconId: 'ai-models' },
-      { text: 'Community support', iconId: 'support' },
-    ],
-    buttonText: 'Get started',
-    href: '/auth/sign-up?plan=free',
-    gradientId: '1',
-  },
-  {
-    workspacePlanId: 'plus',
-    name: 'Plus',
-    priceAmount: 8,
-    currency: 'USD',
-    usdPriceAmount: 8,
-    billingPeriodLabel: 'mo',
-    billingPeriodLabelEn: 'mo',
-    description: 'For people who want the full Rift experience at personal scale.',
-    featureIntro: 'Everything in Free, plus:',
-    features: [
-      { text: 'Increase usage limits', iconId: 'premium' },
-      { text: 'Full model access', iconId: 'ai-models' },
-      { text: 'Unlimited chat history', iconId: 'logs' },
-      { text: 'Team management', iconId: 'teams' },
-      { text: 'BYOK', iconId: 'shield' },
-    ],
-    buttonText: 'Get started',
-    href: '/auth/sign-up?plan=starter',
-    gradientId: '2',
-  },
-  {
-    workspacePlanId: 'pro',
-    name: 'Pro',
-    priceAmount: 50,
-    currency: 'USD',
-    usdPriceAmount: 50,
-    billingPeriodLabel: 'mo',
-    billingPeriodLabelEn: 'mo',
-    description: 'For heavier workloads that need more capacity and faster support.',
-    featureIntro: 'Everything in Plus, plus:',
-    features: [
-      { text: '5x more monthly usage', iconId: 'premium' },
-      { text: 'Priority support', iconId: 'support' },
-      { text: 'Fine-grained organization policies', iconId: 'shield' },
-    ],
-    buttonText: 'Get Pro',
-    href: '/auth/sign-up?plan=pro',
-    popular: true,
-    gradientId: '3',
-  },
-  {
-    workspacePlanId: 'scale',
-    name: 'Scale',
-    priceAmount: 100,
-    currency: 'USD',
-    usdPriceAmount: 100,
-    billingPeriodLabel: 'mo',
-    billingPeriodLabelEn: 'mo',
-    description: 'For operators and larger teams that need headroom for broad adoption.',
-    featureIntro: 'Everything in Pro, plus:',
-    features: [
-      { text: '10x more monthly usage', iconId: 'premium' },
-      { text: 'Built for larger team rollouts', iconId: 'teams' },
-      { text: 'SAML SSO', iconId: 'sso' },
-    ],
-    buttonText: 'Get Scale',
-    href: '/auth/sign-up?plan=team',
-    gradientId: '4',
-  },
-]
+export function getMainPlans(): LandingPlan[] {
+  return [
+    {
+      workspacePlanId: 'free',
+      name: m.pricing_plan_free_name(),
+      priceAmount: 0,
+      currency: 'USD',
+      usdPriceAmount: 0,
+      billingPeriodLabel: m.pricing_billing_period_mo(),
+      billingPeriodLabelEn: 'mo',
+      description: m.pricing_plan_free_description(),
+      featureIntro: m.pricing_plan_free_feature_intro(),
+      features: [
+        {
+          text: m.pricing_plan_free_feature_message_allowance(),
+          iconId: 'message',
+        },
+        {
+          text: m.pricing_plan_free_feature_core_models(),
+          iconId: 'ai-models',
+        },
+        {
+          text: m.pricing_plan_free_feature_community_support(),
+          iconId: 'support',
+        },
+      ],
+      buttonText: m.pricing_cta_get_started(),
+      href: '/auth/sign-up?plan=free',
+      gradientId: '1',
+    },
+    {
+      workspacePlanId: 'plus',
+      name: m.pricing_plan_plus_name(),
+      priceAmount: 8,
+      currency: 'USD',
+      usdPriceAmount: 8,
+      billingPeriodLabel: m.pricing_billing_period_mo(),
+      billingPeriodLabelEn: 'mo',
+      description: m.pricing_plan_plus_description(),
+      featureIntro: m.pricing_plan_plus_feature_intro(),
+      features: [
+        {
+          text: m.pricing_plan_plus_feature_increase_limits(),
+          iconId: 'premium',
+        },
+        {
+          text: m.pricing_plan_plus_feature_full_models(),
+          iconId: 'ai-models',
+        },
+        { text: m.pricing_plan_plus_feature_chat_history(), iconId: 'logs' },
+        { text: m.pricing_plan_plus_feature_team_mgmt(), iconId: 'teams' },
+        { text: m.pricing_plan_plus_feature_byok(), iconId: 'shield' },
+        { text: m.pricing_plan_plus_feature_org_policies(), iconId: 'shield' },
+        { text: m.pricing_plan_plus_feature_zdr(), iconId: 'shield' },
+      ],
+      buttonText: m.pricing_cta_get_started(),
+      href: '/auth/sign-up?plan=starter',
+      gradientId: '2',
+    },
+    {
+      workspacePlanId: 'pro',
+      name: m.pricing_plan_pro_name(),
+      priceAmount: 50,
+      currency: 'USD',
+      usdPriceAmount: 50,
+      billingPeriodLabel: m.pricing_billing_period_mo(),
+      billingPeriodLabelEn: 'mo',
+      description: m.pricing_plan_pro_description(),
+      featureIntro: m.pricing_plan_pro_feature_intro(),
+      features: [
+        { text: m.pricing_plan_pro_feature_5x_usage(), iconId: 'premium' },
+        {
+          text: m.pricing_plan_pro_feature_priority_support(),
+          iconId: 'support',
+        },
+      ],
+      buttonText: m.pricing_cta_get_pro(),
+      href: '/auth/sign-up?plan=pro',
+      popular: true,
+      gradientId: '3',
+    },
+    {
+      workspacePlanId: 'scale',
+      name: m.pricing_plan_scale_name(),
+      priceAmount: 100,
+      currency: 'USD',
+      usdPriceAmount: 100,
+      billingPeriodLabel: m.pricing_billing_period_mo(),
+      billingPeriodLabelEn: 'mo',
+      description: m.pricing_plan_scale_description(),
+      featureIntro: m.pricing_plan_scale_feature_intro(),
+      features: [
+        { text: m.pricing_plan_scale_feature_10x_usage(), iconId: 'premium' },
+        { text: m.pricing_plan_scale_feature_team_rollouts(), iconId: 'teams' },
+      ],
+      buttonText: m.pricing_cta_get_scale(),
+      href: '/auth/sign-up?plan=team',
+      gradientId: '4',
+    },
+  ]
+}
 
 /** Enterprise plan - displayed in separate section below main plans */
-export const enterprisePlan: LandingPlan = {
-  workspacePlanId: 'enterprise',
-  name: 'Enterprise',
-  priceAmount: null,
-  currency: 'USD',
-  description: 'For organizations that need tailored security, scale, and support.',
-  featureIntro: 'Everything in Scale, plus:',
-  features: [
-    { text: 'Usage limits shaped to your rollout', iconId: 'premium' },
-    { text: 'Custom model catalog', iconId: 'ai-models' },
-    { text: 'Single sign-on (SSO)', iconId: 'sso' },
-    { text: 'ZDR', iconId: 'shield' },
-    { text: 'Directory Sync, SIEM, Audit logs', iconId: 'directory-sync' },
-    { text: 'Usage Analytics', iconId: 'analytics' },
-    { text: 'Uptime SLA', iconId: 'shield' },
-  ],
-  buttonText: 'Contact Sales',
-  href: 'mailto:sales@rift.mx',
-  gradientId: '5',
-  isEnterprise: true,
+export function getEnterprisePlan(): LandingPlan {
+  return {
+    workspacePlanId: 'enterprise',
+    name: m.pricing_plan_enterprise_name(),
+    priceAmount: null,
+    currency: 'USD',
+    description: m.pricing_plan_enterprise_description(),
+    featureIntro: m.pricing_plan_enterprise_feature_intro(),
+    features: [
+      {
+        text: m.pricing_plan_enterprise_feature_usage_shaped(),
+        iconId: 'premium',
+      },
+      {
+        text: m.pricing_plan_enterprise_feature_custom_catalog(),
+        iconId: 'ai-models',
+      },
+      { text: m.pricing_plan_enterprise_feature_sso(), iconId: 'sso' },
+      {
+        text: m.pricing_plan_enterprise_feature_directory_siem_audit(),
+        iconId: 'directory-sync',
+      },
+      {
+        text: m.pricing_plan_enterprise_feature_analytics(),
+        iconId: 'analytics',
+      },
+      { text: m.pricing_plan_enterprise_feature_sla(), iconId: 'shield' },
+    ],
+    buttonText: m.pricing_cta_contact_sales(),
+    href: 'mailto:sales@rift.mx',
+    gradientId: '5',
+    isEnterprise: true,
+  }
 }
 
 /** Self-hosting plan - on-premise deployment */
-export const selfHostingPlan: LandingPlan = {
-  name: 'Self-Hosting',
-  priceAmount: null,
-  currency: 'USD',
-  description: 'For regulated or security-sensitive deployments on your own stack.',
-  featureIntro: 'Designed for infrastructure control:',
-  features: [
-    { text: 'Keep data in your environment', iconId: 'shield' },
-    { text: 'Deploy on-prem or in a private cloud', iconId: 'expand' },
-    { text: 'Custom model deployment', iconId: 'ai-models' },
-    { text: 'Air-gapped installation options', iconId: 'shield' },
-    { text: 'Volume licensing', iconId: 'premium' },
-    { text: 'Technical onboarding', iconId: 'onboarding' },
-  ],
-  buttonText: 'Get in Touch',
-  href: 'mailto:enterprise@rift.mx',
-  gradientId: '6',
+export function getSelfHostingPlan(): LandingPlan {
+  return {
+    name: m.pricing_plan_on_prem_name(),
+    priceAmount: null,
+    currency: 'USD',
+    description: m.pricing_plan_on_prem_description(),
+    featureIntro: m.pricing_plan_on_prem_feature_intro(),
+    features: [
+      {
+        text: m.pricing_plan_on_prem_feature_data_environment(),
+        iconId: 'shield',
+      },
+      {
+        text: m.pricing_plan_on_prem_feature_deploy_on_prem(),
+        iconId: 'expand',
+      },
+      {
+        text: m.pricing_plan_on_prem_feature_custom_deployment(),
+        iconId: 'ai-models',
+      },
+      { text: m.pricing_plan_on_prem_feature_air_gapped(), iconId: 'shield' },
+      {
+        text: m.pricing_plan_on_prem_feature_volume_licensing(),
+        iconId: 'premium',
+      },
+      {
+        text: m.pricing_plan_on_prem_feature_onboarding(),
+        iconId: 'onboarding',
+      },
+    ],
+    buttonText: m.pricing_cta_get_in_touch(),
+    href: 'mailto:enterprise@rift.mx',
+    gradientId: '6',
+  }
 }

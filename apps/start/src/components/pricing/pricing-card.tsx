@@ -20,6 +20,7 @@ import {
 import { CardDashedBorder, GradientBackground } from './pricing-decorative'
 import { Check, ShieldCheck } from 'lucide-react'
 import { cn } from '@rift/utils'
+import { m } from '@/paraglide/messages.js'
 
 /** Maps FeatureIconId to the icon component. No arrow icons; each feature has a semantic icon. */
 const FEATURE_ICON_MAP: Record<
@@ -46,7 +47,18 @@ const FEATURE_ICON_MAP: Record<
 const priceFormatters: Record<string, Intl.NumberFormat> = {}
 
 function formatPrice(amount: number, currency: string, locale: string) {
-  const localeTag = locale === 'es' ? 'es-MX' : 'en-US'
+  let localeTag: string
+  switch (locale) {
+    case 'es':
+      localeTag = 'es-MX'
+      break
+    case 'he':
+      localeTag = 'he-IL'
+      break
+    case 'en':
+    default:
+      localeTag = 'en-US'
+  }
   const hasDecimals = amount % 1 !== 0
   const key = `${currency}-${localeTag}-${hasDecimals ? '2' : '0'}`
   if (!priceFormatters[key]) {
@@ -99,7 +111,9 @@ export function PricingCard({
       ? plan.billingPeriodLabelEn
       : plan.billingPeriodLabel
   const formattedPrice =
-    amount !== null ? formatPrice(amount, currency, locale) : 'Custom'
+    amount !== null
+      ? formatPrice(amount, currency, locale)
+      : m.pricing_price_custom()
   const period = periodLabel ? `/${periodLabel}` : ''
 
   const buttonText = actionOverride?.buttonText ?? plan.buttonText
@@ -120,14 +134,11 @@ export function PricingCard({
       )}
     >
       <CardDashedBorder />
-      <GradientBackground
-        id={plan.gradientId}
-        className="pricing-card__orb"
-      />
+      <GradientBackground id={plan.gradientId} className="pricing-card__orb" />
 
       {plan.popular ? (
         <div className="absolute top-4 rounded-full bg-foreground-strong px-3 py-1 text-xs font-bold uppercase tracking-wide text-foreground-inverse dark:bg-foreground-inverse dark:text-foreground-strong">
-          Most Popular
+          {m.pricing_card_popular_badge()}
         </div>
       ) : null}
 
@@ -143,7 +154,9 @@ export function PricingCard({
             {formattedPrice}
           </span>
           {period && amount !== null && (
-            <span className="ml-1 text-sm font-medium opacity-60">{period}</span>
+            <span className="ml-1 text-sm font-medium opacity-60">
+              {period}
+            </span>
           )}
         </div>
         <p className="max-w-[280px] text-sm leading-6 tracking-tight text-foreground-secondary">
@@ -205,12 +218,7 @@ export function PricingCard({
             {buttonText}
           </Button>
         ) : (
-          <Button
-            variant="outline"
-            size="large"
-            className="w-full"
-            asChild
-          >
+          <Button variant="outline" size="large" className="w-full" asChild>
             <Link to={href}>{buttonText}</Link>
           </Button>
         )}

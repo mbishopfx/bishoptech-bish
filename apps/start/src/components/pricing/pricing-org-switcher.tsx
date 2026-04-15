@@ -13,6 +13,7 @@ import {
 } from '@rift/ui/dropdown-menu'
 import { Check, ChevronDown } from 'lucide-react'
 import { cn } from '@rift/utils'
+import { m } from '@/paraglide/messages.js'
 
 type Organization = {
   id: string
@@ -42,8 +43,12 @@ function PricingOrgSwitcherSkeleton({ className }: { className?: string }) {
 }
 
 export function PricingOrgSwitcher({ className }: PricingOrgSwitcherProps) {
-  const { user, activeOrganizationId, refetchSession, loading: authLoading } =
-    useAppAuth()
+  const {
+    user,
+    activeOrganizationId,
+    refetchSession,
+    loading: authLoading,
+  } = useAppAuth()
   const [organizations, setOrganizations] = useState<Organization[]>([])
   const [loading, setLoading] = useState(false)
   const [isOpen, setIsOpen] = useState(false)
@@ -134,10 +139,14 @@ export function PricingOrgSwitcher({ className }: PricingOrgSwitcherProps) {
                     {activeOrg?.logo ? (
                       <AvatarImage src={activeOrg.logo} alt={activeOrg.name} />
                     ) : null}
-                    <AvatarFallback name={activeOrg?.name ?? 'Organization'} />
+                    <AvatarFallback
+                      name={
+                        activeOrg?.name ?? m.layout_organization_tooltip_name()
+                      }
+                    />
                   </Avatar>
                   <span className="text-sm font-medium text-foreground-primary">
-                    {activeOrg?.name ?? 'Select organization'}
+                    {activeOrg?.name ?? m.pricing_org_switcher_select()}
                   </span>
                 </>
               )}
@@ -162,14 +171,14 @@ export function PricingOrgSwitcher({ className }: PricingOrgSwitcherProps) {
             disabled
             className="h-9 rounded-lg px-2 text-sm font-medium text-foreground-secondary focus:bg-surface-inverse/8"
           >
-            Loading organizations...
+            {m.layout_organization_menu_loading()}
           </DropdownMenuItem>
         ) : organizations.length === 0 ? (
           <DropdownMenuItem
             disabled
             className="h-9 rounded-lg px-2 text-sm font-medium text-foreground-secondary focus:bg-surface-inverse/8"
           >
-            No organizations found
+            {m.layout_organization_menu_empty()}
           </DropdownMenuItem>
         ) : (
           organizations.map((org) => {
@@ -196,7 +205,7 @@ export function PricingOrgSwitcher({ className }: PricingOrgSwitcherProps) {
                 </span>
                 {isSwitching ? (
                   <span className="text-xs text-foreground-secondary">
-                    Switching...
+                    {m.layout_organization_menu_switching()}
                   </span>
                 ) : isCurrent ? (
                   <Check

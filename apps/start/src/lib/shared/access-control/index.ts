@@ -117,7 +117,8 @@ export const WORKSPACE_PLANS: readonly WorkspacePlan[] = [
   {
     id: 'scale',
     name: 'Scale',
-    description: 'Operational scale with advanced identity and access controls.',
+    description:
+      'Operational scale with advanced identity and access controls.',
     includedSeats: 1,
     features: ['SAML SSO', 'Verified domains', 'Higher throughput'],
     monthlyPriceUsd: 100,
@@ -128,15 +129,24 @@ export const WORKSPACE_PLANS: readonly WorkspacePlan[] = [
     name: 'Enterprise',
     description: 'Custom contracts, provisioning, and security controls.',
     includedSeats: 1,
-    features: ['Directory provisioning', 'Custom onboarding', 'Manual billing support'],
+    features: [
+      'Directory provisioning',
+      'Custom onboarding',
+      'Manual billing support',
+    ],
     monthlyPriceUsd: 0,
   },
   {
     id: 'self_hosted',
     name: 'Self-Hosted',
-    description: 'Unlimited self-managed deployment with cloud-only controls disabled.',
+    description:
+      'Unlimited self-managed deployment with cloud-only controls disabled.',
     includedSeats: 100_000,
-    features: ['Self-managed infrastructure', 'Unlimited usage', 'Manual instance control'],
+    features: [
+      'Self-managed infrastructure',
+      'Unlimited usage',
+      'Manual instance control',
+    ],
     monthlyPriceUsd: 0,
   },
 ] as const
@@ -146,13 +156,16 @@ export const WORKSPACE_PLANS: readonly WorkspacePlan[] = [
  * The snapshot stores the resolved boolean access state so future overrides can
  * diverge from pure plan minimums without changing call sites.
  */
-export const ORG_FEATURE_MINIMUM_PLANS: Record<WorkspaceFeatureId, PaidWorkspacePlanId> = {
+export const ORG_FEATURE_MINIMUM_PLANS: Record<
+  WorkspaceFeatureId,
+  PaidWorkspacePlanId
+> = {
   byok: 'plus',
-  providerPolicy: 'pro',
-  compliancePolicy: 'pro',
-  toolPolicy: 'pro',
+  providerPolicy: 'plus',
+  compliancePolicy: 'plus',
+  toolPolicy: 'plus',
   verifiedDomains: 'pro',
-  singleSignOn: 'pro',
+  singleSignOn: 'enterprise',
   directoryProvisioning: 'enterprise',
 }
 
@@ -160,7 +173,10 @@ export const ORG_FEATURE_MINIMUM_PLANS: Record<WorkspaceFeatureId, PaidWorkspace
  * Runtime-scoped features are request/user dependent and are intentionally not
  * persisted into the org entitlement snapshot.
  */
-export const RUNTIME_FEATURE_MINIMUM_PLANS: Record<RuntimeFeatureAccessId, PaidWorkspacePlanId> = {
+export const RUNTIME_FEATURE_MINIMUM_PLANS: Record<
+  RuntimeFeatureAccessId,
+  PaidWorkspacePlanId
+> = {
   'chat.fileUpload': 'plus',
   'chat.paidModels': 'plus',
 }
@@ -169,9 +185,10 @@ const BILLING_SETTINGS_HREF = '/organization/settings/billing'
 const ENTERPRISE_CONTACT_HREF = 'mailto:enterprise@rift.mx'
 
 const FREE_TIER_ALLOWED_MODEL_IDS = new Set<string>(
-  AI_CATALOG
-    .filter((model) => model.providerId === 'meta' && model.id.startsWith('meta/llama-'))
-    .map((model) => model.id),
+  AI_CATALOG.filter(
+    (model) =>
+      model.providerId === 'meta' && model.id.startsWith('meta/llama-'),
+  ).map((model) => model.id),
 )
 
 export function getWorkspacePlan(planId: WorkspacePlanId): WorkspacePlan {
@@ -195,16 +212,22 @@ export function isPaidWorkspacePlan(
 export function isStripeManagedWorkspacePlan(
   plan: WorkspacePlan,
 ): plan is WorkspacePlan & { id: StripeManagedWorkspacePlanId } {
-  return plan.id !== 'free' && plan.id !== 'enterprise' && plan.id !== 'self_hosted'
-}
-
-export function isWorkspacePlanId(value: string | null | undefined): value is WorkspacePlanId {
-  return WORKSPACE_PLANS.some((plan) =>
-    plan.id === value && (plan.id !== 'self_hosted' || isSelfHosted),
+  return (
+    plan.id !== 'free' && plan.id !== 'enterprise' && plan.id !== 'self_hosted'
   )
 }
 
-export function coerceWorkspacePlanId(value: string | null | undefined): WorkspacePlanId {
+export function isWorkspacePlanId(
+  value: string | null | undefined,
+): value is WorkspacePlanId {
+  return WORKSPACE_PLANS.some(
+    (plan) => plan.id === value && (plan.id !== 'self_hosted' || isSelfHosted),
+  )
+}
+
+export function coerceWorkspacePlanId(
+  value: string | null | undefined,
+): WorkspacePlanId {
   return isWorkspacePlanId(value) ? value : 'free'
 }
 
@@ -212,7 +235,9 @@ export function getWorkspacePlanRank(planId: WorkspacePlanId): number {
   return WORKSPACE_PLANS.findIndex((plan) => plan.id === planId)
 }
 
-export function resolveStripePlanPriceId(planId: StripeManagedWorkspacePlanId): string {
+export function resolveStripePlanPriceId(
+  planId: StripeManagedWorkspacePlanId,
+): string {
   const plan = getWorkspacePlan(planId)
   const envKey = plan.stripePriceEnvKey
 
@@ -241,16 +266,16 @@ export function resolveWorkspacePlanIdFromStripePriceId(
     return null
   }
 
-  const matchingPlan = WORKSPACE_PLANS
-    .filter(isStripeManagedWorkspacePlan)
-    .find((plan) => {
-      const envKey = plan.stripePriceEnvKey
-      if (!envKey) {
-        return false
-      }
+  const matchingPlan = WORKSPACE_PLANS.filter(
+    isStripeManagedWorkspacePlan,
+  ).find((plan) => {
+    const envKey = plan.stripePriceEnvKey
+    if (!envKey) {
+      return false
+    }
 
-      return process.env[envKey]?.trim() === normalizedPriceId
-    })
+    return process.env[envKey]?.trim() === normalizedPriceId
+  })
 
   return matchingPlan?.id ?? null
 }
@@ -269,7 +294,9 @@ export function getMinimumPlanIdForFeature(
  * Upgrade/contact actions are derived from the minimum plan so callers do not
  * need to maintain a second catalog for CTA behavior.
  */
-export function getFeatureAccessAction(minimumPlanId: PaidWorkspacePlanId): AccessAction {
+export function getFeatureAccessAction(
+  minimumPlanId: PaidWorkspacePlanId,
+): AccessAction {
   if (minimumPlanId === 'enterprise') {
     return {
       kind: 'contact',
@@ -287,7 +314,9 @@ export function getFeatureAccessAction(minimumPlanId: PaidWorkspacePlanId): Acce
  * Server-side denied responses use one generic message template. UI surfaces
  * can localize the same minimum-plan decision separately.
  */
-export function getFeatureAccessGateMessage(minimumPlanId: PaidWorkspacePlanId): string {
+export function getFeatureAccessGateMessage(
+  minimumPlanId: PaidWorkspacePlanId,
+): string {
   if (minimumPlanId === 'enterprise') {
     return 'This feature is available on the Enterprise plan. Contact us to enable it.'
   }
@@ -299,10 +328,12 @@ export function getPlanEffectiveFeatures(
   planId: WorkspacePlanId,
 ): WorkspaceEffectiveFeatures {
   return Object.fromEntries(
-    Object.entries(ORG_FEATURE_MINIMUM_PLANS).map(([feature, minimumPlanId]) => [
-      feature,
-      getWorkspacePlanRank(planId) >= getWorkspacePlanRank(minimumPlanId),
-    ]),
+    Object.entries(ORG_FEATURE_MINIMUM_PLANS).map(
+      ([feature, minimumPlanId]) => [
+        feature,
+        getWorkspacePlanRank(planId) >= getWorkspacePlanRank(minimumPlanId),
+      ],
+    ),
   ) as WorkspaceEffectiveFeatures
 }
 
@@ -339,10 +370,13 @@ export function getFeatureAccessState(input: {
   effectiveFeatures?: Partial<WorkspaceEffectiveFeatures>
 }): FeatureAccessState {
   const minimumPlanId = getMinimumPlanIdForFeature(input.feature)
-  const allowed = input.feature in ORG_FEATURE_MINIMUM_PLANS
-    ? input.effectiveFeatures?.[input.feature as WorkspaceFeatureId]
-      ?? getWorkspacePlanRank(input.planId) >= getWorkspacePlanRank(minimumPlanId)
-    : getWorkspacePlanRank(input.planId) >= getWorkspacePlanRank(minimumPlanId)
+  const allowed =
+    input.feature in ORG_FEATURE_MINIMUM_PLANS
+      ? (input.effectiveFeatures?.[input.feature as WorkspaceFeatureId] ??
+        getWorkspacePlanRank(input.planId) >=
+          getWorkspacePlanRank(minimumPlanId))
+      : getWorkspacePlanRank(input.planId) >=
+        getWorkspacePlanRank(minimumPlanId)
 
   return {
     feature: input.feature,

@@ -1,13 +1,14 @@
 import {
-  mainPlans,
-  enterprisePlan,
-  selfHostingPlan,
+  getMainPlans,
+  getEnterprisePlan,
+  getSelfHostingPlan,
 } from '@/lib/shared/pricing'
 import type { LandingPlan } from '@/lib/shared/pricing'
 import { PricingCard } from './pricing-card'
 import type { PricingPlanActionOverride } from './pricing-card'
 import { DashedBorderFrame } from './pricing-decorative'
 import { PricingOrgSwitcher } from './pricing-org-switcher'
+import { m } from '@/paraglide/messages.js'
 
 type PricingSectionProps = {
   heading?: string
@@ -19,11 +20,14 @@ type PricingSectionProps = {
 }
 
 export function PricingSection({
-  heading = 'Simple, Transparent Plans',
-  summary = 'Choose the plan that best fits your needs. No hidden costs.',
+  heading = m.pricing_section_heading(),
+  summary = m.pricing_section_summary(),
   locale = 'en',
   resolvePlanAction,
 }: PricingSectionProps) {
+  const mainPlans = getMainPlans()
+  const enterprisePlan = getEnterprisePlan()
+  const selfHostingPlan = getSelfHostingPlan()
   return (
     <>
       <style>{`

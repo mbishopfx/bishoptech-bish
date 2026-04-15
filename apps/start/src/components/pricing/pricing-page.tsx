@@ -8,26 +8,38 @@ import { PricingSection } from './pricing-section'
 import { PricingComparisonTable } from './pricing-comparison-table'
 import { BillingChangeDialog } from '@/components/organization/settings/billing/billing-change-dialog'
 import { resolveBillingManagementUiState } from '@/components/organization/settings/billing/billing-ui-policy'
+import { resolveBillingPlanCardActionState } from '@/components/organization/settings/billing/billing-page.logic'
+import { markBillingReconcileOnReturnIfNeeded } from '@/lib/frontend/billing/billing-return-reconcile'
+import { changeWorkspaceSubscription } from '@/lib/frontend/billing/billing.functions'
 import {
-  resolveBillingPlanCardActionState,
-} from '@/components/organization/settings/billing/billing-page.logic'
-import {
-  markBillingReconcileOnReturnIfNeeded,
-} from '@/lib/frontend/billing/billing-return-reconcile'
-import {
-  changeWorkspaceSubscription,
-} from '@/lib/frontend/billing/billing.functions'
-import { coerceWorkspacePlanId, getWorkspacePlan, isStripeManagedWorkspacePlan } from '@/lib/shared/access-control'
+  coerceWorkspacePlanId,
+  getWorkspacePlan,
+  isStripeManagedWorkspacePlan,
+} from '@/lib/shared/access-control'
 import type { StripeManagedWorkspacePlanId } from '@/lib/shared/access-control'
 import { useOrgBillingSummary } from '@/lib/frontend/billing/use-org-billing'
 import { useAppAuth } from '@/lib/frontend/auth/use-auth'
 import type { PricingPlanActionOverride } from './pricing-card'
 import type { LandingPlan } from '@/lib/shared/pricing'
 import { m } from '@/paraglide/messages.js'
+import { getLocale } from '@/paraglide/runtime.js'
 
 function formatUnixDate(timestampMs?: number): string | null {
   if (timestampMs == null || !Number.isFinite(timestampMs)) return null
-  return new Intl.DateTimeFormat('en-US', {
+  const locale = getLocale()
+  let localeTag: string
+  switch (locale) {
+    case 'es':
+      localeTag = 'es-MX'
+      break
+    case 'he':
+      localeTag = 'he-IL'
+      break
+    case 'en':
+    default:
+      localeTag = 'en-US'
+  }
+  return new Intl.DateTimeFormat(localeTag, {
     month: 'long',
     day: 'numeric',
     year: 'numeric',
@@ -55,17 +67,20 @@ type PricingCheckoutIntent = {
  * Pricing page content. Renders the pricing cards followed by the comparative
  * matrix so users can scan plan differences without leaving the pricing view.
  */
-export function PricingPage(props: {
-  checkoutIntent?: PricingCheckoutIntent
-}) {
+export function PricingPage(props: { checkoutIntent?: PricingCheckoutIntent }) {
   const navigate = useNavigate()
   const { user, activeOrganizationId, activeOrganizationRole } = useAppAuth()
   const userId = user?.id ?? null
   const { subscription, entitlement } = useOrgBillingSummary()
   const mutateSubscription = useServerFn(changeWorkspaceSubscription)
-  const [dialogPlanId, setDialogPlanId] = useState<StripeManagedWorkspacePlanId | null>(null)
-  const [dialogErrorMessage, setDialogErrorMessage] = useState<string | null>(null)
-  const [dialogDefaultSeatCount, setDialogDefaultSeatCount] = useState<number | null>(null)
+  const [dialogPlanId, setDialogPlanId] =
+    useState<StripeManagedWorkspacePlanId | null>(null)
+  const [dialogErrorMessage, setDialogErrorMessage] = useState<string | null>(
+    null,
+  )
+  const [dialogDefaultSeatCount, setDialogDefaultSeatCount] = useState<
+    number | null
+  >(null)
   const [pendingActionKey, setPendingActionKey] = useState<string | null>(null)
   const attemptedCheckoutResumeRef = useRef<string | null>(null)
   const billingActionInFlightRef = useRef(false)
@@ -75,8 +90,11 @@ export function PricingPage(props: {
   })
   const hasExplicitNonAdminRole = billingManagementUiState.showAdminOnlyNotice
 
-  const currentPlanId = coerceWorkspacePlanId(entitlement?.planId ?? subscription?.planId)
-  const currentSeatCount = subscription?.seatCount ?? entitlement?.seatCount ?? 1
+  const currentPlanId = coerceWorkspacePlanId(
+    entitlement?.planId ?? subscription?.planId,
+  )
+  const currentSeatCount =
+    subscription?.seatCount ?? entitlement?.seatCount ?? 1
   const activeMembers = entitlement?.activeMemberCount ?? 0
   const currentPeriodEndLabel = formatUnixDate(subscription?.currentPeriodEnd)
   const hasManagedSubscription = Boolean(subscription?.providerSubscriptionId)
@@ -106,9 +124,10 @@ export function PricingPage(props: {
       markBillingReconcileOnReturnIfNeeded(result.url)
       window.location.assign(result.url)
     } catch (error) {
-      const message = error instanceof Error
-        ? error.message
-        : m.org_billing_error_change_subscription()
+      const message =
+        error instanceof Error
+          ? error.message
+          : m.org_billing_error_change_subscription()
 
       if (input.source === 'dialog') {
         setDialogErrorMessage(message)
@@ -131,10 +150,10 @@ export function PricingPage(props: {
     }
 
     if (
-      !userId
-      || !activeOrganizationId
-      || pendingActionKey != null
-      || hasExplicitNonAdminRole
+      !userId ||
+      !activeOrganizationId ||
+      pendingActionKey != null ||
+      hasExplicitNonAdminRole
     ) {
       return
     }
@@ -182,7 +201,8 @@ export function PricingPage(props: {
         (hasStripeManagedSubscription &&
           subscription?.planId === stripePlanId) ||
         (isEnterprisePlan && subscription?.planId === 'enterprise') ||
-        (isFreePlan && (!subscription?.planId || subscription.planId === 'free'))
+        (isFreePlan &&
+          (!subscription?.planId || subscription.planId === 'free'))
 
       if (isFreePlan) {
         if (!isSignedIn) return undefined
@@ -291,7 +311,7 @@ export function PricingPage(props: {
         scheduledPlanId={subscription?.scheduledPlanId ?? null}
         scheduledSeatCount={
           dialogPlanId != null && subscription?.scheduledPlanId === dialogPlanId
-            ? subscription?.scheduledSeatCount ?? null
+            ? (subscription?.scheduledSeatCount ?? null)
             : null
         }
         defaultSeatCountOverride={dialogDefaultSeatCount}
@@ -300,8 +320,7 @@ export function PricingPage(props: {
         submitting={pendingActionKey != null}
         onConfirm={async ({ targetPlanId, seats, actionKey }) => {
           if (!user) {
-            const redirectTarget =
-              `/pricing?checkoutPlan=${targetPlanId}&checkoutSeats=${seats}&resumeCheckout=1`
+            const redirectTarget = `/pricing?checkoutPlan=${targetPlanId}&checkoutSeats=${seats}&resumeCheckout=1`
             await navigate({
               to: '/auth/sign-up',
               search: {

@@ -5,7 +5,7 @@ import { Form } from '@rift/ui/form'
 import { ContentPage } from '@/components/layout'
 import { PricingCard } from '@/components/pricing/pricing-card'
 import { DashedBorderFrame } from '@/components/pricing/pricing-decorative'
-import { enterprisePlan } from '@/lib/shared/pricing'
+import { getEnterprisePlan } from '@/lib/shared/pricing'
 import { m } from '@/paraglide/messages.js'
 import { BillingChangeDialog } from './billing-change-dialog'
 import { BillingCancelDialog } from './billing-cancel-dialog'
@@ -25,9 +25,10 @@ function SeatUsageProgressBar(props: {
     : props.seatCount > 0
       ? (coveredMembers / props.seatCount) * 100
       : 0
-  const overSeatPercent = isOverSeatLimit && props.activeMembers > 0
-    ? (overSeatMembers / props.activeMembers) * 100
-    : 0
+  const overSeatPercent =
+    isOverSeatLimit && props.activeMembers > 0
+      ? (overSeatMembers / props.activeMembers) * 100
+      : 0
 
   return (
     <div
@@ -68,6 +69,8 @@ export function BillingPage() {
     cancelDialogProps,
     openBillingPortal,
   } = useBillingPageLogic()
+
+  const enterprisePlan = getEnterprisePlan()
 
   return (
     <ContentPage
@@ -119,7 +122,10 @@ export function BillingPage() {
         handleSubmit={openBillingPortal}
       />
 
-      <section className="mt-10 space-y-4" aria-labelledby="billing-plans-heading">
+      <section
+        className="mt-10 space-y-4"
+        aria-labelledby="billing-plans-heading"
+      >
         <div className="space-y-1">
           <h2
             id="billing-plans-heading"
