@@ -30,6 +30,9 @@ const MOONSHOTAI_PROVIDER_TOOL_REGISTRY: ProviderToolRegistry<'moonshotai'> = {
 const ZAI_PROVIDER_TOOL_REGISTRY: ProviderToolRegistry<'zai'> = {
   byId: {},
 }
+const XIAOMI_PROVIDER_TOOL_REGISTRY: ProviderToolRegistry<'xiaomi'> = {
+  byId: {},
+}
 
 type ProviderToolRegistries = {
   [P in CatalogProviderId]: ProviderToolRegistry<P>
@@ -46,6 +49,7 @@ const PROVIDER_TOOL_REGISTRIES: ProviderToolRegistries = {
   minimax: MINIMAX_PROVIDER_TOOL_REGISTRY,
   moonshotai: MOONSHOTAI_PROVIDER_TOOL_REGISTRY,
   xai: XAI_PROVIDER_TOOL_REGISTRY,
+  xiaomi: XIAOMI_PROVIDER_TOOL_REGISTRY,
   zai: ZAI_PROVIDER_TOOL_REGISTRY,
 }
 
@@ -53,7 +57,9 @@ const PROVIDER_TOOL_REGISTRIES: ProviderToolRegistries = {
  * Resolves catalog tool ids into concrete AI SDK provider tool instances.
  * Unknown ids and tools without runtime configuration are skipped safely.
  */
-export function resolveProviderToolSet<TProviderId extends CatalogProviderId>(input: {
+export function resolveProviderToolSet<
+  TProviderId extends CatalogProviderId,
+>(input: {
   readonly providerId: TProviderId
   readonly providerToolIds: readonly ProviderToolIdByProvider[TProviderId][]
   readonly context: ProviderToolFactoryContext

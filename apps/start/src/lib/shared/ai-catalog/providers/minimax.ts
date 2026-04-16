@@ -9,6 +9,34 @@ function minimaxDefaultProviderOptions(): Record<string, unknown> {
 
 export const MINIMAX_MODELS: readonly AiModelCatalogEntry<'minimax'>[] = [
   {
+    id: 'minimax/minimax-m2.7',
+    providerId: 'minimax',
+    providers: ['gateway'],
+    name: 'Minimax M2.7',
+    description:
+      'M2.7 delivers outstanding performance in real-world software engineering, including end-to-end full project delivery, log analysis and bug troubleshooting, code security, machine learning, and more.',
+    contextWindow: 204800,
+    zeroDataRetention: true,
+    capabilities: {
+      supportsTools: true,
+      supportsStreaming: true,
+      supportsReasoning: true,
+      supportsImageInput: true,
+      supportsFileInput: true,
+      supportsPdfInput: true,
+    },
+    providerToolIds: [],
+    reasoningEfforts: [],
+    defaultProviderOptions: minimaxDefaultProviderOptions(),
+    defaultMaxOutputTokens: 131000,
+    pricing: {
+      inputPerToken: '0.0000003',
+      outputPerToken: '0.0000012',
+      inputCacheReadPerToken: '0.00000006',
+      inputCacheWritePerToken: '0.000000375',
+    },
+  },
+  {
     id: 'minimax/minimax-m2.5',
     providerId: 'minimax',
     providers: ['gateway'],
@@ -16,7 +44,7 @@ export const MINIMAX_MODELS: readonly AiModelCatalogEntry<'minimax'>[] = [
     description:
       'MiniMax-M2.5 is a SOTA large language model designed for real-world productivity. It is capable of handling the entire development process of various complex systems. It covers full-stack projects across multiple platforms including Web, Android, iOS, Windows, and Mac, encompassing server-side APIs, functional logic, and databases.',
     contextWindow: 204800,
-    zeroDataRetention: false,
+    zeroDataRetention: true,
     capabilities: {
       supportsTools: true,
       supportsStreaming: true,

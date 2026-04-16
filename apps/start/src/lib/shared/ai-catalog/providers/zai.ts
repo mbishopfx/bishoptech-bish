@@ -9,6 +9,33 @@ function zaiDefaultProviderOptions(): Record<string, unknown> {
 
 export const ZAI_MODELS: readonly AiModelCatalogEntry<'zai'>[] = [
   {
+    id: 'zai/glm-5.1',
+    providerId: 'zai',
+    providers: ['gateway'],
+    name: 'GLM-5.1',
+    description:
+      'GLM-5.1 delivers a major leap in coding capability, with particularly significant gains in handling long-horizon tasks. Unlike previous models built around minute-level interactions, GLM-5.1 can work independently and continuously on a single task for more than 8 hours—autonomously planning, executing, and improving itself throughout the process—ultimately delivering complete, engineering-grade results.',
+    contextWindow: 202800,
+    zeroDataRetention: false,
+    capabilities: {
+      supportsTools: true,
+      supportsStreaming: true,
+      supportsReasoning: true,
+      supportsImageInput: false,
+      supportsFileInput: false,
+      supportsPdfInput: false,
+    },
+    providerToolIds: [],
+    reasoningEfforts: [],
+    defaultProviderOptions: zaiDefaultProviderOptions(),
+    defaultMaxOutputTokens: 64000,
+    pricing: {
+      inputPerToken: '0.0000014',
+      outputPerToken: '0.0000044',
+      inputCacheReadPerToken: '0.00000026',
+    },
+  },
+  {
     id: 'zai/glm-5',
     providerId: 'zai',
     providers: ['gateway'],

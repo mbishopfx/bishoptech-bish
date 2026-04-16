@@ -8,9 +8,13 @@ import { MINIMAX_MODELS } from './providers/minimax'
 import { MOONSHOTAI_MODELS } from './providers/moonshotai'
 import { OPENAI_MODELS } from './providers/openai'
 import { XAI_MODELS } from './providers/xai'
+import { XIAOMI_MODELS } from './providers/xiaomi'
 import { ZAI_MODELS } from './providers/zai'
 import type { AiModelCatalogEntry } from './types'
-import type { CatalogProviderId, ProviderToolIdByProvider } from './provider-tools'
+import type {
+  CatalogProviderId,
+  ProviderToolIdByProvider,
+} from './provider-tools'
 
 export {
   DEFAULT_CONTEXT_WINDOW_MODE,
@@ -28,12 +32,13 @@ const DEFAULT_PROVIDER_TOOL_IDS_BY_PROVIDER = {
   [P in CatalogProviderId]: readonly ProviderToolIdByProvider[P][]
 }>
 
-function withDefaultProviderTools<
-  TProviderId extends CatalogProviderId,
->(model: AiModelCatalogEntry<TProviderId>): AiModelCatalogEntry<TProviderId> {
-  const defaultToolIds = DEFAULT_PROVIDER_TOOL_IDS_BY_PROVIDER[
-    model.providerId as keyof typeof DEFAULT_PROVIDER_TOOL_IDS_BY_PROVIDER
-  ]
+function withDefaultProviderTools<TProviderId extends CatalogProviderId>(
+  model: AiModelCatalogEntry<TProviderId>,
+): AiModelCatalogEntry<TProviderId> {
+  const defaultToolIds =
+    DEFAULT_PROVIDER_TOOL_IDS_BY_PROVIDER[
+      model.providerId as keyof typeof DEFAULT_PROVIDER_TOOL_IDS_BY_PROVIDER
+    ]
   if (
     !defaultToolIds ||
     model.providerToolIds.length > 0 ||
@@ -44,7 +49,9 @@ function withDefaultProviderTools<
 
   return {
     ...model,
-    providerToolIds: [...defaultToolIds] as unknown as AiModelCatalogEntry<TProviderId>['providerToolIds'],
+    providerToolIds: [
+      ...defaultToolIds,
+    ] as unknown as AiModelCatalogEntry<TProviderId>['providerToolIds'],
   }
 }
 
@@ -63,28 +70,30 @@ export const AI_CATALOG: readonly AiModelCatalogEntry[] = [
   ...MINIMAX_MODELS,
   ...MOONSHOTAI_MODELS,
   ...XAI_MODELS,
+  ...XIAOMI_MODELS,
   ...ZAI_MODELS,
 ].map((model) => withDefaultProviderTools(model as AiModelCatalogEntry))
 
 /** O(1) catalog lookup for request-path model resolution. */
-export const AI_CATALOG_BY_ID = new Map(AI_CATALOG.map((model) => [model.id, model]))
-
-/** Grouped provider view used by org settings when toggling provider-level policy. */
-export const AI_MODELS_BY_PROVIDER = AI_CATALOG.reduce(
-  (acc, model) => {
-    const current = acc.get(model.providerId)
-    if (current) {
-      current.push(model)
-    } else {
-      acc.set(model.providerId, [model])
-    }
-    return acc
-  },
-  new Map<string, AiModelCatalogEntry[]>(),
+export const AI_CATALOG_BY_ID = new Map(
+  AI_CATALOG.map((model) => [model.id, model]),
 )
 
+/** Grouped provider view used by org settings when toggling provider-level policy. */
+export const AI_MODELS_BY_PROVIDER = AI_CATALOG.reduce((acc, model) => {
+  const current = acc.get(model.providerId)
+  if (current) {
+    current.push(model)
+  } else {
+    acc.set(model.providerId, [model])
+  }
+  return acc
+}, new Map<string, AiModelCatalogEntry[]>())
+
 /** Returns a catalog row by ID, or undefined when the ID is unknown. */
-export function getCatalogModel(modelId: string): AiModelCatalogEntry | undefined {
+export function getCatalogModel(
+  modelId: string,
+): AiModelCatalogEntry | undefined {
   return AI_CATALOG_BY_ID.get(modelId)
 }
 
@@ -103,10 +112,13 @@ export function getCatalogModelProviderRoute(input: {
     }
   }
 
-  const isGatewayLike = input.providerId === 'gateway' || input.providerId === 'openrouter'
+  const isGatewayLike =
+    input.providerId === 'gateway' || input.providerId === 'openrouter'
   return {
     providerId: input.providerId,
-    modelId: isGatewayLike ? input.modelId : input.modelId.replace(/^[^/]+\//, ''),
+    modelId: isGatewayLike
+      ? input.modelId
+      : input.modelId.replace(/^[^/]+\//, ''),
   }
 }
 

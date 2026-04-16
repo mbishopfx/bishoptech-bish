@@ -55,7 +55,7 @@ export const OPENAI_MODELS: readonly AiModelCatalogEntry<'openai'>[] = [
       supportsFileInput: true,
       supportsPdfInput: true,
     },
-    providerToolIds: ["web_search", "code_interpreter"],
+    providerToolIds: ['web_search', 'code_interpreter'],
     reasoningEfforts: ['none', 'low', 'medium', 'high', 'xhigh'],
     defaultReasoningEffort: 'none',
     providerOptionsByReasoning: {
@@ -84,6 +84,75 @@ export const OPENAI_MODELS: readonly AiModelCatalogEntry<'openai'>[] = [
         { cost: '0.00000025', min: 0, max: 272001 },
         { cost: '0.0000005', min: 272000 },
       ],
+    },
+  },
+  {
+    id: 'openai/gpt-5.4-mini',
+    providerId: 'openai',
+    providers: ['openai', 'gateway'],
+    name: 'GPT-5.4 Mini',
+    description:
+      'GPT-5.4 Mini brings the strengths of GPT-5.4 to a faster, more efficient model designed for high-volume workloads.',
+    contextWindow: 400000,
+    zeroDataRetention: true,
+    capabilities: {
+      supportsTools: true,
+      supportsStreaming: true,
+      supportsReasoning: true,
+      supportsImageInput: true,
+      supportsFileInput: true,
+      supportsPdfInput: true,
+    },
+    providerToolIds: ['web_search', 'code_interpreter'],
+    reasoningEfforts: ['none', 'low', 'medium', 'high', 'xhigh'],
+    defaultReasoningEffort: 'low',
+    providerOptionsByReasoning: {
+      none: openaiReasoningOptions('none'),
+      low: openaiReasoningOptions('low'),
+      medium: openaiReasoningOptions('medium'),
+      high: openaiReasoningOptions('high'),
+      xhigh: openaiReasoningOptions('xhigh'),
+    },
+    defaultProviderOptions: openaiDefaultProviderOptions(),
+    defaultMaxOutputTokens: 128000,
+    pricing: {
+      inputPerToken: '0.00000075',
+      outputPerToken: '0.0000045',
+      inputCacheReadPerToken: '0.000000075',
+    },
+  },
+  {
+    id: 'openai/gpt-5.4-nano',
+    providerId: 'openai',
+    providers: ['openai', 'gateway'],
+    name: 'GPT-5.4 Nano',
+    description:
+      'GPT-5.4 Nano is designed for tasks where speed and cost matter most like classification, data extraction, ranking, and sub-agents.',
+    contextWindow: 400000,
+    zeroDataRetention: true,
+    capabilities: {
+      supportsTools: true,
+      supportsStreaming: true,
+      supportsReasoning: true,
+      supportsImageInput: true,
+      supportsFileInput: true,
+      supportsPdfInput: true,
+    },
+    providerToolIds: [],
+    reasoningEfforts: ['none', 'low', 'medium', 'high'],
+    defaultReasoningEffort: 'low',
+    providerOptionsByReasoning: {
+      none: openaiReasoningOptions('none'),
+      low: openaiReasoningOptions('low'),
+      medium: openaiReasoningOptions('medium'),
+      high: openaiReasoningOptions('high'),
+    },
+    defaultProviderOptions: openaiDefaultProviderOptions(),
+    defaultMaxOutputTokens: 128000,
+    pricing: {
+      inputPerToken: '0.0000002',
+      outputPerToken: '0.00000125',
+      inputCacheReadPerToken: '0.00000002',
     },
   },
   {
@@ -127,7 +196,7 @@ export const OPENAI_MODELS: readonly AiModelCatalogEntry<'openai'>[] = [
     providers: ['openai', 'azure', 'gateway'],
     name: 'GPT-5.2',
     description:
-      'The model powering ChatGPT is gpt-5.2-chat-latest: this is OpenAI\'s best general-purpose model, part of the GPT-5 flagship model family.',
+      "The model powering ChatGPT is gpt-5.2-chat-latest: this is OpenAI's best general-purpose model, part of the GPT-5 flagship model family.",
     contextWindow: 128000,
     zeroDataRetention: true,
     capabilities: {
@@ -199,7 +268,7 @@ export const OPENAI_MODELS: readonly AiModelCatalogEntry<'openai'>[] = [
     providers: ['openai', 'azure', 'gateway'],
     name: 'o4-mini',
     description:
-      'OpenAI\'s o4-mini delivers fast, cost-efficient reasoning with exceptional performance for its size, particularly excelling in math (best-performing on AIME benchmarks), coding, and visual tasks.',
+      "OpenAI's o4-mini delivers fast, cost-efficient reasoning with exceptional performance for its size, particularly excelling in math (best-performing on AIME benchmarks), coding, and visual tasks.",
     contextWindow: 200000,
     zeroDataRetention: true,
     capabilities: {
@@ -303,7 +372,8 @@ export const OPENAI_MODELS: readonly AiModelCatalogEntry<'openai'>[] = [
     providerId: 'openai',
     providers: ['openai', 'azure', 'gateway'],
     name: 'GPT-5',
-    description: 'GPT-5 Chat points to the GPT-5 snapshot currently used in ChatGPT.',
+    description:
+      'GPT-5 Chat points to the GPT-5 snapshot currently used in ChatGPT.',
     contextWindow: 128000,
     zeroDataRetention: true,
     capabilities: {
@@ -435,7 +505,7 @@ export const OPENAI_MODELS: readonly AiModelCatalogEntry<'openai'>[] = [
     providers: ['openai', 'azure', 'gateway'],
     name: 'o1',
     description:
-      'o1 is OpenAI\'s flagship reasoning model, designed for complex problems that require deep thinking. It provides strong reasoning capabilities with improved accuracy for complex multi-step tasks.',
+      "o1 is OpenAI's flagship reasoning model, designed for complex problems that require deep thinking. It provides strong reasoning capabilities with improved accuracy for complex multi-step tasks.",
     contextWindow: 200000,
     zeroDataRetention: true,
     capabilities: {
@@ -468,7 +538,7 @@ export const OPENAI_MODELS: readonly AiModelCatalogEntry<'openai'>[] = [
     providers: ['openai', 'azure', 'gateway'],
     name: 'o3',
     description:
-      'OpenAI\'s o3 is their most powerful reasoning model, setting new state-of-the-art benchmarks in coding, math, science, and visual perception. It excels at complex queries requiring multi-faceted analysis, with particular strength in analyzing images, charts, and graphics.',
+      "OpenAI's o3 is their most powerful reasoning model, setting new state-of-the-art benchmarks in coding, math, science, and visual perception. It excels at complex queries requiring multi-faceted analysis, with particular strength in analyzing images, charts, and graphics.",
     contextWindow: 200000,
     zeroDataRetention: false,
     capabilities: {
@@ -501,7 +571,7 @@ export const OPENAI_MODELS: readonly AiModelCatalogEntry<'openai'>[] = [
     providers: ['openai', 'azure', 'gateway'],
     name: 'o3-mini',
     description:
-      'o3-mini is OpenAI\'s most recent small reasoning model, providing high intelligence at the same cost and latency targets of o1-mini.',
+      "o3-mini is OpenAI's most recent small reasoning model, providing high intelligence at the same cost and latency targets of o1-mini.",
     contextWindow: 200000,
     zeroDataRetention: true,
     capabilities: {

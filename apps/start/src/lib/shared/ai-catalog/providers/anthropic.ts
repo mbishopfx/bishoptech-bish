@@ -89,13 +89,70 @@ function anthropicDefaultProviderOptions(): Record<string, unknown> {
  */
 export const ANTHROPIC_MODELS: readonly AiModelCatalogEntry<'anthropic'>[] = [
   {
+    id: 'anthropic/claude-opus-4.7',
+    providerId: 'anthropic',
+    providers: ['anthropic', 'gateway'],
+    providerModelIds: { anthropic: 'claude-opus-4-7' },
+    name: 'Claude Opus 4.7',
+    description:
+      'Opus 4.7 builds on the coding and agentic strengths of Opus 4.6 with stronger performance on complex, multi-step tasks and more reliable agentic execution. It also brings improved performance on knowledge work, from drafting documents to building presentations and analyzing data.',
+    contextWindow: 1000000,
+    zeroDataRetention: true,
+    capabilities: {
+      supportsTools: true,
+      supportsStreaming: true,
+      supportsReasoning: true,
+      supportsImageInput: true,
+      supportsFileInput: true,
+      supportsPdfInput: true,
+    },
+    providerToolIds: [
+      'web_search_20260209',
+      'web_fetch_20260209',
+      'code_execution_20260120',
+    ],
+    reasoningEfforts: ['low', 'medium', 'high', 'max'],
+    defaultReasoningEffort: 'medium',
+    providerOptionsByReasoning: {
+      low: anthropicEffortAndThinkingOptions('low', { adaptive: true }),
+      medium: anthropicEffortAndThinkingOptions('medium', { adaptive: true }),
+      high: anthropicEffortAndThinkingOptions('high', { adaptive: true }),
+      max: anthropicEffortAndThinkingOptions('max', { adaptive: true }),
+    },
+    defaultProviderOptions: anthropicDefaultProviderOptions(),
+    defaultMaxOutputTokens: 128000,
+    pricing: {
+      inputPerToken: '0.000005',
+      outputPerToken: '0.000025',
+      inputCacheReadPerToken: '0.0000005',
+      inputCacheWritePerToken: '0.00000625',
+      webSearchPerRequest: '10',
+      inputTiers: [
+        { cost: '0.000005', min: 0, max: 200001 },
+        { cost: '0.00001', min: 200001 },
+      ],
+      outputTiers: [
+        { cost: '0.000025', min: 0, max: 200001 },
+        { cost: '0.0000375', min: 200001 },
+      ],
+      inputCacheReadTiers: [
+        { cost: '0.0000005', min: 0, max: 200001 },
+        { cost: '0.000001', min: 200001 },
+      ],
+      inputCacheWriteTiers: [
+        { cost: '0.00000625', min: 0, max: 200001 },
+        { cost: '0.0000125', min: 200001 },
+      ],
+    },
+  },
+  {
     id: 'anthropic/claude-opus-4.6',
     providerId: 'anthropic',
     providers: ['anthropic', 'gateway'],
     providerModelIds: { anthropic: 'claude-opus-4-6' },
     name: 'Claude Opus 4.6',
     description:
-      'Opus 4.6 is the world\'s best model for coding and professional work, built to power agents that take on whole categories of real-world work. It excels across the entire SDLC, breaking through on hard problems, identifying complex bugs, and demonstrating deeper codebase understanding.',
+      "Opus 4.6 is the world's best model for coding and professional work, built to power agents that take on whole categories of real-world work. It excels across the entire SDLC, breaking through on hard problems, identifying complex bugs, and demonstrating deeper codebase understanding.",
     contextWindow: 1000000,
     zeroDataRetention: true,
     capabilities: {
@@ -152,7 +209,7 @@ export const ANTHROPIC_MODELS: readonly AiModelCatalogEntry<'anthropic'>[] = [
     providerModelIds: { anthropic: 'claude-opus-4-5' },
     name: 'Claude Opus 4.5',
     description:
-      'Claude Opus 4.5 is Anthropic\'s latest model in the Opus series, meant for demanding reasoning tasks and complex problem solving. This model has improvements in general intelligence and vision compared to previous iterations.',
+      "Claude Opus 4.5 is Anthropic's latest model in the Opus series, meant for demanding reasoning tasks and complex problem solving. This model has improvements in general intelligence and vision compared to previous iterations.",
     contextWindow: 200000,
     zeroDataRetention: true,
     capabilities: {
@@ -193,7 +250,7 @@ export const ANTHROPIC_MODELS: readonly AiModelCatalogEntry<'anthropic'>[] = [
     providerModelIds: { anthropic: 'claude-sonnet-4-6' },
     name: 'Claude Sonnet 4.6',
     description:
-      'Claude Sonnet 4.6 is Anthropic\'s most capable Sonnet model, with significant improvements in coding, computer use, long-context reasoning, and agent planning. Supports adaptive thinking for dynamic reasoning depth.',
+      "Claude Sonnet 4.6 is Anthropic's most capable Sonnet model, with significant improvements in coding, computer use, long-context reasoning, and agent planning. Supports adaptive thinking for dynamic reasoning depth.",
     contextWindow: 1000000,
     zeroDataRetention: true,
     capabilities: {
@@ -305,7 +362,7 @@ export const ANTHROPIC_MODELS: readonly AiModelCatalogEntry<'anthropic'>[] = [
     providerModelIds: { anthropic: 'claude-sonnet-4-0' },
     name: 'Claude Sonnet 4',
     description:
-      'Claude Sonnet 4 significantly improves on Sonnet 3.7\'s industry-leading capabilities, excelling in coding with a state-of-the-art 72.7% on SWE-bench. The model balances performance and efficiency for internal and external use cases.',
+      "Claude Sonnet 4 significantly improves on Sonnet 3.7's industry-leading capabilities, excelling in coding with a state-of-the-art 72.7% on SWE-bench. The model balances performance and efficiency for internal and external use cases.",
     contextWindow: 1000000,
     zeroDataRetention: true,
     capabilities: {
@@ -353,7 +410,7 @@ export const ANTHROPIC_MODELS: readonly AiModelCatalogEntry<'anthropic'>[] = [
     providerModelIds: { anthropic: 'claude-haiku-4-5' },
     name: 'Claude Haiku 4.5',
     description:
-      'Claude Haiku 4.5 matches Sonnet 4\'s performance on coding, computer use, and agent tasks at substantially lower cost and faster speeds. It delivers near-frontier performance at a price point that works for scaled sub-agent deployments and free tier products.',
+      "Claude Haiku 4.5 matches Sonnet 4's performance on coding, computer use, and agent tasks at substantially lower cost and faster speeds. It delivers near-frontier performance at a price point that works for scaled sub-agent deployments and free tier products.",
     contextWindow: 200000,
     zeroDataRetention: true,
     capabilities: {
@@ -389,7 +446,7 @@ export const ANTHROPIC_MODELS: readonly AiModelCatalogEntry<'anthropic'>[] = [
     providerModelIds: { anthropic: 'claude-3-7-sonnet-latest' },
     name: 'Claude 3.7 Sonnet',
     description:
-      'Claude 3.7 Sonnet is Anthropic\'s most intelligent model to date and the first Claude model to offer extended thinking—the ability to solve complex problems with careful, step-by-step reasoning. State-of-the-art for coding, computer use, agentic capabilities, and content generation.',
+      "Claude 3.7 Sonnet is Anthropic's most intelligent model to date and the first Claude model to offer extended thinking—the ability to solve complex problems with careful, step-by-step reasoning. State-of-the-art for coding, computer use, agentic capabilities, and content generation.",
     contextWindow: 200000,
     zeroDataRetention: true,
     capabilities: {
@@ -457,7 +514,7 @@ export const ANTHROPIC_MODELS: readonly AiModelCatalogEntry<'anthropic'>[] = [
     providerModelIds: { anthropic: 'claude-3-5-haiku-latest' },
     name: 'Claude 3.5 Haiku',
     description:
-      'Claude 3.5 Haiku is Anthropic\'s fastest, most compact model for near-instant responsiveness. It answers simple queries and requests with speed. Claude 3.5 Haiku can process images and return text outputs, and features a 200K context window.',
+      "Claude 3.5 Haiku is Anthropic's fastest, most compact model for near-instant responsiveness. It answers simple queries and requests with speed. Claude 3.5 Haiku can process images and return text outputs, and features a 200K context window.",
     contextWindow: 200000,
     zeroDataRetention: true,
     capabilities: {
@@ -490,7 +547,7 @@ export const ANTHROPIC_MODELS: readonly AiModelCatalogEntry<'anthropic'>[] = [
     providerModelIds: { anthropic: 'claude-3-haiku-20240307' },
     name: 'Claude 3 Haiku',
     description:
-      'Claude 3 Haiku is Anthropic\'s fastest model yet, designed for enterprise workloads which often involve longer prompts. Haiku quickly analyzes large volumes of documents, such as quarterly filings, contracts, or legal cases, for half the cost of other models in its performance tier.',
+      "Claude 3 Haiku is Anthropic's fastest model yet, designed for enterprise workloads which often involve longer prompts. Haiku quickly analyzes large volumes of documents, such as quarterly filings, contracts, or legal cases, for half the cost of other models in its performance tier.",
     contextWindow: 200000,
     zeroDataRetention: true,
     capabilities: {

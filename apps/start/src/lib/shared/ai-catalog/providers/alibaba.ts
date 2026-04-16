@@ -7,7 +7,9 @@ function alibabaDefaultProviderOptions(): Record<string, unknown> {
   return {}
 }
 
-function alibabaReasoningOptions(thinkingBudget: number): Record<string, unknown> {
+function alibabaReasoningOptions(
+  thinkingBudget: number,
+): Record<string, unknown> {
   return {
     alibaba: {
       enableThinking: true,
@@ -17,6 +19,77 @@ function alibabaReasoningOptions(thinkingBudget: number): Record<string, unknown
 }
 
 export const ALIBABA_MODELS: readonly AiModelCatalogEntry<'alibaba'>[] = [
+  {
+    id: 'alibaba/qwen3.6-plus',
+    providerId: 'alibaba',
+    providers: ['gateway'],
+    name: 'Qwen 3.6 Plus',
+    description:
+      'The Qwen3.6 native vision-language Plus series models demonstrate exceptional performance on par with the current state-of-the-art models, with a significant improvement in overall results compared to the 3.5 series. The models have been markedly enhanced in code-related capabilities such as agentic coding, front-end programming, and Vibe coding, as well as in multi-modal general object recognition, OCR, and object localization.',
+    contextWindow: 1000000,
+    zeroDataRetention: true,
+    capabilities: {
+      supportsTools: true,
+      supportsStreaming: true,
+      supportsReasoning: true,
+      supportsImageInput: true,
+      supportsFileInput: true,
+      supportsPdfInput: true,
+    },
+    providerToolIds: [],
+    reasoningEfforts: [],
+    defaultProviderOptions: alibabaDefaultProviderOptions(),
+    defaultMaxOutputTokens: 64000,
+    pricing: {
+      inputPerToken: '0.0000005',
+      outputPerToken: '0.000003',
+      inputCacheReadPerToken: '0.0000001',
+    },
+  },
+  {
+    id: 'alibaba/qwen3.5-plus',
+    providerId: 'alibaba',
+    providers: ['gateway'],
+    name: 'Qwen 3.5 Plus',
+    description:
+      'The Qwen3.5 native vision-language series Plus models are built on a hybrid architecture that integrates linear attention mechanisms with sparse mixture-of-experts models, achieving higher inference efficiency. In a variety of task evaluations, the 3.5 series consistently demonstrates performance on par with state-of-the-art leading models. Compared to the 3 series, these models show a leap forward in both pure-text and multimodal capabilities.',
+    contextWindow: 1000000,
+    zeroDataRetention: false,
+    capabilities: {
+      supportsTools: true,
+      supportsStreaming: true,
+      supportsReasoning: true,
+      supportsImageInput: true,
+      supportsFileInput: true,
+      supportsPdfInput: true,
+    },
+    providerToolIds: [],
+    reasoningEfforts: [],
+    defaultProviderOptions: alibabaDefaultProviderOptions(),
+    defaultMaxOutputTokens: 64000,
+    pricing: {
+      inputPerToken: '0.0000004',
+      outputPerToken: '0.0000024',
+      inputCacheReadPerToken: '0.00000004',
+      inputCacheWritePerToken: '0.0000005',
+      inputTiers: [
+        { cost: '0.0000004', min: 0, max: 256001 },
+        { cost: '0.0000012', min: 256001 },
+      ],
+      outputTiers: [
+        { cost: '0.0000024', min: 0, max: 256001 },
+        { cost: '0.0000072', min: 256001 },
+      ],
+      inputCacheReadTiers: [
+        { cost: '0.00000004', min: 0, max: 256001 },
+        { cost: '0.00000012', min: 256001 },
+      ],
+      inputCacheWriteTiers: [
+        { cost: '0.0000005', min: 0, max: 256001 },
+        { cost: '0.0000015', min: 256001 },
+      ],
+    },
+  },
   {
     id: 'alibaba/qwen3-max-thinking',
     providerId: 'alibaba',
