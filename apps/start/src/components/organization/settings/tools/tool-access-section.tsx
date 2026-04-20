@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import { Form } from '@rift/ui/form'
+import { Form } from '@bish/ui/form'
 import type { WorkspaceFeatureAccessState } from '@/lib/shared/access-control'
 import { getFeatureAccessFormProps } from '@/components/organization/settings/feature-access-form-helpers'
 import { m } from '@/paraglide/messages.js'

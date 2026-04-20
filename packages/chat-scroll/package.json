@@ -1,5 +1,5 @@
 {
-  "name": "@rift/chat-scroll",
+  "name": "@bish/chat-scroll",
   "description": "Pin-to-last-user-message scroll behavior for chat threads",
   "version": "0.0.1",
   "private": true,

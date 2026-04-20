@@ -1,7 +1,7 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import type { AuthenticatedServerAuthContext } from '@/lib/backend/server-effect/http/auth-context'
 
-const ZERO_SELF_HOSTED_TOKEN_AUDIENCE = 'rift-zero'
+const ZERO_SELF_HOSTED_TOKEN_AUDIENCE = 'bish-zero'
 const ZERO_SELF_HOSTED_TOKEN_VERSION = 1
 const TOKEN_TTL_SECONDS = 600
 const CLOCK_SKEW_SECONDS = 30

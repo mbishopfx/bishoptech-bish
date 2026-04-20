@@ -1,5 +1,5 @@
 {
-  "name": "Rift",
+  "name": "BISH",
   "version": "1.2.0",
   "private": true,
   "type": "module",
@@ -10,8 +10,11 @@
   "packageManager": "bun@1.2.23",
   "scripts": {
     "dev": "turbo run dev zero-cache --filter=tanstack --ui tui",
-    "build": "turbo run build --filter=tanstack",
+    "build": "turbo run build --filter=tanstack --filter=bish-worker --filter=bish-scheduler",
     "start": "bun run --filter tanstack start",
+    "web:start": "bun run --cwd apps/start start",
+    "app:worker": "bun run --cwd apps/worker start",
+    "app:scheduler": "bun run --cwd apps/scheduler start",
     "lint": "turbo run lint",
     "clean": "turbo run clean",
     "web:db:reset": "bun run --cwd apps/start db:reset",

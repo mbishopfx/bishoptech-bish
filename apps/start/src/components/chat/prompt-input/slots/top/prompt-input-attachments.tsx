@@ -1,8 +1,8 @@
 // Attachment previews displayed above the prompt input.
 'use client'
 
-import { Button } from '@rift/ui/button'
-import { cn } from '@rift/utils'
+import { Button } from '@bish/ui/button'
+import { cn } from '@bish/utils'
 import { AlertTriangle, FileText, Loader2, X } from 'lucide-react'
 import type { HTMLAttributes } from 'react'
 import type { UploadedFile } from '@/lib/frontend/chat/upload'

@@ -4,9 +4,9 @@ import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { Command as CommandPrimitive } from 'cmdk'
 import Search from 'lucide-react/dist/esm/icons/search'
-import { CommandDialog } from '@rift/ui/command'
-import { Kbd, KbdGroup } from '@rift/ui/kbd'
-import { cn } from '@rift/utils'
+import { CommandDialog } from '@bish/ui/command'
+import { Kbd, KbdGroup } from '@bish/ui/kbd'
+import { cn } from '@bish/utils'
 import {
   CHAT_SEARCH_HIGHLIGHT_CLASS_NAME,
   getSearchHighlightSegments,

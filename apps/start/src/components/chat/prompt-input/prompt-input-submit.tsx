@@ -1,8 +1,8 @@
 'use client'
 
-import { Button } from '@rift/ui/button'
-import { SentIcon, LoadingIcon, StopIcon } from '@rift/ui/icons/svg-icons'
-import { cn } from '@rift/utils'
+import { Button } from '@bish/ui/button'
+import { SentIcon, LoadingIcon, StopIcon } from '@bish/ui/icons/svg-icons'
+import { cn } from '@bish/utils'
 import type { ChatStatus } from 'ai'
 import { AlertTriangle } from 'lucide-react'
 import type { ComponentProps } from 'react'

@@ -1,7 +1,7 @@
 'use client'
 
-import { Button } from '@rift/ui/button'
-import { cn } from '@rift/utils'
+import { Button } from '@bish/ui/button'
+import { cn } from '@bish/utils'
 import X from 'lucide-react/dist/esm/icons/x'
 import {
   forwardRef,

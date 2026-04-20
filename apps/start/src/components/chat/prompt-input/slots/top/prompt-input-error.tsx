@@ -3,9 +3,9 @@
 
 import { useRef, useEffect, useState } from 'react'
 import { AlertTriangle, ChevronDown, X } from 'lucide-react'
-import { cn, copyToClipboard } from '@rift/utils'
+import { cn, copyToClipboard } from '@bish/utils'
 import type { HTMLAttributes } from 'react'
-import { Button } from '@rift/ui/button'
+import { Button } from '@bish/ui/button'
 import { m } from '@/paraglide/messages.js'
 
 export type PromptInputErrorProps = Omit<HTMLAttributes<HTMLDivElement>, 'children'> & {

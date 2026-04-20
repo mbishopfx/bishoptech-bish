@@ -1,4 +1,4 @@
-import { cn } from '@rift/utils'
+import { cn } from '@bish/utils'
 import type {
   SidebarNavAreaConfig,
   SidebarNavAreas,

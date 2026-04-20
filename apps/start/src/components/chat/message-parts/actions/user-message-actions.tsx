@@ -1,4 +1,4 @@
-import { CheckIcon, CopyIcon, EditIcon, RedoIcon } from '@rift/ui/icons/svg-icons'
+import { CheckIcon, CopyIcon, EditIcon, RedoIcon } from '@bish/ui/icons/svg-icons'
 import { ChevronLeftIcon, ChevronRightIcon, XIcon } from 'lucide-react'
 import {
   MessageActionButton,

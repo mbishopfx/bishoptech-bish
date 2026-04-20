@@ -4,20 +4,20 @@ import { useAppAuth } from '@/lib/frontend/auth/use-auth'
 import { waitForPageSettled } from '@/lib/frontend/performance/page-settled'
 import { isAdminRole } from '@/lib/shared/auth/roles'
 import { ORG_SETTINGS_HREF } from '@/routes/(app)/_layout/organization/settings/-organization-settings-nav'
-import { Avatar, AvatarFallback, AvatarImage } from '@rift/ui/avatar'
-import { Button } from '@rift/ui/button'
-import { FormDialog } from '@rift/ui/dialog'
+import { Avatar, AvatarFallback, AvatarImage } from '@bish/ui/avatar'
+import { Button } from '@bish/ui/button'
+import { FormDialog } from '@bish/ui/dialog'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@rift/ui/dropdown-menu'
-import { Input } from '@rift/ui/input'
-import { Label } from '@rift/ui/label'
-import { SidebarGroupTooltip } from '@rift/ui/tooltip'
-import { useDirection } from '@rift/ui/direction'
+} from '@bish/ui/dropdown-menu'
+import { Input } from '@bish/ui/input'
+import { Label } from '@bish/ui/label'
+import { SidebarGroupTooltip } from '@bish/ui/tooltip'
+import { useDirection } from '@bish/ui/direction'
 import { Check, Plus, Settings } from 'lucide-react'
 import { useNavigate, Link, useLocation } from '@tanstack/react-router'
 import { useCallback, useEffect, useState } from 'react'

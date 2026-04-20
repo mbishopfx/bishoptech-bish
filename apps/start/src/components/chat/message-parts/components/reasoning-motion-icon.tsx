@@ -2,7 +2,7 @@
 
 import { memo, useId } from 'react'
 import { motion } from 'motion/react'
-import { cn } from '@rift/utils'
+import { cn } from '@bish/utils'
 
 const SHIMMER_ICON_MASK_SIZE = 36
 

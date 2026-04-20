@@ -1,6 +1,6 @@
 'use client'
 
-import { Button } from '@rift/ui/button'
+import { Button } from '@bish/ui/button'
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -10,7 +10,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@rift/ui/dropdown-menu'
+} from '@bish/ui/dropdown-menu'
 import { Plus } from 'lucide-react'
 import { m } from '@/paraglide/messages.js'
 import type { ChatVisibleTool } from '../chat-context'

@@ -1,8 +1,8 @@
 import { Fragment } from 'react'
 import { Link } from '@tanstack/react-router'
 import { Check } from 'lucide-react'
-import { Button } from '@rift/ui/button'
-import { cn } from '@rift/utils'
+import { Button } from '@bish/ui/button'
+import { cn } from '@bish/utils'
 import {
   getEnterprisePlan,
   getMainPlans,

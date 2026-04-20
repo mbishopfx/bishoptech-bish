@@ -7,10 +7,12 @@ import {
   CreditCard,
   Key,
   Lock,
+  ShieldCheck,
   Scale,
   Settings,
   TrendingUp,
   Users,
+  Workflow,
   Wrench,
 } from 'lucide-react'
 
@@ -78,6 +80,24 @@ export const orgSettingsNavArea = () => ({
     {
       name: m.org_settings_nav_section_ai_data(),
       items: [
+        {
+          name: 'Connectors',
+          icon: Workflow,
+          href: `${ORG_SETTINGS_HREF}/connectors`,
+          exact: true,
+        },
+        {
+          name: 'Approvals',
+          icon: ShieldCheck,
+          href: `${ORG_SETTINGS_HREF}/approvals`,
+          exact: true,
+        },
+        {
+          name: 'Agents',
+          icon: Cpu,
+          href: `${ORG_SETTINGS_HREF}/agents`,
+          exact: true,
+        },
         {
           name: m.org_compliance_page_title(),
           icon: Scale,

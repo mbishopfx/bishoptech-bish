@@ -1,6 +1,6 @@
 {
-  "name": "@rift/tailwind-config",
-  "description": "Shared Tailwind CSS theme and design tokens for Rift",
+  "name": "@bish/tailwind-config",
+  "description": "Shared Tailwind CSS theme and design tokens for BISH",
   "version": "0.0.1",
   "private": true,
   "type": "module",

@@ -15,7 +15,7 @@ import {
 } from "@tanstack/react-table";
 import { ChevronLeft, ChevronRight, Columns3, Search } from "lucide-react";
 
-import { cn } from "@rift/utils";
+import { cn } from "@bish/utils";
 
 import { Button } from "./button";
 import {

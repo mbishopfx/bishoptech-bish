@@ -13,15 +13,15 @@ import type {
   ThemedToken,
 } from 'shiki'
 
-import { Button } from '@rift/ui/button'
+import { Button } from '@bish/ui/button'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@rift/ui/select'
-import { cn } from '@rift/utils'
+} from '@bish/ui/select'
+import { cn } from '@bish/utils'
 import CheckIcon from 'lucide-react/dist/esm/icons/check'
 import CopyIcon from 'lucide-react/dist/esm/icons/copy'
 import DownloadIcon from 'lucide-react/dist/esm/icons/download'

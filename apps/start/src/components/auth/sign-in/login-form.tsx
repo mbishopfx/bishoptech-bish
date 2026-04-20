@@ -3,9 +3,9 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { m } from '@/paraglide/messages.js'
-import { Button } from '@rift/ui/button'
-import { Input } from '@rift/ui/input'
-import { Label } from '@rift/ui/label'
+import { Button } from '@bish/ui/button'
+import { Input } from '@bish/ui/input'
+import { Label } from '@bish/ui/label'
 import { cardVariants, staggerChildVariants } from '@/lib/shared/animations'
 import { GitHubIcon, GoogleIcon } from '@/components/icons/provider-icons'
 import {

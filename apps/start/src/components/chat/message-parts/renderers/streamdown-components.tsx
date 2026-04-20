@@ -1,7 +1,7 @@
 import { isValidElement, memo } from 'react'
 import type { HTMLAttributes, ReactNode } from 'react'
 import type { Components } from 'streamdown'
-import { cn } from '@rift/utils'
+import { cn } from '@bish/utils'
 import {
   CodeBlock,
   CodeBlockActions,

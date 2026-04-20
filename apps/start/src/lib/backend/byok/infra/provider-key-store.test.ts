@@ -129,7 +129,7 @@ vi.mock('pg', () => {
       connectionString: process.env.ZERO_UPSTREAM_DB,
       host: 'example.local',
       port: 5432,
-      database: 'rift',
+      database: 'bish',
       user: 'test-user',
       application_name: 'vitest',
       types: undefined,
@@ -176,7 +176,7 @@ vi.mock('pg', () => {
 describe('provider-keys', () => {
   beforeEach(async () => {
     rows.clear()
-    vi.stubEnv('ZERO_UPSTREAM_DB', 'postgres://example.local/rift')
+    vi.stubEnv('ZERO_UPSTREAM_DB', 'postgres://example.local/bish')
     vi.stubEnv(
       'BYOK_ENCRYPTION_KEY_B64',
       Buffer.alloc(32, 7).toString('base64'),

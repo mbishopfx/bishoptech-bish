@@ -9,7 +9,7 @@ export const Route = createFileRoute('/legal/acceptable-use')({
     meta: buildPageMetadata({
       title: 'Acceptable Use Policy',
       description:
-        'Read Rift\'s acceptable use policy, including prohibited activity, content restrictions, and account security expectations.',
+        'Read BISH\'s acceptable use policy, including prohibited activity, content restrictions, and account security expectations.',
     }),
   }),
   component: AcceptableUsePolicyPage,
@@ -46,8 +46,8 @@ function AcceptableUsePolicyPage() {
                 </h2>
                 <p className="text-foreground-primary dark:text-foreground-primary text-sm leading-6">
                   This Acceptable Use Policy ("Policy") establishes the rules
-                  and guidelines for acceptable use of Rift AI services,
-                  including the website https://rift.mx and any associated
+                  and guidelines for acceptable use of BISH services,
+                  including the website https://bish.local and any associated
                   products or services (collectively, the "Services"). By using
                   the Services, you agree to comply with this Policy. If you do
                   not agree to this Policy, you may not access or use the
@@ -128,7 +128,7 @@ function AcceptableUsePolicyPage() {
                   4. Artificial Intelligence Use
                 </h2>
                 <p className="text-foreground-primary dark:text-foreground-primary text-sm leading-6 mb-4">
-                  By using Rift AI's AI Services, you agree to:
+                  By using BISH's AI Services, you agree to:
                 </p>
                 <ul className="list-disc pl-6 space-y-2 text-foreground-primary dark:text-foreground-primary text-sm leading-6">
                   <li>
@@ -152,7 +152,7 @@ function AcceptableUsePolicyPage() {
                     AI-generated content;
                   </li>
                   <li>
-                    Understand that Rift AI does not guarantee the accuracy,
+                    Understand that BISH does not guarantee the accuracy,
                     completeness, or usefulness of AI-generated content;
                   </li>
                   <li>WE DO NOT USE YOUR CONTENT TO TRAIN AI MODELS.</li>
@@ -198,10 +198,10 @@ function AcceptableUsePolicyPage() {
                   agree to:
                 </p>
                 <ul className="list-disc pl-6 space-y-2 text-foreground-primary dark:text-foreground-primary text-sm leading-6">
-                  <li>Not exceed the usage limits established by Rift AI;</li>
+                  <li>Not exceed the usage limits established by BISH;</li>
                   <li>
                     Not use the Services in a manner that may negatively affect
-                    the performance of Rift AI's servers or network;
+                    the performance of BISH's servers or network;
                   </li>
                   <li>
                     Not use automated tools to access the Services without our
@@ -219,7 +219,7 @@ function AcceptableUsePolicyPage() {
                   7. Violations
                 </h2>
                 <p className="text-foreground-primary dark:text-foreground-primary text-sm leading-6 mb-4">
-                  If Rift AI determines, at its sole discretion, that you have
+                  If BISH determines, at its sole discretion, that you have
                   violated this Policy, we may:
                 </p>
                 <ul className="list-disc pl-6 space-y-2 text-foreground-primary dark:text-foreground-primary text-sm leading-6">
@@ -239,7 +239,7 @@ function AcceptableUsePolicyPage() {
                   8. Disclaimer
                 </h2>
                 <p className="text-foreground-primary dark:text-foreground-primary text-sm leading-6">
-                  Rift AI shall not be liable for any damage or harm arising
+                  BISH shall not be liable for any damage or harm arising
                   from the user's violation of this Policy.
                 </p>
               </section>
@@ -272,10 +272,10 @@ function AcceptableUsePolicyPage() {
                   <p className="mt-2">
                     Email:{' '}
                     <a
-                      href="mailto:legal@rift.mx"
+                      href="mailto:legal@bish.local"
                       className="text-foreground-info hover:underline"
                     >
-                      legal@rift.mx
+                      legal@bish.local
                     </a>
                   </p>
                 </div>

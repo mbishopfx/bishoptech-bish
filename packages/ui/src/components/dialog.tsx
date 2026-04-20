@@ -6,7 +6,7 @@ import { Dialog as DialogPrimitive } from "@base-ui/react/dialog"
 import { AnimatePresence, motion } from "motion/react"
 import { XIcon } from "lucide-react"
 
-import { cn } from "@rift/utils"
+import { cn } from "@bish/utils"
 
 import { Button } from "./button"
 

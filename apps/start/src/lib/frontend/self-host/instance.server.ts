@@ -206,7 +206,7 @@ export async function runSelfHostedSetupAction(
         password: input.password,
       },
       headers: new Headers({
-        'x-rift-setup-token': input.setupToken,
+        'x-bish-setup-token': input.setupToken,
       }),
     })
 

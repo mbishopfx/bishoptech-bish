@@ -3,7 +3,7 @@
 import { ChevronDown } from 'lucide-react'
 // Toolbar controls: file picker, voice placeholder, and submit state.
 import type { ChatStatus } from 'ai'
-import { cn } from '@rift/utils'
+import { cn } from '@bish/utils'
 import type { HTMLAttributes } from 'react'
 import { useRef } from 'react'
 import { CHAT_ATTACHMENT_UPLOAD_POLICY } from '@/lib/shared/upload/upload-validation'

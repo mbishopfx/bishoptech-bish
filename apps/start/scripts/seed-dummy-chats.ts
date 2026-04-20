@@ -15,14 +15,14 @@
  *   bun run scripts/seed-dummy-chats.ts --count=1000
  *   bun run scripts/seed-dummy-chats.ts --user-email=you@example.com
  *   bun run scripts/seed-dummy-chats.ts --user-id=<user-id> --org-id=<org-id>
- *   bun run scripts/seed-dummy-chats.ts --database-url=postgresql://rift:rift@localhost:5432/rift
+ *   bun run scripts/seed-dummy-chats.ts --database-url=postgresql://bish:bish@localhost:5432/bish
  */
 
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { Pool } from 'pg'
 
-const DEFAULT_DATABASE_URL = 'postgresql://rift:rift@localhost:5432/rift'
+const DEFAULT_DATABASE_URL = 'postgresql://bish:bish@localhost:5432/bish'
 const DEFAULT_THREAD_COUNT = 1000
 const THREAD_INSERT_CHUNK_SIZE = 100
 const MESSAGE_INSERT_CHUNK_SIZE = 1200

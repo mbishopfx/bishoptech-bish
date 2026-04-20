@@ -1,8 +1,8 @@
 import { memo } from 'react'
 import type { ComponentProps } from 'react'
-import { Button } from '@rift/ui/button'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@rift/ui/tooltip'
-import { cn } from '@rift/utils'
+import { Button } from '@bish/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@bish/ui/tooltip'
+import { cn } from '@bish/utils'
 
 type MessageActionsProps = ComponentProps<'div'>
 

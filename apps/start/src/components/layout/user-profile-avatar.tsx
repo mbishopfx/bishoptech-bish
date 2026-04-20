@@ -1,7 +1,7 @@
 'use client'
 
-import { Avatar, AvatarFallback, AvatarImage } from '@rift/ui/avatar'
-import { Button } from '@rift/ui/button'
+import { Avatar, AvatarFallback, AvatarImage } from '@bish/ui/avatar'
+import { Button } from '@bish/ui/button'
 import { Link } from '@tanstack/react-router'
 import { SETTINGS_HREF } from '@/routes/(app)/_layout/settings/-settings-nav'
 import { m } from '@/paraglide/messages.js'

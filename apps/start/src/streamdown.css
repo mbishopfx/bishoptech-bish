@@ -1,6 +1,6 @@
 /**
  * Streamdown markdown styles.
- * Uses data-streamdown selectors and design tokens from @rift/tailwind-config.
+ * Uses data-streamdown selectors and design tokens from @bish/tailwind-config.
  */
 
 /* Scope to chat Streamdown instances to avoid affecting other uses */

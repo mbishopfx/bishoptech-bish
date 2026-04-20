@@ -3,7 +3,7 @@
 # Usage:
 #   docker compose -f docker-compose.postgres.yml up -d
 # Then set in apps/start/.env.local:
-#   ZERO_UPSTREAM_DB=postgresql://rift:rift@localhost:5432/rift
+#   ZERO_UPSTREAM_DB=postgresql://bish:bish@localhost:5432/bish
 # Run schema: cd apps/start && bun run db:reset
 
 services:
@@ -11,13 +11,13 @@ services:
     image: postgres:16-alpine
     command: postgres -c wal_level=logical
     environment:
-      POSTGRES_USER: rift
-      POSTGRES_PASSWORD: rift
-      POSTGRES_DB: rift
+      POSTGRES_USER: bish
+      POSTGRES_PASSWORD: bish
+      POSTGRES_DB: bish
     ports:
       - "5432:5432"
     volumes:
-      - rift_postgres_data:/var/lib/postgresql/data
+      - bish_postgres_data:/var/lib/postgresql/data
 
 volumes:
-  rift_postgres_data: {}
+  bish_postgres_data: {}

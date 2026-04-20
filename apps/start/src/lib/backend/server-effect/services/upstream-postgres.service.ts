@@ -13,9 +13,9 @@ export const UpstreamPostgresLayer = PgClient.layerFromPool({
     Effect.sync(() => requireZeroUpstreamPool()),
     () => Effect.void,
   ),
-  applicationName: 'rift-upstream-postgres',
+  applicationName: 'bish-upstream-postgres',
   spanAttributes: {
-    'rift.db.role': 'upstream',
+    'bish.db.role': 'upstream',
   },
 })
 

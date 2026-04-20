@@ -1,9 +1,9 @@
 'use client'
 
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react'
-import { Button } from '@rift/ui/button'
+import { Button } from '@bish/ui/button'
 import { useHotkey } from '@tanstack/react-hotkeys'
-import { useMediaQuery } from '@rift/ui/hooks/useMediaQuery'
+import { useMediaQuery } from '@bish/ui/hooks/useMediaQuery'
 import { useSideNav } from '@/components/layout/main-nav'
 import { usePageSidebarVisibility } from '@/components/layout/page-sidebar-visibility-context'
 import { m } from '@/paraglide/messages.js'

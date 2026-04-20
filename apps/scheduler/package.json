@@ -1,0 +1,14 @@
+{
+  "name": "bish-scheduler",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun --watch src/index.ts",
+    "start": "bun src/index.ts",
+    "build": "echo \"scheduler build is runtime-only on Railway\""
+  },
+  "dependencies": {
+    "@bish/automation": "workspace:*",
+    "pg": "^8.18.0"
+  }
+}

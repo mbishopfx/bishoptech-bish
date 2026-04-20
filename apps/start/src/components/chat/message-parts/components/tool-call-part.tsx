@@ -1,4 +1,4 @@
-import { cn } from '@rift/utils'
+import { cn } from '@bish/utils'
 import { Loader2, Wrench } from 'lucide-react'
 
 type ToolCallPartProps = {

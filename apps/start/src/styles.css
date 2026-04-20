@@ -1,5 +1,5 @@
-@import '@rift/tailwind-config';
-@import '@rift/tailwind-config/base.css';
+@import '@bish/tailwind-config';
+@import '@bish/tailwind-config/base.css';
 @import 'tailwindcss';
 @import 'streamdown/styles.css';
 @import './streamdown.css';
@@ -47,15 +47,36 @@
   --right-sidebar-width: min(560px, clamp(240px, 35vw, 560px));
 }
 
+html {
+  min-height: 100%;
+  background:
+    radial-gradient(
+      circle at top,
+      color-mix(in srgb, var(--accent-primary) 14%, transparent),
+      transparent 34%
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--surface-raised) 92%, white 8%),
+      var(--surface-base)
+    );
+}
+
 body {
   @apply m-0;
   font-family: var(--font-geist);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background: transparent;
 }
 
 code {
   font-family: var(--font-geist-mono);
+}
+
+::selection {
+  background: color-mix(in srgb, var(--accent-primary) 22%, white);
+  color: var(--foreground-strong);
 }
 
 /* Thinking-state pulse (from reference orchid) */
@@ -133,7 +154,7 @@ code {
 }
 
 .bg-ai {
-  background-color: #ad46ff;
+  background-color: var(--accent-primary);
 }
 
 /* Hide native scrollbar (e.g. for overflow areas that still scroll). */

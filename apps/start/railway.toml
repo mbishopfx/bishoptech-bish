@@ -1,0 +1,12 @@
+[build]
+builder = "RAILPACK"
+buildCommand = "cd ../.. && bun install --frozen-lockfile && bun run build"
+watchPatterns = ["/apps/start/**", "/packages/**", "/package.json", "/bun.lock", "/turbo.json"]
+
+[deploy]
+preDeployCommand = "cd ../.. && bun run --cwd apps/start zero:migrate"
+startCommand = "cd ../.. && bun run web:start"
+healthcheckPath = "/health"
+healthcheckTimeout = 120
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10

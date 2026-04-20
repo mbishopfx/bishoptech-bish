@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Form } from '@rift/ui/form'
+import { Form } from '@bish/ui/form'
 import { ContentPage } from '@/components/layout'
 import { AvatarUploadField } from '@/components/settings/avatar-upload'
 import { m } from '@/paraglide/messages.js'

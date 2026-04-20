@@ -2,12 +2,12 @@
 
 import { useMemo } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { cn } from '@rift/utils'
-import { DataTable  } from '@rift/ui/data-table'
-import type {DataTableColumnDef} from '@rift/ui/data-table';
-import { Avatar, AvatarFallback, AvatarImage } from '@rift/ui/avatar'
-import { Badge } from '@rift/ui/badge'
-import { Button } from '@rift/ui/button'
+import { cn } from '@bish/utils'
+import { DataTable  } from '@bish/ui/data-table'
+import type {DataTableColumnDef} from '@bish/ui/data-table';
+import { Avatar, AvatarFallback, AvatarImage } from '@bish/ui/avatar'
+import { Badge } from '@bish/ui/badge'
+import { Button } from '@bish/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,8 +18,8 @@ import {
   DropdownMenuSubContent,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
-} from '@rift/ui/dropdown-menu'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@rift/ui/tooltip'
+} from '@bish/ui/dropdown-menu'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@bish/ui/tooltip'
 import { MoreVertical, UserIcon } from 'lucide-react'
 
 import { ContentPage } from '@/components/layout'

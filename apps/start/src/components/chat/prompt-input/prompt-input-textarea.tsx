@@ -1,8 +1,8 @@
 // Auto-growing textarea that handles Enter-to-submit on desktop.
 'use client'
 
-import { Textarea } from '@rift/ui/textarea'
-import { cn } from '@rift/utils'
+import { Textarea } from '@bish/ui/textarea'
+import { cn } from '@bish/utils'
 import type { ComponentProps, KeyboardEventHandler } from 'react'
 import { useRef, useCallback, useEffect, useImperativeHandle, forwardRef } from 'react'
 import { TEXTAREA_MAX_HEIGHT } from './constants'

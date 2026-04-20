@@ -1,4 +1,4 @@
-import { cn } from "@rift/utils";
+import { cn } from "@bish/utils";
 import React from "react";
 
 export type SpinnerProps = React.SVGProps<SVGSVGElement> & {

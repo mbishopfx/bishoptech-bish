@@ -3,7 +3,7 @@
 import * as React from "react"
 import { Avatar as AvatarPrimitive } from "@base-ui/react/avatar"
 
-import { cn } from "@rift/utils"
+import { cn } from "@bish/utils"
 
 type MarbleCssVars = React.CSSProperties & {
   "--color-0"?: string

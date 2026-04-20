@@ -2,7 +2,7 @@
 
 import NumberFlow from "@number-flow/react";
 import type { ReactNode } from "react";
-import { cn } from "@rift/utils";
+import { cn } from "@bish/utils";
 import { usePie } from "./pie-context";
 
 // NumberFlow format - subset of Intl.NumberFormatOptions

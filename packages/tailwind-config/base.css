@@ -1,6 +1,6 @@
 /**
- * @rift/tailwind-config — default base layer (minimal, used by TanStack Start).
- * Optional: @import '@rift/tailwind-config/base.css';
+ * @bish/tailwind-config — default base layer (minimal, used by TanStack Start).
+ * Optional: @import '@bish/tailwind-config/base.css';
  */
 
 @layer base {

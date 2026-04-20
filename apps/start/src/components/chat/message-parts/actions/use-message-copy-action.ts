@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react'
-import { copyToClipboard } from '@rift/utils'
+import { copyToClipboard } from '@bish/utils'
 
 /**
  * Shared clipboard state for message action rows.

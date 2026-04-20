@@ -4,10 +4,10 @@ import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { motion } from 'motion/react'
 import { m } from '@/paraglide/messages.js'
-import { Button } from '@rift/ui/button'
-import { InputOTP, InputOTPGroup, InputOTPSlot } from '@rift/ui/input-otp'
-import { Label } from '@rift/ui/label'
-import { cn } from '@rift/utils'
+import { Button } from '@bish/ui/button'
+import { InputOTP, InputOTPGroup, InputOTPSlot } from '@bish/ui/input-otp'
+import { Label } from '@bish/ui/label'
+import { cn } from '@bish/utils'
 import {
   cardVariants,
   menuCardButtonVariants,

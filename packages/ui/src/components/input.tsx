@@ -3,7 +3,7 @@ import { Input as InputPrimitive } from "@base-ui/react/input"
 import { cva, type VariantProps } from "class-variance-authority"
 import { Eye, EyeOff } from "lucide-react"
 
-import { cn } from "@rift/utils"
+import { cn } from "@bish/utils"
 
 const inputVariants = cva(
   "block w-full min-w-0 border text-foreground-strong transition-colors placeholder:text-foreground-secondary focus-visible:outline-none disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 file:h-6 file:text-sm file:font-medium file:text-foreground-strong file:inline-flex file:border-0 file:bg-transparent sm:text-sm",

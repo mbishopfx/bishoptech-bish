@@ -4,14 +4,14 @@ import type { LanguageModelUsage } from 'ai'
 import type { ComponentProps } from 'react'
 
 import { m } from '@/paraglide/messages.js'
-import { Button } from '@rift/ui/button'
+import { Button } from '@bish/ui/button'
 import {
   HoverCard,
   HoverCardContent,
   HoverCardTrigger,
-} from '@rift/ui/hover-card'
-import { Progress } from '@rift/ui/progress'
-import { cn } from '@rift/utils'
+} from '@bish/ui/hover-card'
+import { Progress } from '@bish/ui/progress'
+import { cn } from '@bish/utils'
 import { createContext, isValidElement, useContext, useMemo } from 'react'
 
 const PERCENT_MAX = 100

@@ -1,7 +1,7 @@
 // Attachment pill extracted from chat-message to keep the parent renderer focused.
 import { memo, useState } from 'react'
-import { Button } from '@rift/ui/button'
-import { Dialog, DialogClose, DialogContent } from '@rift/ui/dialog'
+import { Button } from '@bish/ui/button'
+import { Dialog, DialogClose, DialogContent } from '@bish/ui/dialog'
 import { Download, ExternalLink, FileText, X } from 'lucide-react'
 import type { ChatAttachment } from '@/lib/shared/chat-contracts/attachments'
 import { m } from '@/paraglide/messages.js'

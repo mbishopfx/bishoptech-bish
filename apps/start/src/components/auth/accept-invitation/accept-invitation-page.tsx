@@ -2,8 +2,8 @@
 
 import { Navigate } from '@tanstack/react-router'
 import { motion } from 'motion/react'
-import { Button } from '@rift/ui/button'
-import { Avatar, AvatarFallback } from '@rift/ui/avatar'
+import { Button } from '@bish/ui/button'
+import { Avatar, AvatarFallback } from '@bish/ui/avatar'
 import { AlertTriangle, Check } from 'lucide-react'
 import {
   cardVariants,

@@ -2,9 +2,9 @@
 
 import { motion } from 'motion/react'
 import { m } from '@/paraglide/messages.js'
-import { Button } from '@rift/ui/button'
-import { Label } from '@rift/ui/label'
-import { Input } from '@rift/ui/input'
+import { Button } from '@bish/ui/button'
+import { Label } from '@bish/ui/label'
+import { Input } from '@bish/ui/input'
 import {
   cardVariants,
   staggerChildVariants,

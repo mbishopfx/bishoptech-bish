@@ -1,14 +1,14 @@
 'use client'
 
 import { useState } from 'react'
-import { Form } from '@rift/ui/form'
+import { Form } from '@bish/ui/form'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@rift/ui/select'
+} from '@bish/ui/select'
 import { ContentPage } from '@/components/layout'
 import { AvatarUploadField } from '@/components/settings/avatar-upload'
 import { locales } from '@/paraglide/runtime.js'

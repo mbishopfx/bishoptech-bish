@@ -9,7 +9,7 @@ export const Route = createFileRoute('/legal/privacy')({
     meta: buildPageMetadata({
       title: 'Privacy Policy',
       description:
-        'Review how Rift collects, uses, stores, and protects personal information across the website and product.',
+        'Review how BISH collects, uses, stores, and protects personal information across the website and product.',
     }),
   }),
   component: PrivacyPolicyPage,
@@ -46,9 +46,9 @@ function PrivacyPolicyPage() {
                 </h2>
                 <p className="text-foreground-primary dark:text-foreground-primary text-sm leading-6">
                   This privacy policy (the "Policy") describes how The Unreal
-                  Compound SA de CV ("Company", "Rift AI", "we") collects, uses,
+                  Compound SA de CV ("Company", "BISH", "we") collects, uses,
                   and shares personal information from users of this website,
-                  Rift AI `https://rift.mx` (the "Site"), as well as associated
+                  BISH `https://bish.local` (the "Site"), as well as associated
                   products and services (collectively, the "Services"). It
                   applies to personal information we collect through the Site
                   and our Services, as well as personal information you provide
@@ -67,22 +67,22 @@ function PrivacyPolicyPage() {
                 </h2>
                 <p className="text-foreground-primary dark:text-foreground-primary text-sm leading-6 mb-4">
                   We collect personal information about you in various ways. Our
-                  product, Rift AI, collects the following personal information:
+                  product, BISH, collects the following personal information:
                 </p>
 
                 <div className="space-y-4">
                   <div>
                     <h3 className="font-semibold text-base leading-6 text-foreground-primary dark:text-foreground-primary mb-2">
-                      Personal information from Rift AI users:
+                      Personal information from BISH users:
                     </h3>
                     <p className="text-foreground-primary dark:text-foreground-primary text-sm leading-6 mb-2">
-                      When you use our Rift AI product, we collect the following
+                      When you use our BISH product, we collect the following
                       personal information from you:
                     </p>
                     <ul className="list-disc pl-6 space-y-1 text-foreground-primary dark:text-foreground-primary text-sm leading-6">
                       <li>
                         User content, such as your instructions or queries to
-                        the Rift AI product and other content you upload to the
+                        the BISH product and other content you upload to the
                         product, including PDF files, images, and text files.
                       </li>
                       <li>
@@ -98,7 +98,7 @@ function PrivacyPolicyPage() {
                       general:
                     </h3>
                     <p className="text-foreground-primary dark:text-foreground-primary text-sm leading-6 mb-2">
-                      When you use our Services, including our website and Rift
+                      When you use our Services, including our website and BISH
                       AI, we collect the personal information you provide to us,
                       which may include the following categories, depending on
                       how you use our Services and communicate with us:
@@ -222,7 +222,7 @@ function PrivacyPolicyPage() {
                   Subject to this Privacy Policy, our terms of use, and the
                   applicable terms and conditions of third-party applications,
                   all data transmitted through the Site and Services is owned by
-                  Rift AI. Generally, we may use the information in the
+                  BISH. Generally, we may use the information in the
                   following ways and as described in this Privacy Policy:
                 </p>
 
@@ -302,7 +302,7 @@ function PrivacyPolicyPage() {
                       permitted by law, including by postal and email mail. You
                       may opt out of receiving marketing communications by
                       following the unsubscribe instructions included in
-                      marketing emails or by emailing us at support@rift.chat.
+                      marketing emails or by emailing us at support@bish.local.
                     </p>
                   </div>
 
@@ -679,10 +679,10 @@ function PrivacyPolicyPage() {
                   <p className="mt-2">
                     Email:{' '}
                     <a
-                      href="mailto:privacy@rift.mx"
+                      href="mailto:privacy@bish.local"
                       className="text-foreground-info hover:underline"
                     >
-                      privacy@rift.mx
+                      privacy@bish.local
                     </a>
                   </p>
                 </div>

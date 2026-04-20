@@ -6,7 +6,7 @@ export const Route = createFileRoute('/auth/accept-invitation/$id')({
   head: () => ({
     meta: buildPageMetadata({
       title: 'Accept Invitation',
-      description: 'Accept an invitation to join a Rift workspace.',
+      description: 'Accept an invitation to join a BISH workspace.',
       robots: 'noindex,nofollow',
     }),
   }),

@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react'
 
-import { cn } from '@rift/utils'
+import { cn } from '@bish/utils'
 
 /**
  * Layout and padding for app content pages

@@ -3,14 +3,14 @@
 import * as React from "react"
 import { Command as CommandPrimitive } from "cmdk"
 
-import { cn } from "@rift/utils"
+import { cn } from "@bish/utils"
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@rift/ui/dialog"
+} from "@bish/ui/dialog"
 import { SearchIcon, CheckIcon } from "lucide-react"
 
 function Command({

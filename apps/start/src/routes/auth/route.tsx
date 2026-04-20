@@ -6,7 +6,7 @@ export const Route = createFileRoute('/auth')({
   head: () => ({
     meta: buildPageMetadata({
       title: 'Authentication',
-      description: 'Sign in or create a Rift account to access your workspace.',
+      description: 'Sign in or create a BISH account to access your workspace.',
       robots: 'noindex,follow',
     }),
   }),

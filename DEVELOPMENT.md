@@ -1,6 +1,6 @@
 # Development Guide
 
-This guide covers how to set up and run the Rift development environment locally.
+This guide covers how to set up and run the BISH web, worker, and scheduler stack locally.
 
 ## Prerequisites
 
@@ -43,7 +43,7 @@ This installs all workspace dependencies across the monorepo.
 
 ### 2. Database Setup
 
-Rift uses PostgreSQL for persistence. The easiest way is via Docker:
+BISH uses PostgreSQL for persistence. The easiest way is via Docker:
 
 ```bash
 docker compose -f docker-compose.postgres.yml up -d
@@ -51,14 +51,14 @@ docker compose -f docker-compose.postgres.yml up -d
 
 This starts PostgreSQL on port 5432 with:
 
-- Database: `rift`
-- Username: `rift`
-- Password: `rift`
+- Database: `bish`
+- Username: `bish`
+- Password: `bish`
 
 Next, initialize the database schema:
 
 ```bash
-bun run db:reset
+bun run web:db:reset
 ```
 
 ### 3. Environment Configuration
@@ -71,9 +71,32 @@ cp apps/start/.env.example apps/start/.env.local
 
 Edit `apps/start/.env.local` and configure the required envs.
 
+For connector development, also add the provider credentials you plan to work on:
+
+```bash
+BISH_ENCRYPTION_KEY=replace-with-32-byte-secret
+
+GOOGLE_WORKSPACE_PROJECT_ID=
+GOOGLE_WORKSPACE_CLIENT_EMAIL=
+GOOGLE_WORKSPACE_PRIVATE_KEY=
+GOOGLE_WORKSPACE_IMPERSONATION_ADMIN=
+
+ASANA_CLIENT_ID=
+ASANA_CLIENT_SECRET=
+ASANA_REDIRECT_URI=http://localhost:3000/api/org/bish/connectors/asana/callback
+
+HUBSPOT_CLIENT_ID=
+HUBSPOT_CLIENT_SECRET=
+HUBSPOT_REDIRECT_URI=http://localhost:3000/api/org/bish/connectors/hubspot/callback
+```
+
+For Railway or any non-local deployment, point those redirect URIs at the public BISH hostname instead of `localhost`.
+
+Google Workspace does not use an OAuth callback in the current v1 flow. Once the delegation envs are present, the connector screen exposes an `Activate` action that marks the tenant ready for worker-driven discovery and sync.
+
 ### 4. Markdown Converter Worker Setup
 
-Rift uses a Cloudflare Worker to convert uploaded files (PDFs, Office docs, etc.) to markdown. This is required for file attachments.
+BISH uses a Cloudflare Worker to convert uploaded files (PDFs, Office docs, etc.) to markdown. This is required for file attachments.
 
 ```bash
 bun setup:markdown-worker
@@ -118,6 +141,13 @@ This starts:
 - Zero cache on port 4848
 - Turbo task runner with TUI
 
+Run the background services in separate shells when needed:
+
+```bash
+bun run app:worker
+bun run app:scheduler
+```
+
 Access the app at: `http://localhost:3000`
 
 ### Available Scripts
@@ -129,7 +159,9 @@ bun run dev          # Start dev server with Zero cache
 bun run build        # Build for production
 bun run lint         # Run linter across all packages
 bun run check        # Run type checks
-bun run db:reset     # Reset database and run migrations
+bun run web:db:reset # Reset database and run migrations
+bun run app:worker   # Start the BISH worker service
+bun run app:scheduler # Start the BISH scheduler service
 ```
 
 From `apps/start/`:

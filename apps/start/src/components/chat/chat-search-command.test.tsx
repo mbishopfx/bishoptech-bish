@@ -20,7 +20,7 @@ vi.mock('@/lib/frontend/chat/chat-search.functions', () => ({
   searchChatThreads: (input: unknown) => searchChatThreadsMock(input),
 }))
 
-vi.mock('@rift/ui/hooks/useTheme', () => ({
+vi.mock('@bish/ui/hooks/useTheme', () => ({
   useTheme: () => ({
     resolvedTheme: 'light',
     setTheme: setThemeMock,

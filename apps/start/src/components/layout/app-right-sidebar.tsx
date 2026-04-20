@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { cn } from '@rift/utils'
+import { cn } from '@bish/utils'
 import { m } from '@/paraglide/messages.js'
 
 export type AppRightSidebarProps = {

@@ -1,4 +1,3 @@
-import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto'
 import { isSelfHosted } from '@/utils/app-feature-flags'
 import { authPool } from '@/lib/backend/auth/infra/auth-pool'
 
@@ -53,6 +52,24 @@ let cachedInstanceSettingsPromise: Promise<SelfHostedInstanceSettings> | null = 
 function hasEnvValue(name: string): boolean {
   const value = process.env[name]?.trim()
   return Boolean(value)
+}
+
+function constantTimeEqual(left: string, right: string): boolean {
+  if (left.length !== right.length) {
+    return false
+  }
+
+  let mismatch = 0
+
+  for (let index = 0; index < left.length; index += 1) {
+    mismatch |= left.charCodeAt(index) ^ right.charCodeAt(index)
+  }
+
+  return mismatch === 0
+}
+
+async function loadNodeCrypto() {
+  return import('node:crypto')
 }
 
 function normalizeInstanceSettingsRow(
@@ -215,13 +232,7 @@ export function verifySelfHostedSetupToken(token: string): boolean {
   const normalizedToken = token.trim()
   if (!normalizedToken) return false
 
-  const expectedBuffer = Buffer.from(expectedToken)
-  const actualBuffer = Buffer.from(normalizedToken)
-
-  return (
-    expectedBuffer.length === actualBuffer.length &&
-    timingSafeEqual(expectedBuffer, actualBuffer)
-  )
+  return constantTimeEqual(expectedToken, normalizedToken)
 }
 
 export async function completeSelfHostedSetup(input: {
@@ -331,25 +342,21 @@ export async function hasPendingSelfHostedInvitationForEmail(
   return Boolean(result.rows[0]?.exists)
 }
 
-export function hashSelfHostedSignupSecret(secret: string): string {
+export async function hashSelfHostedSignupSecret(secret: string): Promise<string> {
+  const { randomBytes, scryptSync } = await loadNodeCrypto()
   const salt = randomBytes(16).toString('hex')
   const derived = scryptSync(secret, salt, 64).toString('hex')
   return `${salt}:${derived}`
 }
 
-export function verifySelfHostedSignupSecret(input: {
+export async function verifySelfHostedSignupSecret(input: {
   readonly secret: string
   readonly hash: string
-}): boolean {
+}): Promise<boolean> {
   const [salt, stored] = input.hash.split(':')
   if (!salt || !stored) return false
 
+  const { scryptSync } = await loadNodeCrypto()
   const actual = scryptSync(input.secret, salt, 64).toString('hex')
-  const storedBuffer = Buffer.from(stored)
-  const actualBuffer = Buffer.from(actual)
-
-  return (
-    storedBuffer.length === actualBuffer.length &&
-    timingSafeEqual(storedBuffer, actualBuffer)
-  )
+  return constantTimeEqual(stored, actual)
 }

@@ -1,7 +1,7 @@
 // Single chat message renderer (user/assistant).
 import { memo, useEffect, useMemo, useRef, useState } from 'react'
 import type { UIMessage } from 'ai'
-import { useDirection } from '@rift/ui/direction'
+import { useDirection } from '@bish/ui/direction'
 import type { ChatMessageMetadata } from '@/lib/shared/chat-contracts/message-metadata'
 import type { ChatAttachment } from '@/lib/shared/chat-contracts/attachments'
 import { AttachmentPreviewPill } from './attachment-preview-pill'

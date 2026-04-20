@@ -2,8 +2,8 @@
 
 import { motion, useReducedMotion } from 'motion/react'
 import { Link } from '@tanstack/react-router'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@rift/ui/tooltip'
-import { cn } from '@rift/utils'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@bish/ui/tooltip'
+import { cn } from '@bish/utils'
 import { m } from '@/paraglide/messages.js'
 import { isSelfHosted } from '@/utils/app-feature-flags'
 import { useAppAuth } from '@/lib/frontend/auth/use-auth'

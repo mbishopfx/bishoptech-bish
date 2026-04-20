@@ -1,8 +1,8 @@
-<h1 align="center">Rift</h1>
-<p align="center">High-performance AI chat infrastructure built for teams.</p>
+<h1 align="center">BISH</h1>
+<p align="center">Railway-first autonomous operations platform for small businesses.</p>
 
 <p align="center">
-  <a href="https://rift.mx"><strong>Website</strong></a> ·
+  <a href="https://bish.local"><strong>Website</strong></a> ·
   <a href="#self-hosting"><strong>Deploy on Railway</strong></a> ·
   <a href="#self-hosting"><strong>Self-hosting</strong></a> ·
   <a href="./DEVELOPMENT.md"><strong>Local Development</strong></a>
@@ -10,13 +10,11 @@
 
 ## Introduction
 
-Rift is a Bun + TanStack platform designed to make AI chat feel instant.
+BISH is an AGPL-safe fork/rebuild inspired by Rift's open core, reworked into a Railway-first platform for deploying custom, approval-gated SMB bots.
 
-The core product goal is simple: maximize responsiveness and quality-of-life while preserving native provider behavior and enterprise-grade workspace controls.
+The product goal is to combine sync-first chat infrastructure, Postgres-native knowledge retrieval, connector ingestion, and controlled agent evolution in one base platform.
 
-Rift is built around TanStack Start, Rocicorp Zero for sync-first state and realtime updates, and the AI SDK for multi-provider support.
-
-![Rift chat app screenshot](https://github.com/user-attachments/assets/3b5adbbd-06ef-4e8b-b6ae-7bafc5afdc61)
+![BISH chat app screenshot](https://github.com/user-attachments/assets/3b5adbbd-06ef-4e8b-b6ae-7bafc5afdc61)
 
 ## Features
 
@@ -30,12 +28,14 @@ Rift is built around TanStack Start, Rocicorp Zero for sync-first state and real
 - Sync-based architecture
 - Organization-level model, tool, and compliance policy controls
 - File uploads + markdown conversion pipeline supporting PDF, HTML/XML, Office, OpenDocument, CSV, and related document formats
-- Vector retrieval pipeline (Qdrant) for attachment-aware RAG
-- React Native mobile app currently in development (coming soon)
+- Postgres + `pgvector` retrieval for attachments and organization knowledge
+- Connector control plane for Google Workspace, Asana, and HubSpot
+- Operator and client consoles for connector installs, sync jobs, approvals, and agent evolution
+- Worker and scheduler services for sync, evaluation, and action processing
 
 ## Tech Stack
 
-Rift is centered around this stack:
+BISH is centered around this stack:
 
 - [Bun](https://bun.sh/) - runtime, package management, and scripts
 - [TanStack Start](https://tanstack.com/start) + [TanStack Router](https://tanstack.com/router) - full-stack React architecture
@@ -48,24 +48,39 @@ Additional platform technologies:
 
 - [TypeScript](https://www.typescriptlang.org/), [Vite](https://vitejs.dev/), [React 19](https://react.dev/), [Tailwind CSS v4](https://tailwindcss.com/)
 - [Better Auth](https://www.better-auth.com/) for auth, organizations, invitations, and roles
-- PostgreSQL + Redis for persistence and stream continuity
-- Qdrant for vector search/RAG workflows
+- PostgreSQL + `pgvector` as the system of record and vector store
+- Redis for transient stream continuity
 - Stripe + Resend for billing and email flows
 
 ## Self-Hosting
 
-Rift is deployable via a Railway template.
+BISH is designed for a three-service Railway layout:
 
-[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/rift-1?referralCode=0pCHYK&utm_medium=integration&utm_source=template&utm_campaign=github)
+- `apps/start` -> web app
+- `apps/worker` -> background job executor
+- `apps/scheduler` -> recurring sync scheduler
 
-More self-hosting deployment options will be documented soon.
+Each service includes a `railway.toml` file. On Railway, import the monorepo, keep each service pointed at its package directory, and provision Postgres + Redis in the same project.
+
+For a production v1 deployment, wire the services like this:
+
+1. Create one Railway project with `apps/start`, `apps/worker`, and `apps/scheduler` as separate services.
+2. Add Railway Postgres and Redis, then expose their connection URLs as shared variables.
+3. Add the env contract from `apps/start/.env.example` to the web service, then mirror the database and scheduler variables into worker and scheduler.
+4. Set the OAuth callback URLs to the public BISH hostname:
+   - `ASANA_REDIRECT_URI=https://<your-bish-domain>/api/org/bish/connectors/asana/callback`
+   - `HUBSPOT_REDIRECT_URI=https://<your-bish-domain>/api/org/bish/connectors/hubspot/callback`
+5. Google Workspace activation is handled from the BISH UI and uses the deployed admin delegation envs rather than an OAuth callback.
 
 ## Repository Overview
 
 This repository is a Bun + Turborepo monorepo.
 
-- `apps/start/` - Primary Rift web app (TanStack Start + Vite)
+- `apps/start/` - Primary BISH web app (TanStack Start + Vite)
+- `apps/worker/` - Connector sync, eval, and action worker
+- `apps/scheduler/` - Scheduled sync orchestrator
 - `packages/ui/` - Shared UI components
+- `packages/automation/` - Shared connector definitions, readiness checks, adapter contracts, and ingestion helpers
 - `packages/utils/` - Shared utilities
 - `packages/chat-scroll/` - Chat scrolling primitives
 - `packages/tailwind-config/` - Shared Tailwind configuration
@@ -78,7 +93,7 @@ For detailed setup instructions, see **[DEVELOPMENT.md](./DEVELOPMENT.md)**.
 
 ### Setting up the Markdown Converter Worker (Required for file attachments)
 
-Rift uses a Cloudflare Worker to convert uploaded files (PDFs, documents, etc.) to markdown. To set it up:
+BISH uses a Cloudflare Worker to convert uploaded files (PDFs, documents, etc.) to markdown. To set it up:
 
 ```bash
 bun setup:markdown-worker
@@ -94,6 +109,37 @@ This interactive script will:
 
 **Note:** You'll need a Cloudflare account. The worker runs on Cloudflare's free tier.
 
+## Connector Credentials Needed
+
+To move BISH from scaffolded adapters to live production connectors, these envs need to be supplied in Railway and locally:
+
+- Core platform:
+  - `ZERO_UPSTREAM_DB`
+  - `REDIS_URL`
+  - one S3-compatible object store config set
+  - `BISH_ENCRYPTION_KEY`
+- Google Workspace domain-wide delegation:
+  - `GOOGLE_WORKSPACE_PROJECT_ID`
+  - `GOOGLE_WORKSPACE_CLIENT_EMAIL`
+  - `GOOGLE_WORKSPACE_PRIVATE_KEY`
+  - `GOOGLE_WORKSPACE_IMPERSONATION_ADMIN`
+- Asana OAuth:
+  - `ASANA_CLIENT_ID`
+  - `ASANA_CLIENT_SECRET`
+  - `ASANA_REDIRECT_URI`
+- HubSpot OAuth:
+  - `HUBSPOT_CLIENT_ID`
+  - `HUBSPOT_CLIENT_SECRET`
+  - `HUBSPOT_REDIRECT_URI`
+
+The current build already exposes connector readiness in the BISH settings UI and marks connectors as `config_required` until these credentials are present.
+
+Once a connector account is created in the UI:
+
+- Google Workspace shows an `Activate` action and moves straight to `connected` when the delegation env is valid.
+- Asana and HubSpot show a `Connect` action that starts OAuth and returns to `/organization/settings/connectors`.
+- Only connected connectors expose `Queue Sync`, which keeps manual syncs aligned with the real auth state.
+
 ## Contributing
 
 Contributions are welcome.
@@ -104,11 +150,6 @@ Contributions are welcome.
 
 ## License
 
-Rift is an open-core repository. The core technology is fully open source
-under the GNU Affero General Public License v3.0 (AGPL-3.0), and the
-enterprise surface under `apps/start/src/routes/(ee)` and `apps/start/src/ee`
-is covered by a separate commercial license.
+BISH currently ships only from the AGPL-covered surface in this repository.
 
-See [LICENSE](./LICENSE) for the AGPL terms and
-[apps/start/src/ee/LICENSE.md](./apps/start/src/ee/LICENSE.md) for the
-enterprise license.
+See [LICENSE](./LICENSE) for the AGPL terms.

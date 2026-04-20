@@ -1,6 +1,6 @@
 import type { ComponentType } from 'react'
 import { Link } from '@tanstack/react-router'
-import { Button } from '@rift/ui/button'
+import { Button } from '@bish/ui/button'
 import type { LandingPlan, FeatureIconId } from '@/lib/shared/pricing'
 import {
   StandarIcon,
@@ -19,7 +19,7 @@ import {
 } from './pricing-icons'
 import { CardDashedBorder, GradientBackground } from './pricing-decorative'
 import { Check, ShieldCheck } from 'lucide-react'
-import { cn } from '@rift/utils'
+import { cn } from '@bish/utils'
 import { m } from '@/paraglide/messages.js'
 
 /** Maps FeatureIconId to the icon component. No arrow icons; each feature has a semantic icon. */

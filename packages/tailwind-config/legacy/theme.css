@@ -1,6 +1,6 @@
 /**
- * @rift/tailwind-config/legacy — Tailwind v4 theme for Next.js (legacy).
- * Import in Next: @import '@rift/tailwind-config/legacy'; @import '@rift/tailwind-config/legacy/base.css';
+ * @bish/tailwind-config/legacy — Tailwind v4 theme for Next.js (legacy).
+ * Import in Next: @import '@bish/tailwind-config/legacy'; @import '@bish/tailwind-config/legacy/base.css';
  */
 
 @custom-variant dark (&:is(.dark *));

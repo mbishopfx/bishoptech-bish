@@ -188,7 +188,7 @@ export function getEnterprisePlan(): LandingPlan {
       { text: m.pricing_plan_enterprise_feature_sla(), iconId: 'shield' },
     ],
     buttonText: m.pricing_cta_contact_sales(),
-    href: 'mailto:sales@rift.mx',
+    href: 'mailto:sales@bish.local',
     gradientId: '5',
     isEnterprise: true,
   }
@@ -226,7 +226,7 @@ export function getSelfHostingPlan(): LandingPlan {
       },
     ],
     buttonText: m.pricing_cta_get_in_touch(),
-    href: 'mailto:enterprise@rift.mx',
+    href: 'mailto:enterprise@bish.local',
     gradientId: '6',
   }
 }

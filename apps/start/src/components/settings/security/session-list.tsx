@@ -1,6 +1,6 @@
 'use client'
 
-import { Button } from '@rift/ui/button'
+import { Button } from '@bish/ui/button'
 import { Laptop, Smartphone } from 'lucide-react'
 import { m } from '@/paraglide/messages.js'
 import type { ActiveSessionViewModel } from './security-page.logic'

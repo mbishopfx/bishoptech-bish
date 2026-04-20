@@ -3,16 +3,16 @@
 import { useCallback, useEffect, useState } from 'react'
 import { authClient } from '@/lib/frontend/auth/auth-client'
 import { useAppAuth } from '@/lib/frontend/auth/use-auth'
-import { Avatar, AvatarFallback, AvatarImage } from '@rift/ui/avatar'
-import { Button } from '@rift/ui/button'
+import { Avatar, AvatarFallback, AvatarImage } from '@bish/ui/avatar'
+import { Button } from '@bish/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@rift/ui/dropdown-menu'
+} from '@bish/ui/dropdown-menu'
 import { Check, ChevronDown } from 'lucide-react'
-import { cn } from '@rift/utils'
+import { cn } from '@bish/utils'
 import { m } from '@/paraglide/messages.js'
 
 type Organization = {

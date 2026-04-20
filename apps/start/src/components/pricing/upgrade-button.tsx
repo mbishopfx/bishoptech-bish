@@ -1,7 +1,7 @@
 'use client'
 
 import { Link } from '@tanstack/react-router'
-import { Button } from '@rift/ui/button'
+import { Button } from '@bish/ui/button'
 
 /**
  * Upgrade button for the chat UI. Links to the pricing page.

@@ -2,8 +2,8 @@
 
 import { Link } from '@tanstack/react-router'
 import { Moon, Sun } from 'lucide-react'
-import { Button } from '@rift/ui/button'
-import { useTheme } from '@rift/ui/hooks/useTheme'
+import { Button } from '@bish/ui/button'
+import { useTheme } from '@bish/ui/hooks/useTheme'
 import { AppLogo } from './navbar-icons'
 import { NavbarAuthButtons } from './navbar-auth-buttons'
 import type { NavbarDict } from './navbar-auth-buttons'

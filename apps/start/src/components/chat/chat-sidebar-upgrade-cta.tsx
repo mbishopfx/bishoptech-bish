@@ -1,8 +1,8 @@
 'use client'
 
 import { Link } from '@tanstack/react-router'
-import { Button } from '@rift/ui/button'
-import { cn } from '@rift/utils'
+import { Button } from '@bish/ui/button'
+import { cn } from '@bish/utils'
 import {
   CardDashedBorder,
   GradientBackground,

@@ -5,7 +5,7 @@
     "noEmit": true,
     "baseUrl": ".",
     "paths": {
-      "@rift/ui/*": ["./src/components/*"]
+      "@bish/ui/*": ["./src/components/*"]
     }
   },
   "include": ["src"],

@@ -1,24 +1,24 @@
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react'
 import type { ComponentType } from 'react'
-import { ThemeToggle } from '@rift/ui/theme-toggle'
-import { useMediaQuery } from '@rift/ui/hooks/useMediaQuery'
+import { ThemeToggle } from '@bish/ui/theme-toggle'
+import { useMediaQuery } from '@bish/ui/hooks/useMediaQuery'
 import {
   CHAT_AREA_KEY,
   getCurrentArea,
   NAV_AREAS,
-  SINGULARITY_AREA_KEY,
+  OPERATOR_AREA_KEY,
   SETTINGS_AREA_KEY,
 } from '@/components/layout/sidebar/app-sidebar-nav.config'
 import { SidebarAreaPanel } from '@/components/layout/sidebar/sidebar-area-panel'
 import { ORG_SETTINGS_AREA_KEY } from '@/routes/(app)/_layout/organization/settings/-organization-settings-nav'
 import { UserProfileAvatar } from '@/components/layout/user-profile-avatar'
-import { Button } from '@rift/ui/button'
-import { directionClass, useDirection } from '@rift/ui/direction'
-import { SidebarGroupTooltip } from '@rift/ui/tooltip'
-import { cn } from '@rift/utils'
+import { Button } from '@bish/ui/button'
+import { directionClass, useDirection } from '@bish/ui/direction'
+import { SidebarGroupTooltip } from '@bish/ui/tooltip'
+import { cn } from '@bish/utils'
+import { isBishOperatorEmail } from '@/lib/backend/bish/operator-access'
 import { useAppAuth } from '@/lib/frontend/auth/use-auth'
 import { Link, useRouterState } from '@tanstack/react-router'
-import { isSingularityOrganizationId } from '@/ee/singularity/shared/singularity'
 import { waitForPageSettled } from '@/lib/frontend/performance/page-settled'
 import { SidebarChatThreadPreloader } from './sidebar/sidebar-chat-thread-preloader'
 import { usePageSidebarVisibility } from './page-sidebar-visibility-context'
@@ -112,10 +112,10 @@ export const AppSidebar: ComponentType = () => {
       cancelAnimationFrame(frame)
     }
   }, [effectiveCurrentArea, isTransitionReady])
-  const { user, loading, isAnonymous, activeOrganizationId } = useAppAuth()
+  const { user, loading, isAnonymous } = useAppAuth()
   const { isChatPageSidebarCollapsed } = usePageSidebarVisibility()
   const direction = useDirection()
-  const canAccessSingularity = isSingularityOrganizationId(activeOrganizationId)
+  const canAccessOperator = isBishOperatorEmail(user?.email)
   // Keep non-chat areas unchanged. For chat routes, allow collapsing just the
   // area panel while keeping the primary icon rail visible.
   const showAreaPanel =
@@ -182,7 +182,7 @@ export const AppSidebar: ComponentType = () => {
             </Suspense>
             {Object.entries(NAV_AREAS)
               .filter(([key]) =>
-                key === SINGULARITY_AREA_KEY ? canAccessSingularity : true,
+                key === OPERATOR_AREA_KEY ? canAccessOperator : true,
               )
               .filter(
                 ([key]) =>

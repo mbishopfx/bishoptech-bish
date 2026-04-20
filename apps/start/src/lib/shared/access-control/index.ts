@@ -182,7 +182,7 @@ export const RUNTIME_FEATURE_MINIMUM_PLANS: Record<
 }
 
 const BILLING_SETTINGS_HREF = '/organization/settings/billing'
-const ENTERPRISE_CONTACT_HREF = 'mailto:enterprise@rift.mx'
+const ENTERPRISE_CONTACT_HREF = 'mailto:enterprise@bish.local'
 
 const FREE_TIER_ALLOWED_MODEL_IDS = new Set<string>(
   AI_CATALOG.filter(

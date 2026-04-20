@@ -1,6 +1,6 @@
 'use client'
 
-import { FormDialog } from '@rift/ui/dialog'
+import { FormDialog } from '@bish/ui/dialog'
 import { m } from '@/paraglide/messages.js'
 
 type BillingCancelDialogProps = {

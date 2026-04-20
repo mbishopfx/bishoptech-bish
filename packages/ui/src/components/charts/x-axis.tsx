@@ -2,7 +2,7 @@
 
 import { motion } from "motion/react";
 import { useEffect, useMemo, useState } from "react";
-import { cn } from "@rift/utils";
+import { cn } from "@bish/utils";
 import { useChart } from "./chart-context";
 
 export interface XAxisProps {

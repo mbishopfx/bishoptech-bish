@@ -1,5 +1,5 @@
 import type { SVGProps } from 'react'
-import { cn } from '@rift/utils'
+import { cn } from '@bish/utils'
 
 export function AppLogo({
   className,

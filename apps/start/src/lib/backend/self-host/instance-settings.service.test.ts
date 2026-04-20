@@ -111,16 +111,16 @@ describe('instance-settings.service', () => {
       selfHosted: true,
     })
 
-    const hash = mod.hashSelfHostedSignupSecret('s3cret-value')
+    const hash = await mod.hashSelfHostedSignupSecret('s3cret-value')
 
-    expect(mod.verifySelfHostedSignupSecret({
+    await expect(mod.verifySelfHostedSignupSecret({
       secret: 's3cret-value',
       hash,
-    })).toBe(true)
+    })).resolves.toBe(true)
 
-    expect(mod.verifySelfHostedSignupSecret({
+    await expect(mod.verifySelfHostedSignupSecret({
       secret: 'wrong-value',
       hash,
-    })).toBe(false)
+    })).resolves.toBe(false)
   })
 })

@@ -1,6 +1,6 @@
 'use client'
 
-import { Form } from '@rift/ui/form'
+import { Form } from '@bish/ui/form'
 import { ContentPage } from '@/components/layout'
 import { m } from '@/paraglide/messages.js'
 import { ConnectedLoginMethods } from './connected-login-methods'

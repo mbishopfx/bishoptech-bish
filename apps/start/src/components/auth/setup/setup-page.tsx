@@ -1,9 +1,9 @@
 'use client'
 
 import { AnimatePresence, motion } from 'motion/react'
-import { Button } from '@rift/ui/button'
-import { Input } from '@rift/ui/input'
-import { Label } from '@rift/ui/label'
+import { Button } from '@bish/ui/button'
+import { Input } from '@bish/ui/input'
+import { Label } from '@bish/ui/label'
 import { LegalLinks } from '@/components/auth/sign-in/legal-links'
 import {
   cardVariants,

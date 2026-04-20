@@ -1,0 +1,9 @@
+[build]
+builder = "RAILPACK"
+buildCommand = "cd ../.. && bun install --frozen-lockfile"
+watchPatterns = ["/apps/worker/**", "/apps/start/src/lib/backend/**", "/apps/start/zero/**", "/package.json", "/bun.lock"]
+
+[deploy]
+startCommand = "cd ../.. && bun run app:worker"
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10

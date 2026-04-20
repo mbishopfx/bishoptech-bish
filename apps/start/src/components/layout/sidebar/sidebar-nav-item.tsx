@@ -1,13 +1,13 @@
 import { Link } from '@tanstack/react-router'
 import { useMemo, useState } from 'react'
 
-import { cn } from '@rift/utils'
-import { Button, buttonVariants } from '@rift/ui/button'
+import { cn } from '@bish/utils'
+import { Button, buttonVariants } from '@bish/ui/button'
 import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuTrigger,
-} from '@rift/ui/context-menu'
+} from '@bish/ui/context-menu'
 import { isPathActive } from '@/utils/nav-utils'
 import type { NavItemType } from './app-sidebar-nav.config'
 

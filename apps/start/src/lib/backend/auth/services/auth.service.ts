@@ -249,10 +249,10 @@ const selfHostedAuthGuard = createAuthMiddleware(async (ctx) => {
   }
 
   const setupToken =
-    ctx.headers?.get('x-rift-setup-token')?.trim() ??
+    ctx.headers?.get('x-bish-setup-token')?.trim() ??
     readStringRecordValue(ctx.body, 'selfHostedSetupToken')
   const signupSecret =
-    ctx.headers?.get('x-rift-signup-secret')?.trim() ??
+    ctx.headers?.get('x-bish-signup-secret')?.trim() ??
     readStringRecordValue(ctx.body, 'selfHostedSignupSecret')
   const settings = await getSelfHostedInstanceSettings()
 
@@ -276,10 +276,10 @@ const selfHostedAuthGuard = createAuthMiddleware(async (ctx) => {
     if (
       !signupSecret ||
       !settings.signupSecretHash ||
-      !verifySelfHostedSignupSecret({
+      !(await verifySelfHostedSignupSecret({
         secret: signupSecret,
         hash: settings.signupSecretHash,
-      })
+      }))
     ) {
       throw APIError.from('FORBIDDEN', {
         code: 'SELF_HOSTED_SIGNUP_SECRET_INVALID',
@@ -411,7 +411,7 @@ async function ensureDefaultOrganizationForUser(input: {
  * exact same configuration that the app uses at runtime.
  */
 export const auth = betterAuth({
-  appName: 'Rift',
+  appName: 'BISH',
   baseURL: authBaseURL,
   basePath: '/api/auth',
   secret: requireEnv('BETTER_AUTH_SECRET'),
@@ -628,7 +628,7 @@ export const auth = betterAuth({
       maximumSessions: 10,
     }),
     twoFactor({
-      issuer: 'Rift',
+      issuer: 'BISH',
       totpOptions: {
         digits: 6,
         period: 30,

@@ -14,11 +14,11 @@ export default defineConfig({
     options.outbase = "src";
   },
   external: [
-    /^@rift\/ui\//,
+    /^@bish\/ui\//,
     "react",
     "react-dom",
     "react/jsx-runtime",
-    "@rift/utils",
+    "@bish/utils",
     "@base-ui/react",
     "@tanstack/react-table",
     "class-variance-authority",

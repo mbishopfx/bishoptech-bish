@@ -1,6 +1,6 @@
 'use client'
 
-import { BlobBackgroundGraphic } from '@rift/ui/blob-background-graphic'
+import { BlobBackgroundGraphic } from '@bish/ui/blob-background-graphic'
 
 /**
  * Shared layout shell for auth-related pages (sign-in, sign-up, accept-invitation,

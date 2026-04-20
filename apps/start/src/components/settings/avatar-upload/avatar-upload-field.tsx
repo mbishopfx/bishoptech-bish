@@ -1,8 +1,8 @@
 'use client'
 
-import { Avatar, AvatarFallback, AvatarImage } from '@rift/ui/avatar'
-import { Button } from '@rift/ui/button'
-import { cn } from '@rift/utils'
+import { Avatar, AvatarFallback, AvatarImage } from '@bish/ui/avatar'
+import { Button } from '@bish/ui/button'
+import { cn } from '@bish/utils'
 import { Loader2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { m } from '@/paraglide/messages.js'

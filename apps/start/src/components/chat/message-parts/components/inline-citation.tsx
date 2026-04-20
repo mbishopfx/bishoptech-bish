@@ -5,8 +5,8 @@ import {
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@rift/ui/tooltip'
-import { cn } from '@rift/utils'
+} from '@bish/ui/tooltip'
+import { cn } from '@bish/utils'
 import type { ComponentProps, ReactNode } from 'react'
 
 /**

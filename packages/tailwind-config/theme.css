@@ -1,13 +1,13 @@
 /**
- * @rift/tailwind-config — default Tailwind v4 theme (minimal, used by TanStack Start).
- * Import: @import '@rift/tailwind-config'; @import '@rift/tailwind-config/base.css';
- * Next.js (legacy): @import '@rift/tailwind-config/legacy'; @import '@rift/tailwind-config/legacy/base.css';
+ * @bish/tailwind-config — default Tailwind v4 theme (minimal, used by TanStack Start).
+ * Import: @import '@bish/tailwind-config'; @import '@bish/tailwind-config/base.css';
+ * Next.js (legacy): @import '@bish/tailwind-config/legacy'; @import '@bish/tailwind-config/legacy/base.css';
  */
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  /* Geist is the only default type family used by Rift. */
+  /* Geist is the only default type family used by BISH. */
   --font-geist: "Geist", system-ui, sans-serif;
   --font-geist-mono: "Geist Mono", ui-monospace, monospace;
 
@@ -54,84 +54,87 @@
   --radius: 0.5rem;
 
   /* Streamdown/shadcn-style tokens (external lib compatibility) */
-  --primary: 217 91% 60%;
-  --primary-foreground: 0 0% 100%;
-  --muted: 0 0% 98%;
-  --muted-foreground: 0 0% 64%;
-  --border: 0 0% 83%;
-  --ring: 217 91% 60%;
+  --primary: 218 31% 42%;
+  --primary-foreground: 40 33% 98%;
+  --muted: 35 18% 95%;
+  --muted-foreground: 31 13% 43%;
+  --border: 32 16% 84%;
+  --ring: 218 31% 42%;
 
-  /* Surfaces */
-  --surface-base: rgb(252 252 252);
-  --surface-raised: rgb(250 250 250);
-  --surface-overlay: rgb(247 247 247);
-  --surface-strong: rgb(229 229 229);
-  --surface-inverse: rgb(23 23 23);
-  --surface-info: rgb(191 219 254);
-  --surface-success: rgb(220 252 231);
-  --surface-warning: rgb(255 237 213);
-  --surface-error: rgb(254 226 226);
+  /*
+   * BISH leans into warm off-white neutrals so operational pages stay bright
+   * without washing out borders, badges, or dense table content.
+   */
+  --surface-base: rgb(244 241 236);
+  --surface-raised: rgb(250 248 244);
+  --surface-overlay: rgb(237 233 226);
+  --surface-strong: rgb(224 219 210);
+  --surface-inverse: rgb(31 33 36);
+  --surface-info: rgb(214 227 255);
+  --surface-success: rgb(221 241 226);
+  --surface-warning: rgb(255 235 209);
+  --surface-error: rgb(252 228 225);
 
   /* Foreground (text) */
-  --foreground-primary: rgb(64 64 64);
-  --foreground-secondary: rgb(163 163 163);
-  --foreground-tertiary: rgb(115 115 115);
+  --foreground-primary: rgb(66 61 54);
+  --foreground-secondary: rgb(113 104 92);
+  --foreground-tertiary: rgb(132 124 112);
   --foreground-inverse: rgb(255 255 255);
-  --foreground-strong: rgb(23 23 23);
-  --foreground-info: rgb(29 78 216);
-  --foreground-success: rgb(21 128 61);
-  --foreground-warning: rgb(194 65 12);
-  --foreground-error: rgb(185 28 28);
+  --foreground-strong: rgb(26 23 20);
+  --foreground-info: rgb(48 87 173);
+  --foreground-success: rgb(42 110 67);
+  --foreground-warning: rgb(166 93 29);
+  --foreground-error: rgb(168 62 52);
 
   /* Borders */
-  --border-faint: rgb(247 247 247);
-  --border-light: rgb(245 245 245);
-  --border-base: rgba(5, 5, 5, 0.06);
-  --border-strong: rgb(163 163 163);
+  --border-faint: rgb(248 246 242);
+  --border-light: rgb(236 231 223);
+  --border-base: rgba(36, 32, 27, 0.1);
+  --border-strong: rgb(171 160 146);
 
   /* Accent */
-  --accent-primary: rgb(54 115 252);
+  --accent-primary: rgb(84 108 163);
 }
 
 .dark {
   /* Streamdown/shadcn-style tokens */
-  --primary: 217 91% 60%;
-  --primary-foreground: 0 0% 100%;
-  --muted: 0 0% 9%;
-  --muted-foreground: 0 0% 64%;
-  --border: 0 0% 32%;
-  --ring: 217 91% 60%;
+  --primary: 219 36% 69%;
+  --primary-foreground: 220 18% 12%;
+  --muted: 35 8% 17%;
+  --muted-foreground: 34 12% 67%;
+  --border: 35 10% 25%;
+  --ring: 219 36% 69%;
 
   /* Surfaces */
-  --surface-base: rgb(22 22 22);
-  --surface-raised: rgb(23 23 23);
-  --surface-overlay: rgb(20 20 20);
-  --surface-strong: rgb(17 17 17);
-  --surface-inverse: rgb(250 250 250);
-  --surface-info: rgb(29 78 216);
-  --surface-success: rgb(21 128 61);
-  --surface-warning: rgb(194 65 12);
-  --surface-error: rgb(31 20 20);
+  --surface-base: rgb(25 24 22);
+  --surface-raised: rgb(31 30 27);
+  --surface-overlay: rgb(35 33 29);
+  --surface-strong: rgb(46 42 36);
+  --surface-inverse: rgb(250 248 244);
+  --surface-info: rgb(44 81 158);
+  --surface-success: rgb(34 88 55);
+  --surface-warning: rgb(133 79 32);
+  --surface-error: rgb(77 34 30);
 
   /* Foreground (text) */
-  --foreground-primary: rgb(212 212 212);
-  --foreground-secondary: rgb(163 163 163);
-  --foreground-tertiary: rgb(124 124 124);
+  --foreground-primary: rgb(229 224 215);
+  --foreground-secondary: rgb(181 173 160);
+  --foreground-tertiary: rgb(149 141 129);
   --foreground-inverse: rgb(0 0 0);
-  --foreground-strong: rgb(250 250 250);
-  --foreground-info: rgb(191 219 254);
-  --foreground-success: rgb(220 252 231);
-  --foreground-warning: rgb(255 237 213);
-  --foreground-error: rgb(254 226 226);
+  --foreground-strong: rgb(250 248 244);
+  --foreground-info: rgb(214 227 255);
+  --foreground-success: rgb(216 241 223);
+  --foreground-warning: rgb(255 232 198);
+  --foreground-error: rgb(255 214 208);
 
   /* Borders */
-  --border-faint: rgba(252, 252, 252, 0.08);
-  --border-light: rgb(38 38 38);
-  --border-base: rgba(252, 252, 252, 0.08);
-  --border-strong: rgb(115 115 115);
+  --border-faint: rgba(255, 250, 241, 0.06);
+  --border-light: rgb(54 50 44);
+  --border-base: rgba(255, 250, 241, 0.09);
+  --border-strong: rgb(125 117 105);
 
   /* Accent */
-  --accent-primary: rgb(54 115 252);
+  --accent-primary: rgb(125 154 223);
 }
 
 @layer base {

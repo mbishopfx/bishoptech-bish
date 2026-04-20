@@ -1,5 +1,5 @@
 import { memo, useCallback, useRef } from 'react'
-import { CheckIcon, CopyIcon, RedoIcon } from '@rift/ui/icons/svg-icons'
+import { CheckIcon, CopyIcon, RedoIcon } from '@bish/ui/icons/svg-icons'
 import {
   MessageActionButton,
   MessageActions,

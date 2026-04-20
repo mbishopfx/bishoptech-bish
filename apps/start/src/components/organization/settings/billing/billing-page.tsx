@@ -1,7 +1,7 @@
 'use client'
 
-import { Button } from '@rift/ui/button'
-import { Form } from '@rift/ui/form'
+import { Button } from '@bish/ui/button'
+import { Form } from '@bish/ui/form'
 import { ContentPage } from '@/components/layout'
 import { PricingCard } from '@/components/pricing/pricing-card'
 import { DashedBorderFrame } from '@/components/pricing/pricing-decorative'

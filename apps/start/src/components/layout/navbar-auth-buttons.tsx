@@ -1,7 +1,7 @@
 'use client'
 
 import { Link } from '@tanstack/react-router'
-import { Button } from '@rift/ui/button'
+import { Button } from '@bish/ui/button'
 
 export type NavbarDict = {
   goHome: string

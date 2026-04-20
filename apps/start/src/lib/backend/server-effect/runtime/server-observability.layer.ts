@@ -2,7 +2,7 @@ import { Effect, Layer, Logger, References } from 'effect'
 import * as FetchHttpClient from 'effect/unstable/http/FetchHttpClient'
 import * as Observability from 'effect/unstable/observability'
 
-const DEFAULT_SERVICE_NAME = 'rift'
+const DEFAULT_SERVICE_NAME = 'bish'
 const DEFAULT_SERVICE_VERSION = '0.0.0'
 const DEFAULT_MIN_LOG_LEVEL = 'Warn'
 

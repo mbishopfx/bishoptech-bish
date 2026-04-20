@@ -2,12 +2,12 @@
 
 import * as React from 'react'
 import { ChevronDown, Brain } from 'lucide-react'
-import { cn } from '@rift/utils'
+import { cn } from '@bish/utils'
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from '@rift/ui/popover'
+} from '@bish/ui/popover'
 import type { AiReasoningEffort } from '@/lib/shared/ai-catalog/types'
 import { m } from '@/paraglide/messages.js'
 

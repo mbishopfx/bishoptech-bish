@@ -1,10 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { FormDialog } from '@rift/ui/dialog'
-import { Form } from '@rift/ui/form'
-import { Label } from '@rift/ui/label'
-import { InputOTP, InputOTPGroup, InputOTPSlot } from '@rift/ui/input-otp'
+import { FormDialog } from '@bish/ui/dialog'
+import { Form } from '@bish/ui/form'
+import { Label } from '@bish/ui/label'
+import { InputOTP, InputOTPGroup, InputOTPSlot } from '@bish/ui/input-otp'
 import { m } from '@/paraglide/messages.js'
 import QRCode from 'qrcode'
 

@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from 'react'
 import { Minus, Plus } from 'lucide-react'
-import { Button } from '@rift/ui/button'
-import { FormDialog } from '@rift/ui/dialog'
-import { Input } from '@rift/ui/input'
-import { Label } from '@rift/ui/label'
+import { Button } from '@bish/ui/button'
+import { FormDialog } from '@bish/ui/dialog'
+import { Input } from '@bish/ui/input'
+import { Label } from '@bish/ui/label'
 import { getWorkspacePlan } from '@/lib/shared/access-control'
 import type {
   SelfServeWorkspacePlanId,

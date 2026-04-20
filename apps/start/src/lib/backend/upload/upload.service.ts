@@ -172,7 +172,7 @@ export class UploadService {
       status: 200,
       headers: {
         'Cache-Control': 'private, max-age=300',
-        'x-rift-storage-provider': config.provider,
+        'x-bish-storage-provider': config.provider,
       },
     })
   }

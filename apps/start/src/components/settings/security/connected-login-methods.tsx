@@ -1,12 +1,12 @@
 'use client'
 
-import { Button } from '@rift/ui/button'
+import { Button } from '@bish/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@rift/ui/dropdown-menu'
+} from '@bish/ui/dropdown-menu'
 import { GitHubIcon, GoogleIcon } from '@/components/icons/provider-icons'
 import { Mail, MoreHorizontal } from 'lucide-react'
 import type { ReactNode } from 'react'

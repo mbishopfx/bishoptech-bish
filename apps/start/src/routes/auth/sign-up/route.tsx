@@ -25,7 +25,7 @@ export const Route = createFileRoute('/auth/sign-up')({
   head: () => ({
     meta: buildPageMetadata({
       title: 'Sign Up',
-      description: 'Create a Rift account to start chatting with multiple AI models in one place.',
+      description: 'Create a BISH account to start chatting with multiple AI models in one place.',
       robots: 'noindex,follow',
     }),
   }),

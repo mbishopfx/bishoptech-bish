@@ -1,5 +1,5 @@
-import { directionClass, useDirection } from '@rift/ui/direction'
-import { cn } from '@rift/utils'
+import { directionClass, useDirection } from '@bish/ui/direction'
+import { cn } from '@bish/utils'
 import type { ReactNode } from 'react'
 import type { NavSection } from './app-sidebar-nav.config'
 import { SidebarNavItem } from './sidebar-nav-item'

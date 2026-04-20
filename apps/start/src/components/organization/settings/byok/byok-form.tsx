@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { Button } from '@rift/ui/button'
+import { Button } from '@bish/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -9,8 +9,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@rift/ui/dialog'
-import { Form } from '@rift/ui/form'
+} from '@bish/ui/dialog'
+import { Form } from '@bish/ui/form'
 import {
   getFeatureAccessAction
   

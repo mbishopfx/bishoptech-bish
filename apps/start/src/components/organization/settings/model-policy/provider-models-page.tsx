@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 import { Link } from '@tanstack/react-router'
-import { Form } from '@rift/ui/form'
+import { Form } from '@bish/ui/form'
 import { ChevronLeft } from 'lucide-react'
 import { getProviderIcon } from '@/lib/shared/ai-catalog'
 import type { CatalogProviderId } from '@/lib/shared/ai-catalog/provider-tools'

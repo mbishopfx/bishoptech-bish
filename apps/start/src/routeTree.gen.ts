@@ -31,29 +31,42 @@ import { Route as ApiOrgModelPolicyRouteRouteImport } from './routes/api/org/mod
 import { Route as ApiFilesUploadRouteRouteImport } from './routes/api/files/upload/route'
 import { Route as ApiFilesObjectRouteRouteImport } from './routes/api/files/object/route'
 import { Route as ApiFilesMarkdownRouteRouteImport } from './routes/api/files/markdown/route'
-import { Route as eeSingularityLayoutRouteRouteImport } from './routes/(ee)/singularity/_layout/route'
 import { Route as appLayoutSettingsRouteRouteImport } from './routes/(app)/_layout/settings/route'
 import { Route as appLayoutOrganizationRouteRouteImport } from './routes/(app)/_layout/organization/route'
+import { Route as appLayoutOperatorRouteRouteImport } from './routes/(app)/_layout/operator/route'
 import { Route as appLayoutChatRouteRouteImport } from './routes/(app)/_layout/chat/route'
-import { Route as eeSingularityLayoutIndexRouteImport } from './routes/(ee)/singularity/_layout/index'
 import { Route as appLayoutSettingsIndexRouteImport } from './routes/(app)/_layout/settings/index'
 import { Route as appLayoutChatIndexRouteImport } from './routes/(app)/_layout/chat/index'
+import { Route as ApiOrgBishUploadsRouteRouteImport } from './routes/api/org/bish/uploads/route'
+import { Route as ApiOrgBishRunHistoryRouteRouteImport } from './routes/api/org/bish/run-history/route'
+import { Route as ApiOrgBishOverviewRouteRouteImport } from './routes/api/org/bish/overview/route'
+import { Route as ApiOrgBishEvolutionRouteRouteImport } from './routes/api/org/bish/evolution/route'
+import { Route as ApiOrgBishConnectorsRouteRouteImport } from './routes/api/org/bish/connectors/route'
+import { Route as ApiOrgBishApprovalsRouteRouteImport } from './routes/api/org/bish/approvals/route'
+import { Route as ApiOperatorBishOverviewRouteRouteImport } from './routes/api/operator/bish/overview/route'
 import { Route as appLayoutSettingsSecurityRouteRouteImport } from './routes/(app)/_layout/settings/security/route'
 import { Route as appLayoutOrganizationSettingsRouteRouteImport } from './routes/(app)/_layout/organization/settings/route'
 import { Route as appLayoutChatThreadIdRouteRouteImport } from './routes/(app)/_layout/chat/$threadId/route'
 import { Route as appLayoutOrganizationSettingsIndexRouteImport } from './routes/(app)/_layout/organization/settings/index'
-import { Route as eeSingularityLayoutOrgsOrganizationIdRouteImport } from './routes/(ee)/singularity/_layout/orgs/$organizationId'
 import { Route as appLayoutOrganizationSettingsToolsRouteRouteImport } from './routes/(app)/_layout/organization/settings/tools/route'
 import { Route as appLayoutOrganizationSettingsSecurityRouteRouteImport } from './routes/(app)/_layout/organization/settings/security/route'
 import { Route as appLayoutOrganizationSettingsProviderPolicyRouteRouteImport } from './routes/(app)/_layout/organization/settings/provider-policy/route'
 import { Route as appLayoutOrganizationSettingsModelsRouteRouteImport } from './routes/(app)/_layout/organization/settings/models/route'
 import { Route as appLayoutOrganizationSettingsMembersRouteRouteImport } from './routes/(app)/_layout/organization/settings/members/route'
 import { Route as appLayoutOrganizationSettingsKnowledgeRouteRouteImport } from './routes/(app)/_layout/organization/settings/knowledge/route'
+import { Route as appLayoutOrganizationSettingsConnectorsRouteRouteImport } from './routes/(app)/_layout/organization/settings/connectors/route'
 import { Route as appLayoutOrganizationSettingsCompliancePolicyRouteRouteImport } from './routes/(app)/_layout/organization/settings/compliance-policy/route'
 import { Route as appLayoutOrganizationSettingsByokRouteRouteImport } from './routes/(app)/_layout/organization/settings/byok/route'
 import { Route as appLayoutOrganizationSettingsBillingRouteRouteImport } from './routes/(app)/_layout/organization/settings/billing/route'
+import { Route as appLayoutOrganizationSettingsApprovalsRouteRouteImport } from './routes/(app)/_layout/organization/settings/approvals/route'
 import { Route as appLayoutOrganizationSettingsAnalyticsRouteRouteImport } from './routes/(app)/_layout/organization/settings/analytics/route'
+import { Route as appLayoutOrganizationSettingsAgentsRouteRouteImport } from './routes/(app)/_layout/organization/settings/agents/route'
 import { Route as appLayoutOrganizationSettingsModelsIndexRouteImport } from './routes/(app)/_layout/organization/settings/models/index'
+import { Route as ApiOrgBishConnectorsHubspotStartRouteRouteImport } from './routes/api/org/bish/connectors/hubspot/start/route'
+import { Route as ApiOrgBishConnectorsHubspotCallbackRouteRouteImport } from './routes/api/org/bish/connectors/hubspot/callback/route'
+import { Route as ApiOrgBishConnectorsGoogleWorkspaceActivateRouteRouteImport } from './routes/api/org/bish/connectors/google-workspace/activate/route'
+import { Route as ApiOrgBishConnectorsAsanaStartRouteRouteImport } from './routes/api/org/bish/connectors/asana/start/route'
+import { Route as ApiOrgBishConnectorsAsanaCallbackRouteRouteImport } from './routes/api/org/bish/connectors/asana/callback/route'
 import { Route as appLayoutOrganizationSettingsModelsProviderIdRouteRouteImport } from './routes/(app)/_layout/organization/settings/models/$providerId/route'
 
 const SetupRouteRoute = SetupRouteRouteImport.update({
@@ -166,12 +179,6 @@ const ApiFilesMarkdownRouteRoute = ApiFilesMarkdownRouteRouteImport.update({
   path: '/api/files/markdown',
   getParentRoute: () => rootRouteImport,
 } as any)
-const eeSingularityLayoutRouteRoute =
-  eeSingularityLayoutRouteRouteImport.update({
-    id: '/(ee)/singularity/_layout',
-    path: '/singularity',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 const appLayoutSettingsRouteRoute = appLayoutSettingsRouteRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -183,17 +190,16 @@ const appLayoutOrganizationRouteRoute =
     path: '/organization',
     getParentRoute: () => appLayoutRouteRoute,
   } as any)
+const appLayoutOperatorRouteRoute = appLayoutOperatorRouteRouteImport.update({
+  id: '/operator',
+  path: '/operator',
+  getParentRoute: () => appLayoutRouteRoute,
+} as any)
 const appLayoutChatRouteRoute = appLayoutChatRouteRouteImport.update({
   id: '/chat',
   path: '/chat',
   getParentRoute: () => appLayoutRouteRoute,
 } as any)
-const eeSingularityLayoutIndexRoute =
-  eeSingularityLayoutIndexRouteImport.update({
-    id: '/',
-    path: '/',
-    getParentRoute: () => eeSingularityLayoutRouteRoute,
-  } as any)
 const appLayoutSettingsIndexRoute = appLayoutSettingsIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -204,6 +210,46 @@ const appLayoutChatIndexRoute = appLayoutChatIndexRouteImport.update({
   path: '/',
   getParentRoute: () => appLayoutChatRouteRoute,
 } as any)
+const ApiOrgBishUploadsRouteRoute = ApiOrgBishUploadsRouteRouteImport.update({
+  id: '/api/org/bish/uploads',
+  path: '/api/org/bish/uploads',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiOrgBishRunHistoryRouteRoute =
+  ApiOrgBishRunHistoryRouteRouteImport.update({
+    id: '/api/org/bish/run-history',
+    path: '/api/org/bish/run-history',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiOrgBishOverviewRouteRoute = ApiOrgBishOverviewRouteRouteImport.update({
+  id: '/api/org/bish/overview',
+  path: '/api/org/bish/overview',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiOrgBishEvolutionRouteRoute =
+  ApiOrgBishEvolutionRouteRouteImport.update({
+    id: '/api/org/bish/evolution',
+    path: '/api/org/bish/evolution',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiOrgBishConnectorsRouteRoute =
+  ApiOrgBishConnectorsRouteRouteImport.update({
+    id: '/api/org/bish/connectors',
+    path: '/api/org/bish/connectors',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiOrgBishApprovalsRouteRoute =
+  ApiOrgBishApprovalsRouteRouteImport.update({
+    id: '/api/org/bish/approvals',
+    path: '/api/org/bish/approvals',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiOperatorBishOverviewRouteRoute =
+  ApiOperatorBishOverviewRouteRouteImport.update({
+    id: '/api/operator/bish/overview',
+    path: '/api/operator/bish/overview',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const appLayoutSettingsSecurityRouteRoute =
   appLayoutSettingsSecurityRouteRouteImport.update({
     id: '/security',
@@ -227,12 +273,6 @@ const appLayoutOrganizationSettingsIndexRoute =
     id: '/',
     path: '/',
     getParentRoute: () => appLayoutOrganizationSettingsRouteRoute,
-  } as any)
-const eeSingularityLayoutOrgsOrganizationIdRoute =
-  eeSingularityLayoutOrgsOrganizationIdRouteImport.update({
-    id: '/orgs/$organizationId',
-    path: '/orgs/$organizationId',
-    getParentRoute: () => eeSingularityLayoutRouteRoute,
   } as any)
 const appLayoutOrganizationSettingsToolsRouteRoute =
   appLayoutOrganizationSettingsToolsRouteRouteImport.update({
@@ -270,6 +310,12 @@ const appLayoutOrganizationSettingsKnowledgeRouteRoute =
     path: '/knowledge',
     getParentRoute: () => appLayoutOrganizationSettingsRouteRoute,
   } as any)
+const appLayoutOrganizationSettingsConnectorsRouteRoute =
+  appLayoutOrganizationSettingsConnectorsRouteRouteImport.update({
+    id: '/connectors',
+    path: '/connectors',
+    getParentRoute: () => appLayoutOrganizationSettingsRouteRoute,
+  } as any)
 const appLayoutOrganizationSettingsCompliancePolicyRouteRoute =
   appLayoutOrganizationSettingsCompliancePolicyRouteRouteImport.update({
     id: '/compliance-policy',
@@ -288,10 +334,22 @@ const appLayoutOrganizationSettingsBillingRouteRoute =
     path: '/billing',
     getParentRoute: () => appLayoutOrganizationSettingsRouteRoute,
   } as any)
+const appLayoutOrganizationSettingsApprovalsRouteRoute =
+  appLayoutOrganizationSettingsApprovalsRouteRouteImport.update({
+    id: '/approvals',
+    path: '/approvals',
+    getParentRoute: () => appLayoutOrganizationSettingsRouteRoute,
+  } as any)
 const appLayoutOrganizationSettingsAnalyticsRouteRoute =
   appLayoutOrganizationSettingsAnalyticsRouteRouteImport.update({
     id: '/analytics',
     path: '/analytics',
+    getParentRoute: () => appLayoutOrganizationSettingsRouteRoute,
+  } as any)
+const appLayoutOrganizationSettingsAgentsRouteRoute =
+  appLayoutOrganizationSettingsAgentsRouteRouteImport.update({
+    id: '/agents',
+    path: '/agents',
     getParentRoute: () => appLayoutOrganizationSettingsRouteRoute,
   } as any)
 const appLayoutOrganizationSettingsModelsIndexRoute =
@@ -299,6 +357,36 @@ const appLayoutOrganizationSettingsModelsIndexRoute =
     id: '/',
     path: '/',
     getParentRoute: () => appLayoutOrganizationSettingsModelsRouteRoute,
+  } as any)
+const ApiOrgBishConnectorsHubspotStartRouteRoute =
+  ApiOrgBishConnectorsHubspotStartRouteRouteImport.update({
+    id: '/hubspot/start',
+    path: '/hubspot/start',
+    getParentRoute: () => ApiOrgBishConnectorsRouteRoute,
+  } as any)
+const ApiOrgBishConnectorsHubspotCallbackRouteRoute =
+  ApiOrgBishConnectorsHubspotCallbackRouteRouteImport.update({
+    id: '/hubspot/callback',
+    path: '/hubspot/callback',
+    getParentRoute: () => ApiOrgBishConnectorsRouteRoute,
+  } as any)
+const ApiOrgBishConnectorsGoogleWorkspaceActivateRouteRoute =
+  ApiOrgBishConnectorsGoogleWorkspaceActivateRouteRouteImport.update({
+    id: '/google-workspace/activate',
+    path: '/google-workspace/activate',
+    getParentRoute: () => ApiOrgBishConnectorsRouteRoute,
+  } as any)
+const ApiOrgBishConnectorsAsanaStartRouteRoute =
+  ApiOrgBishConnectorsAsanaStartRouteRouteImport.update({
+    id: '/asana/start',
+    path: '/asana/start',
+    getParentRoute: () => ApiOrgBishConnectorsRouteRoute,
+  } as any)
+const ApiOrgBishConnectorsAsanaCallbackRouteRoute =
+  ApiOrgBishConnectorsAsanaCallbackRouteRouteImport.update({
+    id: '/asana/callback',
+    path: '/asana/callback',
+    getParentRoute: () => ApiOrgBishConnectorsRouteRoute,
   } as any)
 const appLayoutOrganizationSettingsModelsProviderIdRouteRoute =
   appLayoutOrganizationSettingsModelsProviderIdRouteRouteImport.update({
@@ -319,9 +407,9 @@ export interface FileRoutesByFullPath {
   '/legal/privacy': typeof LegalPrivacyRouteRoute
   '/legal/terms': typeof LegalTermsRouteRoute
   '/chat': typeof appLayoutChatRouteRouteWithChildren
+  '/operator': typeof appLayoutOperatorRouteRoute
   '/organization': typeof appLayoutOrganizationRouteRouteWithChildren
   '/settings': typeof appLayoutSettingsRouteRouteWithChildren
-  '/singularity': typeof eeSingularityLayoutRouteRouteWithChildren
   '/api/files/markdown': typeof ApiFilesMarkdownRouteRoute
   '/api/files/object': typeof ApiFilesObjectRouteRoute
   '/api/files/upload': typeof ApiFilesUploadRouteRoute
@@ -336,22 +424,35 @@ export interface FileRoutesByFullPath {
   '/chat/$threadId': typeof appLayoutChatThreadIdRouteRoute
   '/organization/settings': typeof appLayoutOrganizationSettingsRouteRouteWithChildren
   '/settings/security': typeof appLayoutSettingsSecurityRouteRoute
+  '/api/operator/bish/overview': typeof ApiOperatorBishOverviewRouteRoute
+  '/api/org/bish/approvals': typeof ApiOrgBishApprovalsRouteRoute
+  '/api/org/bish/connectors': typeof ApiOrgBishConnectorsRouteRouteWithChildren
+  '/api/org/bish/evolution': typeof ApiOrgBishEvolutionRouteRoute
+  '/api/org/bish/overview': typeof ApiOrgBishOverviewRouteRoute
+  '/api/org/bish/run-history': typeof ApiOrgBishRunHistoryRouteRoute
+  '/api/org/bish/uploads': typeof ApiOrgBishUploadsRouteRoute
   '/chat/': typeof appLayoutChatIndexRoute
   '/settings/': typeof appLayoutSettingsIndexRoute
-  '/singularity/': typeof eeSingularityLayoutIndexRoute
+  '/organization/settings/agents': typeof appLayoutOrganizationSettingsAgentsRouteRoute
   '/organization/settings/analytics': typeof appLayoutOrganizationSettingsAnalyticsRouteRoute
+  '/organization/settings/approvals': typeof appLayoutOrganizationSettingsApprovalsRouteRoute
   '/organization/settings/billing': typeof appLayoutOrganizationSettingsBillingRouteRoute
   '/organization/settings/byok': typeof appLayoutOrganizationSettingsByokRouteRoute
   '/organization/settings/compliance-policy': typeof appLayoutOrganizationSettingsCompliancePolicyRouteRoute
+  '/organization/settings/connectors': typeof appLayoutOrganizationSettingsConnectorsRouteRoute
   '/organization/settings/knowledge': typeof appLayoutOrganizationSettingsKnowledgeRouteRoute
   '/organization/settings/members': typeof appLayoutOrganizationSettingsMembersRouteRoute
   '/organization/settings/models': typeof appLayoutOrganizationSettingsModelsRouteRouteWithChildren
   '/organization/settings/provider-policy': typeof appLayoutOrganizationSettingsProviderPolicyRouteRoute
   '/organization/settings/security': typeof appLayoutOrganizationSettingsSecurityRouteRoute
   '/organization/settings/tools': typeof appLayoutOrganizationSettingsToolsRouteRoute
-  '/singularity/orgs/$organizationId': typeof eeSingularityLayoutOrgsOrganizationIdRoute
   '/organization/settings/': typeof appLayoutOrganizationSettingsIndexRoute
   '/organization/settings/models/$providerId': typeof appLayoutOrganizationSettingsModelsProviderIdRouteRoute
+  '/api/org/bish/connectors/asana/callback': typeof ApiOrgBishConnectorsAsanaCallbackRouteRoute
+  '/api/org/bish/connectors/asana/start': typeof ApiOrgBishConnectorsAsanaStartRouteRoute
+  '/api/org/bish/connectors/google-workspace/activate': typeof ApiOrgBishConnectorsGoogleWorkspaceActivateRouteRoute
+  '/api/org/bish/connectors/hubspot/callback': typeof ApiOrgBishConnectorsHubspotCallbackRouteRoute
+  '/api/org/bish/connectors/hubspot/start': typeof ApiOrgBishConnectorsHubspotStartRouteRoute
   '/organization/settings/models/': typeof appLayoutOrganizationSettingsModelsIndexRoute
 }
 export interface FileRoutesByTo {
@@ -365,6 +466,7 @@ export interface FileRoutesByTo {
   '/legal/acceptable-use': typeof LegalAcceptableUseRouteRoute
   '/legal/privacy': typeof LegalPrivacyRouteRoute
   '/legal/terms': typeof LegalTermsRouteRoute
+  '/operator': typeof appLayoutOperatorRouteRoute
   '/organization': typeof appLayoutOrganizationRouteRouteWithChildren
   '/api/files/markdown': typeof ApiFilesMarkdownRouteRoute
   '/api/files/object': typeof ApiFilesObjectRouteRoute
@@ -379,21 +481,34 @@ export interface FileRoutesByTo {
   '/': typeof appLayoutIndexRoute
   '/chat/$threadId': typeof appLayoutChatThreadIdRouteRoute
   '/settings/security': typeof appLayoutSettingsSecurityRouteRoute
+  '/api/operator/bish/overview': typeof ApiOperatorBishOverviewRouteRoute
+  '/api/org/bish/approvals': typeof ApiOrgBishApprovalsRouteRoute
+  '/api/org/bish/connectors': typeof ApiOrgBishConnectorsRouteRouteWithChildren
+  '/api/org/bish/evolution': typeof ApiOrgBishEvolutionRouteRoute
+  '/api/org/bish/overview': typeof ApiOrgBishOverviewRouteRoute
+  '/api/org/bish/run-history': typeof ApiOrgBishRunHistoryRouteRoute
+  '/api/org/bish/uploads': typeof ApiOrgBishUploadsRouteRoute
   '/chat': typeof appLayoutChatIndexRoute
   '/settings': typeof appLayoutSettingsIndexRoute
-  '/singularity': typeof eeSingularityLayoutIndexRoute
+  '/organization/settings/agents': typeof appLayoutOrganizationSettingsAgentsRouteRoute
   '/organization/settings/analytics': typeof appLayoutOrganizationSettingsAnalyticsRouteRoute
+  '/organization/settings/approvals': typeof appLayoutOrganizationSettingsApprovalsRouteRoute
   '/organization/settings/billing': typeof appLayoutOrganizationSettingsBillingRouteRoute
   '/organization/settings/byok': typeof appLayoutOrganizationSettingsByokRouteRoute
   '/organization/settings/compliance-policy': typeof appLayoutOrganizationSettingsCompliancePolicyRouteRoute
+  '/organization/settings/connectors': typeof appLayoutOrganizationSettingsConnectorsRouteRoute
   '/organization/settings/knowledge': typeof appLayoutOrganizationSettingsKnowledgeRouteRoute
   '/organization/settings/members': typeof appLayoutOrganizationSettingsMembersRouteRoute
   '/organization/settings/provider-policy': typeof appLayoutOrganizationSettingsProviderPolicyRouteRoute
   '/organization/settings/security': typeof appLayoutOrganizationSettingsSecurityRouteRoute
   '/organization/settings/tools': typeof appLayoutOrganizationSettingsToolsRouteRoute
-  '/singularity/orgs/$organizationId': typeof eeSingularityLayoutOrgsOrganizationIdRoute
   '/organization/settings': typeof appLayoutOrganizationSettingsIndexRoute
   '/organization/settings/models/$providerId': typeof appLayoutOrganizationSettingsModelsProviderIdRouteRoute
+  '/api/org/bish/connectors/asana/callback': typeof ApiOrgBishConnectorsAsanaCallbackRouteRoute
+  '/api/org/bish/connectors/asana/start': typeof ApiOrgBishConnectorsAsanaStartRouteRoute
+  '/api/org/bish/connectors/google-workspace/activate': typeof ApiOrgBishConnectorsGoogleWorkspaceActivateRouteRoute
+  '/api/org/bish/connectors/hubspot/callback': typeof ApiOrgBishConnectorsHubspotCallbackRouteRoute
+  '/api/org/bish/connectors/hubspot/start': typeof ApiOrgBishConnectorsHubspotStartRouteRoute
   '/organization/settings/models': typeof appLayoutOrganizationSettingsModelsIndexRoute
 }
 export interface FileRoutesById {
@@ -410,9 +525,9 @@ export interface FileRoutesById {
   '/legal/privacy': typeof LegalPrivacyRouteRoute
   '/legal/terms': typeof LegalTermsRouteRoute
   '/(app)/_layout/chat': typeof appLayoutChatRouteRouteWithChildren
+  '/(app)/_layout/operator': typeof appLayoutOperatorRouteRoute
   '/(app)/_layout/organization': typeof appLayoutOrganizationRouteRouteWithChildren
   '/(app)/_layout/settings': typeof appLayoutSettingsRouteRouteWithChildren
-  '/(ee)/singularity/_layout': typeof eeSingularityLayoutRouteRouteWithChildren
   '/api/files/markdown': typeof ApiFilesMarkdownRouteRoute
   '/api/files/object': typeof ApiFilesObjectRouteRoute
   '/api/files/upload': typeof ApiFilesUploadRouteRoute
@@ -427,22 +542,35 @@ export interface FileRoutesById {
   '/(app)/_layout/chat/$threadId': typeof appLayoutChatThreadIdRouteRoute
   '/(app)/_layout/organization/settings': typeof appLayoutOrganizationSettingsRouteRouteWithChildren
   '/(app)/_layout/settings/security': typeof appLayoutSettingsSecurityRouteRoute
+  '/api/operator/bish/overview': typeof ApiOperatorBishOverviewRouteRoute
+  '/api/org/bish/approvals': typeof ApiOrgBishApprovalsRouteRoute
+  '/api/org/bish/connectors': typeof ApiOrgBishConnectorsRouteRouteWithChildren
+  '/api/org/bish/evolution': typeof ApiOrgBishEvolutionRouteRoute
+  '/api/org/bish/overview': typeof ApiOrgBishOverviewRouteRoute
+  '/api/org/bish/run-history': typeof ApiOrgBishRunHistoryRouteRoute
+  '/api/org/bish/uploads': typeof ApiOrgBishUploadsRouteRoute
   '/(app)/_layout/chat/': typeof appLayoutChatIndexRoute
   '/(app)/_layout/settings/': typeof appLayoutSettingsIndexRoute
-  '/(ee)/singularity/_layout/': typeof eeSingularityLayoutIndexRoute
+  '/(app)/_layout/organization/settings/agents': typeof appLayoutOrganizationSettingsAgentsRouteRoute
   '/(app)/_layout/organization/settings/analytics': typeof appLayoutOrganizationSettingsAnalyticsRouteRoute
+  '/(app)/_layout/organization/settings/approvals': typeof appLayoutOrganizationSettingsApprovalsRouteRoute
   '/(app)/_layout/organization/settings/billing': typeof appLayoutOrganizationSettingsBillingRouteRoute
   '/(app)/_layout/organization/settings/byok': typeof appLayoutOrganizationSettingsByokRouteRoute
   '/(app)/_layout/organization/settings/compliance-policy': typeof appLayoutOrganizationSettingsCompliancePolicyRouteRoute
+  '/(app)/_layout/organization/settings/connectors': typeof appLayoutOrganizationSettingsConnectorsRouteRoute
   '/(app)/_layout/organization/settings/knowledge': typeof appLayoutOrganizationSettingsKnowledgeRouteRoute
   '/(app)/_layout/organization/settings/members': typeof appLayoutOrganizationSettingsMembersRouteRoute
   '/(app)/_layout/organization/settings/models': typeof appLayoutOrganizationSettingsModelsRouteRouteWithChildren
   '/(app)/_layout/organization/settings/provider-policy': typeof appLayoutOrganizationSettingsProviderPolicyRouteRoute
   '/(app)/_layout/organization/settings/security': typeof appLayoutOrganizationSettingsSecurityRouteRoute
   '/(app)/_layout/organization/settings/tools': typeof appLayoutOrganizationSettingsToolsRouteRoute
-  '/(ee)/singularity/_layout/orgs/$organizationId': typeof eeSingularityLayoutOrgsOrganizationIdRoute
   '/(app)/_layout/organization/settings/': typeof appLayoutOrganizationSettingsIndexRoute
   '/(app)/_layout/organization/settings/models/$providerId': typeof appLayoutOrganizationSettingsModelsProviderIdRouteRoute
+  '/api/org/bish/connectors/asana/callback': typeof ApiOrgBishConnectorsAsanaCallbackRouteRoute
+  '/api/org/bish/connectors/asana/start': typeof ApiOrgBishConnectorsAsanaStartRouteRoute
+  '/api/org/bish/connectors/google-workspace/activate': typeof ApiOrgBishConnectorsGoogleWorkspaceActivateRouteRoute
+  '/api/org/bish/connectors/hubspot/callback': typeof ApiOrgBishConnectorsHubspotCallbackRouteRoute
+  '/api/org/bish/connectors/hubspot/start': typeof ApiOrgBishConnectorsHubspotStartRouteRoute
   '/(app)/_layout/organization/settings/models/': typeof appLayoutOrganizationSettingsModelsIndexRoute
 }
 export interface FileRouteTypes {
@@ -459,9 +587,9 @@ export interface FileRouteTypes {
     | '/legal/privacy'
     | '/legal/terms'
     | '/chat'
+    | '/operator'
     | '/organization'
     | '/settings'
-    | '/singularity'
     | '/api/files/markdown'
     | '/api/files/object'
     | '/api/files/upload'
@@ -476,22 +604,35 @@ export interface FileRouteTypes {
     | '/chat/$threadId'
     | '/organization/settings'
     | '/settings/security'
+    | '/api/operator/bish/overview'
+    | '/api/org/bish/approvals'
+    | '/api/org/bish/connectors'
+    | '/api/org/bish/evolution'
+    | '/api/org/bish/overview'
+    | '/api/org/bish/run-history'
+    | '/api/org/bish/uploads'
     | '/chat/'
     | '/settings/'
-    | '/singularity/'
+    | '/organization/settings/agents'
     | '/organization/settings/analytics'
+    | '/organization/settings/approvals'
     | '/organization/settings/billing'
     | '/organization/settings/byok'
     | '/organization/settings/compliance-policy'
+    | '/organization/settings/connectors'
     | '/organization/settings/knowledge'
     | '/organization/settings/members'
     | '/organization/settings/models'
     | '/organization/settings/provider-policy'
     | '/organization/settings/security'
     | '/organization/settings/tools'
-    | '/singularity/orgs/$organizationId'
     | '/organization/settings/'
     | '/organization/settings/models/$providerId'
+    | '/api/org/bish/connectors/asana/callback'
+    | '/api/org/bish/connectors/asana/start'
+    | '/api/org/bish/connectors/google-workspace/activate'
+    | '/api/org/bish/connectors/hubspot/callback'
+    | '/api/org/bish/connectors/hubspot/start'
     | '/organization/settings/models/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -505,6 +646,7 @@ export interface FileRouteTypes {
     | '/legal/acceptable-use'
     | '/legal/privacy'
     | '/legal/terms'
+    | '/operator'
     | '/organization'
     | '/api/files/markdown'
     | '/api/files/object'
@@ -519,21 +661,34 @@ export interface FileRouteTypes {
     | '/'
     | '/chat/$threadId'
     | '/settings/security'
+    | '/api/operator/bish/overview'
+    | '/api/org/bish/approvals'
+    | '/api/org/bish/connectors'
+    | '/api/org/bish/evolution'
+    | '/api/org/bish/overview'
+    | '/api/org/bish/run-history'
+    | '/api/org/bish/uploads'
     | '/chat'
     | '/settings'
-    | '/singularity'
+    | '/organization/settings/agents'
     | '/organization/settings/analytics'
+    | '/organization/settings/approvals'
     | '/organization/settings/billing'
     | '/organization/settings/byok'
     | '/organization/settings/compliance-policy'
+    | '/organization/settings/connectors'
     | '/organization/settings/knowledge'
     | '/organization/settings/members'
     | '/organization/settings/provider-policy'
     | '/organization/settings/security'
     | '/organization/settings/tools'
-    | '/singularity/orgs/$organizationId'
     | '/organization/settings'
     | '/organization/settings/models/$providerId'
+    | '/api/org/bish/connectors/asana/callback'
+    | '/api/org/bish/connectors/asana/start'
+    | '/api/org/bish/connectors/google-workspace/activate'
+    | '/api/org/bish/connectors/hubspot/callback'
+    | '/api/org/bish/connectors/hubspot/start'
     | '/organization/settings/models'
   id:
     | '__root__'
@@ -549,9 +704,9 @@ export interface FileRouteTypes {
     | '/legal/privacy'
     | '/legal/terms'
     | '/(app)/_layout/chat'
+    | '/(app)/_layout/operator'
     | '/(app)/_layout/organization'
     | '/(app)/_layout/settings'
-    | '/(ee)/singularity/_layout'
     | '/api/files/markdown'
     | '/api/files/object'
     | '/api/files/upload'
@@ -566,22 +721,35 @@ export interface FileRouteTypes {
     | '/(app)/_layout/chat/$threadId'
     | '/(app)/_layout/organization/settings'
     | '/(app)/_layout/settings/security'
+    | '/api/operator/bish/overview'
+    | '/api/org/bish/approvals'
+    | '/api/org/bish/connectors'
+    | '/api/org/bish/evolution'
+    | '/api/org/bish/overview'
+    | '/api/org/bish/run-history'
+    | '/api/org/bish/uploads'
     | '/(app)/_layout/chat/'
     | '/(app)/_layout/settings/'
-    | '/(ee)/singularity/_layout/'
+    | '/(app)/_layout/organization/settings/agents'
     | '/(app)/_layout/organization/settings/analytics'
+    | '/(app)/_layout/organization/settings/approvals'
     | '/(app)/_layout/organization/settings/billing'
     | '/(app)/_layout/organization/settings/byok'
     | '/(app)/_layout/organization/settings/compliance-policy'
+    | '/(app)/_layout/organization/settings/connectors'
     | '/(app)/_layout/organization/settings/knowledge'
     | '/(app)/_layout/organization/settings/members'
     | '/(app)/_layout/organization/settings/models'
     | '/(app)/_layout/organization/settings/provider-policy'
     | '/(app)/_layout/organization/settings/security'
     | '/(app)/_layout/organization/settings/tools'
-    | '/(ee)/singularity/_layout/orgs/$organizationId'
     | '/(app)/_layout/organization/settings/'
     | '/(app)/_layout/organization/settings/models/$providerId'
+    | '/api/org/bish/connectors/asana/callback'
+    | '/api/org/bish/connectors/asana/start'
+    | '/api/org/bish/connectors/google-workspace/activate'
+    | '/api/org/bish/connectors/hubspot/callback'
+    | '/api/org/bish/connectors/hubspot/start'
     | '/(app)/_layout/organization/settings/models/'
   fileRoutesById: FileRoutesById
 }
@@ -595,7 +763,6 @@ export interface RootRouteChildren {
   LegalAcceptableUseRouteRoute: typeof LegalAcceptableUseRouteRoute
   LegalPrivacyRouteRoute: typeof LegalPrivacyRouteRoute
   LegalTermsRouteRoute: typeof LegalTermsRouteRoute
-  eeSingularityLayoutRouteRoute: typeof eeSingularityLayoutRouteRouteWithChildren
   ApiFilesMarkdownRouteRoute: typeof ApiFilesMarkdownRouteRoute
   ApiFilesObjectRouteRoute: typeof ApiFilesObjectRouteRoute
   ApiFilesUploadRouteRoute: typeof ApiFilesUploadRouteRoute
@@ -604,6 +771,13 @@ export interface RootRouteChildren {
   ApiZeroQueryRouteRoute: typeof ApiZeroQueryRouteRoute
   ApiZeroTokenRouteRoute: typeof ApiZeroTokenRouteRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiOperatorBishOverviewRouteRoute: typeof ApiOperatorBishOverviewRouteRoute
+  ApiOrgBishApprovalsRouteRoute: typeof ApiOrgBishApprovalsRouteRoute
+  ApiOrgBishConnectorsRouteRoute: typeof ApiOrgBishConnectorsRouteRouteWithChildren
+  ApiOrgBishEvolutionRouteRoute: typeof ApiOrgBishEvolutionRouteRoute
+  ApiOrgBishOverviewRouteRoute: typeof ApiOrgBishOverviewRouteRoute
+  ApiOrgBishRunHistoryRouteRoute: typeof ApiOrgBishRunHistoryRouteRoute
+  ApiOrgBishUploadsRouteRoute: typeof ApiOrgBishUploadsRouteRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -762,13 +936,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiFilesMarkdownRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/(ee)/singularity/_layout': {
-      id: '/(ee)/singularity/_layout'
-      path: '/singularity'
-      fullPath: '/singularity'
-      preLoaderRoute: typeof eeSingularityLayoutRouteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/(app)/_layout/settings': {
       id: '/(app)/_layout/settings'
       path: '/settings'
@@ -783,19 +950,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof appLayoutOrganizationRouteRouteImport
       parentRoute: typeof appLayoutRouteRoute
     }
+    '/(app)/_layout/operator': {
+      id: '/(app)/_layout/operator'
+      path: '/operator'
+      fullPath: '/operator'
+      preLoaderRoute: typeof appLayoutOperatorRouteRouteImport
+      parentRoute: typeof appLayoutRouteRoute
+    }
     '/(app)/_layout/chat': {
       id: '/(app)/_layout/chat'
       path: '/chat'
       fullPath: '/chat'
       preLoaderRoute: typeof appLayoutChatRouteRouteImport
       parentRoute: typeof appLayoutRouteRoute
-    }
-    '/(ee)/singularity/_layout/': {
-      id: '/(ee)/singularity/_layout/'
-      path: '/'
-      fullPath: '/singularity/'
-      preLoaderRoute: typeof eeSingularityLayoutIndexRouteImport
-      parentRoute: typeof eeSingularityLayoutRouteRoute
     }
     '/(app)/_layout/settings/': {
       id: '/(app)/_layout/settings/'
@@ -810,6 +977,55 @@ declare module '@tanstack/react-router' {
       fullPath: '/chat/'
       preLoaderRoute: typeof appLayoutChatIndexRouteImport
       parentRoute: typeof appLayoutChatRouteRoute
+    }
+    '/api/org/bish/uploads': {
+      id: '/api/org/bish/uploads'
+      path: '/api/org/bish/uploads'
+      fullPath: '/api/org/bish/uploads'
+      preLoaderRoute: typeof ApiOrgBishUploadsRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/org/bish/run-history': {
+      id: '/api/org/bish/run-history'
+      path: '/api/org/bish/run-history'
+      fullPath: '/api/org/bish/run-history'
+      preLoaderRoute: typeof ApiOrgBishRunHistoryRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/org/bish/overview': {
+      id: '/api/org/bish/overview'
+      path: '/api/org/bish/overview'
+      fullPath: '/api/org/bish/overview'
+      preLoaderRoute: typeof ApiOrgBishOverviewRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/org/bish/evolution': {
+      id: '/api/org/bish/evolution'
+      path: '/api/org/bish/evolution'
+      fullPath: '/api/org/bish/evolution'
+      preLoaderRoute: typeof ApiOrgBishEvolutionRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/org/bish/connectors': {
+      id: '/api/org/bish/connectors'
+      path: '/api/org/bish/connectors'
+      fullPath: '/api/org/bish/connectors'
+      preLoaderRoute: typeof ApiOrgBishConnectorsRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/org/bish/approvals': {
+      id: '/api/org/bish/approvals'
+      path: '/api/org/bish/approvals'
+      fullPath: '/api/org/bish/approvals'
+      preLoaderRoute: typeof ApiOrgBishApprovalsRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/operator/bish/overview': {
+      id: '/api/operator/bish/overview'
+      path: '/api/operator/bish/overview'
+      fullPath: '/api/operator/bish/overview'
+      preLoaderRoute: typeof ApiOperatorBishOverviewRouteRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/(app)/_layout/settings/security': {
       id: '/(app)/_layout/settings/security'
@@ -838,13 +1054,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/organization/settings/'
       preLoaderRoute: typeof appLayoutOrganizationSettingsIndexRouteImport
       parentRoute: typeof appLayoutOrganizationSettingsRouteRoute
-    }
-    '/(ee)/singularity/_layout/orgs/$organizationId': {
-      id: '/(ee)/singularity/_layout/orgs/$organizationId'
-      path: '/orgs/$organizationId'
-      fullPath: '/singularity/orgs/$organizationId'
-      preLoaderRoute: typeof eeSingularityLayoutOrgsOrganizationIdRouteImport
-      parentRoute: typeof eeSingularityLayoutRouteRoute
     }
     '/(app)/_layout/organization/settings/tools': {
       id: '/(app)/_layout/organization/settings/tools'
@@ -888,6 +1097,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof appLayoutOrganizationSettingsKnowledgeRouteRouteImport
       parentRoute: typeof appLayoutOrganizationSettingsRouteRoute
     }
+    '/(app)/_layout/organization/settings/connectors': {
+      id: '/(app)/_layout/organization/settings/connectors'
+      path: '/connectors'
+      fullPath: '/organization/settings/connectors'
+      preLoaderRoute: typeof appLayoutOrganizationSettingsConnectorsRouteRouteImport
+      parentRoute: typeof appLayoutOrganizationSettingsRouteRoute
+    }
     '/(app)/_layout/organization/settings/compliance-policy': {
       id: '/(app)/_layout/organization/settings/compliance-policy'
       path: '/compliance-policy'
@@ -909,11 +1125,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof appLayoutOrganizationSettingsBillingRouteRouteImport
       parentRoute: typeof appLayoutOrganizationSettingsRouteRoute
     }
+    '/(app)/_layout/organization/settings/approvals': {
+      id: '/(app)/_layout/organization/settings/approvals'
+      path: '/approvals'
+      fullPath: '/organization/settings/approvals'
+      preLoaderRoute: typeof appLayoutOrganizationSettingsApprovalsRouteRouteImport
+      parentRoute: typeof appLayoutOrganizationSettingsRouteRoute
+    }
     '/(app)/_layout/organization/settings/analytics': {
       id: '/(app)/_layout/organization/settings/analytics'
       path: '/analytics'
       fullPath: '/organization/settings/analytics'
       preLoaderRoute: typeof appLayoutOrganizationSettingsAnalyticsRouteRouteImport
+      parentRoute: typeof appLayoutOrganizationSettingsRouteRoute
+    }
+    '/(app)/_layout/organization/settings/agents': {
+      id: '/(app)/_layout/organization/settings/agents'
+      path: '/agents'
+      fullPath: '/organization/settings/agents'
+      preLoaderRoute: typeof appLayoutOrganizationSettingsAgentsRouteRouteImport
       parentRoute: typeof appLayoutOrganizationSettingsRouteRoute
     }
     '/(app)/_layout/organization/settings/models/': {
@@ -922,6 +1152,41 @@ declare module '@tanstack/react-router' {
       fullPath: '/organization/settings/models/'
       preLoaderRoute: typeof appLayoutOrganizationSettingsModelsIndexRouteImport
       parentRoute: typeof appLayoutOrganizationSettingsModelsRouteRoute
+    }
+    '/api/org/bish/connectors/hubspot/start': {
+      id: '/api/org/bish/connectors/hubspot/start'
+      path: '/hubspot/start'
+      fullPath: '/api/org/bish/connectors/hubspot/start'
+      preLoaderRoute: typeof ApiOrgBishConnectorsHubspotStartRouteRouteImport
+      parentRoute: typeof ApiOrgBishConnectorsRouteRoute
+    }
+    '/api/org/bish/connectors/hubspot/callback': {
+      id: '/api/org/bish/connectors/hubspot/callback'
+      path: '/hubspot/callback'
+      fullPath: '/api/org/bish/connectors/hubspot/callback'
+      preLoaderRoute: typeof ApiOrgBishConnectorsHubspotCallbackRouteRouteImport
+      parentRoute: typeof ApiOrgBishConnectorsRouteRoute
+    }
+    '/api/org/bish/connectors/google-workspace/activate': {
+      id: '/api/org/bish/connectors/google-workspace/activate'
+      path: '/google-workspace/activate'
+      fullPath: '/api/org/bish/connectors/google-workspace/activate'
+      preLoaderRoute: typeof ApiOrgBishConnectorsGoogleWorkspaceActivateRouteRouteImport
+      parentRoute: typeof ApiOrgBishConnectorsRouteRoute
+    }
+    '/api/org/bish/connectors/asana/start': {
+      id: '/api/org/bish/connectors/asana/start'
+      path: '/asana/start'
+      fullPath: '/api/org/bish/connectors/asana/start'
+      preLoaderRoute: typeof ApiOrgBishConnectorsAsanaStartRouteRouteImport
+      parentRoute: typeof ApiOrgBishConnectorsRouteRoute
+    }
+    '/api/org/bish/connectors/asana/callback': {
+      id: '/api/org/bish/connectors/asana/callback'
+      path: '/asana/callback'
+      fullPath: '/api/org/bish/connectors/asana/callback'
+      preLoaderRoute: typeof ApiOrgBishConnectorsAsanaCallbackRouteRouteImport
+      parentRoute: typeof ApiOrgBishConnectorsRouteRoute
     }
     '/(app)/_layout/organization/settings/models/$providerId': {
       id: '/(app)/_layout/organization/settings/models/$providerId'
@@ -981,10 +1246,13 @@ const appLayoutOrganizationSettingsModelsRouteRouteWithChildren =
   )
 
 interface appLayoutOrganizationSettingsRouteRouteChildren {
+  appLayoutOrganizationSettingsAgentsRouteRoute: typeof appLayoutOrganizationSettingsAgentsRouteRoute
   appLayoutOrganizationSettingsAnalyticsRouteRoute: typeof appLayoutOrganizationSettingsAnalyticsRouteRoute
+  appLayoutOrganizationSettingsApprovalsRouteRoute: typeof appLayoutOrganizationSettingsApprovalsRouteRoute
   appLayoutOrganizationSettingsBillingRouteRoute: typeof appLayoutOrganizationSettingsBillingRouteRoute
   appLayoutOrganizationSettingsByokRouteRoute: typeof appLayoutOrganizationSettingsByokRouteRoute
   appLayoutOrganizationSettingsCompliancePolicyRouteRoute: typeof appLayoutOrganizationSettingsCompliancePolicyRouteRoute
+  appLayoutOrganizationSettingsConnectorsRouteRoute: typeof appLayoutOrganizationSettingsConnectorsRouteRoute
   appLayoutOrganizationSettingsKnowledgeRouteRoute: typeof appLayoutOrganizationSettingsKnowledgeRouteRoute
   appLayoutOrganizationSettingsMembersRouteRoute: typeof appLayoutOrganizationSettingsMembersRouteRoute
   appLayoutOrganizationSettingsModelsRouteRoute: typeof appLayoutOrganizationSettingsModelsRouteRouteWithChildren
@@ -996,14 +1264,20 @@ interface appLayoutOrganizationSettingsRouteRouteChildren {
 
 const appLayoutOrganizationSettingsRouteRouteChildren: appLayoutOrganizationSettingsRouteRouteChildren =
   {
+    appLayoutOrganizationSettingsAgentsRouteRoute:
+      appLayoutOrganizationSettingsAgentsRouteRoute,
     appLayoutOrganizationSettingsAnalyticsRouteRoute:
       appLayoutOrganizationSettingsAnalyticsRouteRoute,
+    appLayoutOrganizationSettingsApprovalsRouteRoute:
+      appLayoutOrganizationSettingsApprovalsRouteRoute,
     appLayoutOrganizationSettingsBillingRouteRoute:
       appLayoutOrganizationSettingsBillingRouteRoute,
     appLayoutOrganizationSettingsByokRouteRoute:
       appLayoutOrganizationSettingsByokRouteRoute,
     appLayoutOrganizationSettingsCompliancePolicyRouteRoute:
       appLayoutOrganizationSettingsCompliancePolicyRouteRoute,
+    appLayoutOrganizationSettingsConnectorsRouteRoute:
+      appLayoutOrganizationSettingsConnectorsRouteRoute,
     appLayoutOrganizationSettingsKnowledgeRouteRoute:
       appLayoutOrganizationSettingsKnowledgeRouteRoute,
     appLayoutOrganizationSettingsMembersRouteRoute:
@@ -1058,6 +1332,7 @@ const appLayoutSettingsRouteRouteWithChildren =
 
 interface appLayoutRouteRouteChildren {
   appLayoutChatRouteRoute: typeof appLayoutChatRouteRouteWithChildren
+  appLayoutOperatorRouteRoute: typeof appLayoutOperatorRouteRoute
   appLayoutOrganizationRouteRoute: typeof appLayoutOrganizationRouteRouteWithChildren
   appLayoutSettingsRouteRoute: typeof appLayoutSettingsRouteRouteWithChildren
   appLayoutSplatRoute: typeof appLayoutSplatRoute
@@ -1066,6 +1341,7 @@ interface appLayoutRouteRouteChildren {
 
 const appLayoutRouteRouteChildren: appLayoutRouteRouteChildren = {
   appLayoutChatRouteRoute: appLayoutChatRouteRouteWithChildren,
+  appLayoutOperatorRouteRoute: appLayoutOperatorRouteRoute,
   appLayoutOrganizationRouteRoute: appLayoutOrganizationRouteRouteWithChildren,
   appLayoutSettingsRouteRoute: appLayoutSettingsRouteRouteWithChildren,
   appLayoutSplatRoute: appLayoutSplatRoute,
@@ -1076,21 +1352,31 @@ const appLayoutRouteRouteWithChildren = appLayoutRouteRoute._addFileChildren(
   appLayoutRouteRouteChildren,
 )
 
-interface eeSingularityLayoutRouteRouteChildren {
-  eeSingularityLayoutIndexRoute: typeof eeSingularityLayoutIndexRoute
-  eeSingularityLayoutOrgsOrganizationIdRoute: typeof eeSingularityLayoutOrgsOrganizationIdRoute
+interface ApiOrgBishConnectorsRouteRouteChildren {
+  ApiOrgBishConnectorsAsanaCallbackRouteRoute: typeof ApiOrgBishConnectorsAsanaCallbackRouteRoute
+  ApiOrgBishConnectorsAsanaStartRouteRoute: typeof ApiOrgBishConnectorsAsanaStartRouteRoute
+  ApiOrgBishConnectorsGoogleWorkspaceActivateRouteRoute: typeof ApiOrgBishConnectorsGoogleWorkspaceActivateRouteRoute
+  ApiOrgBishConnectorsHubspotCallbackRouteRoute: typeof ApiOrgBishConnectorsHubspotCallbackRouteRoute
+  ApiOrgBishConnectorsHubspotStartRouteRoute: typeof ApiOrgBishConnectorsHubspotStartRouteRoute
 }
 
-const eeSingularityLayoutRouteRouteChildren: eeSingularityLayoutRouteRouteChildren =
+const ApiOrgBishConnectorsRouteRouteChildren: ApiOrgBishConnectorsRouteRouteChildren =
   {
-    eeSingularityLayoutIndexRoute: eeSingularityLayoutIndexRoute,
-    eeSingularityLayoutOrgsOrganizationIdRoute:
-      eeSingularityLayoutOrgsOrganizationIdRoute,
+    ApiOrgBishConnectorsAsanaCallbackRouteRoute:
+      ApiOrgBishConnectorsAsanaCallbackRouteRoute,
+    ApiOrgBishConnectorsAsanaStartRouteRoute:
+      ApiOrgBishConnectorsAsanaStartRouteRoute,
+    ApiOrgBishConnectorsGoogleWorkspaceActivateRouteRoute:
+      ApiOrgBishConnectorsGoogleWorkspaceActivateRouteRoute,
+    ApiOrgBishConnectorsHubspotCallbackRouteRoute:
+      ApiOrgBishConnectorsHubspotCallbackRouteRoute,
+    ApiOrgBishConnectorsHubspotStartRouteRoute:
+      ApiOrgBishConnectorsHubspotStartRouteRoute,
   }
 
-const eeSingularityLayoutRouteRouteWithChildren =
-  eeSingularityLayoutRouteRoute._addFileChildren(
-    eeSingularityLayoutRouteRouteChildren,
+const ApiOrgBishConnectorsRouteRouteWithChildren =
+  ApiOrgBishConnectorsRouteRoute._addFileChildren(
+    ApiOrgBishConnectorsRouteRouteChildren,
   )
 
 const rootRouteChildren: RootRouteChildren = {
@@ -1103,7 +1389,6 @@ const rootRouteChildren: RootRouteChildren = {
   LegalAcceptableUseRouteRoute: LegalAcceptableUseRouteRoute,
   LegalPrivacyRouteRoute: LegalPrivacyRouteRoute,
   LegalTermsRouteRoute: LegalTermsRouteRoute,
-  eeSingularityLayoutRouteRoute: eeSingularityLayoutRouteRouteWithChildren,
   ApiFilesMarkdownRouteRoute: ApiFilesMarkdownRouteRoute,
   ApiFilesObjectRouteRoute: ApiFilesObjectRouteRoute,
   ApiFilesUploadRouteRoute: ApiFilesUploadRouteRoute,
@@ -1112,6 +1397,13 @@ const rootRouteChildren: RootRouteChildren = {
   ApiZeroQueryRouteRoute: ApiZeroQueryRouteRoute,
   ApiZeroTokenRouteRoute: ApiZeroTokenRouteRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiOperatorBishOverviewRouteRoute: ApiOperatorBishOverviewRouteRoute,
+  ApiOrgBishApprovalsRouteRoute: ApiOrgBishApprovalsRouteRoute,
+  ApiOrgBishConnectorsRouteRoute: ApiOrgBishConnectorsRouteRouteWithChildren,
+  ApiOrgBishEvolutionRouteRoute: ApiOrgBishEvolutionRouteRoute,
+  ApiOrgBishOverviewRouteRoute: ApiOrgBishOverviewRouteRoute,
+  ApiOrgBishRunHistoryRouteRoute: ApiOrgBishRunHistoryRouteRoute,
+  ApiOrgBishUploadsRouteRoute: ApiOrgBishUploadsRouteRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

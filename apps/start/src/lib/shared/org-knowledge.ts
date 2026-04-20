@@ -24,8 +24,8 @@ export function summarizeOrgKnowledgeIndexError(input?: string | null): string |
   if (message.includes('timed out') || message.includes('AbortError')) {
     return 'Vector indexing timed out'
   }
-  if (message.includes('Qdrant')) {
-    return 'Vector store request failed'
+  if (message.includes('pgvector') || message.includes('vector')) {
+    return 'Postgres vector indexing failed'
   }
   if (message.includes('not configured')) {
     return 'Vector indexing is not configured'

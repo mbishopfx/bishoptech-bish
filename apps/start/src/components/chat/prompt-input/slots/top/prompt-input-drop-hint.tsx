@@ -1,6 +1,6 @@
 'use client'
 
-import { cn } from '@rift/utils'
+import { cn } from '@bish/utils'
 import { UploadCloud } from 'lucide-react'
 import { m } from '@/paraglide/messages.js'
 

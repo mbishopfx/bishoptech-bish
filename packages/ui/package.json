@@ -1,5 +1,5 @@
 {
-  "name": "@rift/ui",
+  "name": "@bish/ui",
   "version": "0.0.1",
   "private": true,
   "sideEffects": false,
@@ -247,7 +247,7 @@
   },
   "dependencies": {
     "@base-ui/react": "^1.2.0",
-    "@rift/utils": "workspace:*",
+    "@bish/utils": "workspace:*",
     "@tanstack/react-table": "^8.21.3",
     "@visx/responsive": "4.0.1-alpha.0",
     "@visx/shape": "4.0.1-alpha.0",

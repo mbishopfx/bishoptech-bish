@@ -1,17 +1,17 @@
 'use client'
 
 import { useMemo, useRef } from 'react'
-import { cn } from '@rift/utils'
-import { Badge } from '@rift/ui/badge'
-import { Button } from '@rift/ui/button'
-import { DataTable } from '@rift/ui/data-table'
-import type { DataTableColumnDef } from '@rift/ui/data-table'
+import { cn } from '@bish/utils'
+import { Badge } from '@bish/ui/badge'
+import { Button } from '@bish/ui/button'
+import { DataTable } from '@bish/ui/data-table'
+import type { DataTableColumnDef } from '@bish/ui/data-table'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@rift/ui/dropdown-menu'
+} from '@bish/ui/dropdown-menu'
 import { MoreVertical, Upload } from 'lucide-react'
 import { toast } from 'sonner'
 

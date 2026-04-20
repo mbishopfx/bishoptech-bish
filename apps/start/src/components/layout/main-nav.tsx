@@ -7,9 +7,9 @@ import type {
 } from 'react'
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 
-import { cn } from '@rift/utils'
-import { directionClass, useDirection } from '@rift/ui/direction'
-import { useMediaQuery } from '@rift/ui/hooks/useMediaQuery'
+import { cn } from '@bish/utils'
+import { directionClass, useDirection } from '@bish/ui/direction'
+import { useMediaQuery } from '@bish/ui/hooks/useMediaQuery'
 
 import { AppRightSidebar } from '@/components/layout/app-right-sidebar'
 import { useRightSidebar } from '@/components/layout/right-sidebar-context'

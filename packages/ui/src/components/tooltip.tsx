@@ -4,7 +4,7 @@ import { Tooltip as TooltipPrimitive } from "@base-ui/react/tooltip"
 import { motion } from "motion/react"
 import type { ReactElement, ReactNode } from "react"
 
-import { cn } from "@rift/utils"
+import { cn } from "@bish/utils"
 
 function TooltipProvider({
   delay = 0,

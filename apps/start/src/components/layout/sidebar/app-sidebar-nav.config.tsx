@@ -5,10 +5,10 @@ import {
   ORG_SETTINGS_AREA_KEY,
 } from '@/routes/(app)/_layout/organization/settings/-organization-settings-nav'
 import {
-  isSingularityPath,
-  singularityNavArea,
-  SINGULARITY_AREA_KEY,
-} from '@/ee/singularity/components/singularity-nav.config'
+  isOperatorPath,
+  operatorNavArea,
+  OPERATOR_AREA_KEY,
+} from '@/routes/(app)/_layout/operator/-operator-nav'
 import {
   isSettingsPath,
   settingsNavArea,
@@ -61,7 +61,7 @@ export type SidebarNavAreas = Record<
 >
 
 export const NAV_AREAS: SidebarNavAreas = {
-  [SINGULARITY_AREA_KEY]: singularityNavArea,
+  [OPERATOR_AREA_KEY]: operatorNavArea,
   [ORG_SETTINGS_AREA_KEY]: orgSettingsNavArea,
   [CHAT_AREA_KEY]: chatNavArea,
   [SETTINGS_AREA_KEY]: settingsNavArea,
@@ -69,13 +69,13 @@ export const NAV_AREAS: SidebarNavAreas = {
 
 export { CHAT_AREA_KEY }
 export { SETTINGS_AREA_KEY }
-export { SINGULARITY_AREA_KEY }
+export { OPERATOR_AREA_KEY }
 
 /**
  * Resolve current area from pathname.
  */
 export function getCurrentArea(pathname: string): string | null {
-  if (isSingularityPath(pathname)) return SINGULARITY_AREA_KEY
+  if (isOperatorPath(pathname)) return OPERATOR_AREA_KEY
   if (isOrgSettingsPath(pathname)) return ORG_SETTINGS_AREA_KEY
   if (isSettingsPath(pathname)) return SETTINGS_AREA_KEY
   if (isChatPath(pathname)) return CHAT_AREA_KEY

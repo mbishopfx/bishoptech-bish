@@ -1,4 +1,4 @@
-import { cn } from "@rift/utils"
+import { cn } from "@bish/utils"
 
 function Kbd({ className, ...props }: React.ComponentProps<"kbd">) {
   return (

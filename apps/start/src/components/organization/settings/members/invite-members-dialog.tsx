@@ -1,16 +1,16 @@
 'use client'
 
-import { Button } from '@rift/ui/button'
-import { FormDialog } from '@rift/ui/dialog'
-import { Input } from '@rift/ui/input'
-import { Label } from '@rift/ui/label'
+import { Button } from '@bish/ui/button'
+import { FormDialog } from '@bish/ui/dialog'
+import { Input } from '@bish/ui/input'
+import { Label } from '@bish/ui/label'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@rift/ui/select'
+} from '@bish/ui/select'
 import { Plus, UserPlus } from 'lucide-react'
 import {
   INVITE_BATCH_MAX,

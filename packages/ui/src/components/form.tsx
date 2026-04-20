@@ -11,7 +11,7 @@ import {
 import { ExternalLink } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 
-import { cn } from "@rift/utils";
+import { cn } from "@bish/utils";
 
 import { Button } from "./button";
 import { Input } from "./input";

@@ -1,6 +1,6 @@
 "use client"
 
-import { cn } from "@rift/utils"
+import { cn } from "@bish/utils"
 
 export type TextShimmerProps = {
   as?: string

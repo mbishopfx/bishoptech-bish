@@ -10,9 +10,9 @@ import {
   Image,
   FileText,
 } from 'lucide-react'
-import { cn } from '@rift/utils'
-import { Popover, PopoverContent, PopoverTrigger } from '@rift/ui/popover'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@rift/ui/tooltip'
+import { cn } from '@bish/utils'
+import { Popover, PopoverContent, PopoverTrigger } from '@bish/ui/popover'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@bish/ui/tooltip'
 import { getCatalogModel, getProviderIcon } from '@/lib/shared/ai-catalog'
 import type { AiModelCatalogEntry } from '@/lib/shared/ai-catalog/types'
 import type { CatalogProviderId } from '@/lib/shared/ai-catalog/provider-tools'

@@ -14,7 +14,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { cn } from "@rift/utils";
+import { cn } from "@bish/utils";
 import { ChartProvider, type LineConfig, type Margin } from "./chart-context";
 import { Line, type LineProps } from "./line";
 import { useChartInteraction } from "./use-chart-interaction";

@@ -3,7 +3,7 @@
 import * as React from 'react'
 import { Switch as SwitchPrimitive } from '@base-ui/react/switch'
 
-import { cn } from '@rift/utils'
+import { cn } from '@bish/utils'
 
 function Switch(
   { className, ...props }: React.ComponentProps<typeof SwitchPrimitive.Root>) {

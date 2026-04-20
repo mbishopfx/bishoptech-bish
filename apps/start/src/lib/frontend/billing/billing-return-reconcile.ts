@@ -1,7 +1,7 @@
 'use client'
 
 const BILLING_RECONCILE_ON_RETURN_STORAGE_KEY =
-  'rift.billing.reconcile-on-return'
+  'bish.billing.reconcile-on-return'
 
 function resolveBrowserUrl(rawUrl: string): URL | null {
   if (typeof window === 'undefined') {
