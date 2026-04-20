@@ -1,0 +1,12 @@
+.git
+.github
+.turbo
+.cursor
+node_modules
+apps/start/.output
+apps/start/.tanstack
+apps/start/src/paraglide
+coverage
+dist
+tmp
+*.log

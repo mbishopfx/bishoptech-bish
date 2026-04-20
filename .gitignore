@@ -6,6 +6,7 @@ dist/
 *.tsbuildinfo
 .env.local
 lib/local/
+.cursor/
 .cursor/rules/effect.mdc
 zero.db*
 effect-smol/
