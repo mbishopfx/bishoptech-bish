@@ -10,6 +10,18 @@ import {
 } from '@bish/automation'
 import { Pool } from 'pg'
 
+/**
+ * Worker responsibilities
+ * - Claim connector sync jobs and run connector adapter syncs
+ * - Project raw records into CRM/knowledge tables
+ * - Write deterministic embeddings (placeholder until model-backed embeddings ship)
+ *
+ * Production-hardening goals
+ * - Never crash the worker loop for a single failing job
+ * - Maintain multi-tenant safety by scoping jobs to the owning organization
+ * - Keep connector status transitions consistent for operator UX (connected <-> syncing)
+ */
+
 function getConnectionString() {
   return (
     process.env.ZERO_UPSTREAM_DB
@@ -29,6 +41,34 @@ const loopDelayMs = Number(process.env.BISH_WORKER_POLL_MS ?? 4_000)
 
 function wait(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+/**
+ * In production (Railway), processes should exit cleanly on SIGTERM so the
+ * platform can roll deployments without leaving Postgres connections open.
+ */
+function setupGracefulShutdown() {
+  let shuttingDown = false
+
+  async function shutdown(signal: string) {
+    if (shuttingDown) return
+    shuttingDown = true
+    console.log(`bish-worker shutting down (${signal})`)
+    try {
+      await pool.end()
+    } catch (error) {
+      console.error('failed to close Postgres pool during shutdown', error)
+    } finally {
+      process.exit(0)
+    }
+  }
+
+  process.once('SIGTERM', () => {
+    void shutdown('SIGTERM')
+  })
+  process.once('SIGINT', () => {
+    void shutdown('SIGINT')
+  })
 }
 
 function scoreFromSeed(seed: string, min: number, max: number) {
@@ -58,6 +98,7 @@ async function claimSyncJob() {
         FROM connector_sync_jobs csj
         JOIN connector_accounts ca
           ON ca.id = csj.connector_account_id
+          AND ca.organization_id = csj.organization_id
         WHERE csj.status = 'queued'
         ORDER BY csj.created_at ASC
         LIMIT 1
@@ -81,6 +122,52 @@ async function claimSyncJob() {
   )
 
   return result.rows[0] ?? null
+}
+
+async function markConnectorStatus(input: {
+  connectorAccountId: string
+  expectedOrganizationId: string
+  status: 'syncing' | 'connected' | 'config_required'
+  timestamp: number
+  onlyIfCurrentStatus?: 'syncing' | 'connected' | 'needs_auth' | 'config_required'
+}) {
+  await pool.query(
+    `
+      UPDATE connector_accounts
+      SET status = $1,
+          updated_at = $2
+      WHERE id = $3
+        AND organization_id = $4
+        AND ($5::text IS NULL OR status = $5)
+    `,
+    [
+      input.status,
+      input.timestamp,
+      input.connectorAccountId,
+      input.expectedOrganizationId,
+      input.onlyIfCurrentStatus ?? null,
+    ],
+  )
+}
+
+async function failSyncJob(input: {
+  syncJobId: string
+  expectedOrganizationId: string
+  errorMessage: string
+  timestamp: number
+}) {
+  await pool.query(
+    `
+      UPDATE connector_sync_jobs
+      SET status = 'failed',
+          error_message = $1,
+          completed_at = $2,
+          updated_at = $2
+      WHERE id = $3
+        AND organization_id = $4
+    `,
+    [input.errorMessage, input.timestamp, input.syncJobId, input.expectedOrganizationId],
+  )
 }
 
 async function readCursor(input: {
@@ -881,6 +968,14 @@ async function processSyncJob() {
   if (!job) return false
 
   const timestamp = Date.now()
+  await markConnectorStatus({
+    connectorAccountId: job.connector_account_id,
+    expectedOrganizationId: job.organization_id,
+    status: 'syncing',
+    timestamp,
+    onlyIfCurrentStatus: 'connected',
+  })
+
   const readiness = getConnectorInstallReadiness(job.provider, process.env)
 
   if (!readiness.configured) {
@@ -895,183 +990,223 @@ async function processSyncJob() {
       },
     })
 
+    await markConnectorStatus({
+      connectorAccountId: job.connector_account_id,
+      expectedOrganizationId: job.organization_id,
+      status: 'config_required',
+      timestamp,
+    })
+
+    await failSyncJob({
+      syncJobId: job.id,
+      expectedOrganizationId: job.organization_id,
+      errorMessage: `Missing required env: ${readiness.missingEnv.join(', ')}`,
+      timestamp,
+    })
+
+    console.log(`Skipped sync job ${job.id} because credentials are missing`)
+    return true
+  }
+
+  try {
+    const adapter = createConnectorAdapter(job.provider)
+    const discoveredSources = await adapter.discoverSources(
+      job.organization_id,
+      job.connector_account_id,
+    )
+    const selectedSource =
+      discoveredSources.find((source) => source.sourceType === job.source_type)
+      ?? discoveredSources[0]
+
+    if (!selectedSource) {
+      await recordConnectorFailure({
+        organizationId: job.organization_id,
+        connectorAccountId: job.connector_account_id,
+        syncJobId: job.id,
+        code: 'CONNECTOR_SOURCE_MISSING',
+        message: 'No sync source is configured for this connector.',
+        details: {},
+      })
+      await failSyncJob({
+        syncJobId: job.id,
+        expectedOrganizationId: job.organization_id,
+        errorMessage: 'No sync source is configured for this connector.',
+        timestamp,
+      })
+      await markConnectorStatus({
+        connectorAccountId: job.connector_account_id,
+        expectedOrganizationId: job.organization_id,
+        status: 'connected',
+        timestamp,
+        onlyIfCurrentStatus: 'syncing',
+      })
+      return true
+    }
+
+    const sourceType = selectedSource.sourceType
+    const sourceRef = job.source_ref ?? `${job.provider}:${sourceType}`
+    const cursor = await readCursor({
+      organizationId: job.organization_id,
+      connectorAccountId: job.connector_account_id,
+      sourceType,
+      sourceRef,
+    })
+
+    const syncResult = await adapter.syncSource(
+      job.organization_id,
+      {
+        connectorAccountId: job.connector_account_id,
+        sourceType,
+        sourceRef,
+      },
+      cursor,
+    )
+    const records = await adapter.normalizeRecords(syncResult.records)
+    const knowledgeSourceId = await ensureKnowledgeSource({
+      organizationId: job.organization_id,
+      connectorAccountId: job.connector_account_id,
+      sourceType,
+      sourceRef,
+    })
+
+    let documentsIndexed = 0
+    for (const record of records) {
+      await upsertRawConnectorRecord({
+        organizationId: job.organization_id,
+        connectorAccountId: job.connector_account_id,
+        record,
+      })
+      await upsertCrmProjection({
+        organizationId: job.organization_id,
+        connectorAccountId: job.connector_account_id,
+        record,
+      })
+      documentsIndexed += await ingestKnowledgeRecord({
+        organizationId: job.organization_id,
+        connectorAccountId: job.connector_account_id,
+        knowledgeSourceId,
+        record,
+        syncCursor: syncResult.cursor,
+        timestamp,
+      })
+    }
+
+    const proposedActions = await adapter.proposeActions({
+      sourceType,
+      records,
+    })
+
+    await upsertCursor({
+      organizationId: job.organization_id,
+      connectorAccountId: job.connector_account_id,
+      sourceType,
+      sourceRef,
+      cursorValue: syncResult.cursor,
+      timestamp,
+    })
+
     await pool.query(
       `
-        UPDATE connector_accounts
-        SET status = 'config_required',
+        UPDATE connector_scopes
+        SET granted = true,
             updated_at = $1
-        WHERE id = $2
+        WHERE connector_account_id = $2
       `,
       [timestamp, job.connector_account_id],
     )
 
     await pool.query(
       `
-        UPDATE connector_sync_jobs
-        SET status = 'failed',
-            error_message = $1,
-            completed_at = $2,
-            updated_at = $2
-        WHERE id = $3
+        UPDATE connector_accounts
+        SET status = CASE WHEN status = 'syncing' THEN 'connected' ELSE status END,
+            last_synced_at = $1,
+            scope_status = $2::jsonb,
+            metadata = jsonb_set(
+              COALESCE(metadata, '{}'::jsonb),
+              '{lastCursor}',
+              to_jsonb($3::text),
+              true
+            ),
+            updated_at = $1
+        WHERE id = $4
+          AND organization_id = $5
       `,
       [
-        `Missing required env: ${readiness.missingEnv.join(', ')}`,
         timestamp,
-        job.id,
+        JSON.stringify({
+          granted: true,
+          missingEnv: [],
+        }),
+        syncResult.cursor,
+        job.connector_account_id,
+        job.organization_id,
       ],
     )
 
-    console.log(`Skipped sync job ${job.id} because credentials are missing`)
+    await pool.query(
+      `
+        UPDATE connector_sync_jobs
+        SET status = 'completed',
+            completed_at = $1,
+            records_read = $2,
+            records_written = $3,
+            documents_indexed = $4,
+            metadata = $5::jsonb,
+            updated_at = $1
+        WHERE id = $6
+          AND organization_id = $7
+      `,
+      [
+        timestamp,
+        records.length,
+        records.length,
+        documentsIndexed,
+        JSON.stringify({
+          cursor: syncResult.cursor,
+          proposedActionCount: proposedActions.length,
+          sourceType,
+        }),
+        job.id,
+        job.organization_id,
+      ],
+    )
+
+    console.log(`Processed sync job ${job.id} with ${records.length} records`)
     return true
-  }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    console.error(`Failed sync job ${job.id}`, error)
 
-  const adapter = createConnectorAdapter(job.provider)
-  const discoveredSources = await adapter.discoverSources(
-    job.organization_id,
-    job.connector_account_id,
-  )
-  const selectedSource =
-    discoveredSources.find((source) => source.sourceType === job.source_type)
-    ?? discoveredSources[0]
-
-  if (!selectedSource) {
     await recordConnectorFailure({
       organizationId: job.organization_id,
       connectorAccountId: job.connector_account_id,
       syncJobId: job.id,
-      code: 'CONNECTOR_SOURCE_MISSING',
-      message: 'No sync source is configured for this connector.',
-      details: {},
+      code: 'CONNECTOR_SYNC_RUNTIME_ERROR',
+      message,
+      details: {
+        provider: job.provider,
+        sourceRef: job.source_ref,
+        sourceType: job.source_type,
+      },
     })
+
+    await failSyncJob({
+      syncJobId: job.id,
+      expectedOrganizationId: job.organization_id,
+      errorMessage: message,
+      timestamp,
+    })
+
+    await markConnectorStatus({
+      connectorAccountId: job.connector_account_id,
+      expectedOrganizationId: job.organization_id,
+      status: 'connected',
+      timestamp,
+      onlyIfCurrentStatus: 'syncing',
+    })
+
     return true
   }
-
-  const sourceType = selectedSource.sourceType
-  const sourceRef = job.source_ref ?? `${job.provider}:${sourceType}`
-  const cursor = await readCursor({
-    organizationId: job.organization_id,
-    connectorAccountId: job.connector_account_id,
-    sourceType,
-    sourceRef,
-  })
-
-  const syncResult = await adapter.syncSource(
-    job.organization_id,
-    {
-      connectorAccountId: job.connector_account_id,
-      sourceType,
-      sourceRef,
-    },
-    cursor,
-  )
-  const records = await adapter.normalizeRecords(syncResult.records)
-  const knowledgeSourceId = await ensureKnowledgeSource({
-    organizationId: job.organization_id,
-    connectorAccountId: job.connector_account_id,
-    sourceType,
-    sourceRef,
-  })
-
-  let documentsIndexed = 0
-  for (const record of records) {
-    await upsertRawConnectorRecord({
-      organizationId: job.organization_id,
-      connectorAccountId: job.connector_account_id,
-      record,
-    })
-    await upsertCrmProjection({
-      organizationId: job.organization_id,
-      connectorAccountId: job.connector_account_id,
-      record,
-    })
-    documentsIndexed += await ingestKnowledgeRecord({
-      organizationId: job.organization_id,
-      connectorAccountId: job.connector_account_id,
-      knowledgeSourceId,
-      record,
-      syncCursor: syncResult.cursor,
-      timestamp,
-    })
-  }
-
-  const proposedActions = await adapter.proposeActions({
-    sourceType,
-    records,
-  })
-
-  await upsertCursor({
-    organizationId: job.organization_id,
-    connectorAccountId: job.connector_account_id,
-    sourceType,
-    sourceRef,
-    cursorValue: syncResult.cursor,
-    timestamp,
-  })
-
-  await pool.query(
-    `
-      UPDATE connector_scopes
-      SET granted = true,
-          updated_at = $1
-      WHERE connector_account_id = $2
-    `,
-    [timestamp, job.connector_account_id],
-  )
-
-  await pool.query(
-    `
-      UPDATE connector_accounts
-      SET status = 'connected',
-          last_synced_at = $1,
-          scope_status = $2::jsonb,
-          metadata = jsonb_set(
-            COALESCE(metadata, '{}'::jsonb),
-            '{lastCursor}',
-            to_jsonb($3::text),
-            true
-          ),
-          updated_at = $1
-      WHERE id = $4
-    `,
-    [
-      timestamp,
-      JSON.stringify({
-        granted: true,
-        missingEnv: [],
-      }),
-      syncResult.cursor,
-      job.connector_account_id,
-    ],
-  )
-
-  await pool.query(
-    `
-      UPDATE connector_sync_jobs
-      SET status = 'completed',
-          completed_at = $1,
-          records_read = $2,
-          records_written = $3,
-          documents_indexed = $4,
-          metadata = $5::jsonb,
-          updated_at = $1
-      WHERE id = $6
-    `,
-    [
-      timestamp,
-      records.length,
-      records.length,
-      documentsIndexed,
-      JSON.stringify({
-        cursor: syncResult.cursor,
-        proposedActionCount: proposedActions.length,
-        sourceType,
-      }),
-      job.id,
-    ],
-  )
-
-  console.log(`Processed sync job ${job.id} with ${records.length} records`)
-  return true
 }
 
 async function processEvaluationRun() {
@@ -1180,13 +1315,28 @@ async function processActionExecution() {
   return true
 }
 
+/**
+ * Wrap background handlers so a single exception never terminates the worker.
+ * Each handler should be responsible for persisting failure state; this wrapper
+ * is the last-resort protection against a crash loop on Railway.
+ */
+async function safeLoopStep(name: string, handler: () => Promise<boolean>) {
+  try {
+    return await handler()
+  } catch (error) {
+    console.error(`bish-worker loop step failed (${name})`, error)
+    return false
+  }
+}
+
 async function main() {
+  setupGracefulShutdown()
   console.log('bish-worker started')
   while (true) {
     const didWork =
-      (await processSyncJob())
-      || (await processEvaluationRun())
-      || (await processActionExecution())
+      (await safeLoopStep('sync', processSyncJob))
+      || (await safeLoopStep('eval', processEvaluationRun))
+      || (await safeLoopStep('actions', processActionExecution))
 
     if (!didWork) {
       await wait(loopDelayMs)

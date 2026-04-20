@@ -89,18 +89,25 @@ function ConnectorStatusBadge({ value }: { value: string }) {
 }
 
 function SyncJobStatusBadge({ value }: { value: string }) {
+  /**
+   * Sync jobs are written by `apps/worker` and stored in Postgres. The canonical
+   * terminal status today is `completed`, but older UI and logs used `succeeded`.
+   * Map both to the same success tone so operators do not see a "warning" badge
+   * after a normal sync finishes.
+   */
+  const normalizedStatus = value === 'completed' ? 'succeeded' : value
   const tone =
-    value === 'succeeded'
+    normalizedStatus === 'succeeded'
       ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700'
-      : value === 'running'
+      : normalizedStatus === 'running'
         ? 'border-sky-500/30 bg-sky-500/10 text-sky-700'
-        : value === 'failed'
+        : normalizedStatus === 'failed'
           ? 'border-rose-500/30 bg-rose-500/10 text-rose-700'
           : 'border-amber-500/30 bg-amber-500/10 text-amber-700'
 
   return (
     <Badge variant="outline" className={tone}>
-      {value.replaceAll('_', ' ')}
+      {normalizedStatus.replaceAll('_', ' ')}
     </Badge>
   )
 }

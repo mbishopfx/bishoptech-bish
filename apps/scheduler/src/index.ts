@@ -1,5 +1,15 @@
 import { Pool } from 'pg'
 
+/**
+ * Scheduler responsibilities
+ * - Periodically enqueue connector sync jobs for connectors that are stale
+ * - Avoid generating job spam for connectors that are not yet configured/authorized
+ *
+ * Production-hardening goals
+ * - Enforce organization scoping in joins to protect multi-tenant boundaries
+ * - Only enqueue for connectors that are actually eligible to sync
+ */
+
 function getConnectionString() {
   return (
     process.env.ZERO_UPSTREAM_DB
@@ -21,6 +31,79 @@ function wait(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
+/**
+ * Ensure Railway can terminate the scheduler without leaving connections open.
+ */
+function setupGracefulShutdown() {
+  let shuttingDown = false
+
+  async function shutdown(signal: string) {
+    if (shuttingDown) return
+    shuttingDown = true
+    console.log(`bish-scheduler shutting down (${signal})`)
+    try {
+      await pool.end()
+    } catch (error) {
+      console.error('failed to close Postgres pool during shutdown', error)
+    } finally {
+      process.exit(0)
+    }
+  }
+
+  process.once('SIGTERM', () => {
+    void shutdown('SIGTERM')
+  })
+  process.once('SIGINT', () => {
+    void shutdown('SIGINT')
+  })
+}
+
+/**
+ * If the worker crashes mid-sync, jobs can remain `running` forever and block
+ * future scheduling. This sweeps "stuck" jobs based on a conservative timeout
+ * and returns connector status back to `connected` when there is no active
+ * running job.
+ */
+async function rescueStaleSyncJobs() {
+  const timestamp = Date.now()
+  const timeoutMs = Number(process.env.BISH_SYNC_JOB_TIMEOUT_MS ?? 30 * 60_000)
+  const cutoff = timestamp - timeoutMs
+
+  const expired = await pool.query(
+    `
+      UPDATE connector_sync_jobs
+      SET status = 'failed',
+          error_message = COALESCE(error_message, 'Sync job timed out'),
+          completed_at = $1,
+          updated_at = $1
+      WHERE status = 'running'
+        AND started_at IS NOT NULL
+        AND started_at < $2
+    `,
+    [timestamp, cutoff],
+  )
+
+  if (expired.rowCount) {
+    console.log(`Marked ${expired.rowCount} stale running sync jobs as failed`)
+  }
+
+  await pool.query(
+    `
+      UPDATE connector_accounts ca
+      SET status = 'connected',
+          updated_at = $1
+      WHERE ca.status = 'syncing'
+        AND NOT EXISTS (
+          SELECT 1
+          FROM connector_sync_jobs csj
+          WHERE csj.connector_account_id = ca.id
+            AND csj.status = 'running'
+        )
+    `,
+    [timestamp],
+  )
+}
+
 async function queueScheduledSyncs() {
   const timestamp = Date.now()
   const staleBefore = timestamp - Number(process.env.BISH_SYNC_STALE_MS ?? 15 * 60_000)
@@ -38,10 +121,12 @@ async function queueScheduledSyncs() {
       FROM connector_accounts ca
       LEFT JOIN knowledge_sources ks
         ON ks.connector_account_id = ca.id
+       AND ks.organization_id = ca.organization_id
       WHERE (
           ca.last_synced_at IS NULL
           OR ca.last_synced_at < $1
         )
+        AND ca.status = 'connected'
         AND NOT EXISTS (
           SELECT 1
           FROM connector_sync_jobs csj
@@ -99,8 +184,12 @@ async function queueScheduledSyncs() {
 }
 
 async function main() {
+  setupGracefulShutdown()
   console.log('bish-scheduler started')
   while (true) {
+    await rescueStaleSyncJobs().catch((error) => {
+      console.error('failed to rescue stale sync jobs', error)
+    })
     await queueScheduledSyncs().catch((error) => {
       console.error('failed to queue scheduled syncs', error)
     })
