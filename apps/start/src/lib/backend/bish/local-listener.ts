@@ -443,7 +443,7 @@ async function buildThreadHandoffMarkdown(input: {
     pool.query<{
       role: string
       content: string
-      created_at: number
+      created_at: number | string
     }>(
       `
         SELECT role, content, created_at
@@ -463,8 +463,14 @@ async function buildThreadHandoffMarkdown(input: {
   const title = threadResult.rows[0]?.title?.trim() || 'Untitled BISH Handoff'
   const transcript = messagesResult.rows
     .map(
-      (message) =>
-        `## ${message.role.toUpperCase()} (${new Date(message.created_at).toISOString()})\n\n${message.content}`,
+      (message) => {
+        const createdAt = coerceTimestamp(message.created_at)
+        const createdAtLabel = createdAt
+          ? new Date(createdAt).toISOString()
+          : 'unknown-time'
+
+        return `## ${message.role.toUpperCase()} (${createdAtLabel})\n\n${message.content}`
+      },
     )
     .join('\n\n')
 
