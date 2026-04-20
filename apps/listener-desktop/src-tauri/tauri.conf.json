@@ -1,0 +1,35 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "BISH Listener Desktop",
+  "version": "0.0.1",
+  "identifier": "dev.bishoptech.bish-listener-desktop",
+  "build": {
+    "beforeDevCommand": "bun run dev",
+    "beforeBuildCommand": "bun run build:web && bun run --cwd ../../packages/local-listener build",
+    "devUrl": "http://localhost:3031",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "BISH Listener Desktop",
+        "width": 1220,
+        "height": 900,
+        "minWidth": 960,
+        "minHeight": 720,
+        "resizable": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["app", "dmg"],
+    "macOS": {
+      "minimumSystemVersion": "13.0"
+    },
+    "resources": ["../../packages/local-listener"]
+  }
+}

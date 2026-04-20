@@ -1,0 +1,193 @@
+:root {
+  color-scheme: light;
+  font-family:
+    "IBM Plex Sans",
+    "Avenir Next",
+    sans-serif;
+  background:
+    radial-gradient(circle at top left, rgba(214, 221, 227, 0.6), transparent 30%),
+    linear-gradient(180deg, #f6f4ef 0%, #ece8df 100%);
+  color: #111827;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+.shell {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 32px 24px 48px;
+}
+
+.hero,
+.grid,
+.panel,
+.actions,
+.message {
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  background: rgba(255, 252, 246, 0.88);
+  box-shadow: 0 24px 80px rgba(44, 56, 76, 0.08);
+  border-radius: 24px;
+}
+
+.hero {
+  display: grid;
+  gap: 24px;
+  grid-template-columns: minmax(0, 1.5fr) minmax(260px, 0.7fr);
+  padding: 28px;
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+h1,
+h2,
+.lede,
+.status-meta,
+.support-copy,
+.message {
+  margin: 0;
+}
+
+h1 {
+  font-size: clamp(2rem, 3vw, 3rem);
+  line-height: 1;
+}
+
+.lede,
+.support-copy,
+.status-meta,
+.field span {
+  color: #4b5563;
+}
+
+.status-card {
+  padding: 20px;
+  border-radius: 20px;
+  background: rgba(245, 241, 232, 0.9);
+}
+
+.status-label {
+  margin: 0 0 14px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: #6b7280;
+}
+
+.pill-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 8px 12px;
+  background: rgba(148, 163, 184, 0.12);
+  color: #374151;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.pill-active {
+  background: rgba(16, 185, 129, 0.14);
+  color: #0f6d4b;
+}
+
+.grid {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 20px;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+.panel {
+  padding: 24px;
+  margin-top: 20px;
+}
+
+.field {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.field span {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.field input,
+.field select {
+  width: 100%;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 14px;
+  padding: 12px 14px;
+  background: #fcfbf8;
+  color: #111827;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 20px 24px;
+  margin-top: 20px;
+}
+
+.actions button {
+  border: 0;
+  border-radius: 999px;
+  padding: 12px 16px;
+  background: #171717;
+  color: #f8fafc;
+  cursor: pointer;
+}
+
+.actions button:nth-child(2n) {
+  background: #d9d4ca;
+  color: #1f2937;
+}
+
+.message {
+  padding: 18px 20px;
+  margin-top: 20px;
+}
+
+.message.error {
+  border-color: rgba(220, 38, 38, 0.22);
+  background: rgba(254, 242, 242, 0.92);
+  color: #991b1b;
+}
+
+@media (max-width: 900px) {
+  .hero,
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}

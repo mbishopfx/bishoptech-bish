@@ -5,7 +5,9 @@
   <a href="https://bish.local"><strong>Website</strong></a> ·
   <a href="#self-hosting"><strong>Deploy on Railway</strong></a> ·
   <a href="#self-hosting"><strong>Self-hosting</strong></a> ·
-  <a href="./DEVELOPMENT.md"><strong>Local Development</strong></a>
+  <a href="./DEVELOPMENT.md"><strong>Local Development</strong></a> ·
+  <a href="./docs/client-onboarding/BISH_CLIENT_ONBOARDING_TEMPLATE.md"><strong>Client Onboarding</strong></a> ·
+  <a href="./docs/client-onboarding/BISH_LISTENER_INSTALL_GUIDE.md"><strong>Listener Install</strong></a>
 </p>
 
 ## Introduction

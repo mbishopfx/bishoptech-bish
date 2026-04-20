@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "start": "bun run src/index.ts",
+    "start:simple": "./start.sh",
+    "start:localtunnel": "bash scripts/start-localtunnel-stack.sh",
     "build": "tsup src/index.ts --format esm --dts",
     "check-types": "tsc --noEmit"
   },

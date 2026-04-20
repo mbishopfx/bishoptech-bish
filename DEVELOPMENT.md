@@ -197,6 +197,18 @@ bun run start
 
 The listener registers itself back to BISH through `/api/bish/listener/register`, accepts signed handoff deliveries on `/handoff`, writes a markdown handoff file locally, and then launches either `gemini --yolo` or `codex`.
 
+For quick local testing without installing ngrok, you can use the bundled localtunnel helper:
+
+```bash
+cd packages/local-listener
+cp .env.example .env.local
+# Fill in BISH_BASE_URL and BISH_LISTENER_SECRET.
+
+./start.sh
+```
+
+`./start.sh` auto-loads `packages/local-listener/.env.local`. If `BISH_TUNNEL_URL` is already set there, it starts the listener directly. If not, it opens a localtunnel URL automatically and then starts the listener against the current repo as the workspace unless you override `BISH_LISTENER_WORKSPACE_DIR`.
+
 macOS bootstrap helper:
 
 ```bash

@@ -1,0 +1,15 @@
+[package]
+name = "bish-listener-desktop"
+version = "0.0.1"
+description = "BISH macOS listener desktop app"
+authors = ["mbishopfx"]
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2.0.4" }
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tauri = { version = "2.0.6", features = [] }
+

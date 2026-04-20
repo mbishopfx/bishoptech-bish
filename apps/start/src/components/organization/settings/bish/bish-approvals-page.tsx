@@ -40,6 +40,22 @@ function ApprovalStatusBadge({ value }: { value: string }) {
   )
 }
 
+function ListenerStatusBadge({ value }: { value: string }) {
+  const tone =
+    value === 'connected' || value === 'registered'
+      ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700'
+      : value === 'awaiting_registration'
+        ? 'border-amber-500/30 bg-amber-500/10 text-amber-700'
+        : 'border-border-base bg-surface-base text-foreground-secondary'
+
+  return (
+    <Badge variant="outline" className={tone}>
+      <RadioTower className="mr-2 size-3.5" aria-hidden />
+      {value}
+    </Badge>
+  )
+}
+
 export function BishApprovalsPage({
   initialSnapshot,
 }: {
@@ -235,13 +251,7 @@ export function BishApprovalsPage({
         title="Local listener"
         description="Register a customer-local daemon that can accept signed handoffs, launch Gemini or Codex on their machine, and loop selected repo artifacts back into BISH knowledge."
         action={
-          <Badge
-            variant="outline"
-            className="border-border-base bg-surface-base text-foreground-secondary"
-          >
-            <RadioTower className="mr-2 size-3.5" aria-hidden />
-            {primaryListener?.status ?? 'awaiting registration'}
-          </Badge>
+          <ListenerStatusBadge value={primaryListener?.status ?? 'awaiting_registration'} />
         }
       >
         <div className="grid gap-6 lg:grid-cols-[1.3fr_0.7fr]">
@@ -349,6 +359,47 @@ export function BishApprovalsPage({
                 </p>
               </div>
             ) : null}
+
+            {primaryListener ? (
+              <div className="grid gap-3 rounded-2xl border border-border-base bg-surface-base p-4 md:grid-cols-2">
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-[0.16em] text-foreground-tertiary">
+                    Runtime mode
+                  </p>
+                  <p className="mt-1 text-sm text-foreground-primary">
+                    {primaryListener.runtimeMode ?? 'Not registered yet'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-[0.16em] text-foreground-tertiary">
+                    Supported targets
+                  </p>
+                  <p className="mt-1 text-sm text-foreground-primary">
+                    {primaryListener.supportedTargets.length > 0
+                      ? primaryListener.supportedTargets.join(', ')
+                      : 'Not registered yet'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-[0.16em] text-foreground-tertiary">
+                    Endpoint
+                  </p>
+                  <p className="mt-1 break-all text-sm text-foreground-primary">
+                    {primaryListener.endpointUrl ?? 'Not registered yet'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-[0.16em] text-foreground-tertiary">
+                    Last seen
+                  </p>
+                  <p className="mt-1 text-sm text-foreground-primary">
+                    {primaryListener.lastSeenAt
+                      ? new Date(primaryListener.lastSeenAt).toLocaleString()
+                      : 'Never'}
+                  </p>
+                </div>
+              </div>
+            ) : null}
           </div>
 
           <div className="space-y-4 rounded-2xl border border-border-base bg-surface-base p-4">
@@ -363,20 +414,24 @@ export function BishApprovalsPage({
             <pre className="overflow-x-auto rounded-xl border border-border-base bg-background px-3 py-3 text-xs text-foreground-primary">
 {`BISH_BASE_URL=${installOrigin}
 BISH_LISTENER_SECRET=<paste-secret>
-BISH_TUNNEL_URL=https://your-listener.ngrok.app/handoff
 BISH_LISTENER_WORKSPACE_DIR=${listenerWorkspaceDir}
 BISH_LISTENER_RUNTIME_MODE=visible
 BISH_LISTENER_DEFAULT_TARGET=${defaultTarget}
-bun run packages/local-listener/src/index.ts`}
+./start.sh`}
             </pre>
             <div className="space-y-2 text-sm text-foreground-secondary">
-              <p>Endpoint: {primaryListener?.endpointUrl ?? 'Not registered yet'}</p>
               <p>Platform: {primaryListener?.platform ?? 'Unknown'}</p>
               <p>
-                Last seen:{' '}
-                {primaryListener?.lastSeenAt
-                  ? new Date(primaryListener.lastSeenAt).toLocaleString()
-                  : 'Never'}
+                Status guidance:{' '}
+                {primaryListener?.status === 'awaiting_registration'
+                  ? 'Rotate a secret, start the listener, and wait for registration.'
+                  : 'Listener should now accept handoffs from chat.'}
+              </p>
+              <p>
+                Operator bootstrap API:{' '}
+                <span className="font-mono text-xs text-foreground-primary">
+                  {`${installOrigin}/api/operator/bish/listener-secret`}
+                </span>
               </p>
             </div>
           </div>

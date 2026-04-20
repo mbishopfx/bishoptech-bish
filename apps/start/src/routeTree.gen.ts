@@ -44,6 +44,7 @@ import { Route as ApiOrgBishEvolutionRouteRouteImport } from './routes/api/org/b
 import { Route as ApiOrgBishConnectorsRouteRouteImport } from './routes/api/org/bish/connectors/route'
 import { Route as ApiOrgBishApprovalsRouteRouteImport } from './routes/api/org/bish/approvals/route'
 import { Route as ApiOperatorBishOverviewRouteRouteImport } from './routes/api/operator/bish/overview/route'
+import { Route as ApiOperatorBishListenerSecretRouteRouteImport } from './routes/api/operator/bish/listener-secret/route'
 import { Route as ApiBishListenerRegisterRouteRouteImport } from './routes/api/bish/listener/register/route'
 import { Route as ApiBishListenerArtifactsRouteRouteImport } from './routes/api/bish/listener/artifacts/route'
 import { Route as appLayoutSettingsSecurityRouteRouteImport } from './routes/(app)/_layout/settings/security/route'
@@ -254,6 +255,12 @@ const ApiOperatorBishOverviewRouteRoute =
     path: '/api/operator/bish/overview',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiOperatorBishListenerSecretRouteRoute =
+  ApiOperatorBishListenerSecretRouteRouteImport.update({
+    id: '/api/operator/bish/listener-secret',
+    path: '/api/operator/bish/listener-secret',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiBishListenerRegisterRouteRoute =
   ApiBishListenerRegisterRouteRouteImport.update({
     id: '/api/bish/listener/register',
@@ -454,6 +461,7 @@ export interface FileRoutesByFullPath {
   '/settings/security': typeof appLayoutSettingsSecurityRouteRoute
   '/api/bish/listener/artifacts': typeof ApiBishListenerArtifactsRouteRoute
   '/api/bish/listener/register': typeof ApiBishListenerRegisterRouteRoute
+  '/api/operator/bish/listener-secret': typeof ApiOperatorBishListenerSecretRouteRoute
   '/api/operator/bish/overview': typeof ApiOperatorBishOverviewRouteRoute
   '/api/org/bish/approvals': typeof ApiOrgBishApprovalsRouteRoute
   '/api/org/bish/connectors': typeof ApiOrgBishConnectorsRouteRouteWithChildren
@@ -515,6 +523,7 @@ export interface FileRoutesByTo {
   '/settings/security': typeof appLayoutSettingsSecurityRouteRoute
   '/api/bish/listener/artifacts': typeof ApiBishListenerArtifactsRouteRoute
   '/api/bish/listener/register': typeof ApiBishListenerRegisterRouteRoute
+  '/api/operator/bish/listener-secret': typeof ApiOperatorBishListenerSecretRouteRoute
   '/api/operator/bish/overview': typeof ApiOperatorBishOverviewRouteRoute
   '/api/org/bish/approvals': typeof ApiOrgBishApprovalsRouteRoute
   '/api/org/bish/connectors': typeof ApiOrgBishConnectorsRouteRouteWithChildren
@@ -580,6 +589,7 @@ export interface FileRoutesById {
   '/(app)/_layout/settings/security': typeof appLayoutSettingsSecurityRouteRoute
   '/api/bish/listener/artifacts': typeof ApiBishListenerArtifactsRouteRoute
   '/api/bish/listener/register': typeof ApiBishListenerRegisterRouteRoute
+  '/api/operator/bish/listener-secret': typeof ApiOperatorBishListenerSecretRouteRoute
   '/api/operator/bish/overview': typeof ApiOperatorBishOverviewRouteRoute
   '/api/org/bish/approvals': typeof ApiOrgBishApprovalsRouteRoute
   '/api/org/bish/connectors': typeof ApiOrgBishConnectorsRouteRouteWithChildren
@@ -646,6 +656,7 @@ export interface FileRouteTypes {
     | '/settings/security'
     | '/api/bish/listener/artifacts'
     | '/api/bish/listener/register'
+    | '/api/operator/bish/listener-secret'
     | '/api/operator/bish/overview'
     | '/api/org/bish/approvals'
     | '/api/org/bish/connectors'
@@ -707,6 +718,7 @@ export interface FileRouteTypes {
     | '/settings/security'
     | '/api/bish/listener/artifacts'
     | '/api/bish/listener/register'
+    | '/api/operator/bish/listener-secret'
     | '/api/operator/bish/overview'
     | '/api/org/bish/approvals'
     | '/api/org/bish/connectors'
@@ -771,6 +783,7 @@ export interface FileRouteTypes {
     | '/(app)/_layout/settings/security'
     | '/api/bish/listener/artifacts'
     | '/api/bish/listener/register'
+    | '/api/operator/bish/listener-secret'
     | '/api/operator/bish/overview'
     | '/api/org/bish/approvals'
     | '/api/org/bish/connectors'
@@ -825,6 +838,7 @@ export interface RootRouteChildren {
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiBishListenerArtifactsRouteRoute: typeof ApiBishListenerArtifactsRouteRoute
   ApiBishListenerRegisterRouteRoute: typeof ApiBishListenerRegisterRouteRoute
+  ApiOperatorBishListenerSecretRouteRoute: typeof ApiOperatorBishListenerSecretRouteRoute
   ApiOperatorBishOverviewRouteRoute: typeof ApiOperatorBishOverviewRouteRoute
   ApiOrgBishApprovalsRouteRoute: typeof ApiOrgBishApprovalsRouteRoute
   ApiOrgBishConnectorsRouteRoute: typeof ApiOrgBishConnectorsRouteRouteWithChildren
@@ -1081,6 +1095,13 @@ declare module '@tanstack/react-router' {
       path: '/api/operator/bish/overview'
       fullPath: '/api/operator/bish/overview'
       preLoaderRoute: typeof ApiOperatorBishOverviewRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/operator/bish/listener-secret': {
+      id: '/api/operator/bish/listener-secret'
+      path: '/api/operator/bish/listener-secret'
+      fullPath: '/api/operator/bish/listener-secret'
+      preLoaderRoute: typeof ApiOperatorBishListenerSecretRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/bish/listener/register': {
@@ -1483,6 +1504,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiBishListenerArtifactsRouteRoute: ApiBishListenerArtifactsRouteRoute,
   ApiBishListenerRegisterRouteRoute: ApiBishListenerRegisterRouteRoute,
+  ApiOperatorBishListenerSecretRouteRoute:
+    ApiOperatorBishListenerSecretRouteRoute,
   ApiOperatorBishOverviewRouteRoute: ApiOperatorBishOverviewRouteRoute,
   ApiOrgBishApprovalsRouteRoute: ApiOrgBishApprovalsRouteRoute,
   ApiOrgBishConnectorsRouteRoute: ApiOrgBishConnectorsRouteRouteWithChildren,

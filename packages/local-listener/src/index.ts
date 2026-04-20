@@ -123,7 +123,9 @@ async function collectRepoMetadata() {
     // Git metadata is optional; listener installs can point at non-repo folders.
   }
 
-  const artifacts: NonNullable<LocalListenerArtifactPayload['artifacts']> = []
+  const artifacts: Array<
+    NonNullable<LocalListenerArtifactPayload['artifacts']>[number]
+  > = []
   const readmePath = ['README.md', 'readme.md']
     .map((candidate) => join(workspaceDir, candidate))
     .find((candidate) => existsSync(candidate))
