@@ -48,15 +48,36 @@ type HandoffRow = {
   title: string
   target: string
   status: string
-  created_at: number
-  delivered_at: number | null
-  completed_at: number | null
+  created_at: number | string
+  delivered_at: number | string | null
+  completed_at: number | string | null
   error_message: string | null
   metadata?: Record<string, unknown> | null
 }
 
 function hashListenerSecret(secret: string) {
   return createHash('sha256').update(secret).digest('hex')
+}
+
+/**
+ * Postgres bigint columns come back from `pg` as strings by default. The
+ * listener tables store unix-millisecond timestamps in bigint columns, so the
+ * admin UI needs those values normalized back into finite numbers before it can
+ * safely hand them to `Date`.
+ */
+function coerceTimestamp(
+  value: number | string | null | undefined,
+): number | null {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : null
+  }
+
+  if (typeof value !== 'string') {
+    return null
+  }
+
+  const normalized = Number(value)
+  return Number.isFinite(normalized) ? normalized : null
 }
 
 function buildDefaultSystemPrompt() {
@@ -91,9 +112,11 @@ function normalizeLocalListenerActivityLog(
         ? record.message
         : undefined
     const createdAt =
-      typeof record.createdAt === 'number' && Number.isFinite(record.createdAt)
-        ? record.createdAt
-        : undefined
+      coerceTimestamp(
+        typeof record.createdAt === 'number' || typeof record.createdAt === 'string'
+          ? record.createdAt
+          : undefined,
+      ) ?? undefined
 
     if (!id || !kind || !message || createdAt === undefined) return []
 
@@ -225,7 +248,7 @@ function toListenerSummary(row: ListenerRow): LocalListenerSummary {
       ? row.supported_targets
       : [],
     defaultTarget: row.default_target,
-    lastSeenAt: row.last_seen_at,
+    lastSeenAt: coerceTimestamp(row.last_seen_at),
     systemPromptTemplate: row.system_prompt_template,
   }
 }
@@ -290,9 +313,9 @@ export async function listRecentLocalHandoffsForOrganization(
     title: row.title,
     target: row.target,
     status: row.status,
-    createdAt: row.created_at,
-    deliveredAt: row.delivered_at,
-    completedAt: row.completed_at,
+    createdAt: coerceTimestamp(row.created_at) ?? Date.now(),
+    deliveredAt: coerceTimestamp(row.delivered_at),
+    completedAt: coerceTimestamp(row.completed_at),
     errorMessage: row.error_message,
     activityLog: normalizeLocalListenerActivityLog(row.metadata?.activityLog),
   }))

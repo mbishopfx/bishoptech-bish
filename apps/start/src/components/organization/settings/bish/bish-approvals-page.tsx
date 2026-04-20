@@ -25,6 +25,36 @@ import type {
   BishOrgDashboardSnapshot,
 } from '@/lib/shared/bish'
 
+/**
+ * Operator surfaces should never show raw `Invalid Date` text because these
+ * panels are often the first place someone checks when a listener or approval
+ * flow looks broken. Returning a readable fallback keeps the UI usable even if
+ * upstream data is still reconciling.
+ */
+function formatTimestamp(
+  value: number | string | null | undefined,
+  fallback = 'Pending sync',
+) {
+  if (value == null) return fallback
+  const timestamp = typeof value === 'number' ? value : Number(value)
+  if (!Number.isFinite(timestamp)) return fallback
+
+  const date = new Date(timestamp)
+  return Number.isNaN(date.getTime()) ? fallback : date.toLocaleString()
+}
+
+function formatTimestampTimeOnly(
+  value: number | string | null | undefined,
+  fallback = 'Pending sync',
+) {
+  if (value == null) return fallback
+  const timestamp = typeof value === 'number' ? value : Number(value)
+  if (!Number.isFinite(timestamp)) return fallback
+
+  const date = new Date(timestamp)
+  return Number.isNaN(date.getTime()) ? fallback : date.toLocaleTimeString()
+}
+
 function ApprovalStatusBadge({ value }: { value: string }) {
   const tone =
     value === 'approved'
@@ -126,7 +156,7 @@ export function BishApprovalsPage({
         header: 'Created',
         cell: ({ row }) => (
           <p className="text-sm text-foreground-primary">
-            {new Date(row.original.createdAt).toLocaleString()}
+            {formatTimestamp(row.original.createdAt)}
           </p>
         ),
       },
@@ -425,9 +455,7 @@ export function BishApprovalsPage({
                     Last seen
                   </p>
                   <p className="mt-1 text-sm text-foreground-primary">
-                    {primaryListener.lastSeenAt
-                      ? new Date(primaryListener.lastSeenAt).toLocaleString()
-                      : 'Never'}
+                    {formatTimestamp(primaryListener.lastSeenAt, 'Never')}
                   </p>
                 </div>
               </div>
@@ -575,7 +603,7 @@ BISH_LISTENER_DEFAULT_TARGET=${defaultTarget}
                 <div className="space-y-1">
                   <p className="font-medium text-foreground-strong">{handoff.title}</p>
                   <p className="text-xs text-foreground-tertiary">
-                    {handoff.target} · created {new Date(handoff.createdAt).toLocaleString()}
+                    {handoff.target} · created {formatTimestamp(handoff.createdAt)}
                     {handoff.threadId ? ` · thread ${handoff.threadId}` : ''}
                   </p>
                   {handoff.activityLog.length > 0 ? (
@@ -588,7 +616,7 @@ BISH_LISTENER_DEFAULT_TARGET=${defaultTarget}
                           key={activity.id}
                           className="text-xs text-foreground-secondary"
                         >
-                          {new Date(activity.createdAt).toLocaleTimeString()} · {activity.kind} · {activity.message}
+                          {formatTimestampTimeOnly(activity.createdAt)} · {activity.kind} · {activity.message}
                         </p>
                       ))}
                     </div>
