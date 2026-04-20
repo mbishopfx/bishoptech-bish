@@ -1,3 +1,5 @@
+import { readPublicRuntimeEnv } from './public-runtime-env'
+
 /**
  * App-level feature flags.
  *
@@ -16,20 +18,26 @@ type AppFeatureFlags = {
 }
 
 function readBooleanEnv(key: string, defaultValue: boolean): boolean {
-  const value = (import.meta.env as Record<string, string | undefined>)[key]
+  const value = readPublicRuntimeEnv(
+    key as
+      | 'VITE_BETTER_AUTH_URL'
+      | 'VITE_APP_INSTANCE_MODE'
+      | 'VITE_SELF_HOST_SOURCE'
+      | 'VITE_ZERO_CACHE_URL',
+  )
   if (value === 'true') return true
   if (value === 'false') return false
   return defaultValue
 }
 
 const APP_INSTANCE_MODE: 'cloud' | 'self_hosted' =
-  import.meta.env.VITE_APP_INSTANCE_MODE === 'self_hosted'
+  readPublicRuntimeEnv('VITE_APP_INSTANCE_MODE') === 'self_hosted'
     ? 'self_hosted'
     : 'cloud'
 
 const APP_FEATURE_FLAGS: AppFeatureFlags = Object.freeze({
   instanceMode: APP_INSTANCE_MODE,
-  selfHostSource: (import.meta.env.VITE_SELF_HOST_SOURCE ?? '')
+  selfHostSource: (readPublicRuntimeEnv('VITE_SELF_HOST_SOURCE') ?? '')
     .trim()
     .toLowerCase(),
   enableEmbedding: readBooleanEnv('VITE_ENABLE_EMBEDDING', true),

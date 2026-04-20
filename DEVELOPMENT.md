@@ -150,6 +150,8 @@ bun run app:scheduler
 
 Access the app at: `http://localhost:3000`
 
+Zero sync runs on `http://localhost:4848` by default. Local self-hosted mode expects `VITE_ZERO_CACHE_URL=http://localhost:4848`.
+
 ### Available Scripts
 
 From repository root:

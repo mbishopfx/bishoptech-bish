@@ -26,7 +26,7 @@ export function getAbsoluteAppURL(path: string): string {
   const origin =
     typeof window !== 'undefined'
       ? window.location.origin
-      : import.meta.env.VITE_BETTER_AUTH_URL?.trim()?.replace(/\/+$/, '')
+      : readPublicRuntimeEnv('VITE_BETTER_AUTH_URL')?.replace(/\/+$/, '')
 
   if (!origin) {
     throw new Error('Missing app origin for auth callback URLs.')
@@ -49,3 +49,4 @@ export function getDefaultAuthDisplayName(email: string): string {
 
   return candidate.charAt(0).toUpperCase() + candidate.slice(1)
 }
+import { readPublicRuntimeEnv } from '@/utils/public-runtime-env'

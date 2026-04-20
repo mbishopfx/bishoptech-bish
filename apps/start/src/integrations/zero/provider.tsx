@@ -8,9 +8,73 @@ import { useAppAuth } from '@/lib/frontend/auth/use-auth'
 import { resolveZeroAuthSnapshot } from './zero-auth'
 import type { ZeroAuthSnapshot } from './zero-auth'
 import { isSelfHosted } from '@/utils/app-feature-flags'
+import { readPublicRuntimeEnv } from '@/utils/public-runtime-env'
 import { useZeroSelfHostedAccessToken } from './self-hosted-token'
 
-const cacheURL = import.meta.env.VITE_ZERO_CACHE_URL
+function isZeroOptionalRoute(pathname: string): boolean {
+  return (
+    pathname === '/' ||
+    pathname === '/setup' ||
+    pathname === '/pricing' ||
+    pathname.startsWith('/auth')
+  )
+}
+
+function MissingZeroConfigurationState() {
+  return (
+    <main className="min-h-screen bg-[var(--background)] px-6 py-16 text-[var(--foreground)]">
+      <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 rounded-[28px] border border-black/10 bg-white/80 p-8 shadow-[0_20px_80px_rgba(15,23,42,0.08)] backdrop-blur">
+        <div className="flex flex-col gap-3">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-black/45">
+            BISH Sync Setup Required
+          </p>
+          <h1 className="text-3xl font-semibold tracking-tight text-black">
+            The realtime data layer is not configured for this deployment.
+          </h1>
+          <p className="max-w-2xl text-sm leading-6 text-black/70">
+            This app route depends on Rocicorp Zero. Set
+            {' '}
+            <code>VITE_ZERO_CACHE_URL</code>
+            {' '}
+            on the web service and point it at a running
+            {' '}
+            <code>zero-cache</code>
+            {' '}
+            service.
+          </p>
+        </div>
+
+        <div className="grid gap-3 rounded-2xl border border-black/8 bg-black/[0.025] p-5 text-sm text-black/72">
+          <p>
+            Required web env:
+            {' '}
+            <code>VITE_APP_INSTANCE_MODE=self_hosted</code>
+          </p>
+          <p>
+            Required web env:
+            {' '}
+            <code>VITE_ZERO_CACHE_URL=https://&lt;zero-cache-domain&gt;</code>
+          </p>
+          <p>
+            Required service:
+            {' '}
+            <code>zero-cache</code>
+            {' '}
+            with
+            {' '}
+            <code>ZERO_QUERY_URL</code>
+            {' '}
+            and
+            {' '}
+            <code>ZERO_MUTATE_URL</code>
+            {' '}
+            targeting this BISH web app.
+          </p>
+        </div>
+      </div>
+    </main>
+  )
+}
 
 /**
  * Zero identity derives from Better Auth sessions.
@@ -66,15 +130,11 @@ export default function ZeroProvider({
 }: {
   children: React.ReactNode
 }) {
+  const cacheURL = readPublicRuntimeEnv('VITE_ZERO_CACHE_URL')
   const { ready, userID, context } = useZeroAuth()
   const location = useLocation()
-
-  const isPublicSelfHostedRoute =
-    isSelfHosted &&
-    (location.pathname === '/' ||
-      location.pathname === '/setup' ||
-      location.pathname === '/pricing' ||
-      location.pathname.startsWith('/auth'))
+  const zeroOptionalRoute = isZeroOptionalRoute(location.pathname)
+  const isPublicSelfHostedRoute = isSelfHosted && zeroOptionalRoute
 
   const zeroToken = useZeroSelfHostedAccessToken({
     enabled:
@@ -89,7 +149,16 @@ export default function ZeroProvider({
   })
 
   if (!cacheURL) {
-    return <>{children}</>
+    if (zeroOptionalRoute) {
+      return <>{children}</>
+    }
+
+    /**
+     * Production deployments can accidentally boot the React tree without
+     * Zero configured. Rendering a deliberate setup state prevents opaque
+     * `useZero()` crashes deeper in the chat and settings surfaces.
+     */
+    return <MissingZeroConfigurationState />
   }
 
   if (isPublicSelfHostedRoute && (!ready || !userID || !context)) {

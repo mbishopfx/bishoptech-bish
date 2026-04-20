@@ -89,7 +89,7 @@ function getLocaleLabel(targetLocale: SupportedLocale): string {
 }
 
 function resolveSettingsCallbackURLClient(): string {
-  const raw = import.meta.env.VITE_BETTER_AUTH_URL?.trim()
+  const raw = readPublicRuntimeEnv('VITE_BETTER_AUTH_URL')
   if (!raw) {
     throw new Error('Missing VITE_BETTER_AUTH_URL.')
   }
@@ -393,3 +393,4 @@ export function useAccountPageLogic(): AccountPageLogicResult {
     applyAvatarChange,
   }
 }
+import { readPublicRuntimeEnv } from '@/utils/public-runtime-env'

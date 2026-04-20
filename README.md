@@ -54,9 +54,10 @@ Additional platform technologies:
 
 ## Self-Hosting
 
-BISH is designed for a three-service Railway layout:
+BISH is designed for a four-service Railway layout:
 
 - `apps/start` -> web app
+- `apps/zero-cache` -> Rocicorp Zero sync cache
 - `apps/worker` -> background job executor
 - `apps/scheduler` -> recurring sync scheduler
 
@@ -64,13 +65,24 @@ Each service includes a `railway.toml` file. On Railway, import the monorepo, ke
 
 For a production v1 deployment, wire the services like this:
 
-1. Create one Railway project with `apps/start`, `apps/worker`, and `apps/scheduler` as separate services.
+1. Create one Railway project with `apps/start`, `apps/zero-cache`, `apps/worker`, and `apps/scheduler` as separate services.
 2. Add Railway Postgres and Redis, then expose their connection URLs as shared variables.
-3. Add the env contract from `apps/start/.env.example` to the web service, then mirror the database and scheduler variables into worker and scheduler.
-4. Set the OAuth callback URLs to the public BISH hostname:
+3. Add the env contract from `apps/start/.env.example` to the web service.
+4. Set the self-hosted Zero envs on the web service:
+   - `VITE_APP_INSTANCE_MODE=self_hosted`
+   - `VITE_SELF_HOST_SOURCE=railway`
+   - `VITE_ZERO_CACHE_URL=https://<zero-cache-domain>`
+5. Configure the `zero-cache` service with:
+   - `ZERO_UPSTREAM_DB`
+   - `BISH_WEB_URL=https://<your-bish-domain>`
+   - optional `ZERO_APP_ID=bish`
+6. Mirror the database and scheduler variables into worker and scheduler.
+7. Set the OAuth callback URLs to the public BISH hostname:
    - `ASANA_REDIRECT_URI=https://<your-bish-domain>/api/org/bish/connectors/asana/callback`
    - `HUBSPOT_REDIRECT_URI=https://<your-bish-domain>/api/org/bish/connectors/hubspot/callback`
-5. Google Workspace activation is handled from the BISH UI and uses the deployed admin delegation envs rather than an OAuth callback.
+8. Google Workspace activation is handled from the BISH UI and uses the deployed admin delegation envs rather than an OAuth callback.
+
+The web UI will now show a setup state instead of crashing if `VITE_ZERO_CACHE_URL` is missing, but `/chat` and other sync-driven screens still require the `zero-cache` service to be live.
 
 ## Repository Overview
 

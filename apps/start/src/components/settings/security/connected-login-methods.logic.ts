@@ -90,7 +90,7 @@ function hasCredentialLoginMethod(methods: Array<ConnectedLoginMethodViewModel>)
 }
 
 function resolveSettingsCallbackURLClient(): string {
-  const raw = import.meta.env.VITE_BETTER_AUTH_URL?.trim()
+  const raw = readPublicRuntimeEnv('VITE_BETTER_AUTH_URL')
   if (!raw) return '/settings'
   return `${raw.replace(/\/+$/, '')}/settings`
 }
@@ -284,3 +284,4 @@ export function useConnectedLoginMethodsLogic(canEdit: boolean) {
     unlinkConnectedLoginMethod,
   }
 }
+import { readPublicRuntimeEnv } from '@/utils/public-runtime-env'

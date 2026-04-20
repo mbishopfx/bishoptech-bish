@@ -18,6 +18,10 @@ import {
   DEFAULT_SITE_METADATA,
   getAppOrigin,
 } from '@/lib/frontend/metadata/metadata.functions'
+import {
+  buildPublicRuntimeEnvScript,
+  getPublicRuntimeEnvSnapshot,
+} from '@/utils/public-runtime-env'
 
 /**
  * Applies the stored or system theme before the stylesheet paints.
@@ -97,11 +101,17 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   const { posthog } = Route.useLoaderData()
   const locale = getLocale()
   const direction = getLocaleDirection(locale)
+  const publicRuntimeEnvScript = buildPublicRuntimeEnvScript(
+    getPublicRuntimeEnvSnapshot(),
+  )
 
   return (
     <html lang={locale} dir={direction} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+        <script
+          dangerouslySetInnerHTML={{ __html: publicRuntimeEnvScript }}
+        />
         <HeadContent />
       </head>
       <body>

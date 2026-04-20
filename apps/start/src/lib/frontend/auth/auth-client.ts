@@ -7,6 +7,7 @@ import {
   organizationClient, twoFactorClient 
 } from 'better-auth/client/plugins'
 import { isSelfHosted } from '@/utils/app-feature-flags'
+import { readPublicRuntimeEnv } from '@/utils/public-runtime-env'
 
 function resolveAuthClientBaseURL(): string {
   const trimTrailingSlash = (s: string) => s.replace(/\/+$/, '')
@@ -26,8 +27,7 @@ function resolveAuthClientBaseURL(): string {
     return `${trimTrailingSlash(raw)}/api/auth`
   }
 
-  const raw =
-    import.meta.env.VITE_BETTER_AUTH_URL?.trim() || window.location.origin
+  const raw = readPublicRuntimeEnv('VITE_BETTER_AUTH_URL') || window.location.origin
   return `${trimTrailingSlash(raw)}/api/auth`
 }
 
