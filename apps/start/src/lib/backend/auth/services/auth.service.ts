@@ -97,6 +97,14 @@ const stripeSecretKey = process.env.STRIPE_SECRET_KEY?.trim()
 const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET?.trim()
 const isTestRuntime =
   process.env.NODE_ENV === 'test' || process.env.VITEST === 'true'
+
+/**
+ * Dedicated self-hosted deployments are intentionally single-tenant. Enforcing
+ * the workspace cap here guarantees that API callers cannot bypass the UI and
+ * create extra organizations inside what should be one client deployment.
+ */
+const ORGANIZATION_LIMIT_PER_ACCOUNT = isSelfHosted ? 1 : 10
+
 function buildOrganizationSlug(input: {
   name: string
   userId: string
@@ -510,10 +518,11 @@ export const auth = betterAuth({
     organizationPlugin({
       allowUserToCreateOrganization: async (user) => !user.isAnonymous,
       /**
-       * Keep workspace sprawl bounded per account.
-       * Better Auth enforces this during organization creation requests.
+       * Keep workspace sprawl bounded per account. Cloud users can manage
+       * multiple workspaces, but a self-hosted deployment should only ever
+       * contain the single client workspace provisioned for that stack.
        */
-      organizationLimit: 10,
+      organizationLimit: ORGANIZATION_LIMIT_PER_ACCOUNT,
       membershipLimit: async (_user, organization): Promise<number> =>
         getOrganizationSeatLimit(organization.id),
       requireEmailVerificationOnInvitation: !isSelfHosted,

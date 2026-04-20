@@ -23,6 +23,7 @@ import { useNavigate, Link, useLocation } from '@tanstack/react-router'
 import { useCallback, useEffect, useState } from 'react'
 import type { ComponentType } from 'react'
 import { m } from '@/paraglide/messages.js'
+import { isSelfHosted } from '@/utils/app-feature-flags'
 
 type SidebarOrganization = {
   id: string
@@ -34,7 +35,7 @@ type SidebarOrganizationMenuProps = {
   isOrgAreaActive: boolean
 }
 
-const MAX_ORGANIZATIONS_PER_USER = 10
+const MAX_ORGANIZATIONS_PER_USER = isSelfHosted ? 1 : 10
 let sidebarOrganizationBillingSummaryModulePromise:
   | Promise<ComponentType>
   | undefined
@@ -51,7 +52,8 @@ function loadSidebarOrganizationBillingSummary() {
 
 /**
  * Organization avatar trigger + management menu for the icon rail.
- * The menu centralizes org switching, org creation, and admin settings access.
+ * Self-hosted deployments intentionally collapse this down to a single
+ * workspace identity, while cloud mode keeps the multi-organization controls.
  */
 export function SidebarOrganizationMenu({
   isOrgAreaActive,
@@ -314,6 +316,7 @@ export function SidebarOrganizationMenu({
   const createOrganizationNameTrimmed = createOrganizationName.trim()
   const hasReachedOrganizationLimit =
     organizations.length >= MAX_ORGANIZATIONS_PER_USER
+  const showMultiOrganizationControls = !isSelfHosted
   const createOrganizationSubmitDisabled =
     creatingOrganization ||
     createOrganizationNameTrimmed.length === 0 ||
@@ -440,121 +443,127 @@ export function SidebarOrganizationMenu({
                 </div>
               ) : null}
 
-              <DropdownMenuSeparator className="mx-0 my-0" />
-              <div className="px-4 pt-3 pb-1 text-sm font-medium text-foreground-secondary">
-                {m.layout_organization_menu_list_title()}
-              </div>
+              {showMultiOrganizationControls ? (
+                <>
+                  <DropdownMenuSeparator className="mx-0 my-0" />
+                  <div className="px-4 pt-3 pb-1 text-sm font-medium text-foreground-secondary">
+                    {m.layout_organization_menu_list_title()}
+                  </div>
 
-              <div className="px-2 pb-2">
-                {organizationsLoading ? (
-                  <DropdownMenuItem disabled>
-                    {m.layout_organization_menu_loading()}
-                  </DropdownMenuItem>
-                ) : organizations.length === 0 ? (
-                  <DropdownMenuItem disabled>
-                    {m.layout_organization_menu_empty()}
-                  </DropdownMenuItem>
-                ) : (
-                  organizations.map((organization) => {
-                    const isCurrent = organization.id === activeOrganizationId
-                    const isSwitching =
-                      organization.id === switchingOrganizationId
-                    return (
-                      <DropdownMenuItem
-                        key={organization.id}
-                        className="mb-0.5 flex min-h-8 items-center justify-between rounded-md px-2 py-1.5 data-[highlighted]:bg-surface-overlay"
-                        disabled={!!switchingOrganizationId}
-                        onClick={() => {
-                          void handleSwitchOrganization(organization.id)
-                        }}
-                      >
-                        <div className="flex min-w-0 items-center gap-2">
-                          <Avatar size="xs" className="size-5">
-                            {organization.logo ? (
-                              <AvatarImage
-                                src={organization.logo}
-                                alt={organization.name}
+                  <div className="px-2 pb-2">
+                    {organizationsLoading ? (
+                      <DropdownMenuItem disabled>
+                        {m.layout_organization_menu_loading()}
+                      </DropdownMenuItem>
+                    ) : organizations.length === 0 ? (
+                      <DropdownMenuItem disabled>
+                        {m.layout_organization_menu_empty()}
+                      </DropdownMenuItem>
+                    ) : (
+                      organizations.map((organization) => {
+                        const isCurrent = organization.id === activeOrganizationId
+                        const isSwitching =
+                          organization.id === switchingOrganizationId
+                        return (
+                          <DropdownMenuItem
+                            key={organization.id}
+                            className="mb-0.5 flex min-h-8 items-center justify-between rounded-md px-2 py-1.5 data-[highlighted]:bg-surface-overlay"
+                            disabled={!!switchingOrganizationId}
+                            onClick={() => {
+                              void handleSwitchOrganization(organization.id)
+                            }}
+                          >
+                            <div className="flex min-w-0 items-center gap-2">
+                              <Avatar size="xs" className="size-5">
+                                {organization.logo ? (
+                                  <AvatarImage
+                                    src={organization.logo}
+                                    alt={organization.name}
+                                  />
+                                ) : null}
+                                <AvatarFallback name={organization.name} />
+                              </Avatar>
+                              <span className="truncate text-sm text-foreground-primary">
+                                {organization.name}
+                              </span>
+                            </div>
+                            {isSwitching ? (
+                              <span className="text-xs text-foreground-secondary">
+                                {m.layout_organization_menu_switching()}
+                              </span>
+                            ) : isCurrent ? (
+                              <Check
+                                className="size-4 text-foreground-primary"
+                                aria-hidden
                               />
                             ) : null}
-                            <AvatarFallback name={organization.name} />
-                          </Avatar>
-                          <span className="truncate text-sm text-foreground-primary">
-                            {organization.name}
-                          </span>
-                        </div>
-                        {isSwitching ? (
-                          <span className="text-xs text-foreground-secondary">
-                            {m.layout_organization_menu_switching()}
-                          </span>
-                        ) : isCurrent ? (
-                          <Check
-                            className="size-4 text-foreground-primary"
-                            aria-hidden
-                          />
-                        ) : null}
-                      </DropdownMenuItem>
-                    )
-                  })
-                )}
+                          </DropdownMenuItem>
+                        )
+                      })
+                    )}
 
-                <DropdownMenuItem
-                  className="mt-1 flex min-h-8 items-center rounded-md px-2 py-1.5 data-[highlighted]:bg-surface-overlay"
-                  disabled={creatingOrganization || hasReachedOrganizationLimit}
-                  onClick={() => {
-                    if (hasReachedOrganizationLimit) {
-                      return
-                    }
-                    resetCreateOrganizationDialog()
-                    setIsMenuOpen(false)
-                    setIsCreateDialogOpen(true)
-                  }}
-                >
-                  <div className="flex min-w-0 items-center gap-2 rtl:flex-row-reverse">
-                    <span className="flex size-7 shrink-0 items-center justify-center">
-                      <Plus className="size-3.5" aria-hidden />
-                    </span>
-                    <span className="truncate text-sm text-foreground-primary">
-                      {m.layout_organization_create_action()}
-                    </span>
+                    <DropdownMenuItem
+                      className="mt-1 flex min-h-8 items-center rounded-md px-2 py-1.5 data-[highlighted]:bg-surface-overlay"
+                      disabled={creatingOrganization || hasReachedOrganizationLimit}
+                      onClick={() => {
+                        if (hasReachedOrganizationLimit) {
+                          return
+                        }
+                        resetCreateOrganizationDialog()
+                        setIsMenuOpen(false)
+                        setIsCreateDialogOpen(true)
+                      }}
+                    >
+                      <div className="flex min-w-0 items-center gap-2 rtl:flex-row-reverse">
+                        <span className="flex size-7 shrink-0 items-center justify-center">
+                          <Plus className="size-3.5" aria-hidden />
+                        </span>
+                        <span className="truncate text-sm text-foreground-primary">
+                          {m.layout_organization_create_action()}
+                        </span>
+                      </div>
+                    </DropdownMenuItem>
                   </div>
-                </DropdownMenuItem>
-              </div>
+                </>
+              ) : null}
             </DropdownMenuContent>
           </DropdownMenu>
         )}
       </SidebarGroupTooltip>
-      <FormDialog
-        open={isCreateDialogOpen}
-        onOpenChange={handleCreateDialogOpenChange}
-        title={m.layout_organization_create_title()}
-        description={m.layout_organization_create_description()}
-        buttonText={m.layout_organization_create_action()}
-        secondaryButtonText={m.common_cancel()}
-        onSecondaryClick={() => {
-          handleCreateDialogOpenChange(false)
-        }}
-        submitButtonDisabled={createOrganizationSubmitDisabled}
-        secondaryButtonDisabled={creatingOrganization}
-        error={createOrganizationError ?? undefined}
-        handleSubmit={handleCreateOrganizationSubmit}
-      >
-        <div className="space-y-2">
-          <Label htmlFor="create-organization-name">
-            {m.layout_organization_create_name_label()}
-          </Label>
-          <Input
-            id="create-organization-name"
-            value={createOrganizationName}
-            onChange={(event) => {
-              setCreateOrganizationName(event.target.value)
-              setCreateOrganizationError(null)
-            }}
-            placeholder={m.layout_organization_create_name_placeholder()}
-            maxLength={50}
-            disabled={creatingOrganization}
-          />
-        </div>
-      </FormDialog>
+      {showMultiOrganizationControls ? (
+        <FormDialog
+          open={isCreateDialogOpen}
+          onOpenChange={handleCreateDialogOpenChange}
+          title={m.layout_organization_create_title()}
+          description={m.layout_organization_create_description()}
+          buttonText={m.layout_organization_create_action()}
+          secondaryButtonText={m.common_cancel()}
+          onSecondaryClick={() => {
+            handleCreateDialogOpenChange(false)
+          }}
+          submitButtonDisabled={createOrganizationSubmitDisabled}
+          secondaryButtonDisabled={creatingOrganization}
+          error={createOrganizationError ?? undefined}
+          handleSubmit={handleCreateOrganizationSubmit}
+        >
+          <div className="space-y-2">
+            <Label htmlFor="create-organization-name">
+              {m.layout_organization_create_name_label()}
+            </Label>
+            <Input
+              id="create-organization-name"
+              value={createOrganizationName}
+              onChange={(event) => {
+                setCreateOrganizationName(event.target.value)
+                setCreateOrganizationError(null)
+              }}
+              placeholder={m.layout_organization_create_name_placeholder()}
+              maxLength={50}
+              disabled={creatingOrganization}
+            />
+          </div>
+        </FormDialog>
+      ) : null}
     </>
   )
 }

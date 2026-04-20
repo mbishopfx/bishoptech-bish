@@ -89,7 +89,12 @@ function normalizeInstanceSettingsRow(
     firstAdminUserId: row?.first_admin_user_id ?? null,
     signupPolicy: row?.signup_policy ?? 'invite_only',
     signupSecretHash: row?.signup_secret_hash ?? null,
-    publicAppLocked: row?.public_app_locked ?? true,
+    /**
+     * BISH client deployments are private workspaces. Treat the public app
+     * lock as effectively mandatory in self-hosted mode so a stale database
+     * flag cannot reopen the product to anonymous browsing.
+     */
+    publicAppLocked: true,
   }
 }
 
