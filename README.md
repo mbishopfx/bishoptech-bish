@@ -67,10 +67,16 @@ BISH is designed for a four-service Railway layout:
 
 Each service includes a `railway.toml` file. On Railway, import the monorepo, keep each service pointed at its package directory, and provision Postgres + Redis in the same project.
 
+Important release note:
+
+- `railway redeploy` only rebuilds the currently stored service source/image.
+- If your Railway service is not Git-backed yet, `redeploy` does not publish local repo changes.
+- Use `railway up --service <name>` or `bun run deploy:railway:all` from this repo when you need Railway to serve the current source tree.
+
 For a production v1 deployment, wire the services like this:
 
 1. Create one Railway project with `apps/start`, `apps/zero-cache`, `apps/worker`, and `apps/scheduler` as separate services.
-2. Add Railway Postgres and Redis, then expose their connection URLs as shared variables.
+2. Add Redis plus a Postgres instance that supports logical replication, then expose their connection URLs as shared variables.
 3. Add the env contract from `apps/start/.env.example` to the web service.
 4. Set the self-hosted Zero envs on the web service:
    - `VITE_APP_INSTANCE_MODE=self_hosted`
@@ -86,9 +92,24 @@ For a production v1 deployment, wire the services like this:
    - `ASANA_REDIRECT_URI=https://<your-bish-domain>/api/org/bish/connectors/asana/callback`
    - `HUBSPOT_REDIRECT_URI=https://<your-bish-domain>/api/org/bish/connectors/hubspot/callback`
 8. Google Workspace activation is handled from the BISH UI and uses the deployed admin delegation envs rather than an OAuth callback.
-9. If you want local handoffs, generate a listener secret from `Organization Settings -> BISH -> Approvals`, then run the local listener on the operator machine with a public tunnel URL.
+9. If you want local handoffs, generate a listener secret from `Organization Settings -> BISH -> Approvals`, then run the local listener on the operator machine. `packages/local-listener/start.sh` can open a localtunnel URL automatically when `BISH_TUNNEL_URL` is blank.
 
 The web UI will now show a setup state instead of crashing if `VITE_ZERO_CACHE_URL` is missing, but `/chat` and other sync-driven screens still require the `zero-cache` service to be live.
+
+### Railway Zero Requirement
+
+Zero does not work against a Postgres instance where `SHOW wal_level` returns `replica`.
+
+- BISH chat history, org-scoped thread history, and other sync-backed surfaces depend on Zero being healthy.
+- The included preflight script checks this before a source deployment:
+
+```bash
+bun run zero:upstream:check
+```
+
+- The check passes only when `ZERO_UPSTREAM_DB` points at a Postgres instance where `wal_level=logical`.
+- At the time of writing, Railway managed Postgres reports `wal_level=replica`, so it is not a valid upstream for `apps/zero-cache`.
+- Use a logical-replication-capable Postgres provider or self-managed Postgres for `ZERO_UPSTREAM_DB`.
 
 ### Minimal Railway V1 Contract
 
@@ -118,6 +139,35 @@ For a reusable client rollout where the customer fills in their own Railway secr
   - `GOOGLE_PICKER_REDIRECT_URI=https://<your-bish-domain>/api/org/knowledge/google/callback`
 
 If those envs are present, a customer should be able to deploy BISH on Railway, complete setup, chat with the enabled models, connect Google, ingest RAG documents, and hand off a chat thread into the local listener flow.
+
+### Source Deployment Commands
+
+Run these from the repository root when a Railway service is not Git-backed or when you want an explicit source release:
+
+```bash
+bun run deploy:railway:web
+bun run deploy:railway:zero-cache
+bun run deploy:railway:worker
+bun run deploy:railway:scheduler
+```
+
+To release the full four-service stack:
+
+```bash
+bun run deploy:railway:all
+```
+
+The full release script runs the Zero upstream preflight first, then uploads the current source tree with `railway up`.
+
+### Post-Deploy Smoke Checklist
+
+After a fresh Railway source deployment:
+
+1. Open `https://<your-bish-domain>/health` and confirm it returns `200`.
+2. Open `Organization Settings -> Approvals` and confirm `Listener Secret` and `Local listener` are visible above `Approval drills`.
+3. Open `Organization Settings -> Knowledge` and confirm Google Drive Picker shows the correct callback/install state.
+4. Open `/chat`, start a fresh org-scoped thread, refresh, and confirm it remains in the sidebar history.
+5. Only if `zero-cache` is healthy, validate one handoff to Gemini or Codex from chat.
 
 ## Repository Overview
 
@@ -174,6 +224,17 @@ To run the connector stack end-to-end (web OAuth install + worker sync + schedul
   - `GOOGLE_PICKER_CLIENT_ID`
   - `GOOGLE_PICKER_CLIENT_SECRET`
   - `GOOGLE_PICKER_REDIRECT_URI`
+- Stripe pricing / billing:
+  - `STRIPE_SECRET_KEY`
+  - `STRIPE_WEBHOOK_SECRET`
+  - `STRIPE_PRICE_PLUS_MONTHLY`
+  - `STRIPE_PRICE_PLUS_SETUP`
+  - `STRIPE_PRICE_PRO_MONTHLY`
+  - `STRIPE_PRICE_PRO_SETUP`
+  - `STRIPE_PRICE_SCALE_MONTHLY`
+  - `STRIPE_PRICE_SCALE_SETUP`
+  - optional `STRIPE_PRICE_AI_OVERAGE_METERED`
+  - optional extra-seat prices for each paid tier
 - Asana OAuth:
   - `ASANA_CLIENT_ID`
   - `ASANA_CLIENT_SECRET`
@@ -218,6 +279,38 @@ Google Picker uses a separate Google Cloud OAuth web application credential from
    - `GOOGLE_PICKER_CLIENT_ID`
    - `GOOGLE_PICKER_CLIENT_SECRET`
    - `GOOGLE_PICKER_REDIRECT_URI`
+
+## B2B Packaging Defaults
+
+The internal workspace plan IDs stay stable as `free`, `plus`, `pro`, `scale`, and `enterprise`, but the public-facing B2B labels are:
+
+- `Free / Trial`
+- `Starter` (`plus`)
+- `Growth` (`pro`)
+- `Business` (`scale`)
+- `Enterprise`
+
+Recommended v1 packaging:
+
+- `Starter`
+  - `$2,000` setup
+  - `$499/mo`
+  - 5 seats
+  - Google RAG + approvals + 1 listener
+- `Growth`
+  - `$5,000` setup
+  - `$1,499/mo`
+  - 15 seats
+  - full model catalog + listener handoff/activity loop
+- `Business`
+  - `$10,000` setup
+  - `$3,500/mo`
+  - 40 seats
+  - multiple listeners + higher ingestion / sync quotas
+- `Enterprise`
+  - `$20,000+` setup
+  - `$7,500+/mo`
+  - custom procurement, AI budget, and security controls
 
 Once a connector account is created in the UI:
 

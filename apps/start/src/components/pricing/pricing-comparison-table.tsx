@@ -46,7 +46,7 @@ function getComparisonPlans(): ComparisonPlan[] {
 
   return [
     ...mainPlans
-      .filter((plan) => plan.name !== m.pricing_plan_free_name())
+      .filter((plan) => plan.workspacePlanId !== 'free')
       .map(({ name, buttonText, href, gradientId, workspacePlanId }) => ({
         workspacePlanId,
         name,

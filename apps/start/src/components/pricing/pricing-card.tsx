@@ -114,6 +114,10 @@ export function PricingCard({
     amount !== null
       ? formatPrice(amount, currency, locale)
       : m.pricing_price_custom()
+  const formattedSetupFee =
+    typeof plan.setupFeeUsd === 'number' && plan.setupFeeUsd > 0
+      ? formatPrice(plan.setupFeeUsd, 'USD', locale)
+      : null
   const period = periodLabel ? `/${periodLabel}` : ''
 
   const buttonText = actionOverride?.buttonText ?? plan.buttonText
@@ -162,6 +166,11 @@ export function PricingCard({
         <p className="max-w-[280px] text-sm leading-6 tracking-tight text-foreground-secondary">
           {plan.description}
         </p>
+        {formattedSetupFee ? (
+          <p className="text-xs font-medium uppercase tracking-[0.14em] text-foreground-tertiary">
+            {formattedSetupFee} setup
+          </p>
+        ) : null}
       </div>
 
       <ul

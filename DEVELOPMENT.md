@@ -101,6 +101,18 @@ Worker + scheduler notes:
 - Connector OAuth happens in `apps/start`, but connector sync runs in `apps/worker`. Make sure `apps/worker` receives the same connector env values (especially `BISH_ENCRYPTION_KEY`, `ASANA_CLIENT_SECRET`, and `HUBSPOT_CLIENT_SECRET`) so it can decrypt and refresh tokens.
 - The scheduler only enqueues jobs for connector accounts in `connected` status. If a connector is missing OAuth credentials it will be moved to `needs_auth` and will not be scheduled until the user reconnects from the UI.
 
+Zero note:
+
+- Local chat history and most realtime org settings paths depend on Rocicorp Zero, not just the `/api/chat` route.
+- For local development, your upstream Postgres must report `wal_level=logical`.
+- You can verify that with:
+
+```bash
+bun run zero:upstream:check
+```
+
+- If the check fails, do not expect chat history persistence or sync-backed sidebar state to work correctly.
+
 Google Workspace does not use an OAuth callback in the current v1 flow. Once the delegation envs are present, the connector screen exposes an `Activate` action that marks the tenant ready for worker-driven discovery and sync.
 
 Google Drive Picker is the per-user RAG ingestion lane. Once the picker envs are present, the org knowledge screen exposes `Connect Google Drive`, lets the signed-in user browse recent files, and queues those files through the same organization knowledge ingestion pipeline as manual uploads and connector syncs.
@@ -209,6 +221,13 @@ cp .env.example .env.local
 
 `./start.sh` auto-loads `packages/local-listener/.env.local`. If `BISH_TUNNEL_URL` is already set there, it starts the listener directly. If not, it opens a localtunnel URL automatically and then starts the listener against the current repo as the workspace unless you override `BISH_LISTENER_WORKSPACE_DIR`.
 
+`./start.sh` intentionally rejects placeholder/example values. The minimum real config is:
+
+```bash
+BISH_BASE_URL=http://localhost:3000
+BISH_LISTENER_SECRET=<rotated-from-bish-ui>
+```
+
 During a handoff, the listener also writes a helper shell script next to the markdown package so the local Gemini/Codex session can post updates back to BISH. Use it when the shell needs human help or wants to surface progress:
 
 ```bash
@@ -245,6 +264,9 @@ bun run check        # Run type checks
 bun run web:db:reset # Reset database and run migrations
 bun run app:worker   # Start the BISH worker service
 bun run app:scheduler # Start the BISH scheduler service
+bun run zero:upstream:check # Verify upstream Postgres is valid for Zero
+bun run deploy:railway:web # Upload current source to Railway web
+bun run deploy:railway:all # Upload current source to Railway web/zero-cache/worker/scheduler
 ```
 
 From `apps/start/`:

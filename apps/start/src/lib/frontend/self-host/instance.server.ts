@@ -3,6 +3,7 @@ import { splitSetCookieString } from 'cookie-es'
 import { setResponseHeader } from '@tanstack/start-server-core'
 import { auth } from '@/lib/backend/auth/services/auth.service'
 import { isUploadStorageConfigured } from '@/lib/backend/upload/storage-config'
+import { getZeroUpstreamPool } from '@/lib/backend/server-effect/infra/zero-upstream-pool'
 import { getServerAuthContext } from '@/lib/backend/server-effect/http/server-auth'
 import {
   completeSelfHostedSetup,
@@ -22,6 +23,23 @@ type RunSelfHostedSetupInput = {
   readonly password: string
 }
 
+async function resolveZeroReplicationHealthStatus() {
+  const pool = getZeroUpstreamPool()
+  if (!pool) {
+    return 'missing' as const
+  }
+
+  try {
+    const result = await pool.query<{ wal_level: string }>(
+      `select current_setting('wal_level') as wal_level`,
+    )
+    const walLevel = result.rows[0]?.wal_level?.trim().toLowerCase() ?? ''
+    return walLevel === 'logical' ? ('enabled' as const) : ('unsupported' as const)
+  } catch {
+    return 'missing' as const
+  }
+}
+
 function readUserIdFromAuthResult(result: unknown): string | null {
   if (!result || typeof result !== 'object') return null
 
@@ -32,7 +50,7 @@ function readUserIdFromAuthResult(result: unknown): string | null {
   return typeof userId === 'string' && userId.trim().length > 0 ? userId : null
 }
 
-function resolveSelfHostedSetupHealth() {
+async function resolveSelfHostedSetupHealth() {
   const capabilities = getServerInstanceCapabilities()
   const redisDisabled = isRedisDisabled
   const connectionString =
@@ -57,6 +75,11 @@ function resolveSelfHostedSetupHealth() {
         id: 'postgres',
         label: 'Postgres',
         status: connectionString ? 'enabled' : 'missing',
+      },
+      {
+        id: 'zero_logical_replication',
+        label: 'Zero logical replication',
+        status: await resolveZeroReplicationHealthStatus(),
       },
       {
         id: 'redis',
@@ -135,7 +158,7 @@ export async function getInstanceEnvironmentSnapshotAction() {
 
   return {
     ...snapshot,
-    setupHealth: resolveSelfHostedSetupHealth(),
+    setupHealth: await resolveSelfHostedSetupHealth(),
   }
 }
 

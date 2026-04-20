@@ -67,6 +67,10 @@ export type WorkspacePlan = {
   features: readonly string[]
   monthlyPriceUsd: number
   stripePriceEnvKey?: string
+  stripeSetupFeeEnvKey?: string
+  setupFeeUsd?: number
+  additionalSeatPriceUsd?: number
+  includedAiBudgetUsd?: number
 }
 
 export type AccessContext = {
@@ -90,51 +94,64 @@ export type ModelAccessState = {
 export const WORKSPACE_PLANS: readonly WorkspacePlan[] = [
   {
     id: 'free',
-    name: 'Free',
-    description: 'Core workspace access for one member.',
+    name: 'Free / Trial',
+    description: 'Invite-only trial access with a curated model lane.',
     includedSeats: 1,
-    features: ['Core models', 'Single-member workspace'],
+    features: ['Curated models', 'Single operator workspace'],
     monthlyPriceUsd: 0,
   },
   {
     id: 'plus',
-    name: 'Plus',
-    description: 'Expanded model access and workspace controls.',
-    includedSeats: 1,
-    features: ['Expanded usage', 'BYOK', 'Workspace settings'],
-    monthlyPriceUsd: 8,
+    name: 'Starter',
+    description: 'Small-business rollout with Google RAG, approvals, and one local listener.',
+    includedSeats: 5,
+    features: ['Google RAG', 'Approvals', '1 local listener'],
+    monthlyPriceUsd: 499,
     stripePriceEnvKey: 'STRIPE_PRICE_PLUS_MONTHLY',
+    stripeSetupFeeEnvKey: 'STRIPE_PRICE_PLUS_SETUP',
+    setupFeeUsd: 2_000,
+    additionalSeatPriceUsd: 39,
+    includedAiBudgetUsd: 50,
   },
   {
     id: 'pro',
-    name: 'Pro',
-    description: 'Higher-capacity workspaces with advanced controls.',
-    includedSeats: 1,
-    features: ['Higher limits', 'Priority support', 'Advanced policies'],
-    monthlyPriceUsd: 50,
+    name: 'Growth',
+    description: 'Mid-market operations workspace with full model access and listener handoff.',
+    includedSeats: 15,
+    features: ['Full model catalog', 'Listener handoff', 'Higher automation limits'],
+    monthlyPriceUsd: 1_499,
     stripePriceEnvKey: 'STRIPE_PRICE_PRO_MONTHLY',
+    stripeSetupFeeEnvKey: 'STRIPE_PRICE_PRO_SETUP',
+    setupFeeUsd: 5_000,
+    additionalSeatPriceUsd: 29,
+    includedAiBudgetUsd: 250,
   },
   {
     id: 'scale',
-    name: 'Scale',
+    name: 'Business',
     description:
-      'Operational scale with advanced identity and access controls.',
-    includedSeats: 1,
-    features: ['SAML SSO', 'Verified domains', 'Higher throughput'],
-    monthlyPriceUsd: 100,
+      'Higher-capacity deployment with multiple listeners, policy controls, and richer quotas.',
+    includedSeats: 40,
+    features: ['Multiple listeners', 'Policy controls', 'Higher ingestion throughput'],
+    monthlyPriceUsd: 3_500,
     stripePriceEnvKey: 'STRIPE_PRICE_SCALE_MONTHLY',
+    stripeSetupFeeEnvKey: 'STRIPE_PRICE_SCALE_SETUP',
+    setupFeeUsd: 10_000,
+    additionalSeatPriceUsd: 24,
+    includedAiBudgetUsd: 1_000,
   },
   {
     id: 'enterprise',
     name: 'Enterprise',
-    description: 'Custom contracts, provisioning, and security controls.',
-    includedSeats: 1,
+    description: 'Custom contracts, provisioning, AI budgets, and security controls.',
+    includedSeats: 100,
     features: [
       'Directory provisioning',
       'Custom onboarding',
       'Manual billing support',
     ],
-    monthlyPriceUsd: 0,
+    monthlyPriceUsd: 7_500,
+    setupFeeUsd: 20_000,
   },
   {
     id: 'self_hosted',

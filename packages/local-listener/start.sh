@@ -32,5 +32,5 @@ if [[ -n "${BISH_TUNNEL_URL:-}" ]] && ! is_placeholder "${BISH_TUNNEL_URL:-}"; t
   exit 0
 fi
 
-echo "No BISH_TUNNEL_URL configured. Falling back to localtunnel..."
+echo "No real BISH_TUNNEL_URL configured. Falling back to localtunnel..."
 exec "${PACKAGE_DIR}/scripts/start-localtunnel-stack.sh"

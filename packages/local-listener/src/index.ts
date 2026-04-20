@@ -50,15 +50,36 @@ const supportedTargets = (
 
 const replayCache = new Map<string, number>()
 
-if (!baseUrl || !listenerSecret || !tunnelUrl) {
-  throw new Error(
-    'BISH_BASE_URL, BISH_LISTENER_SECRET, and BISH_TUNNEL_URL are required.',
+function isPlaceholderValue(value: string | undefined) {
+  if (!value) return true
+  return (
+    value === 'https://your-bish-domain.com' ||
+    value === 'replace-with-rotated-secret' ||
+    value === 'https://your-listener.ngrok.app/handoff' ||
+    value === '/absolute/path/to/local/workspace' ||
+    value === '/absolute/path/to/handoff-markdown'
   )
 }
 
-const validatedBaseUrl = baseUrl
-const validatedListenerSecret = listenerSecret
-const validatedTunnelUrl = tunnelUrl
+/**
+ * Turn the startup validation into a typed helper so the rest of the listener
+ * can treat required config as plain strings. The script entrypoint already
+ * guarantees these values should be present before we begin HTTP callbacks or
+ * registration work.
+ */
+function requireConfiguredValue(name: string, value: string | undefined): string {
+  if (value == null || isPlaceholderValue(value)) {
+    throw new Error(`${name} must be set to a real value before the listener can start.`)
+  }
+  return value
+}
+
+const validatedBaseUrl = requireConfiguredValue('BISH_BASE_URL', baseUrl)
+const validatedListenerSecret = requireConfiguredValue(
+  'BISH_LISTENER_SECRET',
+  listenerSecret,
+)
+const validatedTunnelUrl = requireConfiguredValue('BISH_TUNNEL_URL', tunnelUrl)
 const callbackUrl = `${validatedBaseUrl}/api/bish/listener/artifacts`
 const activityUrl = `${validatedBaseUrl}/api/bish/listener/activity`
 const registerUrl = `${validatedBaseUrl}/api/bish/listener/register`
