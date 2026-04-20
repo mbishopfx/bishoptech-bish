@@ -248,6 +248,38 @@ export function BishApprovalsPage({
       />
 
       <BishSectionCard
+        title="Listener Secret"
+        description="If you are setting up the local listener right now, rotate the secret here first, then copy it into `packages/local-listener/.env.local` before you run `./start.sh`."
+      >
+        <div className="flex flex-wrap items-center gap-3">
+          <Button
+            type="button"
+            onClick={async () => {
+              try {
+                const result = await createBishLocalListenerSecret({
+                  data: { label: listenerLabel },
+                })
+                setSnapshot(result.snapshot)
+                setListenerSecret(result.secret)
+                toast.success('Listener secret rotated.')
+              } catch (error) {
+                toast.error(
+                  error instanceof Error
+                    ? error.message
+                    : 'Failed to rotate listener secret.',
+                )
+              }
+            }}
+          >
+            Rotate Listener Secret
+          </Button>
+          <p className="text-sm text-foreground-tertiary">
+            The full Local listener section below also lets you save the prompt, target, and install command.
+          </p>
+        </div>
+      </BishSectionCard>
+
+      <BishSectionCard
         title="Local listener"
         description="Register a customer-local daemon that can accept signed handoffs, launch Gemini or Codex on their machine, and loop selected repo artifacts back into BISH knowledge."
         action={
@@ -546,6 +578,21 @@ BISH_LISTENER_DEFAULT_TARGET=${defaultTarget}
                     {handoff.target} · created {new Date(handoff.createdAt).toLocaleString()}
                     {handoff.threadId ? ` · thread ${handoff.threadId}` : ''}
                   </p>
+                  {handoff.activityLog.length > 0 ? (
+                    <div className="space-y-1 rounded-xl border border-border-base/70 bg-background-subtle px-3 py-2">
+                      <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-foreground-tertiary">
+                        Latest listener activity
+                      </p>
+                      {handoff.activityLog.slice(-3).map((activity) => (
+                        <p
+                          key={activity.id}
+                          className="text-xs text-foreground-secondary"
+                        >
+                          {new Date(activity.createdAt).toLocaleTimeString()} · {activity.kind} · {activity.message}
+                        </p>
+                      ))}
+                    </div>
+                  ) : null}
                   {handoff.errorMessage ? (
                     <p className="text-xs text-foreground-error">{handoff.errorMessage}</p>
                   ) : null}
@@ -557,6 +604,8 @@ BISH_LISTENER_DEFAULT_TARGET=${defaultTarget}
                       ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700'
                       : handoff.status === 'failed'
                         ? 'border-rose-500/30 bg-rose-500/10 text-rose-700'
+                        : handoff.status === 'waiting_input'
+                          ? 'border-orange-500/30 bg-orange-500/10 text-orange-700'
                         : handoff.status === 'delivered'
                           ? 'border-sky-500/30 bg-sky-500/10 text-sky-700'
                           : 'border-amber-500/30 bg-amber-500/10 text-amber-700'

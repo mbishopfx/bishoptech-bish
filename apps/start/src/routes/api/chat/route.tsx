@@ -6,6 +6,7 @@ import {
   getServerAuthContextFromHeaders,
   requireAppUserAuth,
 } from '@/lib/backend/server-effect/http/server-auth'
+import { isOrgMember } from '@/lib/backend/auth/services/organization-member-role.service'
 import { canUseOrganizationProviderKeys } from '@/utils/app-feature-flags'
 import {
   ChatOrchestratorService,
@@ -184,11 +185,28 @@ export const Route = createFileRoute('/api/chat')({
             },
           })
 
+          const requestedOrganizationId =
+            typeof body.organizationId === 'string'
+              ? body.organizationId.trim() || undefined
+              : undefined
+          const requestedOrganizationAllowed = requestedOrganizationId
+            ? yield* Effect.tryPromise({
+                try: () =>
+                  isOrgMember({
+                    organizationId: requestedOrganizationId,
+                    userId: authContext.userId,
+                  }),
+                catch: () => false,
+              })
+            : false
+          const organizationId =
+            authContext.organizationId
+            ?? (requestedOrganizationAllowed ? requestedOrganizationId : undefined)
           const accessContext = yield* Effect.tryPromise({
             try: () => resolveAccessContext({
               userId: authContext.userId,
               isAnonymous: authContext.isAnonymous,
-              organizationId: authContext.organizationId,
+              organizationId,
             }),
             catch: (error) =>
               new InvalidRequestError({
@@ -202,13 +220,19 @@ export const Route = createFileRoute('/api/chat')({
           const orchestrator = yield* ChatOrchestratorService
           const modelPolicy = yield* ModelPolicyService
           // Org is resolved server-side and passed to model policy resolution.
-          const organizationId = authContext.organizationId
           const orgPolicy = organizationId
             ? yield* modelPolicy.getOrgPolicy({
                 organizationId,
                 requestId,
               })
             : undefined
+          setWideEventContext(wideEvent, {
+            actor: {
+              userId: authContext.userId,
+              organizationId,
+              isAnonymous: authContext.isAnonymous,
+            },
+          })
           const skipProviderKeyResolution = Boolean(
             canUseOrganizationProviderKeys &&
             orgPolicy?.providerKeyStatus &&

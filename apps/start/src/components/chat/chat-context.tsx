@@ -1057,6 +1057,7 @@ export function ChatProvider({
           return {
             body: {
               threadId: threadIdRef.current,
+              organizationId: activeOrganizationId?.trim() || undefined,
               trigger: requestTrigger,
               messageId: requestMessageId,
               editedText,

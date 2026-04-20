@@ -195,7 +195,7 @@ export BISH_LISTENER_OUTPUT_DIR=$HOME/BISH/listener-handoffs
 bun run start
 ```
 
-The listener registers itself back to BISH through `/api/bish/listener/register`, accepts signed handoff deliveries on `/handoff`, writes a markdown handoff file locally, and then launches either `gemini --yolo` or `codex`.
+The listener registers itself back to BISH through `/api/bish/listener/register`, accepts signed handoff deliveries on `/handoff`, writes a markdown handoff file locally, and then launches either `gemini --yolo` or `codex --dangerously-bypass-approvals-and-sandbox`.
 
 For quick local testing without installing ngrok, you can use the bundled localtunnel helper:
 
@@ -208,6 +208,14 @@ cp .env.example .env.local
 ```
 
 `./start.sh` auto-loads `packages/local-listener/.env.local`. If `BISH_TUNNEL_URL` is already set there, it starts the listener directly. If not, it opens a localtunnel URL automatically and then starts the listener against the current repo as the workspace unless you override `BISH_LISTENER_WORKSPACE_DIR`.
+
+During a handoff, the listener also writes a helper shell script next to the markdown package so the local Gemini/Codex session can post updates back to BISH. Use it when the shell needs human help or wants to surface progress:
+
+```bash
+/absolute/path/to/bish-activity-<handoff-id>.sh info "Started implementation"
+/absolute/path/to/bish-activity-<handoff-id>.sh input_required "Need an API key or approval"
+/absolute/path/to/bish-activity-<handoff-id>.sh resolved "Continuing after human input"
+```
 
 macOS bootstrap helper:
 

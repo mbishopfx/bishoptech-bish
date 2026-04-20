@@ -7,6 +7,7 @@ import { execFile, spawn } from 'node:child_process'
 import { promisify } from 'node:util'
 import {
   verifyLocalListenerSignature,
+  type LocalListenerActivityPayload,
   type LocalListenerArtifactPayload,
   type LocalListenerHandoffPayload,
   type LocalListenerRegistrationPayload,
@@ -59,6 +60,7 @@ const validatedBaseUrl = baseUrl
 const validatedListenerSecret = listenerSecret
 const validatedTunnelUrl = tunnelUrl
 const callbackUrl = `${validatedBaseUrl}/api/bish/listener/artifacts`
+const activityUrl = `${validatedBaseUrl}/api/bish/listener/activity`
 const registerUrl = `${validatedBaseUrl}/api/bish/listener/register`
 
 function sanitizeSlug(input: string) {
@@ -92,6 +94,21 @@ async function postArtifactCallback(payload: LocalListenerArtifactPayload) {
   if (!response.ok) {
     const text = await response.text()
     console.error('artifact callback failed', text)
+  }
+}
+
+async function postActivityCallback(payload: LocalListenerActivityPayload) {
+  const response = await fetch(activityUrl, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-bish-listener-secret': validatedListenerSecret,
+    },
+    body: JSON.stringify(payload),
+  })
+  if (!response.ok) {
+    const text = await response.text()
+    console.error('activity callback failed', text)
   }
 }
 
@@ -151,15 +168,77 @@ async function collectRepoMetadata() {
 function buildPromptMessage(input: {
   readonly systemPrompt: string
   readonly markdownPath: string
+  readonly activityHelperPath: string
 }) {
-  return `${input.systemPrompt}\n\nHandoff markdown: ${input.markdownPath}`
+  return [
+    input.systemPrompt,
+    '',
+    `Handoff markdown: ${input.markdownPath}`,
+    `Activity helper: ${input.activityHelperPath}`,
+    '',
+    'If you need human help or want to report progress back to BISH, run one of these commands from the shell session:',
+    `${input.activityHelperPath} info "Started implementation work"`,
+    `${input.activityHelperPath} input_required "Need an environment variable or approval"`,
+    `${input.activityHelperPath} resolved "Unblocked and continuing"`,
+  ].join('\n')
+}
+
+async function writeActivityHelperScript(input: {
+  readonly handoffId: string
+}) {
+  const helperDir = join(outputDir, '.bish-listener')
+  const helperPath = join(helperDir, `bish-activity-${input.handoffId}.sh`)
+  await mkdir(helperDir, { recursive: true })
+  await writeFile(
+    helperPath,
+    `#!/usr/bin/env bash
+set -euo pipefail
+
+KIND="\${1:-info}"
+shift || true
+MESSAGE="\${*:-}"
+
+if [[ -z "\${MESSAGE}" ]]; then
+  echo "Usage: $(basename "$0") <info|warning|input_required|resolved> <message>"
+  exit 1
+fi
+
+bun -e '
+const [kind, message, url, secret, handoffId] = process.argv.slice(1)
+const payload = JSON.stringify({ handoffId, kind, message })
+fetch(url, {
+  method: "POST",
+  headers: {
+    "content-type": "application/json",
+    "x-bish-listener-secret": secret,
+  },
+  body: payload,
+}).then(async (response) => {
+  if (!response.ok) {
+    const text = await response.text()
+    throw new Error(text || \`HTTP \${response.status}\`)
+  }
+  console.log("BISH activity sent")
+}).catch((error) => {
+  console.error("BISH activity failed", error instanceof Error ? error.message : String(error))
+  process.exit(1)
+})
+' "\${KIND}" "\${MESSAGE}" "${activityUrl}" "${validatedListenerSecret}" "${input.handoffId}"
+`,
+    'utf8',
+  )
+  await execFileAsync('chmod', ['+x', helperPath])
+  return helperPath
 }
 
 async function launchVisibleMacos(input: {
   readonly target: LocalListenerTarget
   readonly prompt: string
 }) {
-  const command = input.target === 'gemini' ? 'gemini --yolo' : 'codex'
+  const command =
+    input.target === 'gemini'
+      ? 'gemini --yolo'
+      : 'codex --dangerously-bypass-approvals-and-sandbox'
   const escapedWorkspace = workspaceDir.replace(/"/g, '\\"')
   await execFileAsync('osascript', [
     '-e',
@@ -186,7 +265,10 @@ async function launchHeadless(input: {
   readonly prompt: string
 }) {
   const command = input.target === 'gemini' ? 'gemini' : 'codex'
-  const args = input.target === 'gemini' ? ['--yolo'] : []
+  const args =
+    input.target === 'gemini'
+      ? ['--yolo']
+      : ['--dangerously-bypass-approvals-and-sandbox']
   const child = spawn(command, args, {
     cwd: workspaceDir,
     stdio: ['pipe', 'inherit', 'inherit'],
@@ -213,10 +295,14 @@ async function executeHandoff(payload: LocalListenerHandoffPayload) {
     `${Date.now()}-${sanitizeSlug(payload.title)}.md`,
   )
   await writeFile(filePath, payload.handoffMarkdown, 'utf8')
+  const activityHelperPath = await writeActivityHelperScript({
+    handoffId: payload.handoffId,
+  })
 
   const prompt = buildPromptMessage({
     systemPrompt: payload.systemPrompt,
     markdownPath: filePath,
+    activityHelperPath,
   })
 
   await postArtifactCallback({
@@ -225,6 +311,15 @@ async function executeHandoff(payload: LocalListenerHandoffPayload) {
     metadata: {
       localFilePath: filePath,
       target: payload.target,
+    },
+  })
+  await postActivityCallback({
+    handoffId: payload.handoffId,
+    kind: 'info',
+    message: 'Listener received the handoff and wrote the markdown package locally.',
+    metadata: {
+      localFilePath: filePath,
+      activityHelperPath,
     },
   })
 
@@ -242,11 +337,33 @@ async function executeHandoff(payload: LocalListenerHandoffPayload) {
       workspaceDir,
     },
   })
+  await postActivityCallback({
+    handoffId: payload.handoffId,
+    kind: 'info',
+    message:
+      runtimeMode === 'visible' && process.platform === 'darwin'
+        ? 'Launching an interactive terminal session for this handoff.'
+        : 'Launching a headless listener session for this handoff.',
+    metadata: {
+      runtimeMode,
+      workspaceDir,
+      activityHelperPath,
+    },
+  })
 
   if (runtimeMode === 'visible' && process.platform === 'darwin') {
     await launchVisibleMacos({
       target: payload.target,
       prompt,
+    })
+    await postActivityCallback({
+      handoffId: payload.handoffId,
+      kind: 'info',
+      message:
+        'Interactive terminal handoff launched. Use the activity helper if you need human input or want to post progress updates back to BISH.',
+      metadata: {
+        activityHelperPath,
+      },
     })
     return
   }
@@ -265,6 +382,18 @@ async function executeHandoff(payload: LocalListenerHandoffPayload) {
       localFilePath: filePath,
       runtimeMode,
       workspaceDir,
+    },
+  })
+  await postActivityCallback({
+    handoffId: payload.handoffId,
+    kind: status === 'completed' ? 'resolved' : 'warning',
+    message:
+      status === 'completed'
+        ? 'Headless listener session completed.'
+        : 'Headless listener session exited with a failure status.',
+    metadata: {
+      runtimeMode,
+      activityHelperPath,
     },
   })
 }
@@ -355,6 +484,12 @@ const server = createServer(async (request, response) => {
     response.end('Accepted')
     void executeHandoff(payload).catch(async (error) => {
       console.error('handoff execution failed', error)
+      await postActivityCallback({
+        handoffId: payload.handoffId,
+        kind: 'warning',
+        message:
+          error instanceof Error ? error.message : 'Unexpected handoff failure.',
+      })
       await postArtifactCallback({
         handoffId: payload.handoffId,
         status: 'failed',

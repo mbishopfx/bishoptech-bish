@@ -47,6 +47,7 @@ import { Route as ApiOperatorBishOverviewRouteRouteImport } from './routes/api/o
 import { Route as ApiOperatorBishListenerSecretRouteRouteImport } from './routes/api/operator/bish/listener-secret/route'
 import { Route as ApiBishListenerRegisterRouteRouteImport } from './routes/api/bish/listener/register/route'
 import { Route as ApiBishListenerArtifactsRouteRouteImport } from './routes/api/bish/listener/artifacts/route'
+import { Route as ApiBishListenerActivityRouteRouteImport } from './routes/api/bish/listener/activity/route'
 import { Route as appLayoutSettingsSecurityRouteRouteImport } from './routes/(app)/_layout/settings/security/route'
 import { Route as appLayoutOrganizationSettingsRouteRouteImport } from './routes/(app)/_layout/organization/settings/route'
 import { Route as appLayoutChatThreadIdRouteRouteImport } from './routes/(app)/_layout/chat/$threadId/route'
@@ -273,6 +274,12 @@ const ApiBishListenerArtifactsRouteRoute =
     path: '/api/bish/listener/artifacts',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiBishListenerActivityRouteRoute =
+  ApiBishListenerActivityRouteRouteImport.update({
+    id: '/api/bish/listener/activity',
+    path: '/api/bish/listener/activity',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const appLayoutSettingsSecurityRouteRoute =
   appLayoutSettingsSecurityRouteRouteImport.update({
     id: '/security',
@@ -459,6 +466,7 @@ export interface FileRoutesByFullPath {
   '/chat/$threadId': typeof appLayoutChatThreadIdRouteRoute
   '/organization/settings': typeof appLayoutOrganizationSettingsRouteRouteWithChildren
   '/settings/security': typeof appLayoutSettingsSecurityRouteRoute
+  '/api/bish/listener/activity': typeof ApiBishListenerActivityRouteRoute
   '/api/bish/listener/artifacts': typeof ApiBishListenerArtifactsRouteRoute
   '/api/bish/listener/register': typeof ApiBishListenerRegisterRouteRoute
   '/api/operator/bish/listener-secret': typeof ApiOperatorBishListenerSecretRouteRoute
@@ -521,6 +529,7 @@ export interface FileRoutesByTo {
   '/': typeof appLayoutIndexRoute
   '/chat/$threadId': typeof appLayoutChatThreadIdRouteRoute
   '/settings/security': typeof appLayoutSettingsSecurityRouteRoute
+  '/api/bish/listener/activity': typeof ApiBishListenerActivityRouteRoute
   '/api/bish/listener/artifacts': typeof ApiBishListenerArtifactsRouteRoute
   '/api/bish/listener/register': typeof ApiBishListenerRegisterRouteRoute
   '/api/operator/bish/listener-secret': typeof ApiOperatorBishListenerSecretRouteRoute
@@ -587,6 +596,7 @@ export interface FileRoutesById {
   '/(app)/_layout/chat/$threadId': typeof appLayoutChatThreadIdRouteRoute
   '/(app)/_layout/organization/settings': typeof appLayoutOrganizationSettingsRouteRouteWithChildren
   '/(app)/_layout/settings/security': typeof appLayoutSettingsSecurityRouteRoute
+  '/api/bish/listener/activity': typeof ApiBishListenerActivityRouteRoute
   '/api/bish/listener/artifacts': typeof ApiBishListenerArtifactsRouteRoute
   '/api/bish/listener/register': typeof ApiBishListenerRegisterRouteRoute
   '/api/operator/bish/listener-secret': typeof ApiOperatorBishListenerSecretRouteRoute
@@ -654,6 +664,7 @@ export interface FileRouteTypes {
     | '/chat/$threadId'
     | '/organization/settings'
     | '/settings/security'
+    | '/api/bish/listener/activity'
     | '/api/bish/listener/artifacts'
     | '/api/bish/listener/register'
     | '/api/operator/bish/listener-secret'
@@ -716,6 +727,7 @@ export interface FileRouteTypes {
     | '/'
     | '/chat/$threadId'
     | '/settings/security'
+    | '/api/bish/listener/activity'
     | '/api/bish/listener/artifacts'
     | '/api/bish/listener/register'
     | '/api/operator/bish/listener-secret'
@@ -781,6 +793,7 @@ export interface FileRouteTypes {
     | '/(app)/_layout/chat/$threadId'
     | '/(app)/_layout/organization/settings'
     | '/(app)/_layout/settings/security'
+    | '/api/bish/listener/activity'
     | '/api/bish/listener/artifacts'
     | '/api/bish/listener/register'
     | '/api/operator/bish/listener-secret'
@@ -836,6 +849,7 @@ export interface RootRouteChildren {
   ApiZeroQueryRouteRoute: typeof ApiZeroQueryRouteRoute
   ApiZeroTokenRouteRoute: typeof ApiZeroTokenRouteRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiBishListenerActivityRouteRoute: typeof ApiBishListenerActivityRouteRoute
   ApiBishListenerArtifactsRouteRoute: typeof ApiBishListenerArtifactsRouteRoute
   ApiBishListenerRegisterRouteRoute: typeof ApiBishListenerRegisterRouteRoute
   ApiOperatorBishListenerSecretRouteRoute: typeof ApiOperatorBishListenerSecretRouteRoute
@@ -1116,6 +1130,13 @@ declare module '@tanstack/react-router' {
       path: '/api/bish/listener/artifacts'
       fullPath: '/api/bish/listener/artifacts'
       preLoaderRoute: typeof ApiBishListenerArtifactsRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/bish/listener/activity': {
+      id: '/api/bish/listener/activity'
+      path: '/api/bish/listener/activity'
+      fullPath: '/api/bish/listener/activity'
+      preLoaderRoute: typeof ApiBishListenerActivityRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/(app)/_layout/settings/security': {
@@ -1502,6 +1523,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiZeroQueryRouteRoute: ApiZeroQueryRouteRoute,
   ApiZeroTokenRouteRoute: ApiZeroTokenRouteRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiBishListenerActivityRouteRoute: ApiBishListenerActivityRouteRoute,
   ApiBishListenerArtifactsRouteRoute: ApiBishListenerArtifactsRouteRoute,
   ApiBishListenerRegisterRouteRoute: ApiBishListenerRegisterRouteRoute,
   ApiOperatorBishListenerSecretRouteRoute:

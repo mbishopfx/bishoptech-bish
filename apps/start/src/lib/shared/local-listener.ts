@@ -26,6 +26,15 @@ export type LocalHandoffSummary = {
   readonly deliveredAt: number | null
   readonly completedAt: number | null
   readonly errorMessage: string | null
+  readonly activityLog: readonly LocalListenerActivityEntry[]
+}
+
+export type LocalListenerActivityEntry = {
+  readonly id: string
+  readonly kind: 'info' | 'warning' | 'input_required' | 'resolved'
+  readonly message: string
+  readonly createdAt: number
+  readonly metadata?: Record<string, unknown>
 }
 
 export const saveLocalListenerConfigInput = z.object({
@@ -71,6 +80,13 @@ export const reportLocalListenerArtifactsInput = z.object({
   metadata: z.record(z.string(), z.unknown()).optional(),
 })
 
+export const reportLocalListenerActivityInput = z.object({
+  handoffId: z.string().trim().min(1),
+  kind: z.enum(['info', 'warning', 'input_required', 'resolved']),
+  message: z.string().trim().min(1).max(2_000),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+})
+
 export type SaveLocalListenerConfigInput = z.infer<
   typeof saveLocalListenerConfigInput
 >
@@ -85,4 +101,7 @@ export type RegisterLocalListenerInput = z.infer<
 >
 export type ReportLocalListenerArtifactsInput = z.infer<
   typeof reportLocalListenerArtifactsInput
+>
+export type ReportLocalListenerActivityInput = z.infer<
+  typeof reportLocalListenerActivityInput
 >

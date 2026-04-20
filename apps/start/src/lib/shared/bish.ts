@@ -7,6 +7,7 @@ import {
   type BishConnectorProvider,
 } from '@bish/automation'
 import type {
+  LocalListenerActivityEntry,
   LocalHandoffSummary,
   LocalListenerSummary,
 } from './local-listener'
@@ -98,6 +99,8 @@ export type BishOrgDashboardSnapshot = {
   readonly listeners: readonly LocalListenerSummary[]
   readonly handoffs: readonly LocalHandoffSummary[]
 }
+
+export type { LocalListenerActivityEntry }
 
 export type BishOperatorOrganizationSummary = {
   readonly organizationId: string

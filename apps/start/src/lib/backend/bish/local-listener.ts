@@ -13,9 +13,11 @@ import { requireZeroUpstreamPool } from '@/lib/backend/server-effect/infra/zero-
 import type {
   CreateLocalListenerSecretInput,
   DispatchThreadHandoffInput,
+  LocalListenerActivityEntry,
   LocalHandoffSummary,
   LocalListenerSummary,
   RegisterLocalListenerInput,
+  ReportLocalListenerActivityInput,
   ReportLocalListenerArtifactsInput,
   SaveLocalListenerConfigInput,
 } from '@/lib/shared/local-listener'
@@ -50,6 +52,7 @@ type HandoffRow = {
   delivered_at: number | null
   completed_at: number | null
   error_message: string | null
+  metadata?: Record<string, unknown> | null
 }
 
 function hashListenerSecret(secret: string) {
@@ -62,6 +65,97 @@ function buildDefaultSystemPrompt() {
     'Use the provided markdown handoff file as the source of truth for the conversation context, build intent, constraints, and expected outputs.',
     'Work directly in the local repository, keep changes scoped, and summarize what you changed before you stop.',
   ].join(' ')
+}
+
+function normalizeLocalListenerActivityLog(
+  value: unknown,
+): readonly LocalListenerActivityEntry[] {
+  if (!Array.isArray(value)) return []
+
+  return value.flatMap((entry) => {
+    if (!entry || typeof entry !== 'object') return []
+    const record = entry as Record<string, unknown>
+    const id =
+      typeof record.id === 'string' && record.id.trim().length > 0
+        ? record.id
+        : undefined
+    const kind =
+      record.kind === 'info' ||
+      record.kind === 'warning' ||
+      record.kind === 'input_required' ||
+      record.kind === 'resolved'
+        ? record.kind
+        : undefined
+    const message =
+      typeof record.message === 'string' && record.message.trim().length > 0
+        ? record.message
+        : undefined
+    const createdAt =
+      typeof record.createdAt === 'number' && Number.isFinite(record.createdAt)
+        ? record.createdAt
+        : undefined
+
+    if (!id || !kind || !message || createdAt === undefined) return []
+
+    return [{
+      id,
+      kind,
+      message,
+      createdAt,
+      metadata:
+        record.metadata && typeof record.metadata === 'object'
+          ? (record.metadata as Record<string, unknown>)
+          : undefined,
+    }]
+  })
+}
+
+/**
+ * Handoff metadata already exists as JSONB, so we append operational activity
+ * there instead of introducing another table during the v1 listener rollout.
+ * That keeps the Railway upgrade path small while still giving operators a
+ * durable progress log for HITL moments.
+ */
+async function appendLocalHandoffActivity(input: {
+  readonly handoffId: string
+  readonly activity: LocalListenerActivityEntry
+  readonly nextStatus?: string
+}) {
+  const pool = requireZeroUpstreamPool()
+  const current = await pool.query<{ metadata: Record<string, unknown> | null }>(
+    `
+      SELECT metadata
+      FROM local_handoffs
+      WHERE id = $1
+      LIMIT 1
+    `,
+    [input.handoffId],
+  )
+
+  const existingMetadata = current.rows[0]?.metadata ?? {}
+  const existingActivity = normalizeLocalListenerActivityLog(
+    (existingMetadata as Record<string, unknown>).activityLog,
+  )
+  const now = Date.now()
+
+  await pool.query(
+    `
+      UPDATE local_handoffs
+      SET metadata = $1::jsonb,
+          status = COALESCE($2, status),
+          updated_at = $3
+      WHERE id = $4
+    `,
+    [
+      JSON.stringify({
+        ...existingMetadata,
+        activityLog: [...existingActivity, input.activity].slice(-40),
+      }),
+      input.nextStatus ?? null,
+      now,
+      input.handoffId,
+    ],
+  )
 }
 
 async function readPrimaryListenerForOrganization(organizationId: string) {
@@ -181,7 +275,8 @@ export async function listRecentLocalHandoffsForOrganization(
         created_at,
         delivered_at,
         completed_at,
-        error_message
+        error_message,
+        metadata
       FROM local_handoffs
       WHERE organization_id = $1
       ORDER BY updated_at DESC
@@ -199,6 +294,7 @@ export async function listRecentLocalHandoffsForOrganization(
     deliveredAt: row.delivered_at,
     completedAt: row.completed_at,
     errorMessage: row.error_message,
+    activityLog: normalizeLocalListenerActivityLog(row.metadata?.activityLog),
   }))
 }
 
@@ -570,9 +666,10 @@ export async function reportLocalListenerArtifactsFromSecret(input: {
     id: string
     organization_id: string
     requested_by_user_id: string
+    metadata: Record<string, unknown> | null
   }>(
     `
-      SELECT id, organization_id, requested_by_user_id
+      SELECT id, organization_id, requested_by_user_id, metadata
       FROM local_handoffs
       WHERE id = $1
         AND listener_registration_id = $2
@@ -601,6 +698,7 @@ export async function reportLocalListenerArtifactsFromSecret(input: {
       now,
       input.data.errorMessage ?? null,
       JSON.stringify({
+        ...(handoff.metadata ?? {}),
         repoUrl: input.data.repoUrl ?? null,
         repoBranch: input.data.repoBranch ?? null,
         repoCommitSha: input.data.repoCommitSha ?? null,
@@ -687,6 +785,56 @@ export async function reportLocalListenerArtifactsFromSecret(input: {
       ],
     )
   }
+
+  await updateListenerLastSeen(listener.id)
+}
+
+export async function reportLocalListenerActivityFromSecret(input: {
+  readonly secret: string
+  readonly data: ReportLocalListenerActivityInput
+}) {
+  const listener = await readListenerBySecret(input.secret)
+  if (!listener) {
+    throw new Error('Listener secret is not recognized.')
+  }
+
+  const pool = requireZeroUpstreamPool()
+  const handoffResult = await pool.query<{
+    id: string
+    listener_registration_id: string
+  }>(
+    `
+      SELECT id, listener_registration_id
+      FROM local_handoffs
+      WHERE id = $1
+      LIMIT 1
+    `,
+    [input.data.handoffId],
+  )
+  const handoff = handoffResult.rows[0]
+  if (!handoff) {
+    throw new Error('The referenced handoff does not exist.')
+  }
+  if (handoff.listener_registration_id !== listener.id) {
+    throw new Error('The handoff does not belong to this listener.')
+  }
+
+  await appendLocalHandoffActivity({
+    handoffId: input.data.handoffId,
+    nextStatus:
+      input.data.kind === 'input_required'
+        ? 'waiting_input'
+        : input.data.kind === 'resolved'
+          ? 'running'
+          : undefined,
+    activity: {
+      id: crypto.randomUUID(),
+      kind: input.data.kind,
+      message: input.data.message,
+      createdAt: Date.now(),
+      metadata: input.data.metadata,
+    },
+  })
 
   await updateListenerLastSeen(listener.id)
 }

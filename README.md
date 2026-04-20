@@ -90,6 +90,35 @@ For a production v1 deployment, wire the services like this:
 
 The web UI will now show a setup state instead of crashing if `VITE_ZERO_CACHE_URL` is missing, but `/chat` and other sync-driven screens still require the `zero-cache` service to be live.
 
+### Minimal Railway V1 Contract
+
+For a reusable client rollout where the customer fills in their own Railway secrets, these are the minimum values that must exist before BISH feels production-usable:
+
+- Web + worker:
+  - `ZERO_UPSTREAM_DB`
+  - `REDIS_URL`
+  - `BISH_ENCRYPTION_KEY`
+  - `AI_GATEWAY_API_KEY`
+- Web only:
+  - `VITE_APP_INSTANCE_MODE=self_hosted`
+  - `VITE_SELF_HOST_SOURCE=railway`
+  - `VITE_ZERO_CACHE_URL=https://<zero-cache-domain>`
+  - `BETTER_AUTH_URL=https://<your-bish-domain>`
+  - `VITE_BETTER_AUTH_URL=https://<your-bish-domain>`
+  - `BETTER_AUTH_SECRET`
+  - `SELF_HOSTED_SETUP_TOKEN`
+- Google Workspace connector:
+  - `GOOGLE_WORKSPACE_PROJECT_ID`
+  - `GOOGLE_WORKSPACE_CLIENT_EMAIL`
+  - `GOOGLE_WORKSPACE_PRIVATE_KEY`
+  - `GOOGLE_WORKSPACE_IMPERSONATION_ADMIN`
+- Google Drive Picker:
+  - `GOOGLE_PICKER_CLIENT_ID`
+  - `GOOGLE_PICKER_CLIENT_SECRET`
+  - `GOOGLE_PICKER_REDIRECT_URI=https://<your-bish-domain>/api/org/knowledge/google/callback`
+
+If those envs are present, a customer should be able to deploy BISH on Railway, complete setup, chat with the enabled models, connect Google, ingest RAG documents, and hand off a chat thread into the local listener flow.
+
 ## Repository Overview
 
 This repository is a Bun + Turborepo monorepo.
@@ -217,6 +246,7 @@ The local listener is a customer-installed Bun daemon in `packages/local-listene
 - writes the handoff package to a local markdown file
 - launches the configured local runtime
 - can report repo metadata and generated markdown artifacts back into BISH knowledge
+- can post activity and human-input requests back into BISH during a live shell session
 
 Minimum local env contract:
 
@@ -232,6 +262,21 @@ Minimum local env contract:
 - optional `GITHUB_TOKEN=<local-only-token>`
 
 On macOS, the repo includes a bootstrap helper at `packages/local-listener/scripts/install-macos-listener.sh` for LaunchAgent-based startup. The GitHub token stays local-only in this design and is never stored in BISH cloud state.
+
+Quick install flow:
+
+```bash
+curl -L https://github.com/mbishopfx/bishoptech-bish/archive/refs/heads/main.tar.gz | tar -xz
+cd bishoptech-bish-main/packages/local-listener
+cp .env.example .env.local
+./start.sh
+```
+
+During a live handoff, BISH writes a per-handoff helper script alongside the markdown package. Gemini or Codex can use it to post progress back to the cloud app:
+
+- `info` for progress updates
+- `input_required` when the shell session needs a human
+- `resolved` when the listener is unblocked and continuing
 
 ## Contributing
 

@@ -43,6 +43,13 @@ export type LocalListenerArtifactPayload = {
   readonly metadata?: Record<string, unknown>
 }
 
+export type LocalListenerActivityPayload = {
+  readonly handoffId: string
+  readonly kind: 'info' | 'warning' | 'input_required' | 'resolved'
+  readonly message: string
+  readonly metadata?: Record<string, unknown>
+}
+
 export function buildLocalListenerSignature(input: {
   readonly secret: string
   readonly timestamp: string
