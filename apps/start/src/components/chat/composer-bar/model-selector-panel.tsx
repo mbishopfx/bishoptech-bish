@@ -13,7 +13,11 @@ import {
 import { cn } from '@bish/utils'
 import { Popover, PopoverContent, PopoverTrigger } from '@bish/ui/popover'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@bish/ui/tooltip'
-import { getCatalogModel, getProviderIcon } from '@/lib/shared/ai-catalog'
+import {
+  getCatalogModel,
+  getProviderIcon,
+  isBishRecommendedModelId,
+} from '@/lib/shared/ai-catalog'
 import type { AiModelCatalogEntry } from '@/lib/shared/ai-catalog/types'
 import type { CatalogProviderId } from '@/lib/shared/ai-catalog/provider-tools'
 import type {PaidWorkspacePlanId} from '@/lib/shared/access-control';
@@ -117,6 +121,18 @@ export function ModelSelectorPanel({
       return searchText.includes(normalized)
     })
   }, [options, query, selectedProvider])
+
+  const recommendedModels = React.useMemo(() => {
+    if (query.trim().length > 0 || selectedProvider !== 'all') return []
+    return filteredModels.filter((opt) => isBishRecommendedModelId(opt.id))
+  }, [filteredModels, query, selectedProvider])
+
+  const additionalModels = React.useMemo(() => {
+    if (query.trim().length > 0 || selectedProvider !== 'all') {
+      return filteredModels
+    }
+    return filteredModels.filter((opt) => !isBishRecommendedModelId(opt.id))
+  }, [filteredModels, query, selectedProvider])
 
   const providersInOptions = React.useMemo(() => {
     const set = new Set<CatalogProviderId>()
@@ -277,27 +293,30 @@ export function ModelSelectorPanel({
                   {m.chat_model_no_search_results()}
                 </div>
               ) : (
-                <div className="space-y-1">
-                  {filteredModels.map((opt) => {
-                    const catalog = getCatalogModel(opt.id)
-                    if (!catalog) return null
-                    return (
-                      <ModelRow
-                        key={opt.id}
-                        model={catalog}
-                        displayName={opt.name}
-                        isSelected={value === opt.id}
-                        locked={opt.locked}
-                        minimumPlanId={opt.minimumPlanId}
-                        onSelect={handleSelect}
-                        capabilityLabels={capabilityLabels}
-                        style={{
-                          contentVisibility: 'auto',
-                          containIntrinsicSize: '0 60px',
-                        }}
-                      />
-                    )
-                  })}
+                <div className="space-y-4">
+                  {recommendedModels.length > 0 ? (
+                    <ModelSection
+                      title={m.chat_model_recommended_section_title()}
+                      description={m.chat_model_recommended_section_description()}
+                      models={recommendedModels}
+                      selectedModelId={value}
+                      capabilityLabels={capabilityLabels}
+                      onSelect={handleSelect}
+                    />
+                  ) : null}
+                  {additionalModels.length > 0 ? (
+                    <ModelSection
+                      title={
+                        recommendedModels.length > 0
+                          ? m.chat_model_more_section_title()
+                          : undefined
+                      }
+                      models={additionalModels}
+                      selectedModelId={value}
+                      capabilityLabels={capabilityLabels}
+                      onSelect={handleSelect}
+                    />
+                  ) : null}
                 </div>
               )}
             </div>
@@ -430,6 +449,63 @@ const ModelRow = React.memo(function ModelRow({
 
   return buttonContent
 })
+
+interface ModelSectionProps {
+  title?: string
+  description?: string
+  models: readonly SelectableModelOption[]
+  selectedModelId: string
+  capabilityLabels: Record<keyof typeof CAPABILITY_ICONS, string>
+  onSelect: (id: string) => void
+}
+
+function ModelSection({
+  title,
+  description,
+  models,
+  selectedModelId,
+  capabilityLabels,
+  onSelect,
+}: ModelSectionProps) {
+  return (
+    <section className="space-y-1.5">
+      {title ? (
+        <div className="px-2 pt-1">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-foreground-secondary">
+            {title}
+          </div>
+          {description ? (
+            <div className="mt-1 text-xs leading-5 text-foreground-secondary">
+              {description}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+      <div className="space-y-1">
+        {models.map((opt) => {
+          const catalog = getCatalogModel(opt.id)
+          if (!catalog) return null
+          return (
+            <ModelRow
+              key={opt.id}
+              model={catalog}
+              displayName={opt.name}
+              isSelected={selectedModelId === opt.id}
+              locked={opt.locked}
+              minimumPlanId={opt.minimumPlanId}
+              onSelect={onSelect}
+              capabilityLabels={capabilityLabels}
+              style={{
+                contentVisibility: 'auto',
+                containIntrinsicSize: '0 60px',
+              }}
+            />
+          )
+        })}
+      </div>
+    </section>
+  )
+}
 
 interface ProviderButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   isActive: boolean

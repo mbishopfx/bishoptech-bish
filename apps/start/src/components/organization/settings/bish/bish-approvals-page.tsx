@@ -1,11 +1,13 @@
 'use client'
 
-import { useMemo, useState } from 'react'
-import { CalendarCheck, Mail, Shield, ShieldAlert } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { CalendarCheck, Mail, RadioTower, Shield, ShieldAlert } from 'lucide-react'
 import { Badge } from '@bish/ui/badge'
 import { Button } from '@bish/ui/button'
 import { DataTable } from '@bish/ui/data-table'
 import type { DataTableColumnDef } from '@bish/ui/data-table'
+import { Input } from '@bish/ui/input'
+import { Textarea } from '@bish/ui/textarea'
 import { toast } from 'sonner'
 import { BishMetricGrid } from '@/components/bish/bish-metric-grid'
 import {
@@ -13,7 +15,9 @@ import {
   BishSectionCard,
 } from '@/components/bish/bish-page-shell'
 import {
+  createBishLocalListenerSecret,
   createBishApprovalRequest,
+  saveBishLocalListenerConfig,
   resolveBishApprovalRequest,
 } from '@/lib/frontend/bish/bish.functions'
 import type {
@@ -43,8 +47,35 @@ export function BishApprovalsPage({
 }) {
   const [snapshot, setSnapshot] = useState(initialSnapshot)
   const [pendingId, setPendingId] = useState<string | null>(null)
+  const [listenerSecret, setListenerSecret] = useState<string | null>(null)
+  const [installOrigin, setInstallOrigin] = useState('https://your-bish-domain.com')
+  const listenerWorkspaceDir = '/absolute/path/to/local/workspace'
+  const primaryListener = snapshot.listeners[0]
+  const [listenerLabel, setListenerLabel] = useState(
+    primaryListener?.label ?? 'Primary Listener',
+  )
+  const [listenerPrompt, setListenerPrompt] = useState(
+    primaryListener?.systemPromptTemplate
+    ?? 'You are continuing a BISH handoff on the local machine. Use the markdown handoff file as the source of truth, work directly in the local repository, and summarize what you changed before you stop.',
+  )
+  const [defaultTarget, setDefaultTarget] = useState<'gemini' | 'codex'>(
+    primaryListener?.defaultTarget === 'codex' ? 'codex' : 'gemini',
+  )
   const firstAgent = snapshot.agents[0]
   const firstConnector = snapshot.connectors[0]
+
+  useEffect(() => {
+    setListenerLabel(primaryListener?.label ?? 'Primary Listener')
+    setListenerPrompt(
+      primaryListener?.systemPromptTemplate
+      ?? 'You are continuing a BISH handoff on the local machine. Use the markdown handoff file as the source of truth, work directly in the local repository, and summarize what you changed before you stop.',
+    )
+    setDefaultTarget(primaryListener?.defaultTarget === 'codex' ? 'codex' : 'gemini')
+  }, [primaryListener?.defaultTarget, primaryListener?.label, primaryListener?.systemPromptTemplate])
+
+  useEffect(() => {
+    setInstallOrigin(window.location.origin)
+  }, [])
 
   const columns = useMemo<Array<DataTableColumnDef<BishApprovalRequestSummary>>>(
     () => [
@@ -201,6 +232,158 @@ export function BishApprovalsPage({
       />
 
       <BishSectionCard
+        title="Local listener"
+        description="Register a customer-local daemon that can accept signed handoffs, launch Gemini or Codex on their machine, and loop selected repo artifacts back into BISH knowledge."
+        action={
+          <Badge
+            variant="outline"
+            className="border-border-base bg-surface-base text-foreground-secondary"
+          >
+            <RadioTower className="mr-2 size-3.5" aria-hidden />
+            {primaryListener?.status ?? 'awaiting registration'}
+          </Badge>
+        }
+      >
+        <div className="grid gap-6 lg:grid-cols-[1.3fr_0.7fr]">
+          <div className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <p className="text-xs font-medium uppercase tracking-[0.16em] text-foreground-tertiary">
+                  Listener label
+                </p>
+                <Input
+                  value={listenerLabel}
+                  onChange={(event) => setListenerLabel(event.target.value)}
+                  placeholder="Primary Listener"
+                />
+              </div>
+              <div className="space-y-2">
+                <p className="text-xs font-medium uppercase tracking-[0.16em] text-foreground-tertiary">
+                  Default target
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant={defaultTarget === 'gemini' ? 'default' : 'ghost'}
+                    onClick={() => setDefaultTarget('gemini')}
+                  >
+                    Gemini
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={defaultTarget === 'codex' ? 'default' : 'ghost'}
+                    onClick={() => setDefaultTarget('codex')}
+                  >
+                    Codex
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-xs font-medium uppercase tracking-[0.16em] text-foreground-tertiary">
+                System build prompt
+              </p>
+              <Textarea
+                value={listenerPrompt}
+                onChange={(event) => setListenerPrompt(event.target.value)}
+                rows={6}
+              />
+            </div>
+
+            <div className="flex flex-wrap gap-3">
+              <Button
+                type="button"
+                onClick={async () => {
+                  try {
+                    const result = await createBishLocalListenerSecret({
+                      data: { label: listenerLabel },
+                    })
+                    setSnapshot(result.snapshot)
+                    setListenerSecret(result.secret)
+                    toast.success('Listener secret rotated.')
+                  } catch (error) {
+                    toast.error(
+                      error instanceof Error
+                        ? error.message
+                        : 'Failed to rotate listener secret.',
+                    )
+                  }
+                }}
+              >
+                Rotate Listener Secret
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={async () => {
+                  try {
+                    const nextSnapshot = await saveBishLocalListenerConfig({
+                      data: {
+                        label: listenerLabel,
+                        systemPromptTemplate: listenerPrompt,
+                        defaultTarget,
+                      },
+                    })
+                    setSnapshot(nextSnapshot)
+                    toast.success('Listener configuration saved.')
+                  } catch (error) {
+                    toast.error(
+                      error instanceof Error
+                        ? error.message
+                        : 'Failed to save listener configuration.',
+                    )
+                  }
+                }}
+              >
+                Save Listener Settings
+              </Button>
+            </div>
+
+            {listenerSecret ? (
+              <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/8 p-4 text-sm text-emerald-900">
+                <p className="font-medium">Listener secret</p>
+                <p className="mt-2 break-all font-mono text-xs">{listenerSecret}</p>
+                <p className="mt-2 text-xs text-emerald-800">
+                  Copy this into the local listener install command now. BISH only shows the raw secret immediately after rotation.
+                </p>
+              </div>
+            ) : null}
+          </div>
+
+          <div className="space-y-4 rounded-2xl border border-border-base bg-surface-base p-4">
+            <div className="space-y-1">
+              <p className="text-xs font-medium uppercase tracking-[0.16em] text-foreground-tertiary">
+                Install outline
+              </p>
+              <p className="text-sm text-foreground-secondary">
+                Run the local listener with your tunnel URL and the rotated secret, then let it register back to BISH.
+              </p>
+            </div>
+            <pre className="overflow-x-auto rounded-xl border border-border-base bg-background px-3 py-3 text-xs text-foreground-primary">
+{`BISH_BASE_URL=${installOrigin}
+BISH_LISTENER_SECRET=<paste-secret>
+BISH_TUNNEL_URL=https://your-listener.ngrok.app/handoff
+BISH_LISTENER_WORKSPACE_DIR=${listenerWorkspaceDir}
+BISH_LISTENER_RUNTIME_MODE=visible
+BISH_LISTENER_DEFAULT_TARGET=${defaultTarget}
+bun run packages/local-listener/src/index.ts`}
+            </pre>
+            <div className="space-y-2 text-sm text-foreground-secondary">
+              <p>Endpoint: {primaryListener?.endpointUrl ?? 'Not registered yet'}</p>
+              <p>Platform: {primaryListener?.platform ?? 'Unknown'}</p>
+              <p>
+                Last seen:{' '}
+                {primaryListener?.lastSeenAt
+                  ? new Date(primaryListener.lastSeenAt).toLocaleString()
+                  : 'Never'}
+              </p>
+            </div>
+          </div>
+        </div>
+      </BishSectionCard>
+
+      <BishSectionCard
         title="Approval drills"
         description="Use these seeded requests to test how the approval lane behaves before live connector writes are enabled for a client."
         action={
@@ -285,6 +468,51 @@ export function BishApprovalsPage({
             noResults: 'No BISH approvals yet.',
           }}
         />
+      </BishSectionCard>
+
+      <BishSectionCard
+        title="Recent handoffs"
+        description="Every local-machine dispatch is auditable so operators can see whether the listener received it, failed it, or pushed artifacts back into BISH knowledge."
+      >
+        <div className="space-y-3">
+          {snapshot.handoffs.length === 0 ? (
+            <p className="text-sm text-foreground-tertiary">
+              No local handoffs yet. Open a chat thread and use the Gemini or Codex handoff actions in the chat shell.
+            </p>
+          ) : (
+            snapshot.handoffs.map((handoff) => (
+              <div
+                key={handoff.id}
+                className="flex flex-col gap-2 rounded-2xl border border-border-base bg-surface-base px-4 py-3 md:flex-row md:items-center md:justify-between"
+              >
+                <div className="space-y-1">
+                  <p className="font-medium text-foreground-strong">{handoff.title}</p>
+                  <p className="text-xs text-foreground-tertiary">
+                    {handoff.target} · created {new Date(handoff.createdAt).toLocaleString()}
+                    {handoff.threadId ? ` · thread ${handoff.threadId}` : ''}
+                  </p>
+                  {handoff.errorMessage ? (
+                    <p className="text-xs text-foreground-error">{handoff.errorMessage}</p>
+                  ) : null}
+                </div>
+                <Badge
+                  variant="outline"
+                  className={
+                    handoff.status === 'completed'
+                      ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700'
+                      : handoff.status === 'failed'
+                        ? 'border-rose-500/30 bg-rose-500/10 text-rose-700'
+                        : handoff.status === 'delivered'
+                          ? 'border-sky-500/30 bg-sky-500/10 text-sky-700'
+                          : 'border-amber-500/30 bg-amber-500/10 text-amber-700'
+                  }
+                >
+                  {handoff.status}
+                </Badge>
+              </div>
+            ))
+          )}
+        </div>
       </BishSectionCard>
     </BishPageShell>
   )

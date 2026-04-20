@@ -1,5 +1,10 @@
 import { getRequestHeaders } from '@tanstack/react-start/server'
 import { getSessionFromHeaders } from '@/lib/backend/auth/services/server-session.service'
+import {
+  createOrRotateLocalListenerSecret,
+  dispatchThreadToLocalListener,
+  saveLocalListenerConfiguration,
+} from '@/lib/backend/bish/local-listener'
 import { isBishOperatorEmail } from '@/lib/backend/bish/operator-access'
 import {
   createApprovalRequestForOrganization,
@@ -17,8 +22,11 @@ import type {
   CreateApprovalRequestInput,
   CreateCandidateVariantInput,
   CreateConnectorAccountInput,
+  CreateLocalListenerSecretInput,
+  DispatchThreadHandoffInput,
   PromoteCandidateVariantInput,
   ResolveApprovalRequestInput,
+  SaveLocalListenerConfigInput,
   ScheduleConnectorSyncInput,
 } from '@/lib/shared/bish'
 
@@ -115,4 +123,43 @@ export async function promoteBishCandidateVariantAction(
 export async function getBishOperatorSnapshotAction(): Promise<BishOperatorDashboardSnapshot> {
   await requireBishOperatorSession()
   return getOperatorControlPlaneSnapshot()
+}
+
+export async function createBishLocalListenerSecretAction(
+  input: CreateLocalListenerSecretInput,
+) {
+  const session = await requireBishOrgSession()
+  const result = await createOrRotateLocalListenerSecret({
+    organizationId: session.organizationId,
+    data: input,
+  })
+
+  return {
+    snapshot: await getOrganizationControlPlaneSnapshot(session.organizationId),
+    secret: result.secret,
+    listenerId: result.listenerId,
+  }
+}
+
+export async function saveBishLocalListenerConfigAction(
+  input: SaveLocalListenerConfigInput,
+) {
+  const session = await requireBishOrgSession()
+  await saveLocalListenerConfiguration({
+    organizationId: session.organizationId,
+    data: input,
+  })
+  return getOrganizationControlPlaneSnapshot(session.organizationId)
+}
+
+export async function dispatchBishThreadHandoffAction(
+  input: DispatchThreadHandoffInput,
+) {
+  const session = await requireBishOrgSession()
+  await dispatchThreadToLocalListener({
+    organizationId: session.organizationId,
+    requestedByUserId: session.userId,
+    data: input,
+  })
+  return getOrganizationControlPlaneSnapshot(session.organizationId)
 }

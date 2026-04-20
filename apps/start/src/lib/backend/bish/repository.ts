@@ -1,5 +1,9 @@
 import { requireZeroUpstreamPool } from '@/lib/backend/server-effect/infra/zero-upstream-pool'
 import {
+  listLocalListenersForOrganization,
+  listRecentLocalHandoffsForOrganization,
+} from '@/lib/backend/bish/local-listener'
+import {
   discoverConnectorSources,
   getConnectorProviderDefinition,
   listConnectorInstallReadiness,
@@ -863,7 +867,7 @@ export async function getOrganizationControlPlaneSnapshot(
   await ensureOrgBootstrap(organizationId)
   const pool = requireZeroUpstreamPool()
 
-  const [connectorsResult, jobsResult, approvalsResult, agentsResult, candidatesResult, statsResult] =
+  const [connectorsResult, jobsResult, approvalsResult, agentsResult, candidatesResult, statsResult, listeners, handoffs] =
     await Promise.all([
       pool.query<ConnectorRow>(
         `
@@ -1003,6 +1007,8 @@ export async function getOrganizationControlPlaneSnapshot(
         `,
         [organizationId],
       ),
+      listLocalListenersForOrganization(organizationId),
+      listRecentLocalHandoffsForOrganization(organizationId),
     ])
 
   const stats = statsResult.rows[0]
@@ -1082,6 +1088,8 @@ export async function getOrganizationControlPlaneSnapshot(
         updatedAt: row.updated_at,
       }),
     ),
+    listeners,
+    handoffs,
   }
 }
 

@@ -3,7 +3,10 @@ import { Effect } from 'effect'
 import {
   sqlJson,
 } from '@/lib/backend/server-effect/services/upstream-postgres.service'
-import { ORG_KNOWLEDGE_KIND } from '@/lib/shared/org-knowledge'
+import {
+  ORG_KNOWLEDGE_KIND,
+  type OrgKnowledgeSourceLane,
+} from '@/lib/shared/org-knowledge'
 
 export type AttachmentPersistenceRow = {
   readonly id: string
@@ -26,6 +29,10 @@ export type AttachmentPersistenceRow = {
   readonly accessScope?: 'user' | 'workspace' | 'org'
   readonly orgKnowledgeKind?: string
   readonly orgKnowledgeActive?: boolean
+  readonly orgKnowledgeSourceLane?: OrgKnowledgeSourceLane
+  readonly orgKnowledgeSourceLabel?: string
+  readonly orgKnowledgeSourceRef?: string
+  readonly orgKnowledgeMetadata?: Record<string, unknown>
   readonly accessGroupIds?: readonly string[]
   readonly vectorIndexedAt?: number
   readonly vectorError?: string
@@ -52,6 +59,10 @@ export type OrgKnowledgeAttachmentRecord = {
   readonly fileContent: string
   readonly orgKnowledgeKind?: string
   readonly orgKnowledgeActive?: boolean
+  readonly orgKnowledgeSourceLane?: OrgKnowledgeSourceLane
+  readonly orgKnowledgeSourceLabel?: string
+  readonly orgKnowledgeSourceRef?: string
+  readonly orgKnowledgeMetadata?: Record<string, unknown>
   readonly embeddingModel?: string
   readonly embeddingTokens?: number
   readonly embeddingDimensions?: number
@@ -96,6 +107,10 @@ export const insertAttachmentRecordEffect = Effect.fn(
           access_scope,
           org_knowledge_kind,
           org_knowledge_active,
+          org_knowledge_source_lane,
+          org_knowledge_source_label,
+          org_knowledge_source_ref,
+          org_knowledge_metadata,
           access_group_ids,
           vector_indexed_at,
           vector_error,
@@ -123,6 +138,10 @@ export const insertAttachmentRecordEffect = Effect.fn(
           ${input.accessScope ?? 'user'},
           ${input.orgKnowledgeKind ?? null},
           ${input.orgKnowledgeActive ?? false},
+          ${input.orgKnowledgeSourceLane ?? null},
+          ${input.orgKnowledgeSourceLabel ?? null},
+          ${input.orgKnowledgeSourceRef ?? null},
+          ${sqlJson(sql, input.orgKnowledgeMetadata ?? {})},
           ${sqlJson(sql, input.accessGroupIds ?? [])},
           ${input.vectorIndexedAt ?? null},
           ${input.vectorError ?? null},
@@ -183,6 +202,10 @@ export const getOrgKnowledgeAttachmentRecordEffect = Effect.fn(
                file_content as "fileContent",
                org_knowledge_kind as "orgKnowledgeKind",
                org_knowledge_active as "orgKnowledgeActive",
+               org_knowledge_source_lane as "orgKnowledgeSourceLane",
+               org_knowledge_source_label as "orgKnowledgeSourceLabel",
+               org_knowledge_source_ref as "orgKnowledgeSourceRef",
+               org_knowledge_metadata as "orgKnowledgeMetadata",
                embedding_model as "embeddingModel",
                embedding_tokens as "embeddingTokens",
                embedding_dimensions as "embeddingDimensions",

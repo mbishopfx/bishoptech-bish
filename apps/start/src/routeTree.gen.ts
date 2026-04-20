@@ -44,10 +44,14 @@ import { Route as ApiOrgBishEvolutionRouteRouteImport } from './routes/api/org/b
 import { Route as ApiOrgBishConnectorsRouteRouteImport } from './routes/api/org/bish/connectors/route'
 import { Route as ApiOrgBishApprovalsRouteRouteImport } from './routes/api/org/bish/approvals/route'
 import { Route as ApiOperatorBishOverviewRouteRouteImport } from './routes/api/operator/bish/overview/route'
+import { Route as ApiBishListenerRegisterRouteRouteImport } from './routes/api/bish/listener/register/route'
+import { Route as ApiBishListenerArtifactsRouteRouteImport } from './routes/api/bish/listener/artifacts/route'
 import { Route as appLayoutSettingsSecurityRouteRouteImport } from './routes/(app)/_layout/settings/security/route'
 import { Route as appLayoutOrganizationSettingsRouteRouteImport } from './routes/(app)/_layout/organization/settings/route'
 import { Route as appLayoutChatThreadIdRouteRouteImport } from './routes/(app)/_layout/chat/$threadId/route'
 import { Route as appLayoutOrganizationSettingsIndexRouteImport } from './routes/(app)/_layout/organization/settings/index'
+import { Route as ApiOrgKnowledgeGoogleStartRouteRouteImport } from './routes/api/org/knowledge/google/start/route'
+import { Route as ApiOrgKnowledgeGoogleCallbackRouteRouteImport } from './routes/api/org/knowledge/google/callback/route'
 import { Route as appLayoutOrganizationSettingsToolsRouteRouteImport } from './routes/(app)/_layout/organization/settings/tools/route'
 import { Route as appLayoutOrganizationSettingsSecurityRouteRouteImport } from './routes/(app)/_layout/organization/settings/security/route'
 import { Route as appLayoutOrganizationSettingsProviderPolicyRouteRouteImport } from './routes/(app)/_layout/organization/settings/provider-policy/route'
@@ -250,6 +254,18 @@ const ApiOperatorBishOverviewRouteRoute =
     path: '/api/operator/bish/overview',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiBishListenerRegisterRouteRoute =
+  ApiBishListenerRegisterRouteRouteImport.update({
+    id: '/api/bish/listener/register',
+    path: '/api/bish/listener/register',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiBishListenerArtifactsRouteRoute =
+  ApiBishListenerArtifactsRouteRouteImport.update({
+    id: '/api/bish/listener/artifacts',
+    path: '/api/bish/listener/artifacts',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const appLayoutSettingsSecurityRouteRoute =
   appLayoutSettingsSecurityRouteRouteImport.update({
     id: '/security',
@@ -273,6 +289,18 @@ const appLayoutOrganizationSettingsIndexRoute =
     id: '/',
     path: '/',
     getParentRoute: () => appLayoutOrganizationSettingsRouteRoute,
+  } as any)
+const ApiOrgKnowledgeGoogleStartRouteRoute =
+  ApiOrgKnowledgeGoogleStartRouteRouteImport.update({
+    id: '/api/org/knowledge/google/start',
+    path: '/api/org/knowledge/google/start',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiOrgKnowledgeGoogleCallbackRouteRoute =
+  ApiOrgKnowledgeGoogleCallbackRouteRouteImport.update({
+    id: '/api/org/knowledge/google/callback',
+    path: '/api/org/knowledge/google/callback',
+    getParentRoute: () => rootRouteImport,
   } as any)
 const appLayoutOrganizationSettingsToolsRouteRoute =
   appLayoutOrganizationSettingsToolsRouteRouteImport.update({
@@ -424,6 +452,8 @@ export interface FileRoutesByFullPath {
   '/chat/$threadId': typeof appLayoutChatThreadIdRouteRoute
   '/organization/settings': typeof appLayoutOrganizationSettingsRouteRouteWithChildren
   '/settings/security': typeof appLayoutSettingsSecurityRouteRoute
+  '/api/bish/listener/artifacts': typeof ApiBishListenerArtifactsRouteRoute
+  '/api/bish/listener/register': typeof ApiBishListenerRegisterRouteRoute
   '/api/operator/bish/overview': typeof ApiOperatorBishOverviewRouteRoute
   '/api/org/bish/approvals': typeof ApiOrgBishApprovalsRouteRoute
   '/api/org/bish/connectors': typeof ApiOrgBishConnectorsRouteRouteWithChildren
@@ -446,6 +476,8 @@ export interface FileRoutesByFullPath {
   '/organization/settings/provider-policy': typeof appLayoutOrganizationSettingsProviderPolicyRouteRoute
   '/organization/settings/security': typeof appLayoutOrganizationSettingsSecurityRouteRoute
   '/organization/settings/tools': typeof appLayoutOrganizationSettingsToolsRouteRoute
+  '/api/org/knowledge/google/callback': typeof ApiOrgKnowledgeGoogleCallbackRouteRoute
+  '/api/org/knowledge/google/start': typeof ApiOrgKnowledgeGoogleStartRouteRoute
   '/organization/settings/': typeof appLayoutOrganizationSettingsIndexRoute
   '/organization/settings/models/$providerId': typeof appLayoutOrganizationSettingsModelsProviderIdRouteRoute
   '/api/org/bish/connectors/asana/callback': typeof ApiOrgBishConnectorsAsanaCallbackRouteRoute
@@ -481,6 +513,8 @@ export interface FileRoutesByTo {
   '/': typeof appLayoutIndexRoute
   '/chat/$threadId': typeof appLayoutChatThreadIdRouteRoute
   '/settings/security': typeof appLayoutSettingsSecurityRouteRoute
+  '/api/bish/listener/artifacts': typeof ApiBishListenerArtifactsRouteRoute
+  '/api/bish/listener/register': typeof ApiBishListenerRegisterRouteRoute
   '/api/operator/bish/overview': typeof ApiOperatorBishOverviewRouteRoute
   '/api/org/bish/approvals': typeof ApiOrgBishApprovalsRouteRoute
   '/api/org/bish/connectors': typeof ApiOrgBishConnectorsRouteRouteWithChildren
@@ -502,6 +536,8 @@ export interface FileRoutesByTo {
   '/organization/settings/provider-policy': typeof appLayoutOrganizationSettingsProviderPolicyRouteRoute
   '/organization/settings/security': typeof appLayoutOrganizationSettingsSecurityRouteRoute
   '/organization/settings/tools': typeof appLayoutOrganizationSettingsToolsRouteRoute
+  '/api/org/knowledge/google/callback': typeof ApiOrgKnowledgeGoogleCallbackRouteRoute
+  '/api/org/knowledge/google/start': typeof ApiOrgKnowledgeGoogleStartRouteRoute
   '/organization/settings': typeof appLayoutOrganizationSettingsIndexRoute
   '/organization/settings/models/$providerId': typeof appLayoutOrganizationSettingsModelsProviderIdRouteRoute
   '/api/org/bish/connectors/asana/callback': typeof ApiOrgBishConnectorsAsanaCallbackRouteRoute
@@ -542,6 +578,8 @@ export interface FileRoutesById {
   '/(app)/_layout/chat/$threadId': typeof appLayoutChatThreadIdRouteRoute
   '/(app)/_layout/organization/settings': typeof appLayoutOrganizationSettingsRouteRouteWithChildren
   '/(app)/_layout/settings/security': typeof appLayoutSettingsSecurityRouteRoute
+  '/api/bish/listener/artifacts': typeof ApiBishListenerArtifactsRouteRoute
+  '/api/bish/listener/register': typeof ApiBishListenerRegisterRouteRoute
   '/api/operator/bish/overview': typeof ApiOperatorBishOverviewRouteRoute
   '/api/org/bish/approvals': typeof ApiOrgBishApprovalsRouteRoute
   '/api/org/bish/connectors': typeof ApiOrgBishConnectorsRouteRouteWithChildren
@@ -564,6 +602,8 @@ export interface FileRoutesById {
   '/(app)/_layout/organization/settings/provider-policy': typeof appLayoutOrganizationSettingsProviderPolicyRouteRoute
   '/(app)/_layout/organization/settings/security': typeof appLayoutOrganizationSettingsSecurityRouteRoute
   '/(app)/_layout/organization/settings/tools': typeof appLayoutOrganizationSettingsToolsRouteRoute
+  '/api/org/knowledge/google/callback': typeof ApiOrgKnowledgeGoogleCallbackRouteRoute
+  '/api/org/knowledge/google/start': typeof ApiOrgKnowledgeGoogleStartRouteRoute
   '/(app)/_layout/organization/settings/': typeof appLayoutOrganizationSettingsIndexRoute
   '/(app)/_layout/organization/settings/models/$providerId': typeof appLayoutOrganizationSettingsModelsProviderIdRouteRoute
   '/api/org/bish/connectors/asana/callback': typeof ApiOrgBishConnectorsAsanaCallbackRouteRoute
@@ -604,6 +644,8 @@ export interface FileRouteTypes {
     | '/chat/$threadId'
     | '/organization/settings'
     | '/settings/security'
+    | '/api/bish/listener/artifacts'
+    | '/api/bish/listener/register'
     | '/api/operator/bish/overview'
     | '/api/org/bish/approvals'
     | '/api/org/bish/connectors'
@@ -626,6 +668,8 @@ export interface FileRouteTypes {
     | '/organization/settings/provider-policy'
     | '/organization/settings/security'
     | '/organization/settings/tools'
+    | '/api/org/knowledge/google/callback'
+    | '/api/org/knowledge/google/start'
     | '/organization/settings/'
     | '/organization/settings/models/$providerId'
     | '/api/org/bish/connectors/asana/callback'
@@ -661,6 +705,8 @@ export interface FileRouteTypes {
     | '/'
     | '/chat/$threadId'
     | '/settings/security'
+    | '/api/bish/listener/artifacts'
+    | '/api/bish/listener/register'
     | '/api/operator/bish/overview'
     | '/api/org/bish/approvals'
     | '/api/org/bish/connectors'
@@ -682,6 +728,8 @@ export interface FileRouteTypes {
     | '/organization/settings/provider-policy'
     | '/organization/settings/security'
     | '/organization/settings/tools'
+    | '/api/org/knowledge/google/callback'
+    | '/api/org/knowledge/google/start'
     | '/organization/settings'
     | '/organization/settings/models/$providerId'
     | '/api/org/bish/connectors/asana/callback'
@@ -721,6 +769,8 @@ export interface FileRouteTypes {
     | '/(app)/_layout/chat/$threadId'
     | '/(app)/_layout/organization/settings'
     | '/(app)/_layout/settings/security'
+    | '/api/bish/listener/artifacts'
+    | '/api/bish/listener/register'
     | '/api/operator/bish/overview'
     | '/api/org/bish/approvals'
     | '/api/org/bish/connectors'
@@ -743,6 +793,8 @@ export interface FileRouteTypes {
     | '/(app)/_layout/organization/settings/provider-policy'
     | '/(app)/_layout/organization/settings/security'
     | '/(app)/_layout/organization/settings/tools'
+    | '/api/org/knowledge/google/callback'
+    | '/api/org/knowledge/google/start'
     | '/(app)/_layout/organization/settings/'
     | '/(app)/_layout/organization/settings/models/$providerId'
     | '/api/org/bish/connectors/asana/callback'
@@ -771,6 +823,8 @@ export interface RootRouteChildren {
   ApiZeroQueryRouteRoute: typeof ApiZeroQueryRouteRoute
   ApiZeroTokenRouteRoute: typeof ApiZeroTokenRouteRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiBishListenerArtifactsRouteRoute: typeof ApiBishListenerArtifactsRouteRoute
+  ApiBishListenerRegisterRouteRoute: typeof ApiBishListenerRegisterRouteRoute
   ApiOperatorBishOverviewRouteRoute: typeof ApiOperatorBishOverviewRouteRoute
   ApiOrgBishApprovalsRouteRoute: typeof ApiOrgBishApprovalsRouteRoute
   ApiOrgBishConnectorsRouteRoute: typeof ApiOrgBishConnectorsRouteRouteWithChildren
@@ -778,6 +832,8 @@ export interface RootRouteChildren {
   ApiOrgBishOverviewRouteRoute: typeof ApiOrgBishOverviewRouteRoute
   ApiOrgBishRunHistoryRouteRoute: typeof ApiOrgBishRunHistoryRouteRoute
   ApiOrgBishUploadsRouteRoute: typeof ApiOrgBishUploadsRouteRoute
+  ApiOrgKnowledgeGoogleCallbackRouteRoute: typeof ApiOrgKnowledgeGoogleCallbackRouteRoute
+  ApiOrgKnowledgeGoogleStartRouteRoute: typeof ApiOrgKnowledgeGoogleStartRouteRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1027,6 +1083,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiOperatorBishOverviewRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/bish/listener/register': {
+      id: '/api/bish/listener/register'
+      path: '/api/bish/listener/register'
+      fullPath: '/api/bish/listener/register'
+      preLoaderRoute: typeof ApiBishListenerRegisterRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/bish/listener/artifacts': {
+      id: '/api/bish/listener/artifacts'
+      path: '/api/bish/listener/artifacts'
+      fullPath: '/api/bish/listener/artifacts'
+      preLoaderRoute: typeof ApiBishListenerArtifactsRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/(app)/_layout/settings/security': {
       id: '/(app)/_layout/settings/security'
       path: '/security'
@@ -1054,6 +1124,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/organization/settings/'
       preLoaderRoute: typeof appLayoutOrganizationSettingsIndexRouteImport
       parentRoute: typeof appLayoutOrganizationSettingsRouteRoute
+    }
+    '/api/org/knowledge/google/start': {
+      id: '/api/org/knowledge/google/start'
+      path: '/api/org/knowledge/google/start'
+      fullPath: '/api/org/knowledge/google/start'
+      preLoaderRoute: typeof ApiOrgKnowledgeGoogleStartRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/org/knowledge/google/callback': {
+      id: '/api/org/knowledge/google/callback'
+      path: '/api/org/knowledge/google/callback'
+      fullPath: '/api/org/knowledge/google/callback'
+      preLoaderRoute: typeof ApiOrgKnowledgeGoogleCallbackRouteRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/(app)/_layout/organization/settings/tools': {
       id: '/(app)/_layout/organization/settings/tools'
@@ -1397,6 +1481,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiZeroQueryRouteRoute: ApiZeroQueryRouteRoute,
   ApiZeroTokenRouteRoute: ApiZeroTokenRouteRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiBishListenerArtifactsRouteRoute: ApiBishListenerArtifactsRouteRoute,
+  ApiBishListenerRegisterRouteRoute: ApiBishListenerRegisterRouteRoute,
   ApiOperatorBishOverviewRouteRoute: ApiOperatorBishOverviewRouteRoute,
   ApiOrgBishApprovalsRouteRoute: ApiOrgBishApprovalsRouteRoute,
   ApiOrgBishConnectorsRouteRoute: ApiOrgBishConnectorsRouteRouteWithChildren,
@@ -1404,6 +1490,9 @@ const rootRouteChildren: RootRouteChildren = {
   ApiOrgBishOverviewRouteRoute: ApiOrgBishOverviewRouteRoute,
   ApiOrgBishRunHistoryRouteRoute: ApiOrgBishRunHistoryRouteRoute,
   ApiOrgBishUploadsRouteRoute: ApiOrgBishUploadsRouteRoute,
+  ApiOrgKnowledgeGoogleCallbackRouteRoute:
+    ApiOrgKnowledgeGoogleCallbackRouteRoute,
+  ApiOrgKnowledgeGoogleStartRouteRoute: ApiOrgKnowledgeGoogleStartRouteRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

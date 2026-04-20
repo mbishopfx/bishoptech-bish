@@ -138,6 +138,17 @@
         "react": ">=18.0.0",
       },
     },
+    "packages/local-listener": {
+      "name": "@bish/local-listener",
+      "version": "0.0.1",
+      "dependencies": {
+        "@bish/automation": "workspace:*",
+      },
+      "devDependencies": {
+        "tsup": "^8.3.5",
+        "typescript": "^5.9.3",
+      },
+    },
     "packages/tailwind-config": {
       "name": "@bish/tailwind-config",
       "version": "0.0.1",
@@ -333,6 +344,8 @@
     "@bish/automation": ["@bish/automation@workspace:packages/automation"],
 
     "@bish/chat-scroll": ["@bish/chat-scroll@workspace:packages/chat-scroll"],
+
+    "@bish/local-listener": ["@bish/local-listener@workspace:packages/local-listener"],
 
     "@bish/tailwind-config": ["@bish/tailwind-config@workspace:packages/tailwind-config"],
 

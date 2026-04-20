@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { cn } from '@bish/utils'
 import { Badge } from '@bish/ui/badge'
 import { Button } from '@bish/ui/button'
@@ -16,8 +16,16 @@ import { MoreVertical, Upload } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { ContentPage } from '@/components/layout'
+import {
+  getGooglePickerFilesSnapshot,
+  ingestGooglePickerFileServer,
+} from '@/lib/frontend/org-knowledge/google-picker.functions'
 import { useOrgKnowledge } from '@/lib/frontend/org-knowledge/use-org-knowledge'
-import { ORG_KNOWLEDGE_UPLOAD_ACCEPT } from '@/lib/shared/org-knowledge'
+import {
+  getOrgKnowledgeSourceLaneLabel,
+  ORG_KNOWLEDGE_UPLOAD_ACCEPT,
+} from '@/lib/shared/org-knowledge'
+import type { GooglePickerFilesSnapshot } from '@/lib/shared/google-picker'
 import type { OrgKnowledgeListItem } from '@/lib/shared/org-knowledge'
 import { m } from '@/paraglide/messages.js'
 import {
@@ -55,6 +63,19 @@ function getIndexBadgeClassName(item: OrgKnowledgeListItem): string {
     return 'border-sky-500/50 bg-sky-500/15 text-sky-700 dark:text-sky-400'
   }
   return 'border-amber-500/50 bg-amber-500/15 text-amber-700 dark:text-amber-400'
+}
+
+function getSourceBadgeClassName(lane?: OrgKnowledgeListItem['orgKnowledgeSourceLane']) {
+  if (lane === 'google_picker') {
+    return 'border-sky-500/50 bg-sky-500/10 text-sky-700'
+  }
+  if (lane === 'google_workspace_connector') {
+    return 'border-violet-500/40 bg-violet-500/10 text-violet-700'
+  }
+  if (lane === 'local_listener_artifact') {
+    return 'border-fuchsia-500/40 bg-fuchsia-500/10 text-fuchsia-700'
+  }
+  return 'border-border-base bg-surface-base text-foreground-secondary'
 }
 
 type OrgKnowledgeRowActionsProps = {
@@ -116,6 +137,10 @@ function OrgKnowledgeRowActions({
  */
 export function OrgKnowledgePage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const [googleSnapshot, setGoogleSnapshot] = useState<GooglePickerFilesSnapshot | null>(null)
+  const [googleLoading, setGoogleLoading] = useState(true)
+  const [pendingGoogleFileId, setPendingGoogleFileId] = useState<string | null>(null)
+  const [appOrigin, setAppOrigin] = useState('https://your-bish-domain.com')
   const {
     items,
     loading,
@@ -126,6 +151,49 @@ export function OrgKnowledgePage() {
     remove,
     retryIndex,
   } = useOrgKnowledge()
+
+  const loadGooglePicker = async () => {
+    try {
+      setGoogleLoading(true)
+      const snapshot = await getGooglePickerFilesSnapshot()
+      setGoogleSnapshot(snapshot)
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : 'Failed to load Google Drive files.',
+      )
+    } finally {
+      setGoogleLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    void loadGooglePicker()
+  }, [])
+
+  useEffect(() => {
+    setAppOrigin(window.location.origin)
+  }, [])
+
+  useEffect(() => {
+    const url = new URL(window.location.href)
+    const googlePicker = url.searchParams.get('googlePicker')
+    if (!googlePicker) {
+      return
+    }
+
+    if (googlePicker === 'success') {
+      toast.success('Google Drive connected for file selection.')
+      void loadGooglePicker()
+    } else {
+      toast.error(url.searchParams.get('message') ?? 'Google Drive connection failed.')
+    }
+
+    url.searchParams.delete('googlePicker')
+    url.searchParams.delete('message')
+    window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`)
+  }, [])
 
   /**
    * Reuses the shared upload validation policy before invoking the server
@@ -201,6 +269,15 @@ export function OrgKnowledgePage() {
                     ? m.common_indexed()
                     : m.org_knowledge_index_status_pending()}
               </Badge>
+              <Badge
+                variant="outline"
+                className={cn(
+                  'rounded-full px-2 py-0.5',
+                  getSourceBadgeClassName(item.orgKnowledgeSourceLane),
+                )}
+              >
+                {getOrgKnowledgeSourceLaneLabel(item.orgKnowledgeSourceLane)}
+              </Badge>
             </div>
           )
         },
@@ -253,6 +330,198 @@ export function OrgKnowledgePage() {
       description={m.org_knowledge_page_description()}
     >
       <div className="space-y-4">
+        <div className="rounded-3xl border border-border-base bg-surface-elevated p-5 shadow-sm">
+          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            <div className="space-y-2">
+              <p className="text-xs font-medium uppercase tracking-[0.16em] text-foreground-tertiary">
+                Google Drive Picker
+              </p>
+              <h2 className="text-lg font-semibold text-foreground-primary">
+                Select Google docs to ingest into BISH RAG
+              </h2>
+              <p className="max-w-2xl text-sm text-foreground-secondary">
+                This is the user-selected lane. It keeps Google Workspace sync separate from explicit
+                Drive picks, then pushes chosen files through the same org knowledge retrieval path as
+                manual uploads.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    'rounded-full px-3 py-1',
+                    googleSnapshot?.connection.status === 'connected'
+                      ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700'
+                      : googleSnapshot?.connection.status === 'config_required'
+                        ? 'border-amber-500/40 bg-amber-500/10 text-amber-700'
+                        : 'border-border-base bg-surface-base text-foreground-secondary',
+                  )}
+                >
+                  {googleSnapshot?.connection.connected
+                    ? `Connected${googleSnapshot.connection.email ? ` as ${googleSnapshot.connection.email}` : ''}`
+                    : googleSnapshot?.connection.status === 'config_required'
+                      ? 'Missing Google picker env'
+                      : 'Not connected'}
+                </Badge>
+                {googleSnapshot?.connection.missingEnv.map((name) => (
+                  <Badge
+                    key={name}
+                    variant="outline"
+                    className="border-border-base font-mono text-[11px] text-foreground-secondary"
+                  >
+                    {name}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                disabled={googleLoading}
+                onClick={() => {
+                  void loadGooglePicker()
+                }}
+              >
+                Refresh Drive Files
+              </Button>
+              <Button
+                type="button"
+                disabled={googleSnapshot?.connection.status === 'config_required'}
+                onClick={() => {
+                  window.location.href = '/api/org/knowledge/google/start?returnTo=/organization/settings/knowledge'
+                }}
+              >
+                {googleSnapshot?.connection.connected
+                  ? 'Reconnect Google Drive'
+                  : 'Connect Google Drive'}
+              </Button>
+            </div>
+          </div>
+
+          <div className="mt-5 grid gap-3 md:grid-cols-2">
+            {(googleSnapshot?.files ?? []).slice(0, 8).map((file) => (
+              <div
+                key={file.id}
+                className="rounded-2xl border border-border-base bg-surface-base p-4"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="space-y-1">
+                    <p className="font-medium text-foreground-primary">{file.name}</p>
+                    <p className="text-xs text-foreground-tertiary">
+                      {file.mimeType}
+                      {file.modifiedTime
+                        ? ` · updated ${new Date(file.modifiedTime).toLocaleString()}`
+                        : ''}
+                    </p>
+                    {file.ownerEmail ? (
+                      <p className="text-xs text-foreground-tertiary">
+                        Owner: {file.ownerEmail}
+                      </p>
+                    ) : null}
+                  </div>
+                  {file.ingestStatus ? (
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        'rounded-full px-2 py-0.5',
+                        file.ingestStatus === 'indexed'
+                          ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700'
+                          : file.ingestStatus === 'failed'
+                            ? 'border-rose-500/40 bg-rose-500/10 text-rose-700'
+                            : file.ingestStatus === 'skipped'
+                              ? 'border-slate-500/30 bg-slate-500/10 text-slate-700'
+                              : 'border-amber-500/40 bg-amber-500/10 text-amber-700',
+                      )}
+                    >
+                      {file.ingestStatus}
+                    </Badge>
+                  ) : null}
+                </div>
+
+                <div className="mt-4 flex items-center justify-between gap-3">
+                  {file.webViewLink ? (
+                    <a
+                      href={file.webViewLink}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-sm text-foreground-secondary underline decoration-border-base underline-offset-4"
+                    >
+                      Open in Google
+                    </a>
+                  ) : <span />}
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={pendingGoogleFileId === file.id}
+                    onClick={async () => {
+                      try {
+                        setPendingGoogleFileId(file.id)
+                        const nextSnapshot = await ingestGooglePickerFileServer({
+                          data: { fileId: file.id },
+                        })
+                        setGoogleSnapshot(nextSnapshot)
+                        toast.success(`${file.name} added to org knowledge.`)
+                      } catch (error) {
+                        toast.error(
+                          error instanceof Error
+                            ? error.message
+                            : 'Failed to ingest Google Drive file.',
+                        )
+                      } finally {
+                        setPendingGoogleFileId(null)
+                      }
+                    }}
+                  >
+                    Ingest Into RAG
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {googleSnapshot?.connection.status === 'config_required' ? (
+            <div className="mt-5 rounded-2xl border border-amber-500/20 bg-amber-500/8 p-4">
+              <p className="text-sm font-medium text-amber-900">
+                Google Picker needs a Google OAuth web application credential.
+              </p>
+              <p className="mt-2 text-sm text-amber-900/90">
+                Create a Google Cloud OAuth client for a web application, then add the client ID,
+                client secret, and redirect URI to BISH. Use this exact redirect URI in Google Cloud:
+              </p>
+              <pre className="mt-3 overflow-x-auto rounded-xl border border-amber-500/20 bg-background px-3 py-3 text-xs text-foreground-primary">
+{`${appOrigin}/api/org/knowledge/google/callback`}
+              </pre>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Badge
+                  variant="outline"
+                  className="border-border-base font-mono text-[11px] text-foreground-secondary"
+                >
+                  GOOGLE_PICKER_CLIENT_ID
+                </Badge>
+                <Badge
+                  variant="outline"
+                  className="border-border-base font-mono text-[11px] text-foreground-secondary"
+                >
+                  GOOGLE_PICKER_CLIENT_SECRET
+                </Badge>
+                <Badge
+                  variant="outline"
+                  className="border-border-base font-mono text-[11px] text-foreground-secondary"
+                >
+                  GOOGLE_PICKER_REDIRECT_URI
+                </Badge>
+              </div>
+            </div>
+          ) : null}
+
+          {!googleLoading && (googleSnapshot?.files.length ?? 0) === 0 ? (
+            <p className="mt-4 text-sm text-foreground-tertiary">
+              No supported Google Drive files are available yet. Connect Google Drive, then refresh this panel.
+            </p>
+          ) : null}
+        </div>
+
         <input
           ref={fileInputRef}
           type="file"

@@ -1,6 +1,10 @@
 import { randomUUID } from 'node:crypto'
 import { requireZeroUpstreamPool } from '@/lib/backend/server-effect/infra/zero-upstream-pool'
-import { decryptBishSecretJson, encryptBishSecretJson } from './connector-secrets'
+import {
+  decryptBishSecretJson,
+  encryptBishSecretJson,
+  encryptBishSecretValue,
+} from './connector-secrets'
 
 type StoredConnectorMetadata = Record<string, unknown> & {
   oauthPending?: {
@@ -162,7 +166,7 @@ function decodeState(state: string): OAuthStatePayload {
 }
 
 function getMetadata(record: ConnectorAccountRecord): StoredConnectorMetadata {
-  return (record.metadata ?? {}) as StoredConnectorMetadata
+  return record.metadata ?? {}
 }
 
 async function readConnectorAccountById(accountId: string) {
@@ -193,9 +197,19 @@ async function updateConnectorAuthState(input: {
   readonly externalAccountId?: string | null
   readonly metadata: StoredConnectorMetadata
   readonly grantedInternalScopes: readonly string[]
+  readonly credentials?: OAuthCredentialBundle | null
 }) {
   const pool = requireZeroUpstreamPool()
   const timestamp = Date.now()
+
+  const encryptedAccessToken = input.credentials
+    ? JSON.stringify(encryptBishSecretValue(input.credentials.accessToken))
+    : null
+  const encryptedRefreshToken =
+    input.credentials?.refreshToken
+      ? JSON.stringify(encryptBishSecretValue(input.credentials.refreshToken))
+      : null
+  const tokenExpiresAt = input.credentials?.expiresAt ?? null
 
   await pool.query(
     `
@@ -204,8 +218,11 @@ async function updateConnectorAuthState(input: {
           external_account_id = $2,
           scope_status = $3::jsonb,
           metadata = $4::jsonb,
-          updated_at = $5
-      WHERE id = $6
+          encrypted_access_token = COALESCE($5, encrypted_access_token),
+          encrypted_refresh_token = COALESCE($6, encrypted_refresh_token),
+          token_expires_at = COALESCE($7, token_expires_at),
+          updated_at = $8
+      WHERE id = $9
     `,
     [
       input.status,
@@ -216,6 +233,9 @@ async function updateConnectorAuthState(input: {
         grantedScopes: input.grantedInternalScopes,
       }),
       JSON.stringify(input.metadata),
+      encryptedAccessToken,
+      encryptedRefreshToken,
+      tokenExpiresAt,
       timestamp,
       input.connectorAccountId,
     ],
@@ -369,27 +389,28 @@ export async function beginConnectorAuthFlow(input: {
     }
 
     const metadata = getMetadata(account)
-    await updateConnectorAuthState({
-      connectorAccountId: account.id,
-      status: 'connected',
-      externalAccountId: adminEmail,
-      grantedInternalScopes: [
-        'gmail.read',
-        'drive.read',
-        'calendar.read',
-        'sheets.read',
-        'docs.read',
-      ],
-      metadata: {
-        ...metadata,
-        oauthPending: null,
-        activation: {
-          provider: 'google_workspace',
-          activatedAt: Date.now(),
-          adminEmail,
-        },
+  await updateConnectorAuthState({
+    connectorAccountId: account.id,
+    status: 'connected',
+    externalAccountId: adminEmail,
+    grantedInternalScopes: [
+      'gmail.read',
+      'drive.read',
+      'calendar.read',
+      'sheets.read',
+      'docs.read',
+    ],
+    metadata: {
+      ...metadata,
+      oauthPending: null,
+      activation: {
+        provider: 'google_workspace',
+        activatedAt: Date.now(),
+        adminEmail,
       },
-    })
+    },
+    credentials: null,
+  })
 
     return {
       mode: 'activated' as const,
@@ -527,6 +548,7 @@ export async function completeConnectorOAuthCallback(input: {
         credentials: encryptBishSecretJson(credentialBundle),
       },
     },
+    credentials: credentialBundle,
   })
 
   return buildCallbackRedirect(input.requestUrl, {
@@ -582,4 +604,3 @@ export async function getStoredConnectorOAuthCredentials(input: {
 export function getConnectorProviderDisplayLabel(provider: keyof typeof PROVIDER_ROUTE_LABELS) {
   return PROVIDER_ROUTE_LABELS[provider]
 }
-

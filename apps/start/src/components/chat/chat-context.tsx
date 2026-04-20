@@ -25,6 +25,7 @@ import {
   DEFAULT_CONTEXT_WINDOW_MODE,
   resolveContextWindowForMode,
   resolveModelContextWindow,
+  sortModelsForBishSelector,
 } from '@/lib/shared/ai-catalog'
 import {
   coerceWorkspacePlanId,
@@ -770,7 +771,7 @@ export function ChatProvider({
     [accessContext.planId],
   )
   const visibleModels = useMemo<readonly ChatModelOption[]>(() => {
-    return AI_CATALOG.filter((model) => {
+    const availableModels = AI_CATALOG.filter((model) => {
       const policyAvailability = evaluateModelAvailability({
         model,
         policy: orgPolicy,
@@ -801,6 +802,8 @@ export function ChatProvider({
         minimumPlanId: modelAccess.minimumPlanId,
       }
     })
+
+    return sortModelsForBishSelector(availableModels)
   }, [accessContext, orgPolicy])
   const selectableModels = useMemo<readonly ChatModelOption[]>(() => {
     return visibleModels.filter((model) => {

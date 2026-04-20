@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { queries } from '@/integrations/zero'
 import type { OrgKnowledgeListItem } from '@/lib/shared/org-knowledge'
 import {
+  ORG_KNOWLEDGE_SOURCE_LANES,
   summarizeOrgKnowledgeIndexError,
 } from '@/lib/shared/org-knowledge'
 import {
@@ -23,6 +24,12 @@ function toOrgKnowledgeStatus(value: unknown): OrgKnowledgeListItem['status'] {
   return value === 'deleted' || value === 'uploaded' ? value : undefined
 }
 
+function toOrgKnowledgeSourceLane(
+  value: unknown,
+): OrgKnowledgeListItem['orgKnowledgeSourceLane'] {
+  return ORG_KNOWLEDGE_SOURCE_LANES.find((lane) => lane === value)
+}
+
 function normalizeItems(rows: readonly unknown[]): readonly OrgKnowledgeListItem[] {
   return rows
     .filter((row): row is Record<string, unknown> => !!row && typeof row === 'object')
@@ -36,6 +43,21 @@ function normalizeItems(rows: readonly unknown[]): readonly OrgKnowledgeListItem
         typeof row.orgKnowledgeActive === 'boolean'
           ? row.orgKnowledgeActive
           : false,
+      orgKnowledgeSourceLane: toOrgKnowledgeSourceLane(row.orgKnowledgeSourceLane),
+      orgKnowledgeSourceLabel:
+        typeof row.orgKnowledgeSourceLabel === 'string'
+          ? row.orgKnowledgeSourceLabel
+          : undefined,
+      orgKnowledgeSourceRef:
+        typeof row.orgKnowledgeSourceRef === 'string'
+          ? row.orgKnowledgeSourceRef
+          : undefined,
+      orgKnowledgeMetadata:
+        row.orgKnowledgeMetadata &&
+        typeof row.orgKnowledgeMetadata === 'object' &&
+        !Array.isArray(row.orgKnowledgeMetadata)
+          ? (row.orgKnowledgeMetadata as Record<string, unknown>)
+          : undefined,
       vectorIndexedAt:
         typeof row.vectorIndexedAt === 'number' ? row.vectorIndexedAt : undefined,
       vectorError:

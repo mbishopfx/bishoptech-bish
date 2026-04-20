@@ -331,6 +331,12 @@ const attachment = table('attachment')
       .optional(),
     orgKnowledgeKind: string().from('org_knowledge_kind').optional(),
     orgKnowledgeActive: boolean().from('org_knowledge_active').optional(),
+    orgKnowledgeSourceLane: string().from('org_knowledge_source_lane').optional(),
+    orgKnowledgeSourceLabel: string().from('org_knowledge_source_label').optional(),
+    orgKnowledgeSourceRef: string().from('org_knowledge_source_ref').optional(),
+    orgKnowledgeMetadata: json<Record<string, unknown>>()
+      .from('org_knowledge_metadata')
+      .optional(),
     accessGroupIds: json<readonly string[]>().from('access_group_ids').optional(),
     vectorIndexedAt: number().from('vector_indexed_at').optional(),
     vectorError: string().from('vector_error').optional(),

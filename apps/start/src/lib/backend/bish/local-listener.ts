@@ -1,0 +1,692 @@
+import { createHash } from 'node:crypto'
+import {
+  buildLocalListenerSignature,
+  type LocalListenerArtifactPayload,
+  type LocalListenerHandoffPayload,
+  type LocalListenerRegistrationPayload,
+  type LocalListenerTarget,
+} from '@bish/automation/handoff'
+import { Effect } from 'effect'
+import { OrgKnowledgeRuntime } from '@/lib/backend/org-knowledge/runtime/org-knowledge-runtime'
+import { OrgKnowledgeAdminService } from '@/lib/backend/org-knowledge/services/org-knowledge-admin.service'
+import { requireZeroUpstreamPool } from '@/lib/backend/server-effect/infra/zero-upstream-pool'
+import type {
+  CreateLocalListenerSecretInput,
+  DispatchThreadHandoffInput,
+  LocalHandoffSummary,
+  LocalListenerSummary,
+  RegisterLocalListenerInput,
+  ReportLocalListenerArtifactsInput,
+  SaveLocalListenerConfigInput,
+} from '@/lib/shared/local-listener'
+import {
+  decryptBishSecretJson,
+  encryptBishSecretJson,
+} from './connector-secrets'
+
+type ListenerRow = {
+  id: string
+  organization_id: string
+  label: string
+  status: string
+  endpoint_url: string | null
+  platform: string | null
+  runtime_mode: string | null
+  supported_targets: readonly string[] | null
+  default_target: string | null
+  system_prompt_template: string | null
+  encrypted_listener_secret: ReturnType<typeof encryptBishSecretJson<string>>
+  listener_secret_hash: string
+  last_seen_at: number | null
+}
+
+type HandoffRow = {
+  id: string
+  thread_id: string | null
+  title: string
+  target: string
+  status: string
+  created_at: number
+  delivered_at: number | null
+  completed_at: number | null
+  error_message: string | null
+}
+
+function hashListenerSecret(secret: string) {
+  return createHash('sha256').update(secret).digest('hex')
+}
+
+function buildDefaultSystemPrompt() {
+  return [
+    'You are continuing a BISH handoff on the local machine.',
+    'Use the provided markdown handoff file as the source of truth for the conversation context, build intent, constraints, and expected outputs.',
+    'Work directly in the local repository, keep changes scoped, and summarize what you changed before you stop.',
+  ].join(' ')
+}
+
+async function readPrimaryListenerForOrganization(organizationId: string) {
+  const pool = requireZeroUpstreamPool()
+  const result = await pool.query<ListenerRow>(
+    `
+      SELECT
+        id,
+        organization_id,
+        label,
+        status,
+        endpoint_url,
+        platform,
+        runtime_mode,
+        supported_targets,
+        default_target,
+        system_prompt_template,
+        encrypted_listener_secret,
+        listener_secret_hash,
+        last_seen_at
+      FROM local_listener_registrations
+      WHERE organization_id = $1
+      ORDER BY updated_at DESC
+      LIMIT 1
+    `,
+    [organizationId],
+  )
+  return result.rows[0] ?? null
+}
+
+async function readListenerBySecret(secret: string) {
+  const pool = requireZeroUpstreamPool()
+  const result = await pool.query<ListenerRow>(
+    `
+      SELECT
+        id,
+        organization_id,
+        label,
+        status,
+        endpoint_url,
+        platform,
+        runtime_mode,
+        supported_targets,
+        default_target,
+        system_prompt_template,
+        encrypted_listener_secret,
+        listener_secret_hash,
+        last_seen_at
+      FROM local_listener_registrations
+      WHERE listener_secret_hash = $1
+      LIMIT 1
+    `,
+    [hashListenerSecret(secret)],
+  )
+  return result.rows[0] ?? null
+}
+
+function toListenerSummary(row: ListenerRow): LocalListenerSummary {
+  return {
+    id: row.id,
+    label: row.label,
+    status: row.status,
+    endpointUrl: row.endpoint_url,
+    platform: row.platform,
+    runtimeMode: row.runtime_mode,
+    supportedTargets: Array.isArray(row.supported_targets)
+      ? row.supported_targets
+      : [],
+    defaultTarget: row.default_target,
+    lastSeenAt: row.last_seen_at,
+    systemPromptTemplate: row.system_prompt_template,
+  }
+}
+
+export async function listLocalListenersForOrganization(
+  organizationId: string,
+): Promise<readonly LocalListenerSummary[]> {
+  const pool = requireZeroUpstreamPool()
+  const result = await pool.query<ListenerRow>(
+    `
+      SELECT
+        id,
+        organization_id,
+        label,
+        status,
+        endpoint_url,
+        platform,
+        runtime_mode,
+        supported_targets,
+        default_target,
+        system_prompt_template,
+        encrypted_listener_secret,
+        listener_secret_hash,
+        last_seen_at
+      FROM local_listener_registrations
+      WHERE organization_id = $1
+      ORDER BY updated_at DESC
+      LIMIT 6
+    `,
+    [organizationId],
+  )
+  return result.rows.map(toListenerSummary)
+}
+
+export async function listRecentLocalHandoffsForOrganization(
+  organizationId: string,
+): Promise<readonly LocalHandoffSummary[]> {
+  const pool = requireZeroUpstreamPool()
+  const result = await pool.query<HandoffRow>(
+    `
+      SELECT
+        id,
+        thread_id,
+        title,
+        target,
+        status,
+        created_at,
+        delivered_at,
+        completed_at,
+        error_message
+      FROM local_handoffs
+      WHERE organization_id = $1
+      ORDER BY updated_at DESC
+      LIMIT 12
+    `,
+    [organizationId],
+  )
+  return result.rows.map((row) => ({
+    id: row.id,
+    threadId: row.thread_id,
+    title: row.title,
+    target: row.target,
+    status: row.status,
+    createdAt: row.created_at,
+    deliveredAt: row.delivered_at,
+    completedAt: row.completed_at,
+    errorMessage: row.error_message,
+  }))
+}
+
+export async function createOrRotateLocalListenerSecret(input: {
+  readonly organizationId: string
+  readonly data: CreateLocalListenerSecretInput
+}) {
+  const pool = requireZeroUpstreamPool()
+  const existing = await readPrimaryListenerForOrganization(input.organizationId)
+  const id = existing?.id ?? crypto.randomUUID()
+  const secret = crypto.randomUUID().replaceAll('-', '') + crypto.randomUUID()
+  const now = Date.now()
+
+  await pool.query(
+    `
+      INSERT INTO local_listener_registrations (
+        id,
+        organization_id,
+        label,
+        status,
+        endpoint_url,
+        platform,
+        runtime_mode,
+        tunnel_provider,
+        supported_targets,
+        default_target,
+        system_prompt_template,
+        listener_secret_hash,
+        encrypted_listener_secret,
+        metadata,
+        created_at,
+        updated_at
+      )
+      VALUES (
+        $1,
+        $2,
+        $3,
+        'awaiting_registration',
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        '["gemini","codex"]'::jsonb,
+        'gemini',
+        $4,
+        $5,
+        $6::jsonb,
+        '{}'::jsonb,
+        $7,
+        $7
+      )
+      ON CONFLICT (id) DO UPDATE SET
+        label = EXCLUDED.label,
+        status = 'awaiting_registration',
+        listener_secret_hash = EXCLUDED.listener_secret_hash,
+        encrypted_listener_secret = EXCLUDED.encrypted_listener_secret,
+        updated_at = EXCLUDED.updated_at
+    `,
+    [
+      id,
+      input.organizationId,
+      input.data.label,
+      existing?.system_prompt_template ?? buildDefaultSystemPrompt(),
+      hashListenerSecret(secret),
+      JSON.stringify(encryptBishSecretJson(secret)),
+      now,
+    ],
+  )
+
+  return {
+    secret,
+    listenerId: id,
+    listeners: await listLocalListenersForOrganization(input.organizationId),
+    handoffs: await listRecentLocalHandoffsForOrganization(input.organizationId),
+  }
+}
+
+export async function saveLocalListenerConfiguration(input: {
+  readonly organizationId: string
+  readonly data: SaveLocalListenerConfigInput
+}) {
+  const pool = requireZeroUpstreamPool()
+  const existing = await readPrimaryListenerForOrganization(input.organizationId)
+  if (!existing) {
+    throw new Error('Create a listener secret before saving listener settings.')
+  }
+
+  await pool.query(
+    `
+      UPDATE local_listener_registrations
+      SET label = $1,
+          system_prompt_template = $2,
+          default_target = $3,
+          updated_at = $4
+      WHERE id = $5
+    `,
+    [
+      input.data.label,
+      input.data.systemPromptTemplate,
+      input.data.defaultTarget,
+      Date.now(),
+      existing.id,
+    ],
+  )
+}
+
+async function buildThreadHandoffMarkdown(input: {
+  readonly organizationId: string
+  readonly threadId: string
+}) {
+  const pool = requireZeroUpstreamPool()
+  const [threadResult, messagesResult] = await Promise.all([
+    pool.query<{ title: string | null }>(
+      `
+        SELECT title
+        FROM threads
+        WHERE thread_id = $1
+          AND owner_org_id = $2
+        LIMIT 1
+      `,
+      [input.threadId, input.organizationId],
+    ),
+    pool.query<{
+      role: string
+      content: string
+      created_at: number
+    }>(
+      `
+        SELECT role, content, created_at
+        FROM messages
+        WHERE thread_id = $1
+          AND status <> 'deleted'
+        ORDER BY created_at ASC
+      `,
+      [input.threadId],
+    ),
+  ])
+
+  if (messagesResult.rows.length === 0) {
+    throw new Error('This chat thread has no messages to hand off yet.')
+  }
+
+  const title = threadResult.rows[0]?.title?.trim() || 'Untitled BISH Handoff'
+  const transcript = messagesResult.rows
+    .map(
+      (message) =>
+        `## ${message.role.toUpperCase()} (${new Date(message.created_at).toISOString()})\n\n${message.content}`,
+    )
+    .join('\n\n')
+
+  return {
+    title,
+    markdown: [
+      `# ${title}`,
+      '',
+      `Thread ID: ${input.threadId}`,
+      '',
+      transcript,
+    ].join('\n'),
+  }
+}
+
+async function updateListenerLastSeen(listenerId: string) {
+  const pool = requireZeroUpstreamPool()
+  const now = Date.now()
+  await pool.query(
+    `
+      UPDATE local_listener_registrations
+      SET last_seen_at = $1,
+          updated_at = $1
+      WHERE id = $2
+    `,
+    [now, listenerId],
+  )
+}
+
+export async function registerLocalListenerFromSecret(input: {
+  readonly secret: string
+  readonly data: RegisterLocalListenerInput
+}) {
+  const listener = await readListenerBySecret(input.secret)
+  if (!listener) {
+    throw new Error('Listener secret is not recognized.')
+  }
+
+  const pool = requireZeroUpstreamPool()
+  const now = Date.now()
+  await pool.query(
+    `
+      UPDATE local_listener_registrations
+      SET endpoint_url = $1,
+          platform = $2,
+          runtime_mode = $3,
+          tunnel_provider = $4,
+          supported_targets = $5::jsonb,
+          status = 'connected',
+          last_seen_at = $6,
+          updated_at = $6
+      WHERE id = $7
+    `,
+    [
+      input.data.endpointUrl,
+      input.data.platform,
+      input.data.runtimeMode,
+      input.data.tunnelProvider ?? null,
+      JSON.stringify(input.data.supportedTargets),
+      now,
+      listener.id,
+    ],
+  )
+
+  return toListenerSummary({
+    ...listener,
+    endpoint_url: input.data.endpointUrl,
+    platform: input.data.platform,
+    runtime_mode: input.data.runtimeMode,
+    supported_targets: input.data.supportedTargets,
+    status: 'connected',
+    last_seen_at: now,
+  })
+}
+
+export async function dispatchThreadToLocalListener(input: {
+  readonly organizationId: string
+  readonly requestedByUserId: string
+  readonly data: DispatchThreadHandoffInput
+}) {
+  const listener = await readPrimaryListenerForOrganization(input.organizationId)
+  if (!listener || !listener.endpoint_url) {
+    throw new Error('Register a local listener endpoint before sending handoffs.')
+  }
+
+  const supportedTargets = Array.isArray(listener.supported_targets)
+    ? listener.supported_targets
+    : []
+  if (!supportedTargets.includes(input.data.target)) {
+    throw new Error(`The registered listener does not support ${input.data.target}.`)
+  }
+
+  const handoff = await buildThreadHandoffMarkdown({
+    organizationId: input.organizationId,
+    threadId: input.data.threadId,
+  })
+  const handoffId = crypto.randomUUID()
+  const now = Date.now()
+  const pool = requireZeroUpstreamPool()
+
+  await pool.query(
+    `
+      INSERT INTO local_handoffs (
+        id,
+        organization_id,
+        listener_registration_id,
+        thread_id,
+        requested_by_user_id,
+        target,
+        status,
+        title,
+        handoff_markdown,
+        metadata,
+        created_at,
+        updated_at
+      )
+      VALUES (
+        $1,
+        $2,
+        $3,
+        $4,
+        $5,
+        $6,
+        'queued',
+        $7,
+        $8,
+        '{}'::jsonb,
+        $9,
+        $9
+      )
+    `,
+    [
+      handoffId,
+      input.organizationId,
+      listener.id,
+      input.data.threadId,
+      input.requestedByUserId,
+      input.data.target,
+      handoff.title,
+      handoff.markdown,
+      now,
+    ],
+  )
+
+  const secret = decryptBishSecretJson<string>(listener.encrypted_listener_secret)
+  const payload: LocalListenerHandoffPayload = {
+    handoffId,
+    organizationId: input.organizationId,
+    threadId: input.data.threadId,
+    title: handoff.title,
+    target: input.data.target as LocalListenerTarget,
+    systemPrompt:
+      listener.system_prompt_template?.trim() || buildDefaultSystemPrompt(),
+    handoffMarkdown: handoff.markdown,
+    createdAt: now,
+  }
+  const body = JSON.stringify(payload)
+  const timestamp = String(now)
+  const signature = buildLocalListenerSignature({
+    secret,
+    timestamp,
+    body,
+  })
+
+  try {
+    const response = await fetch(listener.endpoint_url, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-bish-timestamp': timestamp,
+        'x-bish-signature': signature,
+      },
+      body,
+    })
+
+    if (!response.ok) {
+      const message = await response.text()
+      throw new Error(message || 'Listener endpoint rejected the handoff.')
+    }
+
+    await pool.query(
+      `
+        UPDATE local_handoffs
+        SET status = 'delivered',
+            delivered_at = $1,
+            updated_at = $1
+        WHERE id = $2
+      `,
+      [Date.now(), handoffId],
+    )
+    await updateListenerLastSeen(listener.id)
+  } catch (error) {
+    await pool.query(
+      `
+        UPDATE local_handoffs
+        SET status = 'failed',
+            error_message = $1,
+            updated_at = $2
+        WHERE id = $3
+      `,
+      [
+        error instanceof Error ? error.message : String(error),
+        Date.now(),
+        handoffId,
+      ],
+    )
+    throw error
+  }
+}
+
+export async function reportLocalListenerArtifactsFromSecret(input: {
+  readonly secret: string
+  readonly data: ReportLocalListenerArtifactsInput
+}) {
+  const listener = await readListenerBySecret(input.secret)
+  if (!listener) {
+    throw new Error('Listener secret is not recognized.')
+  }
+
+  const pool = requireZeroUpstreamPool()
+  const handoffResult = await pool.query<{
+    id: string
+    organization_id: string
+    requested_by_user_id: string
+  }>(
+    `
+      SELECT id, organization_id, requested_by_user_id
+      FROM local_handoffs
+      WHERE id = $1
+        AND listener_registration_id = $2
+      LIMIT 1
+    `,
+    [input.data.handoffId, listener.id],
+  )
+  const handoff = handoffResult.rows[0]
+  if (!handoff) {
+    throw new Error('The referenced handoff does not exist.')
+  }
+
+  const now = Date.now()
+  await pool.query(
+    `
+      UPDATE local_handoffs
+      SET status = $1,
+          completed_at = CASE WHEN $1 IN ('completed', 'failed') THEN $2 ELSE completed_at END,
+          error_message = $3,
+          metadata = $4::jsonb,
+          updated_at = $2
+      WHERE id = $5
+    `,
+    [
+      input.data.status,
+      now,
+      input.data.errorMessage ?? null,
+      JSON.stringify({
+        repoUrl: input.data.repoUrl ?? null,
+        repoBranch: input.data.repoBranch ?? null,
+        repoCommitSha: input.data.repoCommitSha ?? null,
+        ...(input.data.metadata ?? {}),
+      }),
+      input.data.handoffId,
+    ],
+  )
+
+  for (const artifact of input.data.artifacts ?? []) {
+    const ingested = await OrgKnowledgeRuntime.run(
+      Effect.gen(function* () {
+        const service = yield* OrgKnowledgeAdminService
+        return yield* service.ingestKnowledgeTextDocument({
+          organizationId: handoff.organization_id,
+          userId: handoff.requested_by_user_id,
+          fileName: `${artifact.displayName}.md`,
+          mimeType: 'text/markdown',
+          content: artifact.contentMarkdown,
+          sourceLane: 'local_listener_artifact',
+          sourceLabel: 'Local Listener Artifact',
+          sourceRef: `handoff:${input.data.handoffId}:${artifact.displayName}`,
+          sourceMetadata: {
+            repoUrl: input.data.repoUrl,
+            repoBranch: input.data.repoBranch,
+            repoCommitSha: input.data.repoCommitSha,
+            artifactType: artifact.artifactType,
+            ...(artifact.metadata ?? {}),
+          },
+          activateOnIngest: true,
+        })
+      }),
+    )
+
+    await pool.query(
+      `
+        INSERT INTO handoff_artifacts (
+          id,
+          organization_id,
+          local_handoff_id,
+          attachment_id,
+          artifact_type,
+          display_name,
+          repo_url,
+          repo_branch,
+          repo_commit_sha,
+          content_markdown,
+          source_url,
+          metadata,
+          created_at,
+          updated_at
+        )
+        VALUES (
+          $1,
+          $2,
+          $3,
+          $4,
+          $5,
+          $6,
+          $7,
+          $8,
+          $9,
+          $10,
+          $11,
+          $12::jsonb,
+          $13,
+          $13
+        )
+      `,
+      [
+        crypto.randomUUID(),
+        handoff.organization_id,
+        input.data.handoffId,
+        ingested.attachmentId,
+        artifact.artifactType,
+        artifact.displayName,
+        input.data.repoUrl ?? null,
+        input.data.repoBranch ?? null,
+        input.data.repoCommitSha ?? null,
+        artifact.contentMarkdown,
+        artifact.sourceUrl ?? null,
+        JSON.stringify(artifact.metadata ?? {}),
+        now,
+      ],
+    )
+  }
+
+  await updateListenerLastSeen(listener.id)
+}

@@ -8,6 +8,7 @@ import {
 import { EMPTY_ORG_PROVIDER_KEY_STATUS } from '@/lib/shared/model-policy/types'
 import {
   ORG_KNOWLEDGE_KIND,
+  type OrgKnowledgeSourceLane,
   summarizeOrgKnowledgeIndexError,
 } from '@/lib/shared/org-knowledge'
 import { OrgKnowledgePersistenceError } from '../domain/errors'
@@ -23,6 +24,10 @@ type OrgKnowledgeRow = {
   readonly fileContent: string
   readonly orgKnowledgeKind?: string
   readonly orgKnowledgeActive?: boolean
+  readonly orgKnowledgeSourceLane?: OrgKnowledgeSourceLane
+  readonly orgKnowledgeSourceLabel?: string
+  readonly orgKnowledgeSourceRef?: string
+  readonly orgKnowledgeMetadata?: Record<string, unknown>
   readonly embeddingModel?: string
   readonly embeddingTokens?: number
   readonly embeddingDimensions?: number
@@ -47,6 +52,10 @@ type PersistedAttachmentInput = {
   readonly embeddingDimensions: number
   readonly embeddingChunks: number
   readonly embeddingStatus: 'indexed' | 'disabled' | 'failed'
+  readonly orgKnowledgeSourceLane?: OrgKnowledgeSourceLane
+  readonly orgKnowledgeSourceLabel?: string
+  readonly orgKnowledgeSourceRef?: string
+  readonly orgKnowledgeMetadata?: Record<string, unknown>
   readonly createdAt: number
   readonly updatedAt: number
 }
@@ -185,6 +194,10 @@ export class OrgKnowledgeRepositoryService extends ServiceMap.Service<
               accessScope: 'org',
               orgKnowledgeKind: ORG_KNOWLEDGE_KIND,
               orgKnowledgeActive: false,
+              orgKnowledgeSourceLane: attachment.orgKnowledgeSourceLane,
+              orgKnowledgeSourceLabel: attachment.orgKnowledgeSourceLabel,
+              orgKnowledgeSourceRef: attachment.orgKnowledgeSourceRef,
+              orgKnowledgeMetadata: attachment.orgKnowledgeMetadata,
               accessGroupIds: [],
               status: 'uploaded',
               createdAt: attachment.createdAt,

@@ -1,12 +1,16 @@
 'use client'
 
+import { useState } from 'react'
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { Button } from '@bish/ui/button'
 import { useHotkey } from '@tanstack/react-hotkeys'
 import { useMediaQuery } from '@bish/ui/hooks/useMediaQuery'
 import { useSideNav } from '@/components/layout/main-nav'
 import { usePageSidebarVisibility } from '@/components/layout/page-sidebar-visibility-context'
+import { dispatchBishThreadHandoff } from '@/lib/frontend/bish/bish.functions'
 import { m } from '@/paraglide/messages.js'
+import { toast } from 'sonner'
+import { useChatComposer } from './chat-context'
 import { ChatInput } from './chat-input'
 import { ChatThread } from './chat-thread'
 
@@ -15,11 +19,13 @@ import { ChatThread } from './chat-thread'
  * Keeping a single component prevents subtle layout drift between routes.
  */
 export function ChatPageShell() {
+  const { activeThreadId } = useChatComposer()
   const { isMobile } = useMediaQuery()
   const { isOpen: isMobileNavOpen, setIsOpen: setIsMobileNavOpen } =
     useSideNav()
   const { isChatPageSidebarCollapsed, setIsChatPageSidebarCollapsed } =
     usePageSidebarVisibility()
+  const [pendingTarget, setPendingTarget] = useState<'gemini' | 'codex' | null>(null)
 
   const toggleSidebar = () => {
     if (isMobile) {
@@ -69,6 +75,60 @@ export function ChatPageShell() {
               )}
             </Button>
           </div>
+          {activeThreadId ? (
+            <div className="pointer-events-auto ml-auto flex items-center gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                disabled={pendingTarget !== null}
+                onClick={async () => {
+                  try {
+                    setPendingTarget('gemini')
+                    await dispatchBishThreadHandoff({
+                      data: { threadId: activeThreadId, target: 'gemini' },
+                    })
+                    toast.success('Sent this chat to the local Gemini listener.')
+                  } catch (error) {
+                    toast.error(
+                      error instanceof Error
+                        ? error.message
+                        : 'Failed to hand off this chat to Gemini.',
+                    )
+                  } finally {
+                    setPendingTarget(null)
+                  }
+                }}
+              >
+                {pendingTarget === 'gemini' ? 'Sending…' : 'Handoff to Gemini'}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                disabled={pendingTarget !== null}
+                onClick={async () => {
+                  try {
+                    setPendingTarget('codex')
+                    await dispatchBishThreadHandoff({
+                      data: { threadId: activeThreadId, target: 'codex' },
+                    })
+                    toast.success('Sent this chat to the local Codex listener.')
+                  } catch (error) {
+                    toast.error(
+                      error instanceof Error
+                        ? error.message
+                        : 'Failed to hand off this chat to Codex.',
+                    )
+                  } finally {
+                    setPendingTarget(null)
+                  }
+                }}
+              >
+                {pendingTarget === 'codex' ? 'Sending…' : 'Handoff to Codex'}
+              </Button>
+            </div>
+          ) : null}
         </div>
       </div>
 

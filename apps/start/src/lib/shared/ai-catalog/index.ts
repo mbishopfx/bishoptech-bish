@@ -21,6 +21,11 @@ export {
   resolveContextWindowForMode,
   resolveModelContextWindow,
 } from './context-window'
+export {
+  BISH_RECOMMENDED_MODEL_IDS,
+  isBishRecommendedModelId,
+  sortModelsForBishSelector,
+} from './bish-curated-models'
 export type { ResolvedModelContextWindow } from './context-window'
 export type { AiContextWindowMode } from './types'
 

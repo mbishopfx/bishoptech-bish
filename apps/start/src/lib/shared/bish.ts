@@ -6,6 +6,11 @@ import {
   type BishConnectorInstallReadiness,
   type BishConnectorProvider,
 } from '@bish/automation'
+import type {
+  LocalHandoffSummary,
+  LocalListenerSummary,
+} from './local-listener'
+import { LOCAL_LISTENER_TARGETS } from './local-listener'
 
 export {
   BISH_CONNECTOR_PROVIDERS,
@@ -90,6 +95,8 @@ export type BishOrgDashboardSnapshot = {
   readonly approvals: readonly BishApprovalRequestSummary[]
   readonly agents: readonly BishAgentSummary[]
   readonly candidates: readonly BishCandidateVariantSummary[]
+  readonly listeners: readonly LocalListenerSummary[]
+  readonly handoffs: readonly LocalHandoffSummary[]
 }
 
 export type BishOperatorOrganizationSummary = {
@@ -148,9 +155,33 @@ export const promoteCandidateVariantInput = z.object({
   candidateVariantId: z.string().trim().min(1),
 })
 
+export const createLocalListenerSecretInput = z.object({
+  label: z.string().trim().min(2).max(80).default('Primary Listener'),
+})
+
+export const saveLocalListenerConfigInput = z.object({
+  label: z.string().trim().min(2).max(80),
+  systemPromptTemplate: z.string().trim().min(20).max(12_000),
+  defaultTarget: z.enum(LOCAL_LISTENER_TARGETS),
+})
+
+export const dispatchThreadHandoffInput = z.object({
+  threadId: z.string().trim().min(1),
+  target: z.enum(LOCAL_LISTENER_TARGETS),
+})
+
 export type CreateConnectorAccountInput = z.infer<typeof createConnectorAccountInput>
 export type ScheduleConnectorSyncInput = z.infer<typeof scheduleConnectorSyncInput>
 export type CreateApprovalRequestInput = z.infer<typeof createApprovalRequestInput>
 export type ResolveApprovalRequestInput = z.infer<typeof resolveApprovalRequestInput>
 export type CreateCandidateVariantInput = z.infer<typeof createCandidateVariantInput>
 export type PromoteCandidateVariantInput = z.infer<typeof promoteCandidateVariantInput>
+export type CreateLocalListenerSecretInput = z.infer<
+  typeof createLocalListenerSecretInput
+>
+export type SaveLocalListenerConfigInput = z.infer<
+  typeof saveLocalListenerConfigInput
+>
+export type DispatchThreadHandoffInput = z.infer<
+  typeof dispatchThreadHandoffInput
+>

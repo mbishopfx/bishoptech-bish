@@ -5,6 +5,19 @@
 export const ORG_KNOWLEDGE_KIND = 'custom_rag'
 
 /**
+ * Every org knowledge attachment records how it entered the shared retrieval
+ * corpus so operators can reason about freshness and provenance.
+ */
+export const ORG_KNOWLEDGE_SOURCE_LANES = [
+  'manual_upload',
+  'google_picker',
+  'google_workspace_connector',
+  'local_listener_artifact',
+] as const
+
+export type OrgKnowledgeSourceLane = (typeof ORG_KNOWLEDGE_SOURCE_LANES)[number]
+
+/**
  * UI-facing upload contract for org knowledge. This intentionally stays narrow:
  * org-wide RAG only accepts markdown sources and PDFs, unlike general chat
  * uploads which allow many conversion-friendly document types.
@@ -43,8 +56,28 @@ export type OrgKnowledgeListItem = {
   readonly fileSize: number
   readonly status?: 'deleted' | 'uploaded'
   readonly orgKnowledgeActive?: boolean
+  readonly orgKnowledgeSourceLane?: OrgKnowledgeSourceLane
+  readonly orgKnowledgeSourceLabel?: string
+  readonly orgKnowledgeSourceRef?: string
+  readonly orgKnowledgeMetadata?: Record<string, unknown>
   readonly vectorIndexedAt?: number
   readonly vectorError?: string
   readonly updatedAt: number
   readonly createdAt: number
+}
+
+export function getOrgKnowledgeSourceLaneLabel(
+  lane?: OrgKnowledgeSourceLane | null,
+): string {
+  switch (lane) {
+    case 'google_picker':
+      return 'Google Drive Picker'
+    case 'google_workspace_connector':
+      return 'Google Workspace Sync'
+    case 'local_listener_artifact':
+      return 'Local Listener Artifact'
+    case 'manual_upload':
+    default:
+      return 'Manual Upload'
+  }
 }

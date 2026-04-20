@@ -3,8 +3,11 @@ import {
   createApprovalRequestInput,
   createCandidateVariantInput,
   createConnectorAccountInput,
+  createLocalListenerSecretInput,
+  dispatchThreadHandoffInput,
   promoteCandidateVariantInput,
   resolveApprovalRequestInput,
+  saveLocalListenerConfigInput,
   scheduleConnectorSyncInput,
 } from '@/lib/shared/bish'
 
@@ -63,3 +66,24 @@ export const getBishOperatorSnapshot = createServerFn({ method: 'GET' }).handler
     return getBishOperatorSnapshotAction()
   },
 )
+
+export const createBishLocalListenerSecret = createServerFn({ method: 'POST' })
+  .inputValidator((input: unknown) => createLocalListenerSecretInput.parse(input))
+  .handler(async ({ data }) => {
+    const { createBishLocalListenerSecretAction } = await import('./bish.server')
+    return createBishLocalListenerSecretAction(data)
+  })
+
+export const saveBishLocalListenerConfig = createServerFn({ method: 'POST' })
+  .inputValidator((input: unknown) => saveLocalListenerConfigInput.parse(input))
+  .handler(async ({ data }) => {
+    const { saveBishLocalListenerConfigAction } = await import('./bish.server')
+    return saveBishLocalListenerConfigAction(data)
+  })
+
+export const dispatchBishThreadHandoff = createServerFn({ method: 'POST' })
+  .inputValidator((input: unknown) => dispatchThreadHandoffInput.parse(input))
+  .handler(async ({ data }) => {
+    const { dispatchBishThreadHandoffAction } = await import('./bish.server')
+    return dispatchBishThreadHandoffAction(data)
+  })

@@ -15,6 +15,11 @@
       "types": "./src/index.ts",
       "import": "./src/index.ts",
       "default": "./src/index.ts"
+    },
+    "./handoff": {
+      "types": "./src/handoff.ts",
+      "import": "./src/handoff.ts",
+      "default": "./src/handoff.ts"
     }
   },
   "scripts": {

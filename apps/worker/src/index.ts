@@ -2,8 +2,14 @@ import { createHash } from 'node:crypto'
 import {
   buildDeterministicEmbedding,
   chunkText,
+  ConnectorAdapterError,
   createConnectorAdapter,
+  decryptBishSecretJson,
+  decryptBishSecretValue,
+  encryptBishSecretJson,
+  encryptBishSecretValue,
   getConnectorInstallReadiness,
+  type EncryptedPayload,
   type BishConnectorProvider,
   type BishConnectorSyncRecord,
   toVectorLiteral,
@@ -77,12 +83,287 @@ function scoreFromSeed(seed: string, min: number, max: number) {
   return Number((min + value * (max - min)).toFixed(4))
 }
 
+type OAuthCredentialBundle = {
+  readonly accessToken: string
+  readonly refreshToken: string | null
+  readonly tokenType: string
+  readonly expiresAt: number | null
+}
+
+type ConnectorAccountAuthRow = {
+  readonly id: string
+  readonly provider: BishConnectorProvider
+  readonly external_account_id: string | null
+  readonly encrypted_access_token: string | null
+  readonly encrypted_refresh_token: string | null
+  readonly token_expires_at: number | null
+  readonly metadata: Record<string, unknown> | null
+}
+
+function parseEncryptedPayload(value: string): EncryptedPayload {
+  const parsed = JSON.parse(value) as Partial<EncryptedPayload>
+  if (
+    !parsed
+    || typeof parsed.ciphertext !== 'string'
+    || typeof parsed.iv !== 'string'
+    || typeof parsed.authTag !== 'string'
+    || typeof parsed.keyVersion !== 'number'
+  ) {
+    throw new ConnectorAdapterError({
+      code: 'CONNECTOR_API_BAD_RESPONSE',
+      message: 'Stored connector token payload is invalid JSON.',
+      details: { value: value.slice(0, 40) },
+    })
+  }
+  return parsed as EncryptedPayload
+}
+
+async function refreshAsanaAccessToken(refreshToken: string): Promise<OAuthCredentialBundle> {
+  const clientId = process.env.ASANA_CLIENT_ID?.trim()
+  const clientSecret = process.env.ASANA_CLIENT_SECRET?.trim()
+  if (!clientId || !clientSecret) {
+    throw new ConnectorAdapterError({
+      code: 'CONNECTOR_AUTH_REFRESH_FAILED',
+      message: 'Asana token refresh requires ASANA_CLIENT_ID and ASANA_CLIENT_SECRET.',
+      details: {},
+    })
+  }
+
+  const response = await fetch('https://app.asana.com/-/oauth_token', {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'refresh_token',
+      client_id: clientId,
+      client_secret: clientSecret,
+      refresh_token: refreshToken,
+    }),
+  })
+
+  const payload = (await response.json()) as Record<string, unknown>
+  if (!response.ok || typeof payload.access_token !== 'string') {
+    throw new ConnectorAdapterError({
+      code: 'CONNECTOR_AUTH_REFRESH_FAILED',
+      message:
+        (typeof payload.error_description === 'string' && payload.error_description)
+        || (typeof payload.error === 'string' && payload.error)
+        || 'Asana token refresh failed.',
+      details: { status: response.status },
+    })
+  }
+
+  const expiresIn = typeof payload.expires_in === 'number' ? payload.expires_in : null
+  const nextRefreshToken =
+    typeof payload.refresh_token === 'string' ? payload.refresh_token : refreshToken
+  const tokenType = typeof payload.token_type === 'string' ? payload.token_type : 'bearer'
+
+  return {
+    accessToken: payload.access_token,
+    refreshToken: nextRefreshToken,
+    tokenType,
+    expiresAt: expiresIn ? Date.now() + expiresIn * 1000 : null,
+  }
+}
+
+async function refreshHubSpotAccessToken(refreshToken: string): Promise<OAuthCredentialBundle> {
+  const clientId = process.env.HUBSPOT_CLIENT_ID?.trim()
+  const clientSecret = process.env.HUBSPOT_CLIENT_SECRET?.trim()
+  if (!clientId || !clientSecret) {
+    throw new ConnectorAdapterError({
+      code: 'CONNECTOR_AUTH_REFRESH_FAILED',
+      message: 'HubSpot token refresh requires HUBSPOT_CLIENT_ID and HUBSPOT_CLIENT_SECRET.',
+      details: {},
+    })
+  }
+
+  const response = await fetch('https://api.hubspot.com/oauth/2026-03/token', {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'refresh_token',
+      client_id: clientId,
+      client_secret: clientSecret,
+      refresh_token: refreshToken,
+    }),
+  })
+
+  const payload = (await response.json()) as Record<string, unknown>
+  if (!response.ok || typeof payload.access_token !== 'string') {
+    throw new ConnectorAdapterError({
+      code: 'CONNECTOR_AUTH_REFRESH_FAILED',
+      message:
+        (typeof payload.message === 'string' && payload.message)
+        || (typeof payload.error_description === 'string' && payload.error_description)
+        || (typeof payload.error === 'string' && payload.error)
+        || 'HubSpot token refresh failed.',
+      details: { status: response.status },
+    })
+  }
+
+  const expiresIn = typeof payload.expires_in === 'number' ? payload.expires_in : null
+  const nextRefreshToken =
+    typeof payload.refresh_token === 'string' ? payload.refresh_token : refreshToken
+  const tokenType = typeof payload.token_type === 'string' ? payload.token_type : 'bearer'
+
+  return {
+    accessToken: payload.access_token,
+    refreshToken: nextRefreshToken,
+    tokenType,
+    expiresAt: expiresIn ? Date.now() + expiresIn * 1000 : null,
+  }
+}
+
+async function readConnectorAccountAuth(connectorAccountId: string): Promise<ConnectorAccountAuthRow | null> {
+  const result = await pool.query<ConnectorAccountAuthRow>(
+    `
+      SELECT
+        id,
+        provider,
+        external_account_id,
+        encrypted_access_token,
+        encrypted_refresh_token,
+        token_expires_at,
+        metadata
+      FROM connector_accounts
+      WHERE id = $1
+      LIMIT 1
+    `,
+    [connectorAccountId],
+  )
+
+  return result.rows[0] ?? null
+}
+
+function readMetadataOAuthBundle(metadata: Record<string, unknown> | null): unknown {
+  if (!metadata) return null
+  const oauth = metadata.oauth
+  if (!oauth || typeof oauth !== 'object') return null
+  // @ts-expect-error - runtime-narrowed
+  return oauth.credentials ?? null
+}
+
+async function resolveOAuthCredentialBundle(row: ConnectorAccountAuthRow): Promise<OAuthCredentialBundle | null> {
+  if (row.encrypted_access_token) {
+    const accessToken = await decryptBishSecretValue(parseEncryptedPayload(row.encrypted_access_token))
+    const refreshToken = row.encrypted_refresh_token
+      ? await decryptBishSecretValue(parseEncryptedPayload(row.encrypted_refresh_token))
+      : null
+    return {
+      accessToken,
+      refreshToken,
+      tokenType: 'bearer',
+      expiresAt: row.token_expires_at,
+    }
+  }
+
+  const metadataBundleEncrypted = readMetadataOAuthBundle(row.metadata)
+  if (!metadataBundleEncrypted) return null
+
+  return await decryptBishSecretJson<OAuthCredentialBundle>(metadataBundleEncrypted as EncryptedPayload)
+}
+
+async function persistOAuthCredentialBundle(input: {
+  readonly connectorAccountId: string
+  readonly bundle: OAuthCredentialBundle
+  readonly provider: BishConnectorProvider
+}) {
+  const encryptedAccessToken = JSON.stringify(await encryptBishSecretValue(input.bundle.accessToken))
+  const encryptedRefreshToken = input.bundle.refreshToken
+    ? JSON.stringify(await encryptBishSecretValue(input.bundle.refreshToken))
+    : null
+  const encryptedBundle = await encryptBishSecretJson(input.bundle)
+  const timestamp = Date.now()
+
+  await pool.query(
+    `
+      UPDATE connector_accounts
+      SET encrypted_access_token = $1,
+          encrypted_refresh_token = $2,
+          token_expires_at = $3,
+          metadata = jsonb_set(
+            COALESCE(metadata, '{}'::jsonb),
+            '{oauth,credentials}',
+            $4::jsonb,
+            true
+          ),
+          updated_at = $5
+      WHERE id = $6
+        AND provider = $7
+    `,
+    [
+      encryptedAccessToken,
+      encryptedRefreshToken,
+      input.bundle.expiresAt,
+      JSON.stringify(encryptedBundle),
+      timestamp,
+      input.connectorAccountId,
+      input.provider,
+    ],
+  )
+}
+
+async function getOAuthAccessToken(input: {
+  readonly provider: BishConnectorProvider
+  readonly connectorAccountId: string
+}): Promise<{ readonly accessToken: string; readonly externalAccountId: string | null }> {
+  const row = await readConnectorAccountAuth(input.connectorAccountId)
+  if (!row || row.provider !== input.provider) {
+    throw new ConnectorAdapterError({
+      code: 'CONNECTOR_AUTH_MISSING',
+      message: 'Connector account auth record not found.',
+      details: { connectorAccountId: input.connectorAccountId, provider: input.provider },
+    })
+  }
+
+  const bundle = await resolveOAuthCredentialBundle(row)
+  if (!bundle) {
+    throw new ConnectorAdapterError({
+      code: 'CONNECTOR_AUTH_MISSING',
+      message: `${input.provider} OAuth credentials have not been stored for this connector.`,
+      details: { connectorAccountId: input.connectorAccountId },
+    })
+  }
+
+  const now = Date.now()
+  const expiresAt = bundle.expiresAt
+  const refreshSkewMs = 2 * 60_000
+  const shouldRefresh = typeof expiresAt === 'number' && expiresAt - now < refreshSkewMs
+
+  if (!shouldRefresh) {
+    return { accessToken: bundle.accessToken, externalAccountId: row.external_account_id }
+  }
+
+  if (!bundle.refreshToken) {
+    throw new ConnectorAdapterError({
+      code: 'CONNECTOR_AUTH_EXPIRED',
+      message: `${input.provider} access token expired and no refresh token is available.`,
+      details: { connectorAccountId: input.connectorAccountId },
+    })
+  }
+
+  const refreshed =
+    input.provider === 'asana'
+      ? await refreshAsanaAccessToken(bundle.refreshToken)
+      : input.provider === 'hubspot'
+        ? await refreshHubSpotAccessToken(bundle.refreshToken)
+        : bundle
+
+  await persistOAuthCredentialBundle({
+    connectorAccountId: input.connectorAccountId,
+    bundle: refreshed,
+    provider: input.provider,
+  })
+
+  return { accessToken: refreshed.accessToken, externalAccountId: row.external_account_id }
+}
+
 async function claimSyncJob() {
   const result = await pool.query<{
     id: string
     organization_id: string
     connector_account_id: string
     provider: BishConnectorProvider
+    external_account_id: string | null
     source_type: string | null
     source_ref: string | null
   }>(
@@ -94,7 +375,8 @@ async function claimSyncJob() {
           csj.connector_account_id,
           csj.source_type,
           csj.source_ref,
-          ca.provider
+          ca.provider,
+          ca.external_account_id
         FROM connector_sync_jobs csj
         JOIN connector_accounts ca
           ON ca.id = csj.connector_account_id
@@ -115,6 +397,7 @@ async function claimSyncJob() {
         csj.organization_id,
         csj.connector_account_id,
         next_job.provider,
+        next_job.external_account_id,
         next_job.source_type,
         next_job.source_ref
     `,
@@ -127,7 +410,7 @@ async function claimSyncJob() {
 async function markConnectorStatus(input: {
   connectorAccountId: string
   expectedOrganizationId: string
-  status: 'syncing' | 'connected' | 'config_required'
+  status: 'syncing' | 'connected' | 'config_required' | 'needs_auth'
   timestamp: number
   onlyIfCurrentStatus?: 'syncing' | 'connected' | 'needs_auth' | 'config_required'
 }) {
@@ -1009,7 +1292,43 @@ async function processSyncJob() {
   }
 
   try {
-    const adapter = createConnectorAdapter(job.provider)
+    let adapterOptions: Parameters<typeof createConnectorAdapter>[1] | undefined
+
+    if (job.provider === 'asana' || job.provider === 'hubspot') {
+      let cachedAuth:
+        | { readonly accessToken: string; readonly externalAccountId: string | null }
+        | null = null
+
+      const resolveAuth = async () => {
+        if (cachedAuth) return cachedAuth
+        cachedAuth = await getOAuthAccessToken({
+          provider: job.provider,
+          connectorAccountId: job.connector_account_id,
+        })
+        return cachedAuth
+      }
+
+      // Preflight auth so we can fail fast with a connector-specific status.
+      await resolveAuth()
+
+      adapterOptions = {
+        oauth: {
+          externalAccountId: job.external_account_id,
+          getAccessToken: async (connectorAccountId) => {
+            if (connectorAccountId !== job.connector_account_id) {
+              throw new ConnectorAdapterError({
+                code: 'CONNECTOR_AUTH_MISSING',
+                message: 'Connector account mismatch when resolving OAuth token.',
+                details: { connectorAccountId, expected: job.connector_account_id },
+              })
+            }
+            return (await resolveAuth()).accessToken
+          },
+        },
+      }
+    }
+
+    const adapter = createConnectorAdapter(job.provider, adapterOptions)
     const discoveredSources = await adapter.discoverSources(
       job.organization_id,
       job.connector_account_id,
@@ -1107,36 +1426,21 @@ async function processSyncJob() {
 
     await pool.query(
       `
-        UPDATE connector_scopes
-        SET granted = true,
-            updated_at = $1
-        WHERE connector_account_id = $2
-      `,
-      [timestamp, job.connector_account_id],
-    )
-
-    await pool.query(
-      `
         UPDATE connector_accounts
         SET status = CASE WHEN status = 'syncing' THEN 'connected' ELSE status END,
             last_synced_at = $1,
-            scope_status = $2::jsonb,
             metadata = jsonb_set(
               COALESCE(metadata, '{}'::jsonb),
               '{lastCursor}',
-              to_jsonb($3::text),
+              to_jsonb($2::text),
               true
             ),
             updated_at = $1
-        WHERE id = $4
-          AND organization_id = $5
+        WHERE id = $3
+          AND organization_id = $4
       `,
       [
         timestamp,
-        JSON.stringify({
-          granted: true,
-          missingEnv: [],
-        }),
         syncResult.cursor,
         job.connector_account_id,
         job.organization_id,
@@ -1175,15 +1479,18 @@ async function processSyncJob() {
     return true
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
+    const adapterError = error instanceof ConnectorAdapterError ? error : null
+    const failureCode = adapterError?.code ?? 'CONNECTOR_SYNC_RUNTIME_ERROR'
     console.error(`Failed sync job ${job.id}`, error)
 
     await recordConnectorFailure({
       organizationId: job.organization_id,
       connectorAccountId: job.connector_account_id,
       syncJobId: job.id,
-      code: 'CONNECTOR_SYNC_RUNTIME_ERROR',
+      code: failureCode,
       message,
       details: {
+        ...(adapterError?.details ?? {}),
         provider: job.provider,
         sourceRef: job.source_ref,
         sourceType: job.source_type,
@@ -1200,7 +1507,13 @@ async function processSyncJob() {
     await markConnectorStatus({
       connectorAccountId: job.connector_account_id,
       expectedOrganizationId: job.organization_id,
-      status: 'connected',
+      status:
+        failureCode === 'CONNECTOR_AUTH_MISSING'
+        || failureCode === 'CONNECTOR_AUTH_EXPIRED'
+        || failureCode === 'CONNECTOR_AUTH_REFRESH_FAILED'
+        || failureCode === 'CONNECTOR_API_UNAUTHORIZED'
+          ? 'needs_auth'
+          : 'connected',
       timestamp,
       onlyIfCurrentStatus: 'syncing',
     })

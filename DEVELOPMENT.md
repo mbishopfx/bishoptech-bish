@@ -81,6 +81,10 @@ GOOGLE_WORKSPACE_CLIENT_EMAIL=
 GOOGLE_WORKSPACE_PRIVATE_KEY=
 GOOGLE_WORKSPACE_IMPERSONATION_ADMIN=
 
+GOOGLE_PICKER_CLIENT_ID=
+GOOGLE_PICKER_CLIENT_SECRET=
+GOOGLE_PICKER_REDIRECT_URI=http://localhost:3000/api/org/knowledge/google/callback
+
 ASANA_CLIENT_ID=
 ASANA_CLIENT_SECRET=
 ASANA_REDIRECT_URI=http://localhost:3000/api/org/bish/connectors/asana/callback
@@ -92,7 +96,26 @@ HUBSPOT_REDIRECT_URI=http://localhost:3000/api/org/bish/connectors/hubspot/callb
 
 For Railway or any non-local deployment, point those redirect URIs at the public BISH hostname instead of `localhost`.
 
+Worker + scheduler notes:
+
+- Connector OAuth happens in `apps/start`, but connector sync runs in `apps/worker`. Make sure `apps/worker` receives the same connector env values (especially `BISH_ENCRYPTION_KEY`, `ASANA_CLIENT_SECRET`, and `HUBSPOT_CLIENT_SECRET`) so it can decrypt and refresh tokens.
+- The scheduler only enqueues jobs for connector accounts in `connected` status. If a connector is missing OAuth credentials it will be moved to `needs_auth` and will not be scheduled until the user reconnects from the UI.
+
 Google Workspace does not use an OAuth callback in the current v1 flow. Once the delegation envs are present, the connector screen exposes an `Activate` action that marks the tenant ready for worker-driven discovery and sync.
+
+Google Drive Picker is the per-user RAG ingestion lane. Once the picker envs are present, the org knowledge screen exposes `Connect Google Drive`, lets the signed-in user browse recent files, and queues those files through the same organization knowledge ingestion pipeline as manual uploads and connector syncs.
+
+Google Picker credential source:
+
+1. In Google Cloud Console, open `APIs & Services -> Credentials`
+2. Create an `OAuth client ID`
+3. Choose `Web application`
+4. Add this redirect URI for local development:
+   - `http://localhost:3000/api/org/knowledge/google/callback`
+5. Copy the generated client ID and client secret into:
+   - `GOOGLE_PICKER_CLIENT_ID`
+   - `GOOGLE_PICKER_CLIENT_SECRET`
+   - `GOOGLE_PICKER_REDIRECT_URI`
 
 ### 4. Markdown Converter Worker Setup
 
@@ -151,6 +174,44 @@ bun run app:scheduler
 Access the app at: `http://localhost:3000`
 
 Zero sync runs on `http://localhost:4848` by default. Local self-hosted mode expects `VITE_ZERO_CACHE_URL=http://localhost:4848`.
+
+## Local Listener Development
+
+The local listener is a separate Bun workspace at `packages/local-listener/`. It is designed to run on a user machine, not on Railway.
+
+Typical local setup:
+
+```bash
+cd packages/local-listener
+
+export BISH_BASE_URL=http://localhost:3000
+export BISH_LISTENER_SECRET=<secret-rotated-from-bish-ui>
+export BISH_TUNNEL_URL=https://example.ngrok-free.app
+export BISH_LISTENER_PORT=8787
+export BISH_LISTENER_RUNTIME_MODE=visible
+export BISH_LISTENER_DEFAULT_TARGET=gemini
+export BISH_LISTENER_OUTPUT_DIR=$HOME/BISH/listener-handoffs
+
+bun run start
+```
+
+The listener registers itself back to BISH through `/api/bish/listener/register`, accepts signed handoff deliveries on `/handoff`, writes a markdown handoff file locally, and then launches either `gemini --yolo` or `codex`.
+
+macOS bootstrap helper:
+
+```bash
+bash packages/local-listener/scripts/install-macos-listener.sh
+```
+
+Optional local-only envs:
+
+```bash
+GITHUB_TOKEN=ghp_xxx
+BISH_LISTENER_WORKSPACE_DIR=/absolute/path/to/local/builds
+BISH_LISTENER_SUPPORTED_TARGETS=gemini,codex
+```
+
+`GITHUB_TOKEN` is intentionally local-only. BISH stores returned repo metadata and selected markdown artifacts, but it does not persist the token or push to GitHub from the cloud app.
 
 ### Available Scripts
 

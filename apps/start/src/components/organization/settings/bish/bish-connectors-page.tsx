@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { Activity, KeyRound, PlugZap, Workflow } from 'lucide-react'
-import { type BishConnectorInstallReadiness } from '@bish/automation'
+import type { BishConnectorInstallReadiness } from '@bish/automation'
 import { Badge } from '@bish/ui/badge'
 import { Button } from '@bish/ui/button'
 import { DataTable } from '@bish/ui/data-table'
@@ -17,11 +17,11 @@ import {
   createBishConnectorAccount,
   scheduleBishConnectorSync,
 } from '@/lib/frontend/bish/bish.functions'
-import {
-  BISH_PROVIDER_LABELS,
-  type BishConnectorAccountSummary,
-  type BishOrgDashboardSnapshot,
-  type BishSyncJobSummary,
+import { BISH_PROVIDER_LABELS } from '@/lib/shared/bish'
+import type {
+  BishConnectorAccountSummary,
+  BishOrgDashboardSnapshot,
+  BishSyncJobSummary,
 } from '@/lib/shared/bish'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
@@ -153,7 +153,7 @@ function ProviderSetupCard({
           <div className="flex flex-wrap gap-2">
             {providerSetup.supportedSources.map((source) => (
               <Badge
-                key={source.id}
+                key={source.sourceType}
                 variant="outline"
                 className="border-border-base bg-surface-base text-foreground-secondary"
               >

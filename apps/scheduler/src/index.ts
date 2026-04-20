@@ -102,6 +102,19 @@ async function rescueStaleSyncJobs() {
     `,
     [timestamp],
   )
+
+  await pool.query(
+    `
+      UPDATE connector_accounts
+      SET status = 'needs_auth',
+          updated_at = $1
+      WHERE provider IN ('asana', 'hubspot')
+        AND status = 'connected'
+        AND encrypted_access_token IS NULL
+        AND (metadata -> 'oauth' -> 'credentials') IS NULL
+    `,
+    [timestamp],
+  )
 }
 
 async function queueScheduledSyncs() {
@@ -127,6 +140,11 @@ async function queueScheduledSyncs() {
           OR ca.last_synced_at < $1
         )
         AND ca.status = 'connected'
+        AND (
+          ca.provider = 'google_workspace'
+          OR ca.encrypted_access_token IS NOT NULL
+          OR (ca.metadata -> 'oauth' -> 'credentials') IS NOT NULL
+        )
         AND NOT EXISTS (
           SELECT 1
           FROM connector_sync_jobs csj
