@@ -261,23 +261,35 @@ async function launchVisibleMacos(input: {
       ? 'gemini --yolo'
       : 'codex --dangerously-bypass-approvals-and-sandbox'
   const escapedWorkspace = workspaceDir.replace(/"/g, '\\"')
-  await execFileAsync('osascript', [
-    '-e',
-    `tell application "Terminal" to do script "cd \\"${escapedWorkspace}\\" && ${command}"`,
-  ])
-
+  const escapedCommand = command.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
   const escapedPrompt = input.prompt
     .replace(/\\/g, '\\\\')
     .replace(/"/g, '\\"')
+
+  /**
+   * Target the exact Terminal tab opened for the handoff instead of relying on
+   * global keystrokes landing in the correct frontmost window. This is more
+   * reliable when the operator already has multiple terminal windows open.
+   */
   await execFileAsync('osascript', [
+    '-e',
+    `set workspacePath to "${escapedWorkspace}"`,
+    '-e',
+    `set launchCommand to "${escapedCommand}"`,
+    '-e',
+    `set promptText to "${escapedPrompt}"`,
+    '-e',
+    'tell application "Terminal"',
+    '-e',
+    'activate',
+    '-e',
+    'set targetTab to do script ("cd " & quoted form of workspacePath & " && " & launchCommand)',
     '-e',
     'delay 15',
     '-e',
-    'tell application "Terminal" to activate',
+    'do script promptText in targetTab',
     '-e',
-    `tell application "System Events" to keystroke "${escapedPrompt}"`,
-    '-e',
-    'tell application "System Events" to key code 36',
+    'end tell',
   ])
 }
 

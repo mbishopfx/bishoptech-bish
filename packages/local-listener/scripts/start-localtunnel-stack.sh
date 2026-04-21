@@ -7,8 +7,11 @@ ROOT_DIR="$(cd "${PACKAGE_DIR}/../.." && pwd)"
 LT_LOG="$(mktemp -t bish-localtunnel.XXXXXX.log)"
 
 if [[ -f "${PACKAGE_DIR}/.env.local" ]]; then
+  # Export sourced variables so Bun/localtunnel inherit the exact same values.
+  set -a
   # shellcheck disable=SC1091
   source "${PACKAGE_DIR}/.env.local"
+  set +a
 fi
 
 is_placeholder() {

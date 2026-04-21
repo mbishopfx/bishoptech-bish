@@ -1,10 +1,11 @@
 import { createHash } from 'node:crypto'
 import {
   buildLocalListenerSignature,
-  type LocalListenerArtifactPayload,
-  type LocalListenerHandoffPayload,
-  type LocalListenerRegistrationPayload,
-  type LocalListenerTarget,
+} from '@bish/automation/handoff'
+import type {
+  LocalListenerArtifactPayload,
+  LocalListenerHandoffPayload,
+  LocalListenerRegistrationPayload,
 } from '@bish/automation/handoff'
 import { Effect } from 'effect'
 import { OrgKnowledgeRuntime } from '@/lib/backend/org-knowledge/runtime/org-knowledge-runtime'
@@ -155,9 +156,9 @@ async function appendLocalHandoffActivity(input: {
     [input.handoffId],
   )
 
-  const existingMetadata = current.rows[0]?.metadata ?? {}
+  const existingMetadata: Record<string, unknown> = current.rows[0]?.metadata ?? {}
   const existingActivity = normalizeLocalListenerActivityLog(
-    (existingMetadata as Record<string, unknown>).activityLog,
+    existingMetadata['activityLog'],
   )
   const now = Date.now()
 
@@ -621,7 +622,7 @@ export async function dispatchThreadToLocalListener(input: {
     organizationId: input.organizationId,
     threadId: input.data.threadId,
     title: handoff.title,
-    target: input.data.target as LocalListenerTarget,
+    target: input.data.target,
     systemPrompt:
       listener.system_prompt_template?.trim() || buildDefaultSystemPrompt(),
     handoffMarkdown: handoff.markdown,
@@ -738,29 +739,43 @@ export async function reportLocalListenerArtifactsFromSecret(input: {
   )
 
   for (const artifact of input.data.artifacts ?? []) {
-    const ingested = await OrgKnowledgeRuntime.run(
-      Effect.gen(function* () {
-        const service = yield* OrgKnowledgeAdminService
-        return yield* service.ingestKnowledgeTextDocument({
-          organizationId: handoff.organization_id,
-          userId: handoff.requested_by_user_id,
-          fileName: `${artifact.displayName}.md`,
-          mimeType: 'text/markdown',
-          content: artifact.contentMarkdown,
-          sourceLane: 'local_listener_artifact',
-          sourceLabel: 'Local Listener Artifact',
-          sourceRef: `handoff:${input.data.handoffId}:${artifact.displayName}`,
-          sourceMetadata: {
-            repoUrl: input.data.repoUrl,
-            repoBranch: input.data.repoBranch,
-            repoCommitSha: input.data.repoCommitSha,
-            artifactType: artifact.artifactType,
-            ...(artifact.metadata ?? {}),
-          },
-          activateOnIngest: true,
-        })
-      }),
-    )
+    /**
+     * Local-listener callbacks should remain durable even when object storage
+     * is not configured yet. We still persist the returned markdown artifact so
+     * operators have a record of the run, and attach the ingestion error to
+     * metadata until storage is wired and backfill can be added later.
+     */
+    let attachmentId: string | null = null
+    let ingestError: string | null = null
+
+    try {
+      const ingested = await OrgKnowledgeRuntime.run(
+        Effect.gen(function* () {
+          const service = yield* OrgKnowledgeAdminService
+          return yield* service.ingestKnowledgeTextDocument({
+            organizationId: handoff.organization_id,
+            userId: handoff.requested_by_user_id,
+            fileName: `${artifact.displayName}.md`,
+            mimeType: 'text/markdown',
+            content: artifact.contentMarkdown,
+            sourceLane: 'local_listener_artifact',
+            sourceLabel: 'Local Listener Artifact',
+            sourceRef: `handoff:${input.data.handoffId}:${artifact.displayName}`,
+            sourceMetadata: {
+              repoUrl: input.data.repoUrl,
+              repoBranch: input.data.repoBranch,
+              repoCommitSha: input.data.repoCommitSha,
+              artifactType: artifact.artifactType,
+              ...(artifact.metadata ?? {}),
+            },
+            activateOnIngest: true,
+          })
+        }),
+      )
+      attachmentId = ingested.attachmentId
+    } catch (error) {
+      ingestError = error instanceof Error ? error.message : String(error)
+    }
 
     await pool.query(
       `
@@ -801,7 +816,7 @@ export async function reportLocalListenerArtifactsFromSecret(input: {
         crypto.randomUUID(),
         handoff.organization_id,
         input.data.handoffId,
-        ingested.attachmentId,
+        attachmentId,
         artifact.artifactType,
         artifact.displayName,
         input.data.repoUrl ?? null,
@@ -809,7 +824,10 @@ export async function reportLocalListenerArtifactsFromSecret(input: {
         input.data.repoCommitSha ?? null,
         artifact.contentMarkdown,
         artifact.sourceUrl ?? null,
-        JSON.stringify(artifact.metadata ?? {}),
+        JSON.stringify({
+          ...(artifact.metadata ?? {}),
+          ...(ingestError ? { ingestError } : {}),
+        }),
         now,
       ],
     )

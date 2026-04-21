@@ -4,8 +4,12 @@ set -euo pipefail
 PACKAGE_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 if [[ -f "${PACKAGE_DIR}/.env.local" ]]; then
+  # Export sourced variables so the spawned Bun process reads the same config
+  # that the shell-side validation checks are using.
+  set -a
   # shellcheck disable=SC1091
   source "${PACKAGE_DIR}/.env.local"
+  set +a
 fi
 
 is_placeholder() {
