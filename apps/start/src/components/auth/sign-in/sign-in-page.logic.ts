@@ -12,7 +12,6 @@ import {
   getAbsoluteAppURL,
   getDefaultAuthDisplayName,
   normalizeEmailAddress,
-  OTP_EXPIRES_IN_SECONDS,
 } from '@/components/auth/auth-shared'
 
 /** Redirect target derived from search.redirect; defaults to /chat. */
@@ -24,7 +23,6 @@ export function getRedirectTarget(redirect: string | undefined): string {
 export type SignInPageView =
   | 'auth-form'
   | 'forgot-password'
-  | 'email-verification'
   | 'mfa-verification'
 
 export type SignInPageLogicResult = {
@@ -33,11 +31,7 @@ export type SignInPageLogicResult = {
   invitationEmail: string
   invitationLookupLoading: boolean
   socialAuthCallbackURL?: string
-  pendingVerificationEmail: string
   pendingMfaEmail: string
-  verificationMessage: string
-  otpSentAt: number | null
-  otpExpiresInSeconds: number
   isLoading: boolean
   error: string
   clearError: () => void
@@ -46,9 +40,7 @@ export type SignInPageLogicResult = {
   handleBackToLogin: () => void
   /** Single submit handler: sign-in or sign-up based on current isSignUp. */
   handleAuthSubmit: (email: string, password: string) => Promise<void>
-  handleVerifyEmailOtp: (otp: string) => Promise<void>
   handleVerifyMfaTotp: (otp: string) => Promise<void>
-  handleResendVerificationOtp: () => Promise<void>
   handleBackFromMfa: () => void
 }
 
@@ -117,12 +109,7 @@ export function useSignInPageLogic(
   const [view, setView] = useState<SignInPageView>('auth-form')
   const [invitationEmail, setInvitationEmail] = useState('')
   const [invitationLookupLoading, setInvitationLookupLoading] = useState(false)
-  const [pendingVerificationEmail, setPendingVerificationEmail] = useState('')
-  const [pendingVerificationPassword, setPendingVerificationPassword] =
-    useState('')
   const [pendingMfaEmail, setPendingMfaEmail] = useState('')
-  const [verificationMessage, setVerificationMessage] = useState('')
-  const [otpSentAt, setOtpSentAt] = useState<number | null>(null)
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const lastAutoAcceptedInvitationIdRef = useRef<string | null>(null)
@@ -200,22 +187,7 @@ export function useSignInPageLogic(
     [invitationEmail],
   )
 
-  const openEmailVerificationStep = useCallback(
-    (email: string, password: string, message: string) => {
-      setPendingVerificationEmail(email)
-      setPendingVerificationPassword(password)
-      setVerificationMessage(message)
-      setOtpSentAt(Date.now())
-      setView('email-verification')
-    },
-    [],
-  )
-
   const openMfaVerificationStep = useCallback((email: string) => {
-    setPendingVerificationEmail('')
-    setPendingVerificationPassword('')
-    setVerificationMessage('')
-    setOtpSentAt(null)
     setPendingMfaEmail(email)
     setView('mfa-verification')
   }, [])
@@ -314,32 +286,20 @@ export function useSignInPageLogic(
   const handleToggleMode = useCallback(() => {
     setIsSignUp((prev) => !prev)
     setView('auth-form')
-    setPendingVerificationEmail('')
-    setPendingVerificationPassword('')
     setPendingMfaEmail('')
-    setVerificationMessage('')
-    setOtpSentAt(null)
     setError('')
   }, [])
 
   const handleShowForgotPassword = useCallback(() => {
     setView('forgot-password')
-    setPendingVerificationEmail('')
-    setPendingVerificationPassword('')
     setPendingMfaEmail('')
-    setVerificationMessage('')
-    setOtpSentAt(null)
     setError('')
   }, [])
 
   const handleBackToLogin = useCallback(() => {
     setIsSignUp(false)
     setView('auth-form')
-    setPendingVerificationEmail('')
-    setPendingVerificationPassword('')
     setPendingMfaEmail('')
-    setVerificationMessage('')
-    setOtpSentAt(null)
     setError('')
   }, [])
 
@@ -358,30 +318,6 @@ export function useSignInPageLogic(
       setIsLoading(false)
 
       if (result.error) {
-        if (!isSelfHosted && result.error.status === 403) {
-          const otpResult = await authClient.emailOtp.sendVerificationOtp({
-            email: normalizedEmail,
-            type: 'email-verification',
-          })
-
-          if (otpResult.error) {
-            setError(
-              readAuthErrorMessage(
-                otpResult.error,
-                m.auth_error_send_verification_failed(),
-              ),
-            )
-            return
-          }
-
-          openEmailVerificationStep(
-            normalizedEmail,
-            password,
-            m.auth_error_email_not_verified(),
-          )
-          return
-        }
-
         setError(readAuthErrorMessage(result.error, m.auth_error_unexpected()))
         return
       }
@@ -400,10 +336,7 @@ export function useSignInPageLogic(
     [
       attemptCredentialSignIn,
       finalizeAuthenticatedNavigation,
-      navigate,
-      openEmailVerificationStep,
       openMfaVerificationStep,
-      redirectTarget,
       validateInvitationEmail,
     ],
   )
@@ -431,17 +364,12 @@ export function useSignInPageLogic(
         return
       }
 
-      if (!isSelfHosted) {
-        openEmailVerificationStep(normalizedEmail, password, '')
-        return
-      }
-
       const navigated = await finalizeAuthenticatedNavigation()
       if (!navigated) {
         setIsLoading(false)
       }
     },
-    [finalizeAuthenticatedNavigation, openEmailVerificationStep, validateInvitationEmail],
+    [finalizeAuthenticatedNavigation, validateInvitationEmail],
   )
 
   const handleAuthSubmit = useCallback(
@@ -453,71 +381,6 @@ export function useSignInPageLogic(
       }
     },
     [isSignUp, handleSignInSubmit, handleSignUpSubmit],
-  )
-
-  const handleVerifyEmailOtp = useCallback(
-    async (otp: string) => {
-      if (!pendingVerificationEmail || !pendingVerificationPassword) {
-        setError(m.auth_error_verify_first())
-        return
-      }
-
-      setIsLoading(true)
-      setError('')
-
-      const verifyResult = await authClient.emailOtp.verifyEmail({
-        email: pendingVerificationEmail,
-        otp,
-      })
-
-      if (verifyResult.error) {
-        setIsLoading(false)
-        setError(
-          readAuthErrorMessage(
-            verifyResult.error,
-            m.auth_error_invalid_or_expired_code(),
-          ),
-        )
-        return
-      }
-
-      const signInResult = await attemptCredentialSignIn(
-        pendingVerificationEmail,
-        pendingVerificationPassword,
-      )
-
-      setIsLoading(false)
-
-      if (signInResult.error) {
-        setError(
-          readAuthErrorMessage(
-            signInResult.error,
-            m.auth_error_verified_but_sign_in_failed(),
-          ),
-        )
-        return
-      }
-
-      if (signInResult.requiresTwoFactor) {
-        setIsLoading(false)
-        openMfaVerificationStep(pendingVerificationEmail)
-        return
-      }
-
-      const navigated = await finalizeAuthenticatedNavigation()
-      if (!navigated) {
-        setIsLoading(false)
-      }
-    },
-    [
-      attemptCredentialSignIn,
-      finalizeAuthenticatedNavigation,
-      navigate,
-      openMfaVerificationStep,
-      pendingVerificationEmail,
-      pendingVerificationPassword,
-      redirectTarget,
-    ],
   )
 
   const handleVerifyMfaTotp = useCallback(
@@ -556,35 +419,6 @@ export function useSignInPageLogic(
     [finalizeAuthenticatedNavigation],
   )
 
-  const handleResendVerificationOtp = useCallback(async () => {
-    if (!pendingVerificationEmail) {
-      setError(m.auth_error_no_pending_email())
-      return
-    }
-
-    setIsLoading(true)
-    setError('')
-
-    const result = await authClient.emailOtp.sendVerificationOtp({
-      email: pendingVerificationEmail,
-      type: 'email-verification',
-    })
-
-    setIsLoading(false)
-
-    if (result.error) {
-      setError(
-        readAuthErrorMessage(
-          result.error,
-          m.auth_error_resend_verification_failed(),
-        ),
-      )
-      return
-    }
-
-    setOtpSentAt(Date.now())
-  }, [pendingVerificationEmail])
-
   const handleBackFromMfa = useCallback(() => {
     setView('auth-form')
     setPendingMfaEmail('')
@@ -597,11 +431,7 @@ export function useSignInPageLogic(
     invitationEmail,
     invitationLookupLoading,
     socialAuthCallbackURL,
-    pendingVerificationEmail,
     pendingMfaEmail,
-    verificationMessage,
-    otpSentAt,
-    otpExpiresInSeconds: OTP_EXPIRES_IN_SECONDS,
     isLoading,
     error,
     clearError,
@@ -609,9 +439,7 @@ export function useSignInPageLogic(
     handleShowForgotPassword,
     handleBackToLogin,
     handleAuthSubmit,
-    handleVerifyEmailOtp,
     handleVerifyMfaTotp,
-    handleResendVerificationOtp,
     handleBackFromMfa,
   }
 }

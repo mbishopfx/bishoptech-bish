@@ -482,7 +482,14 @@ export const auth = betterAuth({
     enabled: true,
     minPasswordLength: 8,
     maxPasswordLength: 128,
-    requireEmailVerification: !isSelfHosted,
+    /**
+     * BISH v1 now treats email/password as the primary self-serve login path.
+     * Requiring inbox verification during sign-in was blocking legitimate
+     * workspace access when transactional email was not fully configured.
+     * Password reset still uses OTP delivery, but successful sign-up should
+     * immediately permit interactive login.
+     */
+    requireEmailVerification: false,
     revokeSessionsOnPasswordReset: true,
   },
   ...(!isSelfHosted && googleClientId && googleClientSecret
@@ -497,10 +504,10 @@ export const auth = betterAuth({
     : {}),
   plugins: [
     ...(!isSelfHosted
-      ? [
+        ? [
           emailOTP({
             overrideDefaultEmailVerification: true,
-            sendVerificationOnSignUp: true,
+            sendVerificationOnSignUp: false,
             otpLength: 6,
             expiresIn: 5 * 60,
             allowedAttempts: 5,

@@ -32,11 +32,7 @@ export function SignInPage({
     invitationEmail,
     invitationLookupLoading,
     socialAuthCallbackURL,
-    pendingVerificationEmail,
     pendingMfaEmail,
-    verificationMessage,
-    otpSentAt,
-    otpExpiresInSeconds,
     isLoading,
     error,
     clearError,
@@ -44,9 +40,7 @@ export function SignInPage({
     handleShowForgotPassword,
     handleBackToLogin,
     handleAuthSubmit,
-    handleVerifyEmailOtp,
     handleVerifyMfaTotp,
-    handleResendVerificationOtp,
     handleBackFromMfa,
   } = useSignInPageLogic(redirectTarget, initialMode, invitationId)
 
@@ -63,26 +57,6 @@ export function SignInPage({
               onBackToLogin={handleBackToLogin}
             />
           ) : null
-        ) : view === 'email-verification' ? (
-          <OtpStep
-            key="email-verification"
-            title={m.common_check_your_email()}
-            description={m.auth_check_email_description()}
-            instruction={m.auth_enter_code_for_email({
-              email: pendingVerificationEmail,
-            })}
-            message={verificationMessage}
-            formId="email-verification-form"
-            otpSentAt={otpSentAt}
-            otpExpiresInSeconds={otpExpiresInSeconds}
-            error={error}
-            isLoading={isLoading}
-            onClearError={clearError}
-            onSubmit={handleVerifyEmailOtp}
-            onResend={handleResendVerificationOtp}
-            submitText={m.auth_email_verification_submit()}
-            resendText={m.common_resend_code()}
-          />
         ) : view === 'mfa-verification' ? (
           <OtpStep
             key="mfa-verification"
