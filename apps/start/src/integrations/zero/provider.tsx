@@ -146,13 +146,14 @@ export default function ZeroProvider({
   const { ready, userID, context } = useZeroAuth()
   const location = useLocation()
   const zeroOptionalRoute = isZeroOptionalRoute(location.pathname)
-  const isPublicSelfHostedRoute = isSelfHosted && zeroOptionalRoute
+  const isPublicRouteWithoutZeroIdentity =
+    zeroOptionalRoute && (!ready || !userID || !context)
 
   const zeroToken = useZeroSelfHostedAccessToken({
     enabled:
       Boolean(cacheURL) &&
       isSelfHosted &&
-      !isPublicSelfHostedRoute &&
+      !isPublicRouteWithoutZeroIdentity &&
       ready &&
       Boolean(userID) &&
       Boolean(context),
@@ -173,7 +174,13 @@ export default function ZeroProvider({
     return <MissingZeroConfigurationState />
   }
 
-  if (isPublicSelfHostedRoute && (!ready || !userID || !context)) {
+  /**
+   * Auth, landing, pricing, and setup screens must stay reachable before a
+   * Better Auth session exists. In cloud mode those routes should never blank
+   * behind Zero readiness, and in self-hosted mode they keep the existing
+   * bootstrap behavior.
+   */
+  if (isPublicRouteWithoutZeroIdentity) {
     return <>{children}</>
   }
 
