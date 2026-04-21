@@ -6,12 +6,6 @@ import type {
   HTMLAttributes,
   ReactNode,
 } from 'react'
-import type {
-  BundledLanguage,
-  BundledTheme,
-  HighlighterGeneric,
-  ThemedToken,
-} from 'shiki'
 
 import { Button } from '@bish/ui/button'
 import {
@@ -53,7 +47,7 @@ const isUnderline = (fontStyle: number | undefined) =>
   fontStyle && fontStyle & 4
 
 interface KeyedToken {
-  token: ThemedToken
+  token: RawToken
   key: string
 }
 interface KeyedLine {
@@ -61,9 +55,17 @@ interface KeyedLine {
   key: string
 }
 
-export type CodeBlockLanguage = BundledLanguage | 'text'
+type RawToken = {
+  readonly color?: string
+  readonly content: string
+  readonly bgColor?: string
+  readonly fontStyle?: number
+  readonly htmlStyle?: CSSProperties
+}
 
-const addKeysToTokens = (lines: ThemedToken[][]): KeyedLine[] =>
+export type CodeBlockLanguage = string
+
+const addKeysToTokens = (lines: RawToken[][]): KeyedLine[] =>
   lines.map((line, lineIdx) => ({
     key: `line-${lineIdx}`,
     tokens: line.map((token, tokenIdx) => ({
@@ -72,7 +74,7 @@ const addKeysToTokens = (lines: ThemedToken[][]): KeyedLine[] =>
     })),
   }))
 
-const TokenSpan = ({ token }: { token: ThemedToken }) => (
+const TokenSpan = ({ token }: { token: RawToken }) => (
   <span
     className="dark:!bg-[var(--shiki-dark-bg)] dark:!text-[var(--shiki-dark)]"
     style={
@@ -141,7 +143,7 @@ type CodeBlockProps = HTMLAttributes<HTMLDivElement> & {
 }
 
 interface TokenizedCode {
-  tokens: ThemedToken[][]
+  tokens: RawToken[][]
   fg: string
   bg: string
 }
@@ -182,53 +184,12 @@ const LANGUAGE_EXTENSION: Partial<Record<CodeBlockLanguage, string>> = {
   yaml: 'yml',
 }
 
-const highlighterCache = new Map<
-  string,
-  Promise<HighlighterGeneric<BundledLanguage, BundledTheme> | null>
->()
-let shikiPromise: Promise<typeof import('shiki')> | null = null
-
 const tokensCache = new Map<string, TokenizedCode>()
-
-const subscribers = new Map<string, Set<(result: TokenizedCode) => void>>()
 
 const getTokensCacheKey = (code: string, language: CodeBlockLanguage) => {
   const start = code.slice(0, 100)
   const end = code.length > 100 ? code.slice(-100) : ''
   return `${language}:${code.length}:${start}:${end}`
-}
-
-const getHighlighter = (
-  language: CodeBlockLanguage,
-): Promise<HighlighterGeneric<BundledLanguage, BundledTheme> | null> => {
-  const cached = highlighterCache.get(language)
-  if (cached) {
-    return cached
-  }
-
-  if (language === 'text') {
-    return Promise.resolve(null)
-  }
-
-  const highlighterPromise = (shikiPromise ??= import('shiki')).then(
-    ({ bundledLanguages, createHighlighter }) => {
-      const hasBundledLanguage = Object.prototype.hasOwnProperty.call(
-        bundledLanguages,
-        language,
-      )
-      if (!hasBundledLanguage) {
-        return null
-      }
-
-      return createHighlighter({
-        langs: [language],
-        themes: ['github-light', 'github-dark'],
-      })
-    },
-  )
-
-  highlighterCache.set(language, highlighterPromise)
-  return highlighterPromise
 }
 
 const createRawTokens = (code: string): TokenizedCode => ({
@@ -249,7 +210,6 @@ const createRawTokens = (code: string): TokenizedCode => ({
 export const highlightCode = (
   code: string,
   language: CodeBlockLanguage,
-  // oxlint-disable-next-line eslint-plugin-promise(prefer-await-to-callbacks)
   callback?: (result: TokenizedCode) => void,
 ): TokenizedCode | null => {
   const tokensCacheKey = getTokensCacheKey(code, language)
@@ -259,75 +219,14 @@ export const highlightCode = (
     return cached
   }
 
-  if (callback) {
-    if (!subscribers.has(tokensCacheKey)) {
-      subscribers.set(tokensCacheKey, new Set())
-    }
-    subscribers.get(tokensCacheKey)?.add(callback)
-  }
-
-  getHighlighter(language)
-    // oxlint-disable-next-line eslint-plugin-promise(prefer-await-to-then)
-    .then((highlighter) => {
-      if (!highlighter || language === 'text') {
-        const tokenized = createRawTokens(code)
-        tokensCache.set(tokensCacheKey, tokenized)
-
-        const subs = subscribers.get(tokensCacheKey)
-        if (subs) {
-          for (const sub of subs) {
-            sub(tokenized)
-          }
-          subscribers.delete(tokensCacheKey)
-        }
-        return
-      }
-
-      const availableLangs = highlighter.getLoadedLanguages()
-      const langToUse = availableLangs.includes(language) ? language : null
-      if (!langToUse) {
-        const tokenized = createRawTokens(code)
-        tokensCache.set(tokensCacheKey, tokenized)
-
-        const subs = subscribers.get(tokensCacheKey)
-        if (subs) {
-          for (const sub of subs) {
-            sub(tokenized)
-          }
-          subscribers.delete(tokensCacheKey)
-        }
-        return
-      }
-
-      const result = highlighter.codeToTokens(code, {
-        lang: langToUse,
-        themes: {
-          dark: 'github-dark',
-          light: 'github-light',
-        },
-      })
-
-      const tokenized: TokenizedCode = {
-        bg: result.bg ?? 'transparent',
-        fg: result.fg ?? 'inherit',
-        tokens: result.tokens,
-      }
-
-      tokensCache.set(tokensCacheKey, tokenized)
-
-      const subs = subscribers.get(tokensCacheKey)
-      if (subs) {
-        for (const sub of subs) {
-          sub(tokenized)
-        }
-        subscribers.delete(tokensCacheKey)
-      }
-    })
-    // oxlint-disable-next-line eslint-plugin-promise(prefer-await-to-then), eslint-plugin-promise(prefer-await-to-callbacks)
-    .catch((error) => {
-      console.error('Failed to highlight code:', error)
-      subscribers.delete(tokensCacheKey)
-    })
+  /**
+   * Production deploys currently prioritize build reliability over syntax
+   * coloration. Returning plain tokens keeps code blocks readable while
+   * removing the very large Shiki bundle from the Railway build path.
+   */
+  const tokenized = createRawTokens(code)
+  tokensCache.set(tokensCacheKey, tokenized)
+  callback?.(tokenized)
 
   return null
 }
