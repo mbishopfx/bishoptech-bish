@@ -1,4 +1,5 @@
 export type ConnectorAdapterErrorCode =
+  | 'CONNECTOR_ENV_MISSING'
   | 'CONNECTOR_AUTH_MISSING'
   | 'CONNECTOR_AUTH_EXPIRED'
   | 'CONNECTOR_AUTH_REFRESH_FAILED'
@@ -29,4 +30,3 @@ export class ConnectorAdapterError extends Error {
     this.details = input.details ?? {}
   }
 }
-

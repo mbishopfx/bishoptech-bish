@@ -524,7 +524,7 @@ export function BishConnectorsPage({
         <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
           <div className="rounded-[1.25rem] border border-border-base bg-surface-base px-4 py-4 text-sm leading-6 text-foreground-secondary">
             Google Workspace expects service-account delegation with admin
-            impersonation for Gmail, Drive, Calendar, Sheets, and Docs. Asana and
+            impersonation for Drive, Sheets, and Docs. Asana and
             HubSpot expect OAuth credentials plus the shared encryption key used
             for tenant token storage.
           </div>

@@ -124,17 +124,12 @@ async function queueScheduledSyncs() {
   const result = await pool.query<{
     organization_id: string
     connector_account_id: string
-    source_type: string | null
   }>(
     `
       SELECT
         ca.organization_id,
-        ca.id AS connector_account_id,
-        MIN(ks.source_type) AS source_type
+        ca.id AS connector_account_id
       FROM connector_accounts ca
-      LEFT JOIN knowledge_sources ks
-        ON ks.connector_account_id = ca.id
-       AND ks.organization_id = ca.organization_id
       WHERE (
           ca.last_synced_at IS NULL
           OR ca.last_synced_at < $1
@@ -151,7 +146,6 @@ async function queueScheduledSyncs() {
           WHERE csj.connector_account_id = ca.id
             AND csj.status IN ('queued', 'running')
         )
-      GROUP BY ca.organization_id, ca.id
     `,
     [staleBefore],
   )
@@ -177,20 +171,19 @@ async function queueScheduledSyncs() {
           $2,
           $3,
           NULL,
-          $4,
+          NULL,
           'scheduled',
           'queued',
-          $5,
+          $4,
           '{"queuedBy":"scheduler"}'::jsonb,
-          $5,
-          $5
+          $4,
+          $4
         )
       `,
       [
         crypto.randomUUID(),
         row.organization_id,
         row.connector_account_id,
-        row.source_type,
         timestamp,
       ],
     )

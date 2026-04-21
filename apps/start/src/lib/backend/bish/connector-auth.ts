@@ -349,7 +349,7 @@ async function exchangeHubSpotCodeForTokens(code: string): Promise<{
     code,
   })
 
-  const response = await fetch('https://api.hubspot.com/oauth/2026-03/token', {
+  const response = await fetch('https://api.hubspot.com/oauth/v1/token', {
     method: 'POST',
     headers: {
       'content-type': 'application/x-www-form-urlencoded',
@@ -389,28 +389,22 @@ export async function beginConnectorAuthFlow(input: {
     }
 
     const metadata = getMetadata(account)
-  await updateConnectorAuthState({
-    connectorAccountId: account.id,
-    status: 'connected',
-    externalAccountId: adminEmail,
-    grantedInternalScopes: [
-      'gmail.read',
-      'drive.read',
-      'calendar.read',
-      'sheets.read',
-      'docs.read',
-    ],
-    metadata: {
-      ...metadata,
-      oauthPending: null,
-      activation: {
-        provider: 'google_workspace',
-        activatedAt: Date.now(),
-        adminEmail,
+    await updateConnectorAuthState({
+      connectorAccountId: account.id,
+      status: 'connected',
+      externalAccountId: adminEmail,
+      grantedInternalScopes: ['drive.read', 'sheets.read', 'docs.read'],
+      metadata: {
+        ...metadata,
+        oauthPending: null,
+        activation: {
+          provider: 'google_workspace',
+          activatedAt: Date.now(),
+          adminEmail,
+        },
       },
-    },
-    credentials: null,
-  })
+      credentials: null,
+    })
 
     return {
       mode: 'activated' as const,

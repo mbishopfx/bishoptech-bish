@@ -20,20 +20,12 @@ export const BISH_CONNECTOR_PROVIDER_DEFINITIONS = {
     ],
     optionalEnv: ['GOOGLE_WORKSPACE_WEBHOOK_TOPIC'],
     scopes: [
-      { key: 'gmail.read', label: 'Read Gmail' },
       { key: 'drive.read', label: 'Read Drive' },
-      { key: 'calendar.read', label: 'Read Calendar' },
       { key: 'sheets.read', label: 'Read Sheets' },
       { key: 'docs.read', label: 'Read Docs' },
     ],
     supportedSources: [
-      { sourceType: 'gmail', displayName: 'Gmail', defaultScopeKeys: ['gmail.read'] },
       { sourceType: 'drive', displayName: 'Drive', defaultScopeKeys: ['drive.read'] },
-      {
-        sourceType: 'calendar',
-        displayName: 'Calendar',
-        defaultScopeKeys: ['calendar.read'],
-      },
       { sourceType: 'sheets', displayName: 'Sheets', defaultScopeKeys: ['sheets.read'] },
       { sourceType: 'docs', displayName: 'Docs', defaultScopeKeys: ['docs.read'] },
     ],
@@ -258,21 +250,33 @@ async function getGoogleWorkspaceAccessToken() {
   const impersonationAdmin =
     process.env.GOOGLE_WORKSPACE_IMPERSONATION_ADMIN?.trim()
 
-  if (!clientEmail || !privateKeyRaw || !impersonationAdmin) {
-    throw new Error(
-      'Missing Google Workspace service account credentials for connector sync.',
-    )
+  const missingEnv = [
+    !clientEmail ? 'GOOGLE_WORKSPACE_CLIENT_EMAIL' : null,
+    !privateKeyRaw ? 'GOOGLE_WORKSPACE_PRIVATE_KEY' : null,
+    !impersonationAdmin ? 'GOOGLE_WORKSPACE_IMPERSONATION_ADMIN' : null,
+  ].filter((value): value is string => value !== null)
+
+  if (missingEnv.length > 0) {
+    throw new ConnectorAdapterError({
+      code: 'CONNECTOR_ENV_MISSING',
+      message: 'Missing Google Workspace service account credentials for connector sync.',
+      details: { missingEnv },
+    })
   }
 
-  const privateKey = normalizeGooglePrivateKey(privateKeyRaw)
+  const clientEmailValue = clientEmail!
+  const privateKeyRawValue = privateKeyRaw!
+  const impersonationAdminValue = impersonationAdmin!
+
+  const privateKey = normalizeGooglePrivateKey(privateKeyRawValue)
   const issuedAt = Math.floor(Date.now() / 1000)
   const header = {
     alg: 'RS256',
     typ: 'JWT',
   }
   const payload = {
-    iss: clientEmail,
-    sub: impersonationAdmin,
+    iss: clientEmailValue,
+    sub: impersonationAdminValue,
     scope: [
       'https://www.googleapis.com/auth/drive.readonly',
       'https://www.googleapis.com/auth/documents.readonly',
@@ -296,13 +300,16 @@ async function getGoogleWorkspaceAccessToken() {
     }),
   })
 
-  const payloadJson = await response.json() as Record<string, unknown>
+  const payloadJson = (await response.json()) as Record<string, unknown>
   if (!response.ok || typeof payloadJson.access_token !== 'string') {
-    throw new Error(
-      typeof payloadJson.error_description === 'string'
-        ? payloadJson.error_description
-        : 'Failed to mint a Google Workspace access token.',
-    )
+    throw new ConnectorAdapterError({
+      code: 'CONNECTOR_API_BAD_RESPONSE',
+      message:
+        typeof payloadJson.error_description === 'string'
+          ? payloadJson.error_description
+          : 'Failed to mint a Google Workspace access token.',
+      details: { status: response.status, payload: payloadJson },
+    })
   }
 
   return payloadJson.access_token
@@ -330,9 +337,45 @@ const GOOGLE_WORKSPACE_EXPORTS: Record<
   },
 }
 
+async function readConnectorResponseBody(response: Response): Promise<string | null> {
+  try {
+    const cloned = response.clone()
+    const contentType = cloned.headers.get('content-type') ?? ''
+    const text = contentType.includes('application/json')
+      ? JSON.stringify(await cloned.json())
+      : await cloned.text()
+    return text.length > 1200 ? `${text.slice(0, 1200)}…` : text
+  } catch {
+    return null
+  }
+}
+
+function connectorErrorCodeForHttpStatus(status: number): ConnectorAdapterError['code'] {
+  if (status === 401) return 'CONNECTOR_API_UNAUTHORIZED'
+  if (status === 403) return 'CONNECTOR_API_FORBIDDEN'
+  if (status === 429) return 'CONNECTOR_API_RATE_LIMITED'
+  return 'CONNECTOR_API_BAD_RESPONSE'
+}
+
 class GoogleWorkspaceConnectorAdapter implements ConnectorAdapter {
   readonly provider = 'google_workspace' as const
   readonly authMethod = definitionFor('google_workspace').authMethod
+  private accessToken: { readonly value: string; readonly mintedAt: number } | null = null
+
+  /**
+   * Google Workspace uses a service-account JWT assertion rather than tenant
+   * tokens stored in Postgres. We still want to avoid minting a new access token
+   * for every Drive export call inside one sync job, so we cache the token in
+   * memory for the adapter lifetime.
+   */
+  private async getAccessToken(): Promise<string> {
+    if (this.accessToken && Date.now() - this.accessToken.mintedAt < 50 * 60_000) {
+      return this.accessToken.value
+    }
+    const token = await getGoogleWorkspaceAccessToken()
+    this.accessToken = { value: token, mintedAt: Date.now() }
+    return token
+  }
 
   async discoverSources() {
     return definitionFor('google_workspace').supportedSources
@@ -347,14 +390,7 @@ class GoogleWorkspaceConnectorAdapter implements ConnectorAdapter {
     },
     cursor: string | null,
   ): Promise<BishConnectorSyncResult> {
-    if (sourceRef.sourceType === 'gmail' || sourceRef.sourceType === 'calendar') {
-      return {
-        cursor: String(Date.now()),
-        records: [],
-      }
-    }
-
-    const accessToken = await getGoogleWorkspaceAccessToken()
+    const accessToken = await this.getAccessToken()
     const modifiedAfter =
       cursor && Number.isFinite(Number(cursor))
         ? new Date(Number(cursor)).toISOString()
@@ -378,26 +414,49 @@ mimeType='text/csv'
       queryParts.push(`modifiedTime > '${modifiedAfter}'`)
     }
 
-    const url = new URL('https://www.googleapis.com/drive/v3/files')
-    url.searchParams.set(
-      'fields',
-      'files(id,name,mimeType,modifiedTime,webViewLink)',
-    )
-    url.searchParams.set('pageSize', '10')
-    url.searchParams.set('orderBy', 'modifiedTime desc')
-    url.searchParams.set('q', queryParts.join(' and '))
+    const files: GoogleDriveFile[] = []
+    let pageToken: string | null = null
+    const maxFiles = 25
 
-    const response = await fetch(url, {
-      headers: {
-        authorization: `Bearer ${accessToken}`,
-      },
-    })
-    if (!response.ok) {
-      throw new Error(`Google Drive sync failed for ${sourceRef.sourceType}.`)
+    while (files.length < maxFiles) {
+      const url = new URL('https://www.googleapis.com/drive/v3/files')
+      url.searchParams.set(
+        'fields',
+        'nextPageToken,files(id,name,mimeType,modifiedTime,webViewLink)',
+      )
+      url.searchParams.set('pageSize', String(Math.min(25, maxFiles - files.length)))
+      url.searchParams.set('orderBy', 'modifiedTime desc')
+      url.searchParams.set('q', queryParts.join(' and '))
+      if (pageToken) {
+        url.searchParams.set('pageToken', pageToken)
+      }
+
+      const response = await fetch(url, {
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+        },
+      })
+      if (!response.ok) {
+        throw new ConnectorAdapterError({
+          code: connectorErrorCodeForHttpStatus(response.status),
+          message: `Google Drive sync failed for ${sourceRef.sourceType}.`,
+          details: {
+            status: response.status,
+            body: await readConnectorResponseBody(response),
+            sourceType: sourceRef.sourceType,
+          },
+        })
+      }
+
+      const payload = (await response.json()) as {
+        readonly files?: readonly GoogleDriveFile[]
+        readonly nextPageToken?: string | null
+      }
+      files.push(...(payload.files ?? []))
+      pageToken = payload.nextPageToken ?? null
+      if (!pageToken) break
     }
 
-    const payload = await response.json() as { readonly files?: readonly GoogleDriveFile[] }
-    const files = payload.files ?? []
     const records = await Promise.all(
       files.map(async (file) => {
         const content = await this.fetchContent({
@@ -406,6 +465,10 @@ mimeType='text/csv'
           externalId: file.id,
         })
 
+        const updatedAt = file.modifiedTime
+          ? new Date(file.modifiedTime).getTime()
+          : Date.now()
+
         return {
           sourceType: sourceRef.sourceType,
           sourceRef: sourceRef.sourceRef,
@@ -413,9 +476,7 @@ mimeType='text/csv'
           title: file.name,
           content,
           sourceUrl: file.webViewLink ?? null,
-          updatedAt: file.modifiedTime
-            ? new Date(file.modifiedTime).getTime()
-            : Date.now(),
+          updatedAt,
           fingerprint: fingerprintContent(
             [file.id, file.modifiedTime ?? '', content].join('::'),
           ),
@@ -433,14 +494,22 @@ mimeType='text/csv'
       }),
     )
 
+    const baseCursorMs =
+      cursor && Number.isFinite(Number(cursor)) ? Number(cursor) : 0
+    const maxUpdatedAt =
+      records.reduce(
+        (max, record) => Math.max(max, record.updatedAt),
+        baseCursorMs,
+      ) || Date.now()
+
     return {
-      cursor: String(Date.now()),
+      cursor: String(maxUpdatedAt),
       records,
     }
   }
 
   async fetchContent(recordRef: BishConnectorRecordReference): Promise<string> {
-    const accessToken = await getGoogleWorkspaceAccessToken()
+    const accessToken = await this.getAccessToken()
     const metadataResponse = await fetch(
       `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(recordRef.externalId)}?fields=id,name,mimeType`,
       {
@@ -450,7 +519,15 @@ mimeType='text/csv'
       },
     )
     if (!metadataResponse.ok) {
-      throw new Error(`Failed to read Google Drive metadata for ${recordRef.externalId}.`)
+      throw new ConnectorAdapterError({
+        code: connectorErrorCodeForHttpStatus(metadataResponse.status),
+        message: `Failed to read Google Drive metadata for ${recordRef.externalId}.`,
+        details: {
+          status: metadataResponse.status,
+          body: await readConnectorResponseBody(metadataResponse),
+          externalId: recordRef.externalId,
+        },
+      })
     }
 
     const file = await metadataResponse.json() as GoogleDriveFile
@@ -464,7 +541,15 @@ mimeType='text/csv'
       },
     })
     if (!response.ok) {
-      throw new Error(`Failed to export Google Drive file ${recordRef.externalId}.`)
+      throw new ConnectorAdapterError({
+        code: connectorErrorCodeForHttpStatus(response.status),
+        message: `Failed to export Google Drive file ${recordRef.externalId}.`,
+        details: {
+          status: response.status,
+          body: await readConnectorResponseBody(response),
+          externalId: recordRef.externalId,
+        },
+      })
     }
 
     const downloadedMimeType = exportPlan?.mimeType ?? file.mimeType

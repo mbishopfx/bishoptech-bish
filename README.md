@@ -6,6 +6,7 @@
   <a href="#deploying-on-railway"><strong>Deploy on Railway</strong></a> ·
   <a href="#self-hosting"><strong>Self-hosting</strong></a> ·
   <a href="./DEVELOPMENT.md"><strong>Local Development</strong></a> ·
+  <a href="./docs/connectors/CONNECTOR_SETUP.md"><strong>Connector Setup</strong></a> ·
   <a href="./docs/client-onboarding/BISH_CLIENT_ONBOARDING_TEMPLATE.md"><strong>Client Onboarding</strong></a> ·
   <a href="./docs/client-onboarding/BISH_LISTENER_INSTALL_GUIDE.md"><strong>Listener Install</strong></a>
 </p>
@@ -269,12 +270,10 @@ To run the connector stack end-to-end (web OAuth install + worker sync + schedul
 - Stripe pricing / billing:
   - `STRIPE_SECRET_KEY`
   - `STRIPE_WEBHOOK_SECRET`
+  - `STRIPE_PRICE_SETUP_UNIVERSAL`
   - `STRIPE_PRICE_PLUS_MONTHLY`
-  - `STRIPE_PRICE_PLUS_SETUP`
   - `STRIPE_PRICE_PRO_MONTHLY`
-  - `STRIPE_PRICE_PRO_SETUP`
   - `STRIPE_PRICE_SCALE_MONTHLY`
-  - `STRIPE_PRICE_SCALE_SETUP`
   - optional `STRIPE_PRICE_AI_OVERAGE_METERED`
   - optional extra-seat prices for each paid tier
 - Asana OAuth:
@@ -334,23 +333,20 @@ The internal workspace plan IDs stay stable as `free`, `plus`, `pro`, `scale`, a
 
 Recommended v1 packaging:
 
+- Universal paid-plan setup fee: `$2,000`
 - `Starter`
-  - `$2,000` setup
   - `$499/mo`
   - 5 seats
   - Google RAG + approvals + 1 listener
 - `Growth`
-  - `$5,000` setup
   - `$1,499/mo`
   - 15 seats
   - full model catalog + listener handoff/activity loop
 - `Business`
-  - `$10,000` setup
   - `$3,500/mo`
   - 40 seats
   - multiple listeners + higher ingestion / sync quotas
 - `Enterprise`
-  - `$20,000+` setup
   - `$7,500+/mo`
   - custom procurement, AI budget, and security controls
 
@@ -363,7 +359,7 @@ Once a connector account is created in the UI:
 
 Current adapter maturity:
 
-- Google Workspace: Drive/Docs/Sheets ingestion is live (Gmail/Calendar are stub lanes today).
+- Google Workspace: Drive/Docs/Sheets ingestion is live.
 - Asana: Projects + portfolios sync, and tasks sync (assignee `me`) are live.
 - HubSpot: Contacts, companies, and deals sync are live; activities are staged behind optional scopes and return an empty sync result today.
 

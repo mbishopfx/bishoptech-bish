@@ -191,7 +191,7 @@ async function refreshHubSpotAccessToken(refreshToken: string): Promise<OAuthCre
     })
   }
 
-  const response = await fetch('https://api.hubspot.com/oauth/2026-03/token', {
+  const response = await fetch('https://api.hubspot.com/oauth/v1/token', {
     method: 'POST',
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
@@ -796,6 +796,11 @@ async function upsertCrmProjection(input: {
 }) {
   const payload = input.record.payload
   const timestamp = Date.now()
+  const projectionMetadata = JSON.stringify({
+    ...input.record.metadata,
+    sourceUrl: input.record.sourceUrl,
+    sourcePayload: payload,
+  })
 
   if (input.record.crmObjectType === 'contact') {
     await pool.query(
@@ -833,7 +838,7 @@ async function upsertCrmProjection(input: {
         typeof payload.email === 'string' ? payload.email : null,
         typeof payload.phone === 'string' ? payload.phone : null,
         typeof payload.lifecycleStage === 'string' ? payload.lifecycleStage : null,
-        JSON.stringify(input.record.metadata),
+        projectionMetadata,
         input.record.updatedAt,
         timestamp,
       ],
@@ -874,7 +879,7 @@ async function upsertCrmProjection(input: {
         String(payload.companyName ?? input.record.title),
         typeof payload.website === 'string' ? payload.website : null,
         typeof payload.industry === 'string' ? payload.industry : null,
-        JSON.stringify(input.record.metadata),
+        projectionMetadata,
         input.record.updatedAt,
         timestamp,
       ],
@@ -956,7 +961,7 @@ async function upsertCrmProjection(input: {
         typeof payload.stage === 'string' ? payload.stage : null,
         typeof payload.amount === 'number' ? payload.amount : null,
         typeof payload.currency === 'string' ? payload.currency : null,
-        JSON.stringify(input.record.metadata),
+        projectionMetadata,
         input.record.updatedAt,
         timestamp,
       ],
@@ -1034,7 +1039,7 @@ async function upsertCrmProjection(input: {
         typeof payload.activityType === 'string' ? payload.activityType : 'activity',
         typeof payload.summary === 'string' ? payload.summary : input.record.title,
         input.record.updatedAt,
-        JSON.stringify(input.record.metadata),
+        projectionMetadata,
         input.record.updatedAt,
         timestamp,
       ],
@@ -1403,11 +1408,7 @@ async function processSyncJob() {
       job.organization_id,
       job.connector_account_id,
     )
-    const selectedSource =
-      discoveredSources.find((source) => source.sourceType === job.source_type)
-      ?? discoveredSources[0]
-
-    if (!selectedSource) {
+    if (discoveredSources.length === 0) {
       await recordConnectorFailure({
         organizationId: job.organization_id,
         connectorAccountId: job.connector_account_id,
@@ -1432,87 +1433,229 @@ async function processSyncJob() {
       return true
     }
 
-    const sourceType = selectedSource.sourceType
-    const sourceRef = job.source_ref ?? `${job.provider}:${sourceType}`
-    const cursor = await readCursor({
-      organizationId: job.organization_id,
-      connectorAccountId: job.connector_account_id,
-      sourceType,
-      sourceRef,
-    })
+    /**
+     * Connector sync jobs can target a single source (legacy `source_type`
+     * scheduling) or request a full connector run (`source_type` null). The
+     * scheduler now queues full runs so each connector hydrates all of its data
+     * lanes without requiring one job per source type.
+     */
+    const requestedSourceType = job.source_type?.trim() || null
+    const explicitSource =
+      requestedSourceType
+        ? discoveredSources.find((source) => source.sourceType === requestedSourceType) ?? null
+        : null
+    const syncSources =
+      explicitSource ? [explicitSource] : discoveredSources
 
-    const syncResult = await adapter.syncSource(
-      job.organization_id,
-      {
+    type SourceSyncSummary = {
+      readonly sourceType: string
+      readonly sourceRef: string
+      readonly recordsRead: number
+      readonly documentsIndexed: number
+      readonly cursor: string
+      readonly proposedActionCount: number
+    }
+
+    const summaries: SourceSyncSummary[] = []
+    const failures: Array<{
+      readonly sourceType: string
+      readonly sourceRef: string
+      readonly code: string
+      readonly message: string
+    }> = []
+    const lastCursorBySource: Record<string, string> = {}
+
+    let totalRecordsRead = 0
+    let totalDocumentsIndexed = 0
+    let totalProposedActions = 0
+
+    for (const source of syncSources) {
+      const sourceType = source.sourceType
+      const sourceRef =
+        explicitSource
+          ? job.source_ref ?? `${job.provider}:${sourceType}`
+          : `${job.provider}:${sourceType}`
+      const cursor = await readCursor({
+        organizationId: job.organization_id,
         connectorAccountId: job.connector_account_id,
         sourceType,
         sourceRef,
-      },
-      cursor,
-    )
-    const records = await adapter.normalizeRecords(syncResult.records)
-    const knowledgeSourceId = await ensureKnowledgeSource({
-      organizationId: job.organization_id,
-      connectorAccountId: job.connector_account_id,
-      sourceType,
-      sourceRef,
-      displayName: selectedSource.displayName,
-    })
+      })
 
-    let documentsIndexed = 0
-    for (const record of records) {
-      await upsertRawConnectorRecord({
-        organizationId: job.organization_id,
-        connectorAccountId: job.connector_account_id,
-        record,
-      })
-      await upsertCrmProjection({
-        organizationId: job.organization_id,
-        connectorAccountId: job.connector_account_id,
-        record,
-      })
-      documentsIndexed += await ingestKnowledgeRecord({
-        organizationId: job.organization_id,
-        connectorAccountId: job.connector_account_id,
-        knowledgeSourceId,
-        record,
-        syncCursor: syncResult.cursor,
-        timestamp,
-      })
+      try {
+        const syncResult = await adapter.syncSource(
+          job.organization_id,
+          {
+            connectorAccountId: job.connector_account_id,
+            sourceType,
+            sourceRef,
+          },
+          cursor,
+        )
+        const records = await adapter.normalizeRecords(syncResult.records)
+        const knowledgeSourceId = await ensureKnowledgeSource({
+          organizationId: job.organization_id,
+          connectorAccountId: job.connector_account_id,
+          sourceType,
+          sourceRef,
+          displayName: source.displayName,
+        })
+
+        let documentsIndexed = 0
+        for (const record of records) {
+          await upsertRawConnectorRecord({
+            organizationId: job.organization_id,
+            connectorAccountId: job.connector_account_id,
+            record,
+          })
+          await upsertCrmProjection({
+            organizationId: job.organization_id,
+            connectorAccountId: job.connector_account_id,
+            record,
+          })
+          documentsIndexed += await ingestKnowledgeRecord({
+            organizationId: job.organization_id,
+            connectorAccountId: job.connector_account_id,
+            knowledgeSourceId,
+            record,
+            syncCursor: syncResult.cursor,
+            timestamp,
+          })
+        }
+
+        const proposedActions = await adapter.proposeActions({
+          sourceType,
+          records,
+        })
+
+        await upsertCursor({
+          organizationId: job.organization_id,
+          connectorAccountId: job.connector_account_id,
+          sourceType,
+          sourceRef,
+          cursorValue: syncResult.cursor,
+          timestamp,
+        })
+
+        summaries.push({
+          sourceType,
+          sourceRef,
+          recordsRead: records.length,
+          documentsIndexed,
+          cursor: syncResult.cursor,
+          proposedActionCount: proposedActions.length,
+        })
+        lastCursorBySource[sourceType] = syncResult.cursor
+        totalRecordsRead += records.length
+        totalDocumentsIndexed += documentsIndexed
+        totalProposedActions += proposedActions.length
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        const adapterError = error instanceof ConnectorAdapterError ? error : null
+        const failureCode = adapterError?.code ?? 'CONNECTOR_SYNC_RUNTIME_ERROR'
+
+        failures.push({
+          sourceType,
+          sourceRef,
+          code: failureCode,
+          message,
+        })
+
+        await recordConnectorFailure({
+          organizationId: job.organization_id,
+          connectorAccountId: job.connector_account_id,
+          syncJobId: job.id,
+          code: failureCode,
+          message,
+          details: {
+            ...(adapterError?.details ?? {}),
+            provider: job.provider,
+            sourceRef,
+            sourceType,
+          },
+        })
+
+        if (explicitSource) {
+          throw error
+        }
+      }
     }
 
-    const proposedActions = await adapter.proposeActions({
-      sourceType,
-      records,
-    })
+    if (summaries.length === 0) {
+      const fallbackMessage =
+        failures[0]?.message
+        ?? `Connector sync failed for provider ${job.provider}.`
+      const fallbackCode = failures[0]?.code ?? 'CONNECTOR_SYNC_RUNTIME_ERROR'
 
-    await upsertCursor({
-      organizationId: job.organization_id,
-      connectorAccountId: job.connector_account_id,
-      sourceType,
-      sourceRef,
-      cursorValue: syncResult.cursor,
-      timestamp,
-    })
+      await failSyncJob({
+        syncJobId: job.id,
+        expectedOrganizationId: job.organization_id,
+        errorMessage: fallbackMessage,
+        timestamp,
+      })
+
+      await markConnectorStatus({
+        connectorAccountId: job.connector_account_id,
+        expectedOrganizationId: job.organization_id,
+        status:
+          fallbackCode === 'CONNECTOR_ENV_MISSING'
+            ? 'config_required'
+            : fallbackCode === 'CONNECTOR_AUTH_MISSING'
+                || fallbackCode === 'CONNECTOR_AUTH_EXPIRED'
+                || fallbackCode === 'CONNECTOR_AUTH_REFRESH_FAILED'
+                || fallbackCode === 'CONNECTOR_API_UNAUTHORIZED'
+              ? 'needs_auth'
+              : 'connected',
+        timestamp,
+        onlyIfCurrentStatus: 'syncing',
+      })
+
+      return true
+    }
+
+    const shouldRequireAuth = failures.some(
+      (failure) =>
+        failure.code === 'CONNECTOR_AUTH_MISSING'
+        || failure.code === 'CONNECTOR_AUTH_EXPIRED'
+        || failure.code === 'CONNECTOR_AUTH_REFRESH_FAILED'
+        || failure.code === 'CONNECTOR_API_UNAUTHORIZED',
+    )
+    const shouldRequireConfig = failures.some(
+      (failure) => failure.code === 'CONNECTOR_ENV_MISSING',
+    )
+    const postSyncStatus = shouldRequireConfig
+      ? 'config_required'
+      : shouldRequireAuth
+        ? 'needs_auth'
+        : 'connected'
 
     await pool.query(
       `
         UPDATE connector_accounts
-        SET status = CASE WHEN status = 'syncing' THEN 'connected' ELSE status END,
+        SET status = CASE WHEN status = 'syncing' THEN $2 ELSE status END,
             last_synced_at = $1,
             metadata = jsonb_set(
-              COALESCE(metadata, '{}'::jsonb),
-              '{lastCursor}',
-              to_jsonb($2::text),
+              jsonb_set(
+                COALESCE(metadata, '{}'::jsonb),
+                '{lastCursor}',
+                to_jsonb($3::text),
+                true
+              ),
+              '{lastCursorBySource}',
+              $4::jsonb,
               true
             ),
             updated_at = $1
-        WHERE id = $3
-          AND organization_id = $4
+        WHERE id = $5
+          AND organization_id = $6
       `,
       [
         timestamp,
-        syncResult.cursor,
+        postSyncStatus,
+        explicitSource
+          ? lastCursorBySource[explicitSource.sourceType] ?? String(timestamp)
+          : JSON.stringify(lastCursorBySource),
+        JSON.stringify(lastCursorBySource),
         job.connector_account_id,
         job.organization_id,
       ],
@@ -1533,20 +1676,25 @@ async function processSyncJob() {
       `,
       [
         timestamp,
-        records.length,
-        records.length,
-        documentsIndexed,
+        totalRecordsRead,
+        totalRecordsRead,
+        totalDocumentsIndexed,
         JSON.stringify({
-          cursor: syncResult.cursor,
-          proposedActionCount: proposedActions.length,
-          sourceType,
+          sources: summaries,
+          cursorBySource: lastCursorBySource,
+          proposedActionCount: totalProposedActions,
+          partialFailures: failures.length > 0 ? failures : null,
+          sourceTypeMismatch:
+            requestedSourceType && !explicitSource ? requestedSourceType : null,
         }),
         job.id,
         job.organization_id,
       ],
     )
 
-    console.log(`Processed sync job ${job.id} with ${records.length} records`)
+    console.log(
+      `Processed sync job ${job.id} with ${totalRecordsRead} records across ${summaries.length} sources`,
+    )
     return true
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
@@ -1579,10 +1727,12 @@ async function processSyncJob() {
       connectorAccountId: job.connector_account_id,
       expectedOrganizationId: job.organization_id,
       status:
-        failureCode === 'CONNECTOR_AUTH_MISSING'
-        || failureCode === 'CONNECTOR_AUTH_EXPIRED'
-        || failureCode === 'CONNECTOR_AUTH_REFRESH_FAILED'
-        || failureCode === 'CONNECTOR_API_UNAUTHORIZED'
+        failureCode === 'CONNECTOR_ENV_MISSING'
+          ? 'config_required'
+          : failureCode === 'CONNECTOR_AUTH_MISSING'
+            || failureCode === 'CONNECTOR_AUTH_EXPIRED'
+            || failureCode === 'CONNECTOR_AUTH_REFRESH_FAILED'
+            || failureCode === 'CONNECTOR_API_UNAUTHORIZED'
           ? 'needs_auth'
           : 'connected',
       timestamp,
