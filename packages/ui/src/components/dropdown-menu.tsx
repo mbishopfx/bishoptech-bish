@@ -73,12 +73,23 @@ function DropdownMenuLabel({
   inset?: boolean
 }) {
   return (
-    <MenuPrimitive.GroupLabel
-      data-slot="dropdown-menu-label"
-      data-inset={inset}
-      className={cn("text-foreground-secondary px-2 py-1.5 text-xs font-medium data-inset:ltr:pl-7 data-inset:rtl:pr-7", className)}
-      {...props}
-    />
+    /**
+     * Base UI requires `Menu.GroupLabel` to live under `Menu.Group`.
+     * Our wrapper intentionally hides that implementation detail so call-sites
+     * can render a simple dropdown label without manually adding a group
+     * container and triggering production error #31.
+     */
+    <MenuPrimitive.Group data-slot="dropdown-menu-label-group">
+      <MenuPrimitive.GroupLabel
+        data-slot="dropdown-menu-label"
+        data-inset={inset}
+        className={cn(
+          "text-foreground-secondary px-2 py-1.5 text-xs font-medium data-inset:ltr:pl-7 data-inset:rtl:pr-7",
+          className
+        )}
+        {...props}
+      />
+    </MenuPrimitive.Group>
   )
 }
 
