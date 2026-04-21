@@ -831,6 +831,9 @@ CREATE TABLE IF NOT EXISTS knowledge_sources (
 );
 CREATE INDEX IF NOT EXISTS knowledge_sources_org_type
   ON knowledge_sources (organization_id, source_type, updated_at DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS knowledge_sources_unique_connector_source
+  ON knowledge_sources (organization_id, connector_account_id, source_type)
+  WHERE connector_account_id IS NOT NULL;
 
 -- knowledge_documents
 CREATE TABLE IF NOT EXISTS knowledge_documents (

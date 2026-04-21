@@ -50,6 +50,21 @@ function wait(ms: number) {
 }
 
 /**
+ * When we use `ON CONFLICT (...) DO UPDATE`, Postgres requires a matching UNIQUE
+ * (or exclusion) constraint. During upgrades it is possible to deploy app code
+ * before migrations are applied, so we keep a narrow fallback that preserves
+ * legacy behavior until the migration lands.
+ */
+function isMissingOnConflictConstraintError(error: unknown) {
+  if (!error || typeof error !== 'object') return false
+  const message =
+    'message' in error && typeof (error as { message?: unknown }).message === 'string'
+      ? String((error as { message: string }).message)
+      : ''
+  return message.toLowerCase().includes('no unique or exclusion constraint matching the on conflict specification')
+}
+
+/**
  * In production (Railway), processes should exit cleanly on SIGTERM so the
  * platform can roll deployments without leaving Postgres connections open.
  */
@@ -561,66 +576,121 @@ async function ensureKnowledgeSource(input: {
   connectorAccountId: string
   sourceType: string
   sourceRef: string
+  displayName: string
 }) {
-  const existing = await pool.query<{ id: string }>(
-    `
-      SELECT id
-      FROM knowledge_sources
-      WHERE organization_id = $1
-        AND connector_account_id = $2
-        AND source_type = $3
-      LIMIT 1
-    `,
-    [input.organizationId, input.connectorAccountId, input.sourceType],
-  )
-
-  if (existing.rows[0]?.id) {
-    return existing.rows[0].id
-  }
-
   const id = crypto.randomUUID()
   const timestamp = Date.now()
-  await pool.query(
-    `
-      INSERT INTO knowledge_sources (
-        id,
-        organization_id,
-        connector_account_id,
-        source_type,
-        external_source_id,
-        display_name,
-        status,
-        sync_policy,
-        metadata,
-        created_at,
-        updated_at
-      )
-      VALUES (
-        $1,
-        $2,
-        $3,
-        $4,
-        $5,
-        $6,
-        'configured',
-        '{"mode":"scheduled_plus_manual"}'::jsonb,
-        '{}'::jsonb,
-        $7,
-        $7
-      )
-    `,
-    [
-      id,
-      input.organizationId,
-      input.connectorAccountId,
-      input.sourceType,
-      input.sourceRef,
-      input.sourceType.replaceAll('_', ' '),
-      timestamp,
-    ],
-  )
 
-  return id
+  try {
+    const result = await pool.query<{ id: string }>(
+      `
+        INSERT INTO knowledge_sources (
+          id,
+          organization_id,
+          connector_account_id,
+          source_type,
+          external_source_id,
+          display_name,
+          status,
+          sync_policy,
+          metadata,
+          created_at,
+          updated_at
+        )
+        VALUES (
+          $1,
+          $2,
+          $3,
+          $4,
+          $5,
+          $6,
+          'configured',
+          '{"mode":"scheduled_plus_manual"}'::jsonb,
+          '{}'::jsonb,
+          $7,
+          $7
+        )
+        ON CONFLICT (organization_id, connector_account_id, source_type) DO UPDATE SET
+          external_source_id = EXCLUDED.external_source_id,
+          display_name = EXCLUDED.display_name,
+          updated_at = EXCLUDED.updated_at
+        RETURNING id
+      `,
+      [
+        id,
+        input.organizationId,
+        input.connectorAccountId,
+        input.sourceType,
+        input.sourceRef,
+        input.displayName,
+        timestamp,
+      ],
+    )
+
+    return result.rows[0]?.id ?? id
+  } catch (error) {
+    if (!isMissingOnConflictConstraintError(error)) {
+      throw error
+    }
+
+    const existing = await pool.query<{ id: string }>(
+      `
+        SELECT id
+        FROM knowledge_sources
+        WHERE organization_id = $1
+          AND connector_account_id = $2
+          AND source_type = $3
+        LIMIT 1
+      `,
+      [input.organizationId, input.connectorAccountId, input.sourceType],
+    )
+
+    if (existing.rows[0]?.id) {
+      return existing.rows[0].id
+    }
+
+    await pool.query(
+      `
+        INSERT INTO knowledge_sources (
+          id,
+          organization_id,
+          connector_account_id,
+          source_type,
+          external_source_id,
+          display_name,
+          status,
+          sync_policy,
+          metadata,
+          created_at,
+          updated_at
+        )
+        VALUES (
+          $1,
+          $2,
+          $3,
+          $4,
+          $5,
+          $6,
+          'configured',
+          '{"mode":"scheduled_plus_manual"}'::jsonb,
+          '{}'::jsonb,
+          $7,
+          $7
+        )
+      `,
+      [
+        id,
+        input.organizationId,
+        input.connectorAccountId,
+        input.sourceType,
+        input.sourceRef,
+        input.displayName,
+        timestamp,
+      ],
+    )
+
+    return id
+  }
 }
 
 async function upsertRawConnectorRecord(input: {
@@ -1386,6 +1456,7 @@ async function processSyncJob() {
       connectorAccountId: job.connector_account_id,
       sourceType,
       sourceRef,
+      displayName: selectedSource.displayName,
     })
 
     let documentsIndexed = 0

@@ -364,7 +364,10 @@ async function seedConnectorSources(input: {
           $7,
           $7
         )
-        ON CONFLICT DO NOTHING
+        ON CONFLICT (organization_id, connector_account_id, source_type) DO UPDATE SET
+          external_source_id = EXCLUDED.external_source_id,
+          display_name = EXCLUDED.display_name,
+          updated_at = EXCLUDED.updated_at
       `,
       [
         crypto.randomUUID(),
