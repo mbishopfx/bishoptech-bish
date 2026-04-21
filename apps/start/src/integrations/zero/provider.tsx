@@ -149,10 +149,14 @@ export default function ZeroProvider({
   const isPublicRouteWithoutZeroIdentity =
     zeroOptionalRoute && (!ready || !userID || !context)
 
+  /**
+   * Zero often runs on a sibling Railway domain, so authenticated app sessions
+   * need an explicit bearer token in both cloud and self-hosted deployments.
+   * Public/auth routes still bypass Zero completely until a user session exists.
+   */
   const zeroToken = useZeroSelfHostedAccessToken({
     enabled:
       Boolean(cacheURL) &&
-      isSelfHosted &&
       !isPublicRouteWithoutZeroIdentity &&
       ready &&
       Boolean(userID) &&
@@ -188,13 +192,11 @@ export default function ZeroProvider({
     return null
   }
 
-  if (isSelfHosted && (!zeroToken.ready || !zeroToken.token)) {
+  if (!zeroToken.ready || !zeroToken.token) {
     return null
   }
 
-  const zeroProviderKey = isSelfHosted
-    ? `${userID}:${context.organizationId ?? 'personal'}:${zeroToken.token ?? 'missing'}`
-    : `${userID}:${context.organizationId ?? 'personal'}:cookie`
+  const zeroProviderKey = `${userID}:${context.organizationId ?? 'personal'}:${zeroToken.token ?? 'missing'}`
 
   return (
     <ZeroProviderBase
@@ -202,7 +204,7 @@ export default function ZeroProvider({
       userID={userID}
       context={context}
       cacheURL={cacheURL}
-      {...(isSelfHosted ? { auth: zeroToken.token } : {})}
+      auth={zeroToken.token}
       schema={schema}
       mutators={mutators}
     >

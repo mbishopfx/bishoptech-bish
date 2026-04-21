@@ -3,7 +3,6 @@ import { Effect, Schema } from 'effect'
 import { ServerRuntime } from '@/lib/backend/server-effect'
 import { requireNonAnonymousUserAuth } from '@/lib/backend/server-effect/http/server-auth'
 import { issueZeroSelfHostedAccessToken } from '@/lib/backend/zero-auth/zero-self-hosted-token.service'
-import { isSelfHosted } from '@/utils/app-feature-flags'
 
 class ZeroTokenUnauthorizedError extends Schema.TaggedErrorClass<ZeroTokenUnauthorizedError>()(
   'ZeroTokenUnauthorizedError',
@@ -24,10 +23,6 @@ export const Route = createFileRoute('/api/zero/token')({
   server: {
     handlers: {
       GET: async ({ request }) => {
-        if (!isSelfHosted) {
-          return new Response('Not Found', { status: 404 })
-        }
-
         const program = Effect.gen(function* () {
           const authContext = yield* requireNonAnonymousUserAuth({
             headers: request.headers,
@@ -43,7 +38,7 @@ export const Route = createFileRoute('/api/zero/token')({
               }),
             catch: (error) =>
               new ZeroTokenConfigurationError({
-                message: 'Failed to issue self-hosted Zero token.',
+                message: 'Failed to issue Zero access token.',
                 cause: error instanceof Error ? error.message : String(error),
               }),
           })
@@ -70,7 +65,7 @@ export const Route = createFileRoute('/api/zero/token')({
           if (error instanceof ZeroTokenConfigurationError) {
             return new Response(
               JSON.stringify({
-                error: 'Self-hosted Zero token configuration failed.',
+                error: 'Zero token configuration failed.',
                 cause: error.cause,
               }),
               {

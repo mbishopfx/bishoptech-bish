@@ -1,6 +1,5 @@
 import { Effect } from 'effect'
 import { requireAppUserAuth } from './server-auth'
-import { isSelfHosted } from '@/utils/app-feature-flags'
 import { verifyZeroSelfHostedAccessToken } from '@/lib/backend/zero-auth/zero-self-hosted-token.service'
 
 function readBearerToken(headers: Headers): string | null {
@@ -26,10 +25,13 @@ export const requireZeroAppUserAuth = Effect.fn(
   readonly headers: Headers
   readonly onUnauthorized: () => TUnauthorized
 }) => {
-  if (!isSelfHosted) {
-    return requireAppUserAuth(input)
-  }
-
+  /**
+   * Zero requests can arrive through a different Railway service/domain than
+   * the main web app. In that topology the browser session cookie is not
+   * guaranteed to accompany the Zero request, so we prefer an explicit bearer
+   * token when present and only fall back to the app cookie/session path when
+   * no token was supplied at all.
+   */
   const bearerToken = (() => {
     try {
       return readBearerToken(input.headers)
