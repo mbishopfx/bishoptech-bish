@@ -1,23 +1,28 @@
 import { Outlet, createFileRoute, redirect } from '@tanstack/react-router'
 import { DashboardLayout } from '@/components/layout'
-import { isSelfHosted } from '@/utils/app-feature-flags'
+import {
+  isGuestAccessEnabled,
+  isSelfHosted,
+} from '@/utils/app-feature-flags'
 
 export const Route = createFileRoute('/(app)/_layout')({
   beforeLoad: async ({ location }) => {
-    if (!isSelfHosted) {
-      return
-    }
-
-    const { getSelfHostedAppAccessSnapshot } = await import(
+    const { getAppAccessSnapshot } = await import(
       '@/lib/frontend/self-host/instance.functions'
     )
-    const snapshot = await getSelfHostedAppAccessSnapshot()
+    const snapshot = await getAppAccessSnapshot()
 
-    if (!snapshot.setupComplete) {
+    if (isSelfHosted && !snapshot.setupComplete) {
       throw redirect({ to: '/setup' })
     }
 
-    if (snapshot.publicAppLocked && (!snapshot.hasAuthenticatedUser || snapshot.isAnonymous)) {
+    const requiresSignIn =
+      (isSelfHosted && snapshot.publicAppLocked) || !isGuestAccessEnabled
+
+    if (
+      requiresSignIn &&
+      (!snapshot.hasAuthenticatedUser || snapshot.isAnonymous)
+    ) {
       throw redirect({
         to: '/auth/sign-in',
         search: {

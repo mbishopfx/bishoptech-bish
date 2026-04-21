@@ -9,6 +9,7 @@ import { readPublicRuntimeEnv } from './public-runtime-env'
 type AppFeatureFlags = {
   readonly instanceMode: 'cloud' | 'self_hosted'
   readonly selfHostSource: string
+  readonly enableGuestAccess: boolean
   readonly enableEmbedding: boolean
   readonly enableReasoningControls: boolean
   readonly enableAdvancedProviderTools: boolean
@@ -40,6 +41,12 @@ const APP_FEATURE_FLAGS: AppFeatureFlags = Object.freeze({
   selfHostSource: (readPublicRuntimeEnv('VITE_SELF_HOST_SOURCE') ?? '')
     .trim()
     .toLowerCase(),
+  /**
+   * Shared SaaS deployments should start from an authenticated workspace, not
+   * an automatically provisioned guest shell. The flag remains available so the
+   * open-source build can opt back into anonymous/demo flows explicitly.
+   */
+  enableGuestAccess: readBooleanEnv('VITE_ENABLE_GUEST_ACCESS', false),
   enableEmbedding: readBooleanEnv('VITE_ENABLE_EMBEDDING', true),
   enableReasoningControls: true,
   enableAdvancedProviderTools: true,
@@ -62,6 +69,7 @@ export const APP_FEATURES = APP_FEATURE_FLAGS
 export const appInstanceMode = APP_FEATURE_FLAGS.instanceMode
 export const selfHostSource = APP_FEATURE_FLAGS.selfHostSource
 export const isSelfHosted = APP_FEATURE_FLAGS.instanceMode === 'self_hosted'
+export const isGuestAccessEnabled = APP_FEATURE_FLAGS.enableGuestAccess
 export const isEmbeddingFeatureEnabled = APP_FEATURE_FLAGS.enableEmbedding
 export const canUseReasoningControls =
   APP_FEATURE_FLAGS.enableReasoningControls

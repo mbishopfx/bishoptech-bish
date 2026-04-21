@@ -188,6 +188,22 @@ export async function getSelfHostedAppAccessSnapshotAction() {
 }
 
 /**
+ * App shell auth gating needs one normalized answer regardless of deployment
+ * mode. Cloud SaaS uses the same session snapshot so public routes can decide
+ * whether to force sign-in without duplicating self-host setup checks.
+ */
+export async function getAppAccessSnapshotAction() {
+  const snapshot = await getPublicInstanceEnvironmentSnapshot()
+  const authContext = await Effect.runPromise(getServerAuthContext())
+
+  return {
+    ...snapshot,
+    hasAuthenticatedUser: Boolean(authContext.userId),
+    isAnonymous: authContext.isAnonymous,
+  }
+}
+
+/**
  * Step one of bootstrap setup validates the shared deployment token before the
  * UI collects the first admin credentials.
  */

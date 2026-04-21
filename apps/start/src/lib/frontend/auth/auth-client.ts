@@ -6,7 +6,10 @@ import {
   multiSessionClient,
   organizationClient, twoFactorClient 
 } from 'better-auth/client/plugins'
-import { isSelfHosted } from '@/utils/app-feature-flags'
+import {
+  isGuestAccessEnabled,
+  isSelfHosted,
+} from '@/utils/app-feature-flags'
 import { readPublicRuntimeEnv } from '@/utils/public-runtime-env'
 
 function resolveAuthClientBaseURL(): string {
@@ -44,7 +47,7 @@ export const authClient = createAuthClient({
           }),
         ]
       : []),
-    ...(!isSelfHosted ? [anonymousClient()] : []),
+    ...(!isSelfHosted && isGuestAccessEnabled ? [anonymousClient()] : []),
     multiSessionClient(),
     twoFactorClient(),
     ...(!isSelfHosted ? [emailOTPClient()] : []),

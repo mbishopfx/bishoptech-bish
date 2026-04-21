@@ -5,7 +5,10 @@ import type {
 } from './auth-context'
 import { extractServerAuthContext } from './auth-context'
 import { getSessionFromHeaders } from '@/lib/backend/auth/services/server-session.service'
-import { isSelfHosted } from '@/utils/app-feature-flags'
+import {
+  isGuestAccessEnabled,
+  isSelfHosted,
+} from '@/utils/app-feature-flags'
 
 export type OrgAuthenticatedServerAuthContext =
   AuthenticatedServerAuthContext & {
@@ -79,16 +82,16 @@ export const requireNonAnonymousUserAuth = Effect.fn(
 )
 
 /**
- * Self-hosted deployments never allow anonymous sessions into app or data APIs,
- * while cloud keeps the existing guest experience. This helper centralizes
- * that policy so chat and Zero routes do not each need to replicate it.
+ * Shared SaaS deployments default to explicit sign-in. Anonymous guest access
+ * remains opt-in for demo/open-source setups and self-hosted mode always keeps
+ * app/data APIs behind a persisted user session.
  */
 export const requireAppUserAuth = Effect.fn('ServerAuth.requireAppUserAuth')(
   <TUnauthorized>(input: {
     readonly headers: Headers
     readonly onUnauthorized: () => TUnauthorized
   }): Effect.Effect<AuthenticatedServerAuthContext, TUnauthorized> =>
-    isSelfHosted
+    isSelfHosted || !isGuestAccessEnabled
       ? requireNonAnonymousUserAuth(input)
       : requireUserAuth(input),
 )

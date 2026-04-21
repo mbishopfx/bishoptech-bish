@@ -7,7 +7,10 @@ import type { ZeroContext } from './schema'
 import { useAppAuth } from '@/lib/frontend/auth/use-auth'
 import { resolveZeroAuthSnapshot } from './zero-auth'
 import type { ZeroAuthSnapshot } from './zero-auth'
-import { isSelfHosted } from '@/utils/app-feature-flags'
+import {
+  isGuestAccessEnabled,
+  isSelfHosted,
+} from '@/utils/app-feature-flags'
 import { readPublicRuntimeEnv } from '@/utils/public-runtime-env'
 import { useZeroSelfHostedAccessToken } from './self-hosted-token'
 
@@ -78,7 +81,8 @@ function MissingZeroConfigurationState() {
 
 /**
  * Zero identity derives from Better Auth sessions.
- * Anonymous users are provisioned with Better Auth anonymous sessions.
+ * Anonymous users are only provisioned when the deployment explicitly opts
+ * into guest access. Shared SaaS mode keeps auth explicit.
  */
 function useZeroAuth(): {
   ready: boolean
@@ -96,7 +100,15 @@ function useZeroAuth(): {
   const anonymousBootstrapRef = useRef(false)
 
   useEffect(() => {
-    if (isSelfHosted || loading || user || anonymousBootstrapRef.current) return
+    if (
+      isSelfHosted ||
+      !isGuestAccessEnabled ||
+      loading ||
+      user ||
+      anonymousBootstrapRef.current
+    ) {
+      return
+    }
     anonymousBootstrapRef.current = true
     void signInAnonymously().finally(() => {
       anonymousBootstrapRef.current = false

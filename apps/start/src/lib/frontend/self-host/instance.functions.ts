@@ -37,6 +37,13 @@ export const getSelfHostedAppAccessSnapshot = createServerFn({
   return getSelfHostedAppAccessSnapshotAction()
 })
 
+export const getAppAccessSnapshot = createServerFn({
+  method: 'GET',
+}).handler(async () => {
+  const { getAppAccessSnapshotAction } = await import('./instance.server')
+  return getAppAccessSnapshotAction()
+})
+
 export const verifySelfHostedSetupAccess = createServerFn({ method: 'POST' })
   .inputValidator((input: unknown) => SelfHostedSetupTokenSchema.parse(input))
   .handler(async ({ data }) => {

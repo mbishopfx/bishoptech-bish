@@ -71,6 +71,14 @@ cp apps/start/.env.example apps/start/.env.local
 
 Edit `apps/start/.env.local` and configure the required envs.
 
+The default `apps/start/.env.example` now boots the shared SaaS posture:
+
+- `VITE_APP_INSTANCE_MODE=cloud`
+- `VITE_ENABLE_GUEST_ACCESS=false`
+
+If you specifically want the dedicated single-client deployment flow, start
+from `apps/start/.env.self-host.example` instead.
+
 For connector development, also add the provider credentials you plan to work on:
 
 ```bash
@@ -185,7 +193,8 @@ bun run app:scheduler
 
 Access the app at: `http://localhost:3000`
 
-Zero sync runs on `http://localhost:4848` by default. Local self-hosted mode expects `VITE_ZERO_CACHE_URL=http://localhost:4848`.
+Zero sync runs on `http://localhost:4848` by default. Both cloud and
+self-hosted mode expect `VITE_ZERO_CACHE_URL=http://localhost:4848` locally.
 
 ## Local Listener Development
 

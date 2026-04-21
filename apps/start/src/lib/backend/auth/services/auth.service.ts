@@ -51,7 +51,10 @@ import {
   verifySelfHostedSignupSecret,
 } from '@/lib/backend/self-host/instance-settings.service'
 import { APIError, createAuthMiddleware } from 'better-auth/api'
-import { isSelfHosted } from '@/utils/app-feature-flags'
+import {
+  isGuestAccessEnabled,
+  isSelfHosted,
+} from '@/utils/app-feature-flags'
 
 async function syncWorkspaceSubscription(input: {
   subscription: BetterAuthStripeSubscription
@@ -598,7 +601,7 @@ export const auth = betterAuth({
     }),
     ...(stripePlugin ? [stripePlugin] : []),
     ...(isTestRuntime ? [testUtils()] : []),
-    ...(!isSelfHosted
+    ...(!isSelfHosted && isGuestAccessEnabled
       ? [
           anonymous({
             generateName: () => 'Human',

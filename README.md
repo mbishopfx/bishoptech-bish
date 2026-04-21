@@ -1,9 +1,9 @@
 <h1 align="center">BISH</h1>
-<p align="center">Railway-first autonomous operations platform for small businesses.</p>
+<p align="center">Railway-first multi-tenant operations platform for small businesses.</p>
 
 <p align="center">
   <a href="https://bish.local"><strong>Website</strong></a> ·
-  <a href="#self-hosting"><strong>Deploy on Railway</strong></a> ·
+  <a href="#deploying-on-railway"><strong>Deploy on Railway</strong></a> ·
   <a href="#self-hosting"><strong>Self-hosting</strong></a> ·
   <a href="./DEVELOPMENT.md"><strong>Local Development</strong></a> ·
   <a href="./docs/client-onboarding/BISH_CLIENT_ONBOARDING_TEMPLATE.md"><strong>Client Onboarding</strong></a> ·
@@ -12,7 +12,7 @@
 
 ## Introduction
 
-BISH is an AGPL-safe fork/rebuild inspired by Rift's open core, reworked into a Railway-first platform for deploying custom, approval-gated SMB bots.
+BISH is an AGPL-safe fork/rebuild inspired by Rift's open core, reworked into a Railway-first platform for running a shared, approval-gated SMB ops workspace with optional self-hosting.
 
 The product goal is to combine sync-first chat infrastructure, Postgres-native knowledge retrieval, connector ingestion, and controlled agent evolution in one base platform.
 
@@ -56,9 +56,51 @@ Additional platform technologies:
 - Redis for transient stream continuity
 - Stripe + Resend for billing and email flows
 
+## Deploying on Railway
+
+BISH is designed for a four-service Railway layout and can run either as:
+
+- `cloud`: one shared SaaS deployment with many organizations
+- `self_hosted`: one dedicated deployment for a single client workspace
+
+The shared `cloud` mode is now the default path.
+
+BISH uses:
+
+- `apps/start` -> web app
+- `apps/zero-cache` -> Rocicorp Zero sync cache
+- `apps/worker` -> background job executor
+- `apps/scheduler` -> recurring sync scheduler
+
+Each service includes a `railway.toml` file. On Railway, import the monorepo, keep each service pointed at its package directory, and provision Postgres + Redis in the same project.
+
+For a shared SaaS deployment, wire the services like this:
+
+1. Create one Railway project with `apps/start`, `apps/zero-cache`, `apps/worker`, and `apps/scheduler` as separate services.
+2. Add Redis plus a Postgres instance that supports logical replication, then expose their connection URLs as shared variables.
+3. Add the env contract from `apps/start/.env.example` to the web service.
+4. Set the cloud-mode web envs:
+   - `VITE_APP_INSTANCE_MODE=cloud`
+   - `VITE_ENABLE_GUEST_ACCESS=false`
+   - `VITE_ZERO_CACHE_URL=https://<zero-cache-domain>`
+5. Configure the `zero-cache` service with:
+   - `ZERO_UPSTREAM_DB`
+   - `BISH_WEB_URL=https://<your-bish-domain>`
+   - optional `ZERO_APP_ID=bish`
+6. Mirror the database and scheduler variables into worker and scheduler.
+7. Set the OAuth callback URLs to the public BISH hostname:
+   - `GOOGLE_PICKER_REDIRECT_URI=https://<your-bish-domain>/api/org/knowledge/google/callback`
+   - `ASANA_REDIRECT_URI=https://<your-bish-domain>/api/org/bish/connectors/asana/callback`
+   - `HUBSPOT_REDIRECT_URI=https://<your-bish-domain>/api/org/bish/connectors/hubspot/callback`
+8. Add Stripe billing envs so organizations can upgrade in-app:
+   - `STRIPE_SECRET_KEY`
+   - `STRIPE_WEBHOOK_SECRET`
+   - the plan price IDs from `apps/start/.env.example`
+9. If you want local handoffs, users can generate a listener secret from the org approvals screen and run `packages/local-listener/start.sh` on their own machine.
+
 ## Self-Hosting
 
-BISH is designed for a four-service Railway layout:
+BISH can still run in dedicated self-hosted mode:
 
 - `apps/start` -> web app
 - `apps/zero-cache` -> Rocicorp Zero sync cache
@@ -73,13 +115,14 @@ Important release note:
 - If your Railway service is not Git-backed yet, `redeploy` does not publish local repo changes.
 - Use `railway up --service <name>` or `bun run deploy:railway:all` from this repo when you need Railway to serve the current source tree.
 
-For a production v1 deployment, wire the services like this:
+For a production self-hosted deployment, wire the services like this:
 
 1. Create one Railway project with `apps/start`, `apps/zero-cache`, `apps/worker`, and `apps/scheduler` as separate services.
 2. Add Redis plus a Postgres instance that supports logical replication, then expose their connection URLs as shared variables.
-3. Add the env contract from `apps/start/.env.example` to the web service.
+3. Start from `apps/start/.env.self-host.example` instead of the cloud example.
 4. Set the self-hosted Zero envs on the web service:
    - `VITE_APP_INSTANCE_MODE=self_hosted`
+   - `VITE_ENABLE_GUEST_ACCESS=false`
    - `VITE_SELF_HOST_SOURCE=railway`
    - `VITE_ZERO_CACHE_URL=https://<zero-cache-domain>`
 5. Configure the `zero-cache` service with:
@@ -121,13 +164,12 @@ For a reusable client rollout where the customer fills in their own Railway secr
   - `BISH_ENCRYPTION_KEY`
   - `AI_GATEWAY_API_KEY`
 - Web only:
-  - `VITE_APP_INSTANCE_MODE=self_hosted`
-  - `VITE_SELF_HOST_SOURCE=railway`
+  - `VITE_APP_INSTANCE_MODE=cloud`
+  - `VITE_ENABLE_GUEST_ACCESS=false`
   - `VITE_ZERO_CACHE_URL=https://<zero-cache-domain>`
   - `BETTER_AUTH_URL=https://<your-bish-domain>`
   - `VITE_BETTER_AUTH_URL=https://<your-bish-domain>`
   - `BETTER_AUTH_SECRET`
-  - `SELF_HOSTED_SETUP_TOKEN`
 - Google Workspace connector:
   - `GOOGLE_WORKSPACE_PROJECT_ID`
   - `GOOGLE_WORKSPACE_CLIENT_EMAIL`
@@ -138,7 +180,7 @@ For a reusable client rollout where the customer fills in their own Railway secr
   - `GOOGLE_PICKER_CLIENT_SECRET`
   - `GOOGLE_PICKER_REDIRECT_URI=https://<your-bish-domain>/api/org/knowledge/google/callback`
 
-If those envs are present, a customer should be able to deploy BISH on Railway, complete setup, chat with the enabled models, connect Google, ingest RAG documents, and hand off a chat thread into the local listener flow.
+If those envs are present, an organization should be able to sign up, enter the app on the shared deployment, connect Google, ingest RAG documents, upgrade via Stripe, and hand off a chat thread into the local listener flow.
 
 ### Source Deployment Commands
 
