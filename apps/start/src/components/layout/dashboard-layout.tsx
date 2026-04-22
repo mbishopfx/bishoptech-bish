@@ -13,24 +13,22 @@ import {
 
 export function DashboardLayout({ children }: { children: ReactNode }) {
   return (
-    <>
-      <div className="scrollbar-app min-h-screen w-full bg-surface-base">
-        <ActiveOrganizationProvider>
-          <HuddleSessionProvider>
-            <PageSidebarVisibilityProvider>
-              <RightSidebarProvider>
-                <MainNav sidebar={AppSidebar}>{children}</MainNav>
-                <ChatSearchCommand />
-              </RightSidebarProvider>
-            </PageSidebarVisibilityProvider>
-          </HuddleSessionProvider>
-        </ActiveOrganizationProvider>
-      </div>
-      <div className="fixed bottom-0 ltr:right-0 rtl:left-0 z-40 m-5">
-        <div className="flex items-center gap-3">
-          <HuddleSessionDock />
-        </div>
-      </div>
-    </>
+    <div className="scrollbar-app min-h-screen w-full bg-surface-base">
+      <ActiveOrganizationProvider>
+        <HuddleSessionProvider>
+          <PageSidebarVisibilityProvider>
+            <RightSidebarProvider>
+              <MainNav sidebar={AppSidebar}>{children}</MainNav>
+              <ChatSearchCommand />
+            </RightSidebarProvider>
+          </PageSidebarVisibilityProvider>
+          <div className="fixed bottom-0 ltr:right-0 rtl:left-0 z-40 m-5">
+            <div className="flex items-center gap-3">
+              <HuddleSessionDock />
+            </div>
+          </div>
+        </HuddleSessionProvider>
+      </ActiveOrganizationProvider>
+    </div>
   )
 }
