@@ -144,7 +144,7 @@ export function HuddlePage() {
       description="Voice-first collaboration rooms with reactions, live sticky notes, and workspace export controls."
     >
       <div className="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
-        <div className="rounded-3xl border border-border-base bg-surface-base/90 p-4">
+        <div className="rounded-[28px] border border-border-base bg-surface-strong p-3">
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-xs uppercase tracking-[0.24em] text-foreground-secondary">
@@ -223,8 +223,8 @@ export function HuddlePage() {
                     className={cn(
                       'w-full rounded-2xl border px-4 py-4 text-left transition-colors',
                       room.roomId === selectedRoomId
-                        ? 'border-sky-500/35 bg-sky-500/10'
-                        : 'border-border-base bg-surface-base hover:bg-surface-elevated',
+                        ? 'border-border-strong bg-surface-overlay'
+                        : 'border-border-base bg-surface-base hover:bg-surface-overlay',
                     )}
                   >
                     <div className="flex items-center justify-between gap-3">
@@ -251,16 +251,16 @@ export function HuddlePage() {
         </div>
 
         <div className="space-y-6">
-          <div className="rounded-3xl border border-border-base bg-surface-base/90 p-5">
+          <div className="rounded-[28px] border border-border-base bg-surface-strong p-3">
             {selectedRoom ? (
-              <>
+              <div className="rounded-[24px] bg-surface-base px-5 py-5">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <div className="flex items-center gap-2">
                       <Badge variant="outline" className="border-emerald-500/30 bg-emerald-500/10 text-emerald-300">
                         Live audio floor
                       </Badge>
-                      <Badge variant="outline" className="border-border-base">
+                      <Badge variant="outline" className="border-border-base bg-surface-overlay">
                         {selectedRoom.roomType === 'thread' ? 'Thread attached' : 'Org room'}
                       </Badge>
                     </div>
@@ -345,7 +345,7 @@ export function HuddlePage() {
                 </div>
 
                 <div className="mt-6 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-                  <div className="rounded-3xl border border-border-base bg-surface-base/70 p-4">
+                  <div className="rounded-[24px] border border-border-base bg-surface-base p-4">
                     <div className="flex items-center justify-between gap-3">
                       <div>
                         <p className="text-xs uppercase tracking-[0.24em] text-foreground-secondary">
@@ -380,7 +380,7 @@ export function HuddlePage() {
                         })}
                       </div>
                     </div>
-                    <div className="mt-4 rounded-2xl border border-border-base bg-surface-elevated/70 p-4">
+                    <div className="mt-4 rounded-2xl border border-border-base bg-surface-overlay p-4">
                       <div className="flex flex-wrap items-center justify-between gap-3">
                         <div>
                           <p className="text-xs uppercase tracking-[0.24em] text-foreground-secondary">
@@ -394,7 +394,7 @@ export function HuddlePage() {
                           </p>
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
-                          <Badge variant="outline" className="border-border-base">
+                          <Badge variant="outline" className="border-border-base bg-surface-base">
                             <Volume2 className="mr-1 size-3" />
                             {selectedRoomLiveCount} connected
                           </Badge>
@@ -518,7 +518,7 @@ export function HuddlePage() {
                       {(selectedRoom.members ?? []).map((member) => (
                         <div
                           key={member.id}
-                          className="rounded-2xl border border-border-base bg-surface-base px-4 py-3"
+                          className="rounded-2xl border border-border-base bg-surface-overlay px-4 py-3"
                         >
                           <div className="flex items-center justify-between gap-3">
                             <div>
@@ -575,7 +575,7 @@ export function HuddlePage() {
                     </div>
                   </div>
 
-                  <div className="rounded-3xl border border-border-base bg-surface-base/70 p-4">
+                  <div className="rounded-[24px] border border-border-base bg-surface-base p-4">
                     <p className="text-xs uppercase tracking-[0.24em] text-foreground-secondary">
                       Sticky notes
                     </p>
@@ -606,7 +606,7 @@ export function HuddlePage() {
                   {(selectedRoom.notes ?? []).map((note) => (
                     <div
                       key={note.id}
-                      className="rounded-[28px] border border-amber-500/25 bg-amber-500/10 p-4 shadow-[0_20px_60px_-40px_rgba(245,158,11,0.8)]"
+                      className="rounded-2xl border border-border-base bg-surface-overlay p-4"
                     >
                       <div className="flex items-center justify-between gap-3">
                         <h4 className="font-medium text-foreground-primary">{note.title}</h4>
@@ -632,9 +632,9 @@ export function HuddlePage() {
                     </div>
                   ))}
                 </div>
-              </>
+              </div>
             ) : (
-              <div className="rounded-3xl border border-dashed border-border-base p-8 text-foreground-secondary">
+              <div className="rounded-[24px] border border-dashed border-border-base bg-surface-base p-8 text-foreground-secondary">
                 Select a room to view its live huddle state.
               </div>
             )}

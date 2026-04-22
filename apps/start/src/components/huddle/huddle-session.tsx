@@ -159,8 +159,8 @@ export function HuddleSessionDock() {
   const levelPercent = Math.max(8, Math.round(audio.audioLevel * 100))
 
   return (
-    <div className="pointer-events-auto rounded-[28px] border border-border-base bg-surface-base/95 px-4 py-3 shadow-[0_20px_80px_-45px_rgba(15,23,42,0.9)] backdrop-blur-md">
-      <div className="flex min-w-[18rem] items-center gap-3">
+    <div className="pointer-events-auto min-w-[18rem] rounded-[30px] border border-border-base bg-surface-strong p-2.5 shadow-[0_18px_48px_-36px_rgba(25,24,22,0.72)]">
+      <div className="flex items-center gap-3 rounded-[24px] border border-border-base bg-surface-base px-4 py-3">
         <div
           className={cn(
             'inline-flex size-10 items-center justify-center rounded-full border',
@@ -182,7 +182,7 @@ export function HuddleSessionDock() {
             <p className="truncate font-medium text-foreground-primary">
               {activeRoom.name}
             </p>
-            <Badge variant="outline" className="border-border-base text-[10px] uppercase tracking-[0.18em]">
+            <Badge variant="outline" className="border-border-base bg-surface-overlay text-[10px] uppercase tracking-[0.18em]">
               {activeRoom.roomType === 'thread' ? 'Thread huddle' : 'Huddle'}
             </Badge>
           </div>
@@ -190,7 +190,7 @@ export function HuddleSessionDock() {
             {participantCount} live member{participantCount === 1 ? '' : 's'}
           </p>
         </div>
-        <div className="flex items-end gap-1 rounded-full border border-border-base bg-surface-elevated/80 px-2 py-1">
+        <div className="flex items-end gap-1 rounded-full border border-border-base bg-surface-strong px-2 py-1">
           {Array.from({ length: 4 }).map((_, index) => {
             const activeHeight = Math.max(
               6,
@@ -209,7 +209,7 @@ export function HuddleSessionDock() {
           })}
         </div>
       </div>
-      <div className="mt-3 flex items-center gap-2">
+      <div className="mt-2 flex items-center gap-2 px-1">
         <Button
           type="button"
           variant={audio.isMuted ? 'outline' : 'default'}
@@ -248,8 +248,8 @@ export function HuddleSessionDock() {
           Leave
         </Button>
       </div>
-      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-foreground-secondary">
-        <Badge variant="outline" className="border-border-base">
+      <div className="mt-2 flex flex-wrap items-center gap-2 px-1 pb-0.5 text-xs text-foreground-secondary">
+        <Badge variant="outline" className="border-border-base bg-surface-base">
           <Volume2 className="mr-1 size-3" />
           {audio.remoteConnectedCount} peer{audio.remoteConnectedCount === 1 ? '' : 's'}
         </Badge>

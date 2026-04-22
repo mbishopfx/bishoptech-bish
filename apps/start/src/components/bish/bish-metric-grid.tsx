@@ -15,21 +15,13 @@ export function BishMetricGrid({
 }: {
   metrics: readonly BishMetric[]
 }) {
-  const toneClasses: Record<NonNullable<BishMetric['tone']>, string> = {
-    default: 'bg-surface-raised',
-    accent: 'bg-[linear-gradient(180deg,rgba(84,108,163,0.08),transparent_72%)]',
-    success: 'bg-[linear-gradient(180deg,rgba(34,88,55,0.10),transparent_72%)]',
-    warning: 'bg-[linear-gradient(180deg,rgba(166,93,29,0.10),transparent_72%)]',
-  }
-
   return (
     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
       {metrics.map((metric) => (
         <Card
           key={metric.label}
           className={cn(
-            'min-h-[152px] border-border-base/80 shadow-[0_18px_40px_-34px_rgba(25,24,22,0.28)]',
-            toneClasses[metric.tone ?? 'default'],
+            'min-h-[152px] border-border-base bg-surface-base shadow-none',
           )}
         >
           <CardContent className="flex h-full flex-col justify-between gap-6 pt-1">
