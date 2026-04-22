@@ -91,6 +91,37 @@ function buildDefaultSystemPrompt() {
   ].join(' ')
 }
 
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+/**
+ * Local listener delivery happens over customer-managed tunnels, so brief TLS
+ * or edge-proxy hiccups should not immediately fail the handoff. We only retry
+ * transport-level failures and upstream gateway statuses; auth or validation
+ * errors remain immediate failures because they require operator action.
+ */
+function isRetryableListenerDeliveryFailure(input: {
+  readonly error?: unknown
+  readonly status?: number
+}) {
+  if (typeof input.status === 'number') {
+    return [408, 425, 429, 502, 503, 504].includes(input.status)
+  }
+
+  if (!(input.error instanceof Error)) return false
+  const message = input.error.message.toLowerCase()
+  return (
+    message.includes('certificate') ||
+    message.includes('tls') ||
+    message.includes('ssl') ||
+    message.includes('fetch failed') ||
+    message.includes('econnreset') ||
+    message.includes('econnrefused') ||
+    message.includes('socket hang up')
+  )
+}
+
 function formatLocalListenerThreadUpdate(input: {
   readonly title: string
   readonly target: string
@@ -829,19 +860,66 @@ export async function dispatchThreadToLocalListener(input: {
   })
 
   try {
-    const response = await fetch(listener.endpoint_url, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-bish-timestamp': timestamp,
-        'x-bish-signature': signature,
-      },
-      body,
-    })
+    let delivered = false
+    let lastError: Error | null = null
+    const retryDelaysMs = [0, 1_500, 4_000]
 
-    if (!response.ok) {
-      const message = await response.text()
-      throw new Error(message || 'Listener endpoint rejected the handoff.')
+    for (const [attemptIndex, delayMs] of retryDelaysMs.entries()) {
+      if (delayMs > 0) {
+        await sleep(delayMs)
+      }
+
+      try {
+        const response = await fetch(listener.endpoint_url, {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            'x-bish-timestamp': timestamp,
+            'x-bish-signature': signature,
+          },
+          body,
+        })
+
+        if (!response.ok) {
+          const message = await response.text()
+          const responseError = new Error(
+            message || 'Listener endpoint rejected the handoff.',
+          )
+
+          if (
+            !isRetryableListenerDeliveryFailure({
+              status: response.status,
+            }) ||
+            attemptIndex === retryDelaysMs.length - 1
+          ) {
+            throw responseError
+          }
+
+          lastError = responseError
+          continue
+        }
+
+        delivered = true
+        break
+      } catch (error) {
+        const normalizedError =
+          error instanceof Error ? error : new Error(String(error))
+
+        if (
+          !isRetryableListenerDeliveryFailure({
+            error: normalizedError,
+          }) ||
+          attemptIndex === retryDelaysMs.length - 1
+        ) {
+          throw normalizedError
+        }
+
+        lastError = normalizedError
+      }
+    }
+
+    if (!delivered) {
+      throw lastError ?? new Error('Listener endpoint rejected the handoff.')
     }
 
     await pool.query(
