@@ -6,6 +6,7 @@ import {
   Database,
   CreditCard,
   Key,
+  LayoutTemplate,
   Lock,
   ShieldCheck,
   Scale,
@@ -40,12 +41,12 @@ export const orgSettingsNavArea = () => ({
           href: `${ORG_SETTINGS_HREF}`,
           exact: true,
         },
-        // {
-        //   name: 'Integrations',
-        //   icon: Layout,
-        //   href: `${ORG_SETTINGS_HREF}/integrations`,
-        //   exact: true,
-        // },
+        {
+          name: 'Integration Wizard',
+          icon: LayoutTemplate,
+          href: `${ORG_SETTINGS_HREF}/integrations`,
+          exact: true,
+        },
         {
           name: m.org_analytics_page_title(),
           icon: TrendingUp,

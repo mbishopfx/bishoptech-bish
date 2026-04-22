@@ -442,6 +442,380 @@ const huddleNote = table('huddleNote')
   })
   .primaryKey('id')
 
+const orgPluginEntitlement = table('orgPluginEntitlement')
+  .from('org_plugin_entitlements')
+  .columns({
+    id: string(),
+    organizationId: string().from('organization_id'),
+    pluginKey: string().from('plugin_key'),
+    entitlementStatus: string().from('entitlement_status'),
+    entitlementSource: string().from('entitlement_source'),
+    metadata: json<Record<string, unknown>>(),
+    createdAt: number().from('created_at'),
+    updatedAt: number().from('updated_at'),
+  })
+  .primaryKey('id')
+
+const orgPluginInstallation = table('orgPluginInstallation')
+  .from('org_plugin_installations')
+  .columns({
+    id: string(),
+    organizationId: string().from('organization_id'),
+    pluginKey: string().from('plugin_key'),
+    activationStatus: string().from('activation_status'),
+    navVisible: boolean().from('nav_visible'),
+    activatedAt: number().from('activated_at').optional(),
+    activatedByUserId: string().from('activated_by_user_id').optional(),
+    metadata: json<Record<string, unknown>>(),
+    createdAt: number().from('created_at'),
+    updatedAt: number().from('updated_at'),
+  })
+  .primaryKey('id')
+
+const orgIntegrationCredential = table('orgIntegrationCredential')
+  .from('org_integration_credentials')
+  .columns({
+    id: string(),
+    organizationId: string().from('organization_id'),
+    providerKey: string().from('provider_key'),
+    authMode: string().from('auth_mode'),
+    status: string(),
+    credentialLabel: string().from('credential_label').optional(),
+    linkedAccountName: string().from('linked_account_name').optional(),
+    linkedAccountExternalId: string()
+      .from('linked_account_external_id')
+      .optional(),
+    encryptedConfig: json<Record<string, unknown>>()
+      .from('encrypted_config')
+      .optional(),
+    metadata: json<Record<string, unknown>>(),
+    createdByUserId: string().from('created_by_user_id').optional(),
+    createdAt: number().from('created_at'),
+    updatedAt: number().from('updated_at'),
+  })
+  .primaryKey('id')
+
+const project = table('project')
+  .from('project')
+  .columns({
+    id: string(),
+    organizationId: string().from('organization_id'),
+    title: string(),
+    description: string().optional(),
+    status: string(),
+    createdByUserId: string().from('created_by_user_id'),
+    linkedTicketId: string().from('linked_ticket_id').optional(),
+    activeHuddleRoomId: string().from('active_huddle_room_id').optional(),
+    createdAt: number().from('created_at'),
+    updatedAt: number().from('updated_at'),
+  })
+  .primaryKey('id')
+
+const projectMember = table('projectMember')
+  .from('project_member')
+  .columns({
+    id: string(),
+    projectId: string().from('project_id'),
+    organizationId: string().from('organization_id'),
+    userId: string().from('user_id'),
+    accessRole: string().from('access_role'),
+    addedByUserId: string().from('added_by_user_id').optional(),
+    createdAt: number().from('created_at'),
+    updatedAt: number().from('updated_at'),
+  })
+  .primaryKey('id')
+
+const projectColumn = table('projectColumn')
+  .from('project_column')
+  .columns({
+    id: string(),
+    projectId: string().from('project_id'),
+    organizationId: string().from('organization_id'),
+    title: string(),
+    position: number(),
+    createdAt: number().from('created_at'),
+    updatedAt: number().from('updated_at'),
+  })
+  .primaryKey('id')
+
+const projectCard = table('projectCard')
+  .from('project_card')
+  .columns({
+    id: string(),
+    projectId: string().from('project_id'),
+    organizationId: string().from('organization_id'),
+    columnId: string().from('column_id'),
+    title: string(),
+    description: string().optional(),
+    position: number(),
+    createdByUserId: string().from('created_by_user_id'),
+    assigneeUserId: string().from('assignee_user_id').optional(),
+    ticketId: string().from('ticket_id').optional(),
+    dueAt: number().from('due_at').optional(),
+    createdAt: number().from('created_at'),
+    updatedAt: number().from('updated_at'),
+  })
+  .primaryKey('id')
+
+const projectArtifact = table('projectArtifact')
+  .from('project_artifact')
+  .columns({
+    id: string(),
+    projectId: string().from('project_id'),
+    organizationId: string().from('organization_id'),
+    createdByUserId: string().from('created_by_user_id'),
+    kind: string(),
+    label: string(),
+    url: string(),
+    storageKey: string().from('storage_key').optional(),
+    contentType: string().from('content_type').optional(),
+    createdAt: number().from('created_at'),
+    updatedAt: number().from('updated_at'),
+  })
+  .primaryKey('id')
+
+const projectNote = table('projectNote')
+  .from('project_note')
+  .columns({
+    id: string(),
+    projectId: string().from('project_id'),
+    organizationId: string().from('organization_id'),
+    createdByUserId: string().from('created_by_user_id'),
+    title: string(),
+    content: string(),
+    createdAt: number().from('created_at'),
+    updatedAt: number().from('updated_at'),
+  })
+  .primaryKey('id')
+
+const ticket = table('ticket')
+  .from('ticket')
+  .columns({
+    id: string(),
+    organizationId: string().from('organization_id'),
+    title: string(),
+    description: string(),
+    severity: string(),
+    status: string(),
+    createdByUserId: string().from('created_by_user_id'),
+    approvedProjectId: string().from('approved_project_id').optional(),
+    createdAt: number().from('created_at'),
+    updatedAt: number().from('updated_at'),
+  })
+  .primaryKey('id')
+
+const ticketMember = table('ticketMember')
+  .from('ticket_member')
+  .columns({
+    id: string(),
+    ticketId: string().from('ticket_id'),
+    organizationId: string().from('organization_id'),
+    userId: string().from('user_id'),
+    accessRole: string().from('access_role'),
+    addedByUserId: string().from('added_by_user_id').optional(),
+    createdAt: number().from('created_at'),
+    updatedAt: number().from('updated_at'),
+  })
+  .primaryKey('id')
+
+const ticketDecision = table('ticketDecision')
+  .from('ticket_decision')
+  .columns({
+    id: string(),
+    ticketId: string().from('ticket_id'),
+    organizationId: string().from('organization_id'),
+    decision: string(),
+    decisionNote: string().from('decision_note').optional(),
+    decidedByUserId: string().from('decided_by_user_id'),
+    projectId: string().from('project_id').optional(),
+    createdAt: number().from('created_at'),
+    updatedAt: number().from('updated_at'),
+  })
+  .primaryKey('id')
+
+const socialPost = table('socialPost')
+  .from('social_post')
+  .columns({
+    id: string(),
+    organizationId: string().from('organization_id'),
+    title: string(),
+    content: string(),
+    channels: json<readonly string[]>(),
+    status: string(),
+    scheduledFor: number().from('scheduled_for').optional(),
+    publishedAt: number().from('published_at').optional(),
+    createdByUserId: string().from('created_by_user_id'),
+    errorMessage: string().from('error_message').optional(),
+    createdAt: number().from('created_at'),
+    updatedAt: number().from('updated_at'),
+  })
+  .primaryKey('id')
+
+const socialPublishJob = table('socialPublishJob')
+  .from('social_publish_job')
+  .columns({
+    id: string(),
+    organizationId: string().from('organization_id'),
+    socialPostId: string().from('social_post_id'),
+    providerKey: string().from('provider_key'),
+    status: string(),
+    externalAccountId: string().from('external_account_id').optional(),
+    errorMessage: string().from('error_message').optional(),
+    scheduledFor: number().from('scheduled_for').optional(),
+    publishedAt: number().from('published_at').optional(),
+    createdAt: number().from('created_at'),
+    updatedAt: number().from('updated_at'),
+  })
+  .primaryKey('id')
+
+const voiceAssistantInstance = table('voiceAssistantInstance')
+  .from('voice_assistant_instance')
+  .columns({
+    id: string(),
+    organizationId: string().from('organization_id'),
+    assistantTemplateKey: string().from('assistant_template_key'),
+    providerMode: string().from('provider_mode'),
+    externalAssistantId: string().from('external_assistant_id').optional(),
+    phoneNumber: string().from('phone_number').optional(),
+    callerId: string().from('caller_id').optional(),
+    provisioningStatus: string().from('provisioning_status'),
+    lastSyncedAt: number().from('last_synced_at').optional(),
+    createdByUserId: string().from('created_by_user_id'),
+    metadata: json<Record<string, unknown>>(),
+    createdAt: number().from('created_at'),
+    updatedAt: number().from('updated_at'),
+  })
+  .primaryKey('id')
+
+const voiceCampaign = table('voiceCampaign')
+  .from('voice_campaign')
+  .columns({
+    id: string(),
+    organizationId: string().from('organization_id'),
+    title: string(),
+    status: string(),
+    assistantInstanceId: string().from('assistant_instance_id').optional(),
+    assistantTemplateKey: string().from('assistant_template_key'),
+    providerMode: string().from('provider_mode'),
+    externalAssistantId: string().from('external_assistant_id').optional(),
+    phoneNumber: string().from('phone_number').optional(),
+    callerId: string().from('caller_id').optional(),
+    provisioningStatus: string().from('provisioning_status'),
+    lastSyncedAt: number().from('last_synced_at').optional(),
+    createdByUserId: string().from('created_by_user_id'),
+    csvFileName: string().from('csv_file_name').optional(),
+    createdAt: number().from('created_at'),
+    updatedAt: number().from('updated_at'),
+  })
+  .primaryKey('id')
+
+const voiceLeadBatch = table('voiceLeadBatch')
+  .from('voice_lead_batch')
+  .columns({
+    id: string(),
+    organizationId: string().from('organization_id'),
+    campaignId: string().from('campaign_id'),
+    title: string(),
+    rowCount: number().from('row_count'),
+    fieldMapping: json<Record<string, unknown>>().from('field_mapping'),
+    createdAt: number().from('created_at'),
+    updatedAt: number().from('updated_at'),
+  })
+  .primaryKey('id')
+
+const voiceLead = table('voiceLead')
+  .from('voice_lead')
+  .columns({
+    id: string(),
+    organizationId: string().from('organization_id'),
+    batchId: string().from('batch_id'),
+    campaignId: string().from('campaign_id'),
+    displayName: string().from('display_name').optional(),
+    phoneNumber: string().from('phone_number').optional(),
+    email: string().optional(),
+    companyName: string().from('company_name').optional(),
+    payload: json<Record<string, unknown>>(),
+    rowIndex: number().from('row_index'),
+    createdAt: number().from('created_at'),
+    updatedAt: number().from('updated_at'),
+  })
+  .primaryKey('id')
+
+const voiceCallLog = table('voiceCallLog')
+  .from('voice_call_log')
+  .columns({
+    id: string(),
+    organizationId: string().from('organization_id'),
+    campaignId: string().from('campaign_id'),
+    leadId: string().from('lead_id'),
+    externalCallId: string().from('external_call_id').optional(),
+    status: string(),
+    transcript: string().optional(),
+    errorMessage: string().from('error_message').optional(),
+    createdAt: number().from('created_at'),
+    updatedAt: number().from('updated_at'),
+  })
+  .primaryKey('id')
+
+const voiceTranscriptSummary = table('voiceTranscriptSummary')
+  .from('voice_transcript_summary')
+  .columns({
+    id: string(),
+    organizationId: string().from('organization_id'),
+    callLogId: string().from('call_log_id'),
+    summary: string(),
+    actionItems: json<readonly string[]>().from('action_items'),
+    createdAt: number().from('created_at'),
+    updatedAt: number().from('updated_at'),
+  })
+  .primaryKey('id')
+
+const smsCampaign = table('smsCampaign')
+  .from('sms_campaign')
+  .columns({
+    id: string(),
+    organizationId: string().from('organization_id'),
+    title: string(),
+    status: string(),
+    messageTemplate: string().from('message_template'),
+    createdByUserId: string().from('created_by_user_id'),
+    csvFileName: string().from('csv_file_name').optional(),
+    createdAt: number().from('created_at'),
+    updatedAt: number().from('updated_at'),
+  })
+  .primaryKey('id')
+
+const smsBatch = table('smsBatch')
+  .from('sms_batch')
+  .columns({
+    id: string(),
+    organizationId: string().from('organization_id'),
+    campaignId: string().from('campaign_id'),
+    title: string(),
+    rowCount: number().from('row_count'),
+    createdAt: number().from('created_at'),
+    updatedAt: number().from('updated_at'),
+  })
+  .primaryKey('id')
+
+const smsMessageLog = table('smsMessageLog')
+  .from('sms_message_log')
+  .columns({
+    id: string(),
+    organizationId: string().from('organization_id'),
+    campaignId: string().from('campaign_id'),
+    batchId: string().from('batch_id'),
+    phoneNumber: string().from('phone_number').optional(),
+    displayName: string().from('display_name').optional(),
+    status: string(),
+    externalMessageId: string().from('external_message_id').optional(),
+    responseText: string().from('response_text').optional(),
+    payload: json<Record<string, unknown>>(),
+    createdAt: number().from('created_at'),
+    updatedAt: number().from('updated_at'),
+  })
+  .primaryKey('id')
+
 // ---------------------------------------------------------------------------
 // Relationships (optional; use for .related() in ZQL)
 // ---------------------------------------------------------------------------
@@ -718,6 +1092,29 @@ export const schema = createSchema({
     huddleSignal,
     huddleReaction,
     huddleNote,
+    orgPluginEntitlement,
+    orgPluginInstallation,
+    orgIntegrationCredential,
+    project,
+    projectMember,
+    projectColumn,
+    projectCard,
+    projectArtifact,
+    projectNote,
+    ticket,
+    ticketMember,
+    ticketDecision,
+  socialPost,
+  socialPublishJob,
+  voiceAssistantInstance,
+  voiceCampaign,
+    voiceLeadBatch,
+    voiceLead,
+    voiceCallLog,
+    voiceTranscriptSummary,
+    smsCampaign,
+    smsBatch,
+    smsMessageLog,
   ],
   relationships: [
     organizationRelationships,

@@ -6,6 +6,7 @@ import { orgKnowledgeQueryDefinitions } from './queries/org-knowledge.queries'
 import { orgSettingsQueryDefinitions } from './queries/org-settings.queries'
 import { orgPolicyQueryDefinitions } from './queries/org-policy.queries'
 import { huddleQueryDefinitions } from './queries/huddle.queries'
+import { workspaceToolsQueryDefinitions } from './queries/workspace-tools.queries'
 
 /**
  * Workspace-wide Zero queries composed from feature-scoped modules.
@@ -18,4 +19,5 @@ export const queries = defineQueriesWithType<Schema>()({
   ...orgSettingsQueryDefinitions,
   ...orgPolicyQueryDefinitions,
   ...huddleQueryDefinitions,
+  ...workspaceToolsQueryDefinitions,
 })

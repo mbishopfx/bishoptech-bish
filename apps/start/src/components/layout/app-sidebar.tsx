@@ -5,9 +5,15 @@ import { useMediaQuery } from '@bish/ui/hooks/useMediaQuery'
 import {
   CHAT_AREA_KEY,
   getCurrentArea,
+  MARKETPLACE_AREA_KEY,
   NAV_AREAS,
   OPERATOR_AREA_KEY,
+  PROJECTS_AREA_KEY,
   SETTINGS_AREA_KEY,
+  SMS_AREA_KEY,
+  SOCIAL_AREA_KEY,
+  TICKETS_AREA_KEY,
+  VOICE_AREA_KEY,
 } from '@/components/layout/sidebar/app-sidebar-nav.config'
 import { SidebarAreaPanel } from '@/components/layout/sidebar/sidebar-area-panel'
 import { ORG_SETTINGS_AREA_KEY } from '@/routes/(app)/_layout/organization/settings/-organization-settings-nav'
@@ -20,6 +26,8 @@ import { isBishOperatorEmail } from '@/lib/backend/bish/operator-access'
 import { useAppAuth } from '@/lib/frontend/auth/use-auth'
 import { Link, useRouterState } from '@tanstack/react-router'
 import { waitForPageSettled } from '@/lib/frontend/performance/page-settled'
+import { useQuery } from '@rocicorp/zero/react'
+import { queries } from '@/integrations/zero'
 import { SidebarChatThreadPreloader } from './sidebar/sidebar-chat-thread-preloader'
 import { usePageSidebarVisibility } from './page-sidebar-visibility-context'
 
@@ -33,6 +41,15 @@ const SIDEBAR_AREAS_WIDTH = 240
 const SIDEBAR_WIDTH = SIDEBAR_GROUPS_WIDTH + SIDEBAR_AREAS_WIDTH
 const SIDEBAR_CONTENT_GAP = 8
 let lastKnownAppSidebarArea: string | null = null
+
+const WORKSPACE_PLUGIN_AREA_KEYS = {
+  marketplace: MARKETPLACE_AREA_KEY,
+  projects: PROJECTS_AREA_KEY,
+  ticket_triage: TICKETS_AREA_KEY,
+  social_publishing: SOCIAL_AREA_KEY,
+  voice_campaigns: VOICE_AREA_KEY,
+  sms_campaigns: SMS_AREA_KEY,
+} as const
 
 export const AppSidebar: ComponentType = () => {
   const { isMobile } = useMediaQuery()
@@ -113,9 +130,35 @@ export const AppSidebar: ComponentType = () => {
     }
   }, [effectiveCurrentArea, isTransitionReady])
   const { user, loading, isAnonymous } = useAppAuth()
+  const [pluginInstallations] = useQuery(
+    queries.workspaceTools.pluginInstallations({}),
+  )
   const { isChatPageSidebarCollapsed } = usePageSidebarVisibility()
   const direction = useDirection()
   const canAccessOperator = isBishOperatorEmail(user?.email)
+  const visiblePluginAreaKeys = useMemo(() => {
+    const visible = new Set<string>([MARKETPLACE_AREA_KEY])
+
+    for (const installation of pluginInstallations ?? []) {
+      if (
+        installation.activation_status === 'active' &&
+        installation.nav_visible &&
+        installation.plugin_key in WORKSPACE_PLUGIN_AREA_KEYS
+      ) {
+        visible.add(
+          WORKSPACE_PLUGIN_AREA_KEYS[
+            installation.plugin_key as keyof typeof WORKSPACE_PLUGIN_AREA_KEYS
+          ],
+        )
+      }
+    }
+
+    if (effectiveCurrentArea && effectiveCurrentArea in NAV_AREAS) {
+      visible.add(effectiveCurrentArea)
+    }
+
+    return visible
+  }, [effectiveCurrentArea, pluginInstallations])
   // Keep non-chat areas unchanged. For chat routes, allow collapsing just the
   // area panel while keeping the primary icon rail visible.
   const showAreaPanel =
@@ -184,6 +227,20 @@ export const AppSidebar: ComponentType = () => {
               .filter(([key]) =>
                 key === OPERATOR_AREA_KEY ? canAccessOperator : true,
               )
+              .filter(([key]) => {
+                if (
+                  key === MARKETPLACE_AREA_KEY ||
+                  key === PROJECTS_AREA_KEY ||
+                  key === TICKETS_AREA_KEY ||
+                  key === SOCIAL_AREA_KEY ||
+                  key === VOICE_AREA_KEY ||
+                  key === SMS_AREA_KEY
+                ) {
+                  return visiblePluginAreaKeys.has(key)
+                }
+
+                return true
+              })
               .filter(
                 ([key]) =>
                   key !== SETTINGS_AREA_KEY && key !== ORG_SETTINGS_AREA_KEY,

@@ -1,19 +1,21 @@
-import { createFileRoute, redirect } from '@tanstack/react-router'
-import { BishOperatorPage } from '@/components/operator/bish-operator-page'
-import { getBishOperatorSnapshot } from '@/lib/frontend/bish/bish.functions'
+import { createFileRoute } from '@tanstack/react-router'
+import { OperatorDashboardPage } from '@/components/workspace-tools/operator-dashboard-page'
+import { getWorkspaceDashboardSnapshot } from '@/lib/frontend/workspace-tools/workspace-tools.functions'
+import { useAppAuth } from '@/lib/frontend/auth/use-auth'
+import { isBishOperatorEmail } from '@/lib/backend/bish/operator-access'
 
 export const Route = createFileRoute('/(app)/_layout/operator')({
-  loader: async () => {
-    try {
-      return await getBishOperatorSnapshot()
-    } catch {
-      throw redirect({ to: '/' })
-    }
-  },
+  loader: () => getWorkspaceDashboardSnapshot(),
   component: RouteComponent,
 })
 
 function RouteComponent() {
   const snapshot = Route.useLoaderData()
-  return <BishOperatorPage snapshot={snapshot} />
+  const { user } = useAppAuth()
+  return (
+    <OperatorDashboardPage
+      snapshot={snapshot}
+      showPlatformOperatorLink={isBishOperatorEmail(user?.email)}
+    />
+  )
 }

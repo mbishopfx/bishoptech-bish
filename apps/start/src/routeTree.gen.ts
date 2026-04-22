@@ -31,9 +31,15 @@ import { Route as ApiOrgModelPolicyRouteRouteImport } from './routes/api/org/mod
 import { Route as ApiFilesUploadRouteRouteImport } from './routes/api/files/upload/route'
 import { Route as ApiFilesObjectRouteRouteImport } from './routes/api/files/object/route'
 import { Route as ApiFilesMarkdownRouteRouteImport } from './routes/api/files/markdown/route'
+import { Route as appLayoutVoiceRouteRouteImport } from './routes/(app)/_layout/voice/route'
+import { Route as appLayoutTicketsRouteRouteImport } from './routes/(app)/_layout/tickets/route'
+import { Route as appLayoutSocialRouteRouteImport } from './routes/(app)/_layout/social/route'
+import { Route as appLayoutSmsRouteRouteImport } from './routes/(app)/_layout/sms/route'
 import { Route as appLayoutSettingsRouteRouteImport } from './routes/(app)/_layout/settings/route'
+import { Route as appLayoutProjectsRouteRouteImport } from './routes/(app)/_layout/projects/route'
 import { Route as appLayoutOrganizationRouteRouteImport } from './routes/(app)/_layout/organization/route'
 import { Route as appLayoutOperatorRouteRouteImport } from './routes/(app)/_layout/operator/route'
+import { Route as appLayoutMarketplaceRouteRouteImport } from './routes/(app)/_layout/marketplace/route'
 import { Route as appLayoutHuddleRouteRouteImport } from './routes/(app)/_layout/huddle/route'
 import { Route as appLayoutChatRouteRouteImport } from './routes/(app)/_layout/chat/route'
 import { Route as appLayoutSettingsIndexRouteImport } from './routes/(app)/_layout/settings/index'
@@ -51,6 +57,7 @@ import { Route as ApiBishListenerArtifactsRouteRouteImport } from './routes/api/
 import { Route as ApiBishListenerActivityRouteRouteImport } from './routes/api/bish/listener/activity/route'
 import { Route as appLayoutSettingsSecurityRouteRouteImport } from './routes/(app)/_layout/settings/security/route'
 import { Route as appLayoutOrganizationSettingsRouteRouteImport } from './routes/(app)/_layout/organization/settings/route'
+import { Route as appLayoutOperatorPlatformRouteRouteImport } from './routes/(app)/_layout/operator/platform/route'
 import { Route as appLayoutChatThreadIdRouteRouteImport } from './routes/(app)/_layout/chat/$threadId/route'
 import { Route as appLayoutOrganizationSettingsIndexRouteImport } from './routes/(app)/_layout/organization/settings/index'
 import { Route as ApiOrgKnowledgeGoogleStartRouteRouteImport } from './routes/api/org/knowledge/google/start/route'
@@ -61,6 +68,7 @@ import { Route as appLayoutOrganizationSettingsProviderPolicyRouteRouteImport } 
 import { Route as appLayoutOrganizationSettingsModelsRouteRouteImport } from './routes/(app)/_layout/organization/settings/models/route'
 import { Route as appLayoutOrganizationSettingsMembersRouteRouteImport } from './routes/(app)/_layout/organization/settings/members/route'
 import { Route as appLayoutOrganizationSettingsKnowledgeRouteRouteImport } from './routes/(app)/_layout/organization/settings/knowledge/route'
+import { Route as appLayoutOrganizationSettingsIntegrationsRouteRouteImport } from './routes/(app)/_layout/organization/settings/integrations/route'
 import { Route as appLayoutOrganizationSettingsConnectorsRouteRouteImport } from './routes/(app)/_layout/organization/settings/connectors/route'
 import { Route as appLayoutOrganizationSettingsCompliancePolicyRouteRouteImport } from './routes/(app)/_layout/organization/settings/compliance-policy/route'
 import { Route as appLayoutOrganizationSettingsByokRouteRouteImport } from './routes/(app)/_layout/organization/settings/byok/route'
@@ -186,9 +194,34 @@ const ApiFilesMarkdownRouteRoute = ApiFilesMarkdownRouteRouteImport.update({
   path: '/api/files/markdown',
   getParentRoute: () => rootRouteImport,
 } as any)
+const appLayoutVoiceRouteRoute = appLayoutVoiceRouteRouteImport.update({
+  id: '/voice',
+  path: '/voice',
+  getParentRoute: () => appLayoutRouteRoute,
+} as any)
+const appLayoutTicketsRouteRoute = appLayoutTicketsRouteRouteImport.update({
+  id: '/tickets',
+  path: '/tickets',
+  getParentRoute: () => appLayoutRouteRoute,
+} as any)
+const appLayoutSocialRouteRoute = appLayoutSocialRouteRouteImport.update({
+  id: '/social',
+  path: '/social',
+  getParentRoute: () => appLayoutRouteRoute,
+} as any)
+const appLayoutSmsRouteRoute = appLayoutSmsRouteRouteImport.update({
+  id: '/sms',
+  path: '/sms',
+  getParentRoute: () => appLayoutRouteRoute,
+} as any)
 const appLayoutSettingsRouteRoute = appLayoutSettingsRouteRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => appLayoutRouteRoute,
+} as any)
+const appLayoutProjectsRouteRoute = appLayoutProjectsRouteRouteImport.update({
+  id: '/projects',
+  path: '/projects',
   getParentRoute: () => appLayoutRouteRoute,
 } as any)
 const appLayoutOrganizationRouteRoute =
@@ -202,6 +235,12 @@ const appLayoutOperatorRouteRoute = appLayoutOperatorRouteRouteImport.update({
   path: '/operator',
   getParentRoute: () => appLayoutRouteRoute,
 } as any)
+const appLayoutMarketplaceRouteRoute =
+  appLayoutMarketplaceRouteRouteImport.update({
+    id: '/marketplace',
+    path: '/marketplace',
+    getParentRoute: () => appLayoutRouteRoute,
+  } as any)
 const appLayoutHuddleRouteRoute = appLayoutHuddleRouteRouteImport.update({
   id: '/huddle',
   path: '/huddle',
@@ -298,6 +337,12 @@ const appLayoutOrganizationSettingsRouteRoute =
     path: '/settings',
     getParentRoute: () => appLayoutOrganizationRouteRoute,
   } as any)
+const appLayoutOperatorPlatformRouteRoute =
+  appLayoutOperatorPlatformRouteRouteImport.update({
+    id: '/platform',
+    path: '/platform',
+    getParentRoute: () => appLayoutOperatorRouteRoute,
+  } as any)
 const appLayoutChatThreadIdRouteRoute =
   appLayoutChatThreadIdRouteRouteImport.update({
     id: '/$threadId',
@@ -356,6 +401,12 @@ const appLayoutOrganizationSettingsKnowledgeRouteRoute =
   appLayoutOrganizationSettingsKnowledgeRouteRouteImport.update({
     id: '/knowledge',
     path: '/knowledge',
+    getParentRoute: () => appLayoutOrganizationSettingsRouteRoute,
+  } as any)
+const appLayoutOrganizationSettingsIntegrationsRouteRoute =
+  appLayoutOrganizationSettingsIntegrationsRouteRouteImport.update({
+    id: '/integrations',
+    path: '/integrations',
     getParentRoute: () => appLayoutOrganizationSettingsRouteRoute,
   } as any)
 const appLayoutOrganizationSettingsConnectorsRouteRoute =
@@ -456,9 +507,15 @@ export interface FileRoutesByFullPath {
   '/legal/terms': typeof LegalTermsRouteRoute
   '/chat': typeof appLayoutChatRouteRouteWithChildren
   '/huddle': typeof appLayoutHuddleRouteRoute
-  '/operator': typeof appLayoutOperatorRouteRoute
+  '/marketplace': typeof appLayoutMarketplaceRouteRoute
+  '/operator': typeof appLayoutOperatorRouteRouteWithChildren
   '/organization': typeof appLayoutOrganizationRouteRouteWithChildren
+  '/projects': typeof appLayoutProjectsRouteRoute
   '/settings': typeof appLayoutSettingsRouteRouteWithChildren
+  '/sms': typeof appLayoutSmsRouteRoute
+  '/social': typeof appLayoutSocialRouteRoute
+  '/tickets': typeof appLayoutTicketsRouteRoute
+  '/voice': typeof appLayoutVoiceRouteRoute
   '/api/files/markdown': typeof ApiFilesMarkdownRouteRoute
   '/api/files/object': typeof ApiFilesObjectRouteRoute
   '/api/files/upload': typeof ApiFilesUploadRouteRoute
@@ -471,6 +528,7 @@ export interface FileRoutesByFullPath {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/': typeof appLayoutIndexRoute
   '/chat/$threadId': typeof appLayoutChatThreadIdRouteRoute
+  '/operator/platform': typeof appLayoutOperatorPlatformRouteRoute
   '/organization/settings': typeof appLayoutOrganizationSettingsRouteRouteWithChildren
   '/settings/security': typeof appLayoutSettingsSecurityRouteRoute
   '/api/bish/listener/activity': typeof ApiBishListenerActivityRouteRoute
@@ -493,6 +551,7 @@ export interface FileRoutesByFullPath {
   '/organization/settings/byok': typeof appLayoutOrganizationSettingsByokRouteRoute
   '/organization/settings/compliance-policy': typeof appLayoutOrganizationSettingsCompliancePolicyRouteRoute
   '/organization/settings/connectors': typeof appLayoutOrganizationSettingsConnectorsRouteRoute
+  '/organization/settings/integrations': typeof appLayoutOrganizationSettingsIntegrationsRouteRoute
   '/organization/settings/knowledge': typeof appLayoutOrganizationSettingsKnowledgeRouteRoute
   '/organization/settings/members': typeof appLayoutOrganizationSettingsMembersRouteRoute
   '/organization/settings/models': typeof appLayoutOrganizationSettingsModelsRouteRouteWithChildren
@@ -522,8 +581,14 @@ export interface FileRoutesByTo {
   '/legal/privacy': typeof LegalPrivacyRouteRoute
   '/legal/terms': typeof LegalTermsRouteRoute
   '/huddle': typeof appLayoutHuddleRouteRoute
-  '/operator': typeof appLayoutOperatorRouteRoute
+  '/marketplace': typeof appLayoutMarketplaceRouteRoute
+  '/operator': typeof appLayoutOperatorRouteRouteWithChildren
   '/organization': typeof appLayoutOrganizationRouteRouteWithChildren
+  '/projects': typeof appLayoutProjectsRouteRoute
+  '/sms': typeof appLayoutSmsRouteRoute
+  '/social': typeof appLayoutSocialRouteRoute
+  '/tickets': typeof appLayoutTicketsRouteRoute
+  '/voice': typeof appLayoutVoiceRouteRoute
   '/api/files/markdown': typeof ApiFilesMarkdownRouteRoute
   '/api/files/object': typeof ApiFilesObjectRouteRoute
   '/api/files/upload': typeof ApiFilesUploadRouteRoute
@@ -536,6 +601,7 @@ export interface FileRoutesByTo {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/': typeof appLayoutIndexRoute
   '/chat/$threadId': typeof appLayoutChatThreadIdRouteRoute
+  '/operator/platform': typeof appLayoutOperatorPlatformRouteRoute
   '/settings/security': typeof appLayoutSettingsSecurityRouteRoute
   '/api/bish/listener/activity': typeof ApiBishListenerActivityRouteRoute
   '/api/bish/listener/artifacts': typeof ApiBishListenerArtifactsRouteRoute
@@ -557,6 +623,7 @@ export interface FileRoutesByTo {
   '/organization/settings/byok': typeof appLayoutOrganizationSettingsByokRouteRoute
   '/organization/settings/compliance-policy': typeof appLayoutOrganizationSettingsCompliancePolicyRouteRoute
   '/organization/settings/connectors': typeof appLayoutOrganizationSettingsConnectorsRouteRoute
+  '/organization/settings/integrations': typeof appLayoutOrganizationSettingsIntegrationsRouteRoute
   '/organization/settings/knowledge': typeof appLayoutOrganizationSettingsKnowledgeRouteRoute
   '/organization/settings/members': typeof appLayoutOrganizationSettingsMembersRouteRoute
   '/organization/settings/provider-policy': typeof appLayoutOrganizationSettingsProviderPolicyRouteRoute
@@ -588,9 +655,15 @@ export interface FileRoutesById {
   '/legal/terms': typeof LegalTermsRouteRoute
   '/(app)/_layout/chat': typeof appLayoutChatRouteRouteWithChildren
   '/(app)/_layout/huddle': typeof appLayoutHuddleRouteRoute
-  '/(app)/_layout/operator': typeof appLayoutOperatorRouteRoute
+  '/(app)/_layout/marketplace': typeof appLayoutMarketplaceRouteRoute
+  '/(app)/_layout/operator': typeof appLayoutOperatorRouteRouteWithChildren
   '/(app)/_layout/organization': typeof appLayoutOrganizationRouteRouteWithChildren
+  '/(app)/_layout/projects': typeof appLayoutProjectsRouteRoute
   '/(app)/_layout/settings': typeof appLayoutSettingsRouteRouteWithChildren
+  '/(app)/_layout/sms': typeof appLayoutSmsRouteRoute
+  '/(app)/_layout/social': typeof appLayoutSocialRouteRoute
+  '/(app)/_layout/tickets': typeof appLayoutTicketsRouteRoute
+  '/(app)/_layout/voice': typeof appLayoutVoiceRouteRoute
   '/api/files/markdown': typeof ApiFilesMarkdownRouteRoute
   '/api/files/object': typeof ApiFilesObjectRouteRoute
   '/api/files/upload': typeof ApiFilesUploadRouteRoute
@@ -603,6 +676,7 @@ export interface FileRoutesById {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/(app)/_layout/': typeof appLayoutIndexRoute
   '/(app)/_layout/chat/$threadId': typeof appLayoutChatThreadIdRouteRoute
+  '/(app)/_layout/operator/platform': typeof appLayoutOperatorPlatformRouteRoute
   '/(app)/_layout/organization/settings': typeof appLayoutOrganizationSettingsRouteRouteWithChildren
   '/(app)/_layout/settings/security': typeof appLayoutSettingsSecurityRouteRoute
   '/api/bish/listener/activity': typeof ApiBishListenerActivityRouteRoute
@@ -625,6 +699,7 @@ export interface FileRoutesById {
   '/(app)/_layout/organization/settings/byok': typeof appLayoutOrganizationSettingsByokRouteRoute
   '/(app)/_layout/organization/settings/compliance-policy': typeof appLayoutOrganizationSettingsCompliancePolicyRouteRoute
   '/(app)/_layout/organization/settings/connectors': typeof appLayoutOrganizationSettingsConnectorsRouteRoute
+  '/(app)/_layout/organization/settings/integrations': typeof appLayoutOrganizationSettingsIntegrationsRouteRoute
   '/(app)/_layout/organization/settings/knowledge': typeof appLayoutOrganizationSettingsKnowledgeRouteRoute
   '/(app)/_layout/organization/settings/members': typeof appLayoutOrganizationSettingsMembersRouteRoute
   '/(app)/_layout/organization/settings/models': typeof appLayoutOrganizationSettingsModelsRouteRouteWithChildren
@@ -657,9 +732,15 @@ export interface FileRouteTypes {
     | '/legal/terms'
     | '/chat'
     | '/huddle'
+    | '/marketplace'
     | '/operator'
     | '/organization'
+    | '/projects'
     | '/settings'
+    | '/sms'
+    | '/social'
+    | '/tickets'
+    | '/voice'
     | '/api/files/markdown'
     | '/api/files/object'
     | '/api/files/upload'
@@ -672,6 +753,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/'
     | '/chat/$threadId'
+    | '/operator/platform'
     | '/organization/settings'
     | '/settings/security'
     | '/api/bish/listener/activity'
@@ -694,6 +776,7 @@ export interface FileRouteTypes {
     | '/organization/settings/byok'
     | '/organization/settings/compliance-policy'
     | '/organization/settings/connectors'
+    | '/organization/settings/integrations'
     | '/organization/settings/knowledge'
     | '/organization/settings/members'
     | '/organization/settings/models'
@@ -723,8 +806,14 @@ export interface FileRouteTypes {
     | '/legal/privacy'
     | '/legal/terms'
     | '/huddle'
+    | '/marketplace'
     | '/operator'
     | '/organization'
+    | '/projects'
+    | '/sms'
+    | '/social'
+    | '/tickets'
+    | '/voice'
     | '/api/files/markdown'
     | '/api/files/object'
     | '/api/files/upload'
@@ -737,6 +826,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/'
     | '/chat/$threadId'
+    | '/operator/platform'
     | '/settings/security'
     | '/api/bish/listener/activity'
     | '/api/bish/listener/artifacts'
@@ -758,6 +848,7 @@ export interface FileRouteTypes {
     | '/organization/settings/byok'
     | '/organization/settings/compliance-policy'
     | '/organization/settings/connectors'
+    | '/organization/settings/integrations'
     | '/organization/settings/knowledge'
     | '/organization/settings/members'
     | '/organization/settings/provider-policy'
@@ -788,9 +879,15 @@ export interface FileRouteTypes {
     | '/legal/terms'
     | '/(app)/_layout/chat'
     | '/(app)/_layout/huddle'
+    | '/(app)/_layout/marketplace'
     | '/(app)/_layout/operator'
     | '/(app)/_layout/organization'
+    | '/(app)/_layout/projects'
     | '/(app)/_layout/settings'
+    | '/(app)/_layout/sms'
+    | '/(app)/_layout/social'
+    | '/(app)/_layout/tickets'
+    | '/(app)/_layout/voice'
     | '/api/files/markdown'
     | '/api/files/object'
     | '/api/files/upload'
@@ -803,6 +900,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/(app)/_layout/'
     | '/(app)/_layout/chat/$threadId'
+    | '/(app)/_layout/operator/platform'
     | '/(app)/_layout/organization/settings'
     | '/(app)/_layout/settings/security'
     | '/api/bish/listener/activity'
@@ -825,6 +923,7 @@ export interface FileRouteTypes {
     | '/(app)/_layout/organization/settings/byok'
     | '/(app)/_layout/organization/settings/compliance-policy'
     | '/(app)/_layout/organization/settings/connectors'
+    | '/(app)/_layout/organization/settings/integrations'
     | '/(app)/_layout/organization/settings/knowledge'
     | '/(app)/_layout/organization/settings/members'
     | '/(app)/_layout/organization/settings/models'
@@ -1032,11 +1131,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiFilesMarkdownRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/(app)/_layout/voice': {
+      id: '/(app)/_layout/voice'
+      path: '/voice'
+      fullPath: '/voice'
+      preLoaderRoute: typeof appLayoutVoiceRouteRouteImport
+      parentRoute: typeof appLayoutRouteRoute
+    }
+    '/(app)/_layout/tickets': {
+      id: '/(app)/_layout/tickets'
+      path: '/tickets'
+      fullPath: '/tickets'
+      preLoaderRoute: typeof appLayoutTicketsRouteRouteImport
+      parentRoute: typeof appLayoutRouteRoute
+    }
+    '/(app)/_layout/social': {
+      id: '/(app)/_layout/social'
+      path: '/social'
+      fullPath: '/social'
+      preLoaderRoute: typeof appLayoutSocialRouteRouteImport
+      parentRoute: typeof appLayoutRouteRoute
+    }
+    '/(app)/_layout/sms': {
+      id: '/(app)/_layout/sms'
+      path: '/sms'
+      fullPath: '/sms'
+      preLoaderRoute: typeof appLayoutSmsRouteRouteImport
+      parentRoute: typeof appLayoutRouteRoute
+    }
     '/(app)/_layout/settings': {
       id: '/(app)/_layout/settings'
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof appLayoutSettingsRouteRouteImport
+      parentRoute: typeof appLayoutRouteRoute
+    }
+    '/(app)/_layout/projects': {
+      id: '/(app)/_layout/projects'
+      path: '/projects'
+      fullPath: '/projects'
+      preLoaderRoute: typeof appLayoutProjectsRouteRouteImport
       parentRoute: typeof appLayoutRouteRoute
     }
     '/(app)/_layout/organization': {
@@ -1051,6 +1185,13 @@ declare module '@tanstack/react-router' {
       path: '/operator'
       fullPath: '/operator'
       preLoaderRoute: typeof appLayoutOperatorRouteRouteImport
+      parentRoute: typeof appLayoutRouteRoute
+    }
+    '/(app)/_layout/marketplace': {
+      id: '/(app)/_layout/marketplace'
+      path: '/marketplace'
+      fullPath: '/marketplace'
+      preLoaderRoute: typeof appLayoutMarketplaceRouteRouteImport
       parentRoute: typeof appLayoutRouteRoute
     }
     '/(app)/_layout/huddle': {
@@ -1172,6 +1313,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof appLayoutOrganizationSettingsRouteRouteImport
       parentRoute: typeof appLayoutOrganizationRouteRoute
     }
+    '/(app)/_layout/operator/platform': {
+      id: '/(app)/_layout/operator/platform'
+      path: '/platform'
+      fullPath: '/operator/platform'
+      preLoaderRoute: typeof appLayoutOperatorPlatformRouteRouteImport
+      parentRoute: typeof appLayoutOperatorRouteRoute
+    }
     '/(app)/_layout/chat/$threadId': {
       id: '/(app)/_layout/chat/$threadId'
       path: '/$threadId'
@@ -1240,6 +1388,13 @@ declare module '@tanstack/react-router' {
       path: '/knowledge'
       fullPath: '/organization/settings/knowledge'
       preLoaderRoute: typeof appLayoutOrganizationSettingsKnowledgeRouteRouteImport
+      parentRoute: typeof appLayoutOrganizationSettingsRouteRoute
+    }
+    '/(app)/_layout/organization/settings/integrations': {
+      id: '/(app)/_layout/organization/settings/integrations'
+      path: '/integrations'
+      fullPath: '/organization/settings/integrations'
+      preLoaderRoute: typeof appLayoutOrganizationSettingsIntegrationsRouteRouteImport
       parentRoute: typeof appLayoutOrganizationSettingsRouteRoute
     }
     '/(app)/_layout/organization/settings/connectors': {
@@ -1372,6 +1527,20 @@ const appLayoutChatRouteRouteChildren: appLayoutChatRouteRouteChildren = {
 const appLayoutChatRouteRouteWithChildren =
   appLayoutChatRouteRoute._addFileChildren(appLayoutChatRouteRouteChildren)
 
+interface appLayoutOperatorRouteRouteChildren {
+  appLayoutOperatorPlatformRouteRoute: typeof appLayoutOperatorPlatformRouteRoute
+}
+
+const appLayoutOperatorRouteRouteChildren: appLayoutOperatorRouteRouteChildren =
+  {
+    appLayoutOperatorPlatformRouteRoute: appLayoutOperatorPlatformRouteRoute,
+  }
+
+const appLayoutOperatorRouteRouteWithChildren =
+  appLayoutOperatorRouteRoute._addFileChildren(
+    appLayoutOperatorRouteRouteChildren,
+  )
+
 interface appLayoutOrganizationSettingsModelsRouteRouteChildren {
   appLayoutOrganizationSettingsModelsProviderIdRouteRoute: typeof appLayoutOrganizationSettingsModelsProviderIdRouteRoute
   appLayoutOrganizationSettingsModelsIndexRoute: typeof appLayoutOrganizationSettingsModelsIndexRoute
@@ -1398,6 +1567,7 @@ interface appLayoutOrganizationSettingsRouteRouteChildren {
   appLayoutOrganizationSettingsByokRouteRoute: typeof appLayoutOrganizationSettingsByokRouteRoute
   appLayoutOrganizationSettingsCompliancePolicyRouteRoute: typeof appLayoutOrganizationSettingsCompliancePolicyRouteRoute
   appLayoutOrganizationSettingsConnectorsRouteRoute: typeof appLayoutOrganizationSettingsConnectorsRouteRoute
+  appLayoutOrganizationSettingsIntegrationsRouteRoute: typeof appLayoutOrganizationSettingsIntegrationsRouteRoute
   appLayoutOrganizationSettingsKnowledgeRouteRoute: typeof appLayoutOrganizationSettingsKnowledgeRouteRoute
   appLayoutOrganizationSettingsMembersRouteRoute: typeof appLayoutOrganizationSettingsMembersRouteRoute
   appLayoutOrganizationSettingsModelsRouteRoute: typeof appLayoutOrganizationSettingsModelsRouteRouteWithChildren
@@ -1423,6 +1593,8 @@ const appLayoutOrganizationSettingsRouteRouteChildren: appLayoutOrganizationSett
       appLayoutOrganizationSettingsCompliancePolicyRouteRoute,
     appLayoutOrganizationSettingsConnectorsRouteRoute:
       appLayoutOrganizationSettingsConnectorsRouteRoute,
+    appLayoutOrganizationSettingsIntegrationsRouteRoute:
+      appLayoutOrganizationSettingsIntegrationsRouteRoute,
     appLayoutOrganizationSettingsKnowledgeRouteRoute:
       appLayoutOrganizationSettingsKnowledgeRouteRoute,
     appLayoutOrganizationSettingsMembersRouteRoute:
@@ -1478,9 +1650,15 @@ const appLayoutSettingsRouteRouteWithChildren =
 interface appLayoutRouteRouteChildren {
   appLayoutChatRouteRoute: typeof appLayoutChatRouteRouteWithChildren
   appLayoutHuddleRouteRoute: typeof appLayoutHuddleRouteRoute
-  appLayoutOperatorRouteRoute: typeof appLayoutOperatorRouteRoute
+  appLayoutMarketplaceRouteRoute: typeof appLayoutMarketplaceRouteRoute
+  appLayoutOperatorRouteRoute: typeof appLayoutOperatorRouteRouteWithChildren
   appLayoutOrganizationRouteRoute: typeof appLayoutOrganizationRouteRouteWithChildren
+  appLayoutProjectsRouteRoute: typeof appLayoutProjectsRouteRoute
   appLayoutSettingsRouteRoute: typeof appLayoutSettingsRouteRouteWithChildren
+  appLayoutSmsRouteRoute: typeof appLayoutSmsRouteRoute
+  appLayoutSocialRouteRoute: typeof appLayoutSocialRouteRoute
+  appLayoutTicketsRouteRoute: typeof appLayoutTicketsRouteRoute
+  appLayoutVoiceRouteRoute: typeof appLayoutVoiceRouteRoute
   appLayoutSplatRoute: typeof appLayoutSplatRoute
   appLayoutIndexRoute: typeof appLayoutIndexRoute
 }
@@ -1488,9 +1666,15 @@ interface appLayoutRouteRouteChildren {
 const appLayoutRouteRouteChildren: appLayoutRouteRouteChildren = {
   appLayoutChatRouteRoute: appLayoutChatRouteRouteWithChildren,
   appLayoutHuddleRouteRoute: appLayoutHuddleRouteRoute,
-  appLayoutOperatorRouteRoute: appLayoutOperatorRouteRoute,
+  appLayoutMarketplaceRouteRoute: appLayoutMarketplaceRouteRoute,
+  appLayoutOperatorRouteRoute: appLayoutOperatorRouteRouteWithChildren,
   appLayoutOrganizationRouteRoute: appLayoutOrganizationRouteRouteWithChildren,
+  appLayoutProjectsRouteRoute: appLayoutProjectsRouteRoute,
   appLayoutSettingsRouteRoute: appLayoutSettingsRouteRouteWithChildren,
+  appLayoutSmsRouteRoute: appLayoutSmsRouteRoute,
+  appLayoutSocialRouteRoute: appLayoutSocialRouteRoute,
+  appLayoutTicketsRouteRoute: appLayoutTicketsRouteRoute,
+  appLayoutVoiceRouteRoute: appLayoutVoiceRouteRoute,
   appLayoutSplatRoute: appLayoutSplatRoute,
   appLayoutIndexRoute: appLayoutIndexRoute,
 }

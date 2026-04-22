@@ -10,7 +10,7 @@ export const isOperatorPath = (pathname: string) =>
 export const operatorNavArea = () => ({
   title: 'Operator',
   href: OPERATOR_HREF,
-  description: 'Cross-tenant ARCH3R control plane',
+  description: 'Organization dashboard for member activity, tools, campaigns, and shared workspace posture.',
   icon: LayoutDashboard,
   content: [
     {
@@ -20,6 +20,11 @@ export const operatorNavArea = () => ({
           name: 'Overview',
           icon: LayoutDashboard,
           href: OPERATOR_HREF,
+          exact: true,
+        },
+        {
+          name: 'Platform Control',
+          href: `${OPERATOR_HREF}/platform`,
           exact: true,
         },
       ],
