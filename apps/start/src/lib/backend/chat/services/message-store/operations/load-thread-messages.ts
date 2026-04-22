@@ -3,6 +3,7 @@ import { Effect } from 'effect'
 import { getCatalogModel } from '@/lib/shared/ai-catalog'
 import { isEmbeddingFeatureEnabled } from '@/utils/app-feature-flags'
 import type { ChatAttachment } from '@/lib/shared/chat-contracts/attachments'
+import type { LocalListenerMessageMetadata } from '@/lib/shared/chat-contracts/message-metadata'
 import { ORG_KNOWLEDGE_KIND } from '@/lib/shared/org-knowledge'
 import { MessagePersistenceError } from '@/lib/backend/chat/domain/errors'
 import { zql } from '@/lib/backend/chat/infra/zero/db'
@@ -112,6 +113,59 @@ function buildOrgKnowledgeContextBlock(
     '',
     ...sections,
   ].join('\n\n')
+}
+
+function parseLocalListenerMessageMetadata(
+  value: unknown,
+): LocalListenerMessageMetadata | undefined {
+  if (!value || typeof value !== 'object') return undefined
+
+  const record = value as Record<string, unknown>
+  if (record.source !== 'local_listener') return undefined
+  if (typeof record.title !== 'string' || typeof record.target !== 'string') {
+    return undefined
+  }
+  if (
+    record.status !== 'activity' &&
+    record.status !== 'completed' &&
+    record.status !== 'failed'
+  ) {
+    return undefined
+  }
+  if (typeof record.summary !== 'string') return undefined
+
+  return {
+    source: 'local_listener',
+    handoffId:
+      typeof record.handoffId === 'string' && record.handoffId.trim().length > 0
+        ? record.handoffId
+        : undefined,
+    title: record.title,
+    target: record.target,
+    status: record.status,
+    summary: record.summary,
+    activityKind:
+      record.activityKind === 'info' ||
+      record.activityKind === 'warning' ||
+      record.activityKind === 'input_required' ||
+      record.activityKind === 'resolved'
+        ? record.activityKind
+        : undefined,
+    repoBranch:
+      typeof record.repoBranch === 'string' && record.repoBranch.trim().length > 0
+        ? record.repoBranch
+        : null,
+    repoCommitSha:
+      typeof record.repoCommitSha === 'string' && record.repoCommitSha.trim().length > 0
+        ? record.repoCommitSha
+        : null,
+    artifactNames: Array.isArray(record.artifactNames)
+      ? record.artifactNames.filter(
+          (entry): entry is string =>
+            typeof entry === 'string' && entry.trim().length > 0,
+        )
+      : undefined,
+  }
 }
 
 export const makeLoadThreadMessagesOperation = (dependencies: {
@@ -567,6 +621,13 @@ export const makeLoadThreadMessagesOperation = (dependencies: {
             parts: messageParts,
             metadata: {
               ...(message.role === 'assistant' ? { model: message.model } : {}),
+              ...(((message as { generationMetadata?: unknown }).generationMetadata)
+                ? {
+                    localListener: parseLocalListenerMessageMetadata(
+                      (message as { generationMetadata?: unknown }).generationMetadata,
+                    ),
+                  }
+                : {}),
               ...(attachmentMetadata.length > 0
                 ? { attachments: attachmentMetadata }
                 : {}),

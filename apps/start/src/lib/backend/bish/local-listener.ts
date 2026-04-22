@@ -260,6 +260,11 @@ async function appendLocalListenerThreadMessage(input: {
   readonly organizationId: string
   readonly threadId: string | null
   readonly userId: string
+  readonly title: string
+  readonly target: string
+  readonly status: 'activity' | 'completed' | 'failed'
+  readonly summary: string
+  readonly activityKind?: 'info' | 'warning' | 'input_required' | 'resolved'
   readonly content: string
   readonly metadata?: Record<string, unknown>
 }) {
@@ -382,6 +387,11 @@ async function appendLocalListenerThreadMessage(input: {
       thread.model,
       JSON.stringify({
         source: 'local_listener',
+        title: input.title,
+        target: input.target,
+        status: input.status,
+        summary: input.summary,
+        ...(input.activityKind ? { activityKind: input.activityKind } : {}),
         ...(input.metadata ?? {}),
       }),
     ],
@@ -1016,6 +1026,13 @@ export async function reportLocalListenerArtifactsFromSecret(input: {
       organizationId: handoff.organization_id,
       threadId: handoff.thread_id,
       userId: handoff.requested_by_user_id,
+      title: handoff.title,
+      target: handoff.target,
+      status: input.data.status,
+      summary:
+        input.data.status === 'completed'
+          ? 'The local listener run finished and posted its latest artifact metadata back to BISH.'
+          : input.data.errorMessage?.trim() || 'The local listener run exited with a failure status.',
       content: formatLocalListenerThreadUpdate({
         title: handoff.title,
         target: handoff.target,
@@ -1030,11 +1047,14 @@ export async function reportLocalListenerArtifactsFromSecret(input: {
           artifactNames: (input.data.artifacts ?? []).map((artifact) => artifact.displayName),
         },
       }),
-      metadata: {
-        handoffId: input.data.handoffId,
-        status: input.data.status,
-      },
-    })
+    metadata: {
+      handoffId: input.data.handoffId,
+      status: input.data.status,
+      repoBranch: input.data.repoBranch ?? null,
+      repoCommitSha: input.data.repoCommitSha ?? null,
+      artifactNames: (input.data.artifacts ?? []).map((artifact) => artifact.displayName),
+    },
+  })
   }
 
   for (const artifact of input.data.artifacts ?? []) {
@@ -1198,6 +1218,11 @@ export async function reportLocalListenerActivityFromSecret(input: {
     organizationId: handoff.organization_id,
     threadId: handoff.thread_id,
     userId: handoff.requested_by_user_id,
+    title: handoff.title,
+    target: handoff.target,
+    status: 'activity',
+    summary: input.data.message,
+    activityKind: input.data.kind,
     content: formatLocalListenerThreadUpdate({
       title: handoff.title,
       target: handoff.target,

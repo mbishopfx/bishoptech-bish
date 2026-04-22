@@ -5,6 +5,7 @@ import { useDirection } from '@bish/ui/direction'
 import type { ChatMessageMetadata } from '@/lib/shared/chat-contracts/message-metadata'
 import type { ChatAttachment } from '@/lib/shared/chat-contracts/attachments'
 import { AttachmentPreviewPill } from './attachment-preview-pill'
+import { LocalListenerMessageCard } from './local-listener-message-card'
 import {
   AssistantMessageParts,
   AssistantMessageActions,
@@ -110,6 +111,9 @@ export function ChatMessage({
   const modelName = !isUser && typeof metadata?.model === 'string'
     ? metadata.model
     : null
+  const localListener = !isUser && metadata?.localListener
+    ? metadata.localListener
+    : undefined
 
   useEffect(() => {
     if (isEditing || isSavingEdit) return
@@ -249,14 +253,20 @@ export function ChatMessage({
         dir={direction}
         className="flex w-full flex-col gap-3 overflow-hidden rounded-2xl px-2 py-1 text-foreground-strong leading-[21px]"
       >
-        <AssistantMessageContent parts={message.parts} isAnimating={isAnimating} />
-        <AssistantMessageFooter
-          messageId={message.id}
-          text={text}
-          modelName={modelName}
-          canRegenerate={canRegenerate}
-          onRegenerate={onRegenerate}
-        />
+        {localListener ? (
+          <LocalListenerMessageCard localListener={localListener} />
+        ) : (
+          <AssistantMessageContent parts={message.parts} isAnimating={isAnimating} />
+        )}
+        {!localListener && (
+          <AssistantMessageFooter
+            messageId={message.id}
+            text={text}
+            modelName={modelName}
+            canRegenerate={canRegenerate}
+            onRegenerate={onRegenerate}
+          />
+        )}
       </div>
     </div>
   )
