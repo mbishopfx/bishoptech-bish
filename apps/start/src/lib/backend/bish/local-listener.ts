@@ -10,6 +10,7 @@ import type {
 import { Effect } from 'effect'
 import { OrgKnowledgeRuntime } from '@/lib/backend/org-knowledge/runtime/org-knowledge-runtime'
 import { OrgKnowledgeAdminService } from '@/lib/backend/org-knowledge/services/org-knowledge-admin.service'
+import { normalizeThreadActiveChildMap } from '@/lib/backend/chat/services/message-store/helpers'
 import { requireZeroUpstreamPool } from '@/lib/backend/server-effect/infra/zero-upstream-pool'
 import type {
   CreateLocalListenerSecretInput,
@@ -85,8 +86,44 @@ function buildDefaultSystemPrompt() {
   return [
     'You are continuing a BISH handoff on the local machine.',
     'Use the provided markdown handoff file as the source of truth for the conversation context, build intent, constraints, and expected outputs.',
-    'Work directly in the local repository, keep changes scoped, and summarize what you changed before you stop.',
+    'Use the isolated handoff workspace for new files and experiments unless the handoff explicitly instructs you to patch an existing repository.',
+    'Keep changes scoped, avoid modifying the BISH listener/system code by default, and summarize what you changed before you stop.',
   ].join(' ')
+}
+
+function formatLocalListenerThreadUpdate(input: {
+  readonly title: string
+  readonly target: string
+  readonly status: 'activity' | 'completed' | 'failed'
+  readonly message: string
+  readonly metadata?: Record<string, unknown>
+}) {
+  const lines = [
+    `## Local Listener ${input.status === 'activity' ? 'Update' : input.status === 'completed' ? 'Completed' : 'Failed'}`,
+    '',
+    `Handoff: ${input.title}`,
+    `Target: ${input.target}`,
+    '',
+    input.message,
+  ]
+
+  if (input.metadata?.['repoBranch'] || input.metadata?.['repoCommitSha']) {
+    lines.push(
+      '',
+      `Repo branch: ${String(input.metadata['repoBranch'] ?? 'unknown')}`,
+      `Commit: ${String(input.metadata['repoCommitSha'] ?? 'unknown')}`,
+    )
+  }
+
+  if (Array.isArray(input.metadata?.['artifactNames'])) {
+    const artifactNames = (input.metadata?.['artifactNames'] as unknown[])
+      .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+    if (artifactNames.length > 0) {
+      lines.push('', `Artifacts: ${artifactNames.join(', ')}`)
+    }
+  }
+
+  return lines.join('\n')
 }
 
 function normalizeLocalListenerActivityLog(
@@ -178,6 +215,161 @@ async function appendLocalHandoffActivity(input: {
       input.nextStatus ?? null,
       now,
       input.handoffId,
+    ],
+  )
+}
+
+/**
+ * Listener activity should be visible in the same chat thread that spawned the
+ * handoff so operators do not need to split attention between the approvals
+ * page and the conversation timeline. These messages are inserted directly into
+ * upstream Postgres because they originate outside the normal streaming path.
+ */
+async function appendLocalListenerThreadMessage(input: {
+  readonly organizationId: string
+  readonly threadId: string | null
+  readonly userId: string
+  readonly content: string
+  readonly metadata?: Record<string, unknown>
+}) {
+  if (!input.threadId) return
+
+  const pool = requireZeroUpstreamPool()
+  const threadResult = await pool.query<{
+    id: string
+    thread_id: string
+    user_id: string
+    model: string
+    active_child_by_parent: unknown
+    branch_version: number
+  }>(
+    `
+      SELECT
+        id,
+        thread_id,
+        user_id,
+        model,
+        active_child_by_parent,
+        branch_version
+      FROM threads
+      WHERE thread_id = $1
+        AND owner_org_id = $2
+      LIMIT 1
+    `,
+    [input.threadId, input.organizationId],
+  )
+  const thread = threadResult.rows[0]
+  if (!thread) return
+
+  const parentResult = await pool.query<{ message_id: string | null }>(
+    `
+      SELECT message_id
+      FROM messages
+      WHERE thread_id = $1
+        AND status <> 'deleted'
+      ORDER BY created_at DESC
+      LIMIT 1
+    `,
+    [input.threadId],
+  )
+  const parentMessageId = parentResult.rows[0]?.message_id ?? null
+  const branchResult = await pool.query<{ next_branch_index: number }>(
+    `
+      SELECT COALESCE(MAX(branch_index), 0) + 1 AS next_branch_index
+      FROM messages
+      WHERE thread_id = $1
+        AND parent_message_id IS NOT DISTINCT FROM $2
+    `,
+    [input.threadId, parentMessageId],
+  )
+
+  const messageId = crypto.randomUUID()
+  const now = Date.now()
+  const activeChildByParent = normalizeThreadActiveChildMap(
+    thread.active_child_by_parent,
+  )
+  if (parentMessageId) {
+    activeChildByParent[parentMessageId] = messageId
+  }
+
+  await pool.query(
+    `
+      INSERT INTO messages (
+        id,
+        message_id,
+        thread_id,
+        user_id,
+        reasoning,
+        content,
+        status,
+        updated_at,
+        parent_message_id,
+        branch_index,
+        branch_anchor_message_id,
+        regen_source_message_id,
+        role,
+        created_at,
+        server_error,
+        model,
+        attachments_ids,
+        sources,
+        model_params,
+        provider_metadata,
+        generation_metadata
+      ) VALUES (
+        $1,
+        $1,
+        $2,
+        $3,
+        NULL,
+        $4,
+        'done',
+        $5,
+        $6,
+        $7,
+        NULL,
+        NULL,
+        'assistant',
+        $5,
+        NULL,
+        $8,
+        '[]'::jsonb,
+        NULL,
+        NULL,
+        NULL,
+        $9::jsonb
+      )
+    `,
+    [
+      messageId,
+      input.threadId,
+      thread.user_id || input.userId,
+      input.content,
+      now,
+      parentMessageId,
+      branchResult.rows[0]?.next_branch_index ?? 1,
+      thread.model,
+      JSON.stringify({
+        source: 'local_listener',
+        ...(input.metadata ?? {}),
+      }),
+    ],
+  )
+
+  await pool.query(
+    `
+      UPDATE threads
+      SET active_child_by_parent = $1::jsonb,
+          branch_version = branch_version + 1,
+          generation_status = 'completed',
+          updated_at = $2,
+          last_message_at = $2
+      WHERE id = $3
+    `,
+    [
+      JSON.stringify(activeChildByParent),
+      now,
+      thread.id,
     ],
   )
 }
@@ -695,11 +887,14 @@ export async function reportLocalListenerArtifactsFromSecret(input: {
   const handoffResult = await pool.query<{
     id: string
     organization_id: string
+    thread_id: string | null
+    title: string
+    target: string
     requested_by_user_id: string
     metadata: Record<string, unknown> | null
   }>(
     `
-      SELECT id, organization_id, requested_by_user_id, metadata
+      SELECT id, organization_id, thread_id, title, target, requested_by_user_id, metadata
       FROM local_handoffs
       WHERE id = $1
         AND listener_registration_id = $2
@@ -737,6 +932,32 @@ export async function reportLocalListenerArtifactsFromSecret(input: {
       input.data.handoffId,
     ],
   )
+
+  if (input.data.status === 'completed' || input.data.status === 'failed') {
+    await appendLocalListenerThreadMessage({
+      organizationId: handoff.organization_id,
+      threadId: handoff.thread_id,
+      userId: handoff.requested_by_user_id,
+      content: formatLocalListenerThreadUpdate({
+        title: handoff.title,
+        target: handoff.target,
+        status: input.data.status,
+        message:
+          input.data.status === 'completed'
+            ? 'The local listener run finished and posted its latest artifact metadata back to BISH.'
+            : input.data.errorMessage?.trim() || 'The local listener run exited with a failure status.',
+        metadata: {
+          repoBranch: input.data.repoBranch ?? null,
+          repoCommitSha: input.data.repoCommitSha ?? null,
+          artifactNames: (input.data.artifacts ?? []).map((artifact) => artifact.displayName),
+        },
+      }),
+      metadata: {
+        handoffId: input.data.handoffId,
+        status: input.data.status,
+      },
+    })
+  }
 
   for (const artifact of input.data.artifacts ?? []) {
     /**
@@ -849,9 +1070,21 @@ export async function reportLocalListenerActivityFromSecret(input: {
   const handoffResult = await pool.query<{
     id: string
     listener_registration_id: string
+    organization_id: string
+    thread_id: string | null
+    requested_by_user_id: string
+    title: string
+    target: string
   }>(
     `
-      SELECT id, listener_registration_id
+      SELECT
+        id,
+        listener_registration_id,
+        organization_id,
+        thread_id,
+        requested_by_user_id,
+        title,
+        target
       FROM local_handoffs
       WHERE id = $1
       LIMIT 1
@@ -880,6 +1113,23 @@ export async function reportLocalListenerActivityFromSecret(input: {
       message: input.data.message,
       createdAt: Date.now(),
       metadata: input.data.metadata,
+    },
+  })
+
+  await appendLocalListenerThreadMessage({
+    organizationId: handoff.organization_id,
+    threadId: handoff.thread_id,
+    userId: handoff.requested_by_user_id,
+    content: formatLocalListenerThreadUpdate({
+      title: handoff.title,
+      target: handoff.target,
+      status: 'activity',
+      message: input.data.message,
+    }),
+    metadata: {
+      handoffId: input.data.handoffId,
+      activityKind: input.data.kind,
+      ...(input.data.metadata ?? {}),
     },
   })
 

@@ -98,6 +98,25 @@ function sanitizeSlug(input: string) {
     .slice(0, 80) || 'handoff'
 }
 
+/**
+ * Each local handoff gets a dedicated working directory inside the configured
+ * workspace so Gemini/Codex can create files without treating the BISH repo
+ * itself as the handoff target. Keeping the folder inside the workspace also
+ * preserves file-tool access for CLIs that restrict reads to their cwd tree.
+ */
+async function createIsolatedHandoffWorkspace(input: {
+  readonly handoffId: string
+  readonly title: string
+}) {
+  const handoffWorkspacePath = join(
+    workspaceDir,
+    '.bish-handoff-workspaces',
+    `${sanitizeSlug(input.title)}-${input.handoffId.slice(0, 8)}`,
+  )
+  await mkdir(handoffWorkspacePath, { recursive: true })
+  return handoffWorkspacePath
+}
+
 function readBody(request: IncomingMessage) {
   return new Promise<string>((resolve, reject) => {
     const chunks: Buffer[] = []
@@ -196,9 +215,14 @@ function buildPromptMessage(input: {
   readonly systemPrompt: string
   readonly markdownPath: string
   readonly activityHelperPath: string
+  readonly handoffWorkspacePath: string
 }) {
   return [
     input.systemPrompt,
+    '',
+    `Isolated handoff workspace: ${input.handoffWorkspacePath}`,
+    'Use that isolated folder for any files, notes, prototypes, or generated code created during this run.',
+    'Do not modify the BISH listener/system code unless the handoff explicitly instructs you to patch an existing repository.',
     '',
     `Handoff markdown: ${input.markdownPath}`,
     `Activity helper: ${input.activityHelperPath}`,
@@ -212,10 +236,12 @@ function buildPromptMessage(input: {
 
 async function writeActivityHelperScript(input: {
   readonly handoffId: string
+  readonly handoffWorkspacePath: string
 }) {
-  const helperDir = join(outputDir, '.bish-listener')
-  const helperPath = join(helperDir, `bish-activity-${input.handoffId}.sh`)
-  await mkdir(helperDir, { recursive: true })
+  const helperPath = join(
+    input.handoffWorkspacePath,
+    `.bish-activity-${input.handoffId.slice(0, 8)}.sh`,
+  )
   await writeFile(
     helperPath,
     `#!/usr/bin/env bash
@@ -261,12 +287,13 @@ fetch(url, {
 async function launchVisibleMacos(input: {
   readonly target: LocalListenerTarget
   readonly prompt: string
+  readonly handoffWorkspacePath: string
 }) {
   const command =
     input.target === 'gemini'
       ? 'gemini --yolo'
       : 'codex --dangerously-bypass-approvals-and-sandbox'
-  const escapedWorkspace = workspaceDir.replace(/"/g, '\\"')
+  const escapedWorkspace = input.handoffWorkspacePath.replace(/"/g, '\\"')
   const escapedCommand = command.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
   const escapedPrompt = input.prompt
     .replace(/\\/g, '\\\\')
@@ -307,6 +334,7 @@ async function launchVisibleMacos(input: {
 async function launchHeadless(input: {
   readonly target: LocalListenerTarget
   readonly prompt: string
+  readonly handoffWorkspacePath: string
 }) {
   const command = input.target === 'gemini' ? 'gemini' : 'codex'
   const args =
@@ -314,7 +342,7 @@ async function launchHeadless(input: {
       ? ['--yolo']
       : ['--dangerously-bypass-approvals-and-sandbox']
   const child = spawn(command, args, {
-    cwd: workspaceDir,
+    cwd: input.handoffWorkspacePath,
     stdio: ['pipe', 'inherit', 'inherit'],
   })
 
@@ -334,19 +362,27 @@ async function launchHeadless(input: {
 
 async function executeHandoff(payload: LocalListenerHandoffPayload) {
   await mkdir(outputDir, { recursive: true })
+  const handoffWorkspacePath = await createIsolatedHandoffWorkspace({
+    handoffId: payload.handoffId,
+    title: payload.title,
+  })
   const filePath = join(
     outputDir,
     `${Date.now()}-${sanitizeSlug(payload.title)}.md`,
   )
+  const workspaceMarkdownPath = join(handoffWorkspacePath, 'handoff.md')
   await writeFile(filePath, payload.handoffMarkdown, 'utf8')
+  await writeFile(workspaceMarkdownPath, payload.handoffMarkdown, 'utf8')
   const activityHelperPath = await writeActivityHelperScript({
     handoffId: payload.handoffId,
+    handoffWorkspacePath,
   })
 
   const prompt = buildPromptMessage({
     systemPrompt: payload.systemPrompt,
-    markdownPath: filePath,
+    markdownPath: workspaceMarkdownPath,
     activityHelperPath,
+    handoffWorkspacePath,
   })
 
   await postArtifactCallback({
@@ -354,6 +390,7 @@ async function executeHandoff(payload: LocalListenerHandoffPayload) {
     status: 'received',
     metadata: {
       localFilePath: filePath,
+      handoffWorkspacePath,
       target: payload.target,
     },
   })
@@ -363,6 +400,8 @@ async function executeHandoff(payload: LocalListenerHandoffPayload) {
     message: 'Listener received the handoff and wrote the markdown package locally.',
     metadata: {
       localFilePath: filePath,
+      workspaceMarkdownPath,
+      handoffWorkspacePath,
       activityHelperPath,
     },
   })
@@ -377,6 +416,7 @@ async function executeHandoff(payload: LocalListenerHandoffPayload) {
     artifacts: repo.artifacts,
     metadata: {
       localFilePath: filePath,
+      handoffWorkspacePath,
       runtimeMode,
       workspaceDir,
     },
@@ -390,6 +430,7 @@ async function executeHandoff(payload: LocalListenerHandoffPayload) {
         : 'Launching a headless listener session for this handoff.',
     metadata: {
       runtimeMode,
+      handoffWorkspacePath,
       workspaceDir,
       activityHelperPath,
     },
@@ -399,6 +440,7 @@ async function executeHandoff(payload: LocalListenerHandoffPayload) {
     await launchVisibleMacos({
       target: payload.target,
       prompt,
+      handoffWorkspacePath,
     })
     await postActivityCallback({
       handoffId: payload.handoffId,
@@ -407,6 +449,7 @@ async function executeHandoff(payload: LocalListenerHandoffPayload) {
         'Interactive terminal handoff launched. Use the activity helper if you need human input or want to post progress updates back to BISH.',
       metadata: {
         activityHelperPath,
+        handoffWorkspacePath,
       },
     })
     return
@@ -415,6 +458,7 @@ async function executeHandoff(payload: LocalListenerHandoffPayload) {
   const status = await launchHeadless({
     target: payload.target,
     prompt,
+    handoffWorkspacePath,
   })
   await postArtifactCallback({
     handoffId: payload.handoffId,
@@ -424,6 +468,7 @@ async function executeHandoff(payload: LocalListenerHandoffPayload) {
     repoCommitSha: repo.repoCommitSha,
     metadata: {
       localFilePath: filePath,
+      handoffWorkspacePath,
       runtimeMode,
       workspaceDir,
     },
@@ -437,6 +482,7 @@ async function executeHandoff(payload: LocalListenerHandoffPayload) {
         : 'Headless listener session exited with a failure status.',
     metadata: {
       runtimeMode,
+      handoffWorkspacePath,
       activityHelperPath,
     },
   })
