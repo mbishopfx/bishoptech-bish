@@ -43,6 +43,9 @@ const defaultTarget = (
 const visiblePromptDelaySeconds = Number(
   readEnv('BISH_LISTENER_VISIBLE_PROMPT_DELAY_SECONDS') || '18',
 )
+const visiblePromptSubmitDelaySeconds = Number(
+  readEnv('BISH_LISTENER_VISIBLE_SUBMIT_DELAY_SECONDS') || '1',
+)
 const supportedTargets = (
   readEnv('BISH_LISTENER_SUPPORTED_TARGETS', 'BISH_SUPPORTED_TARGETS')
   || 'gemini,codex'
@@ -265,7 +268,7 @@ async function launchVisibleMacos(input: {
       : 'codex --dangerously-bypass-approvals-and-sandbox'
   const escapedWorkspace = workspaceDir.replace(/"/g, '\\"')
   const escapedCommand = command.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
-  const escapedPrompt = `${input.prompt}\n`
+  const escapedPrompt = input.prompt
     .replace(/\\/g, '\\\\')
     .replace(/"/g, '\\"')
 
@@ -273,7 +276,9 @@ async function launchVisibleMacos(input: {
    * Target the exact Terminal tab opened for the handoff instead of relying on
    * global keystrokes landing in the correct frontmost window. We also avoid
    * re-activating Terminal so the listener does not steal focus from whatever
-   * the operator is doing in another app while the handoff boots.
+   * the operator is doing in another app while the handoff boots. Gemini's TUI
+   * treats pasted text and submit as separate actions, so we explicitly send an
+   * empty follow-up command one second later to mimic pressing Enter.
    */
   await execFileAsync('osascript', [
     '-e',
@@ -290,6 +295,10 @@ async function launchVisibleMacos(input: {
     `delay ${Number.isFinite(visiblePromptDelaySeconds) ? Math.max(1, visiblePromptDelaySeconds) : 18}`,
     '-e',
     'do script promptText in targetTab',
+    '-e',
+    `delay ${Number.isFinite(visiblePromptSubmitDelaySeconds) ? Math.max(0.1, visiblePromptSubmitDelaySeconds) : 1}`,
+    '-e',
+    'do script "" in targetTab',
     '-e',
     'end tell',
   ])
