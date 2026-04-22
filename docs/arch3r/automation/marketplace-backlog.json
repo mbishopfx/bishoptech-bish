@@ -1,0 +1,66 @@
+{
+  "version": 1,
+  "updatedAt": "2026-04-22T00:00:00.000Z",
+  "items": [
+    {
+      "pluginKey": "playbooks",
+      "title": "Playbooks",
+      "status": "planned",
+      "routeHref": "/playbooks",
+      "valueHypothesis": "Reusable SOPs and step-by-step workflows create high daily utility without requiring external APIs.",
+      "acceptanceChecklist": [
+        "Marketplace lane is defined as an addon and remains hidden from non-entitled org toolbars.",
+        "Matt enterprise org can load the route, create a playbook, edit it, and reopen it after deploy.",
+        "Relevant build and test checks pass and the production smoke run succeeds."
+      ]
+    },
+    {
+      "pluginKey": "proposal_builder",
+      "title": "Proposal Builder",
+      "status": "planned",
+      "routeHref": "/proposals",
+      "valueHypothesis": "Proposal generation turns shared knowledge into revenue-facing output without needing third-party credentials.",
+      "acceptanceChecklist": [
+        "Marketplace lane is addon-gated and not visible on non-entitled org toolbars.",
+        "Matt enterprise org can create, update, and read back a proposal draft.",
+        "Scoped build, tests, deploy, and production smoke verification pass."
+      ]
+    },
+    {
+      "pluginKey": "content_planner",
+      "title": "Content Planner",
+      "status": "planned",
+      "routeHref": "/content-planner",
+      "valueHypothesis": "Editorial planning adds team value immediately and supports future campaign plugins without adding API cost.",
+      "acceptanceChecklist": [
+        "Marketplace lane is addon-gated and not visible on non-entitled org toolbars.",
+        "Matt enterprise org can create a content plan item, update its status, and reload the surface.",
+        "Scoped build, tests, deploy, and production smoke verification pass."
+      ]
+    },
+    {
+      "pluginKey": "asset_library",
+      "title": "Asset Library",
+      "status": "planned",
+      "routeHref": "/asset-library",
+      "valueHypothesis": "A shared asset library increases operational stickiness with no external provider dependency.",
+      "acceptanceChecklist": [
+        "Marketplace lane is addon-gated and not visible on non-entitled org toolbars.",
+        "Matt enterprise org can create, update, and browse at least one asset record.",
+        "Scoped build, tests, deploy, and production smoke verification pass."
+      ]
+    },
+    {
+      "pluginKey": "intake_briefs",
+      "title": "Intake Briefs",
+      "status": "planned",
+      "routeHref": "/intake-briefs",
+      "valueHypothesis": "Structured briefs convert conversations into repeatable project intake without needing any paid integration.",
+      "acceptanceChecklist": [
+        "Marketplace lane is addon-gated and not visible on non-entitled org toolbars.",
+        "Matt enterprise org can create, update, and reopen a brief.",
+        "Scoped build, tests, deploy, and production smoke verification pass."
+      ]
+    }
+  ]
+}
