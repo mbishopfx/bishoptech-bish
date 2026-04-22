@@ -151,13 +151,13 @@ export const AppSidebar: ComponentType = () => {
       (pluginInstallations ?? [])
         .filter(
           (installation) =>
-            installation.activation_status === 'active' &&
-            installation.nav_visible &&
-            installation.plugin_key in WORKSPACE_PLUGIN_AREA_KEYS,
+            installation.activationStatus === 'active' &&
+            installation.navVisible &&
+            installation.pluginKey in WORKSPACE_PLUGIN_AREA_KEYS,
         )
         .map(
           (installation) =>
-            installation.plugin_key as keyof typeof WORKSPACE_PLUGIN_AREA_KEYS,
+            installation.pluginKey as keyof typeof WORKSPACE_PLUGIN_AREA_KEYS,
         ),
     [pluginInstallations],
   )
