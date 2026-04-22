@@ -797,13 +797,31 @@ export async function dispatchThreadToLocalListener(input: {
     throw new Error(`The registered listener does not support ${input.data.target}.`)
   }
 
+  const pool = requireZeroUpstreamPool()
+  const threadOwnerResult = await pool.query<{ user_id: string }>(
+    `
+      SELECT user_id
+      FROM threads
+      WHERE thread_id = $1
+        AND owner_org_id = $2
+      LIMIT 1
+    `,
+    [input.data.threadId, input.organizationId],
+  )
+  const threadOwnerUserId = threadOwnerResult.rows[0]?.user_id?.trim()
+  if (!threadOwnerUserId) {
+    throw new Error('Thread not found in the active organization.')
+  }
+  if (threadOwnerUserId !== input.requestedByUserId) {
+    throw new Error('Only the chat owner can send this thread to a local listener.')
+  }
+
   const handoff = await buildThreadHandoffMarkdown({
     organizationId: input.organizationId,
     threadId: input.data.threadId,
   })
   const handoffId = crypto.randomUUID()
   const now = Date.now()
-  const pool = requireZeroUpstreamPool()
 
   await pool.query(
     `

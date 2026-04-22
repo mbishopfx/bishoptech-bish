@@ -11,6 +11,10 @@ import {
   AssistantMessageActions,
   UserMessageActions,
 } from './message-parts'
+import { Avatar, AvatarFallback, AvatarImage } from '@bish/ui/avatar'
+import { Badge } from '@bish/ui/badge'
+import { cn } from '@bish/utils'
+import { useAppAuth } from '@/lib/frontend/auth/use-auth'
 
 function getRawMessageText(message: UIMessage): string {
   if (message.parts.length === 0) return ''
@@ -98,6 +102,7 @@ export function ChatMessage({
   const [isSavingEdit, setIsSavingEdit] = useState(false)
   const editTextareaRef = useRef<HTMLTextAreaElement | null>(null)
   const isUser = message.role === 'user'
+  const { user: currentUser } = useAppAuth()
   const direction = useDirection()
   const metadata = message.metadata as ChatMessageMetadata | undefined
   const attachmentManifest = (isUser ? metadata?.attachments ?? [] : []).filter(
@@ -114,6 +119,11 @@ export function ChatMessage({
   const localListener = !isUser && metadata?.localListener
     ? metadata.localListener
     : undefined
+  const author = metadata?.author
+  const isCollaboratorUserMessage =
+    isUser &&
+    Boolean(author?.userId) &&
+    author?.userId !== currentUser?.id
 
   useEffect(() => {
     if (isEditing || isSavingEdit) return
@@ -130,6 +140,55 @@ export function ChatMessage({
       textarea.select()
     })
   }, [isEditing])
+
+  if (isCollaboratorUserMessage && author) {
+    return (
+      <div
+        className="group flex w-full scroll-mt-24 items-start gap-3 py-3"
+        data-role={message.role}
+        data-message-id={message.id}
+        id={`chat-message-${message.id}`}
+      >
+        <Avatar className="mt-1 size-8 border border-border-base">
+          <AvatarImage src={author.image ?? undefined} alt={author.name} />
+          <AvatarFallback>{author.name.slice(0, 1)}</AvatarFallback>
+        </Avatar>
+        <div className="flex max-w-[80%] flex-col gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm font-medium text-foreground-primary">
+              {author.name}
+            </span>
+            {author.isThreadOwner ? (
+              <Badge
+                variant="outline"
+                className="border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
+              >
+                Owner
+              </Badge>
+            ) : (
+              <Badge
+                variant="outline"
+                className="border-sky-500/30 bg-sky-500/10 text-sky-300"
+              >
+                Shared member
+              </Badge>
+            )}
+          </div>
+          <div
+            dir={direction}
+            className={cn(
+              'relative flex min-h-7 w-fit max-w-full flex-col gap-3 overflow-hidden rounded-3xl border px-4 py-2 text-md leading-7',
+              'border-sky-500/20 bg-sky-500/8 text-foreground-primary ltr:rounded-tl-lg rtl:rounded-tr-lg',
+            )}
+          >
+            <div className="whitespace-pre-wrap break-words text-md leading-7">
+              {text || '\u00a0'}
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   if (isUser) {
     return (

@@ -8,10 +8,12 @@ import {
   useHistoryScrollState,
   useZeroVirtualizer,
 } from '@rocicorp/zero-virtual/react'
-import { useZero } from '@rocicorp/zero/react'
+import { useQuery, useZero } from '@rocicorp/zero/react'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { Button, buttonVariants } from '@bish/ui/button'
+import { Badge } from '@bish/ui/badge'
 import { copyToClipboard } from '@bish/utils'
+import { Archive, ChevronDown, ChevronRight, Undo2 } from 'lucide-react'
 import AlertTriangle from 'lucide-react/dist/esm/icons/alert-triangle'
 import Copy from 'lucide-react/dist/esm/icons/copy'
 import Link2 from 'lucide-react/dist/esm/icons/link-2'
@@ -20,7 +22,6 @@ import Pencil from 'lucide-react/dist/esm/icons/pencil'
 import Pin from 'lucide-react/dist/esm/icons/pin'
 import PinOff from 'lucide-react/dist/esm/icons/pin-off'
 import Search from 'lucide-react/dist/esm/icons/search'
-import Trash2 from 'lucide-react/dist/esm/icons/trash-2'
 import { SidebarGroupTooltip } from '@bish/ui/tooltip'
 import { ContextMenuItem, ContextMenuSeparator } from '@bish/ui/context-menu'
 import { Spinner } from '@bish/ui/spinner'
@@ -82,6 +83,8 @@ type ThreadItemRow = {
   readonly pinned: boolean
   readonly updatedAt: number
   readonly generationStatus?: ThreadHistoryRow['generationStatus']
+  readonly visibility?: 'visible' | 'archived'
+  readonly isShared?: boolean
 }
 
 type ThreadHistoryListContext = {
@@ -183,7 +186,8 @@ function buildThreadItem({
   submitRenameThread,
   cancelEditingThread,
   handleCopyThreadLink,
-  handleDeleteThread,
+  handleArchiveThread,
+  handleRestoreThread,
   handleSetThreadPinned,
   isPersisted,
 }: {
@@ -196,7 +200,8 @@ function buildThreadItem({
   submitRenameThread: (threadId: string, currentTitle: string) => Promise<void>
   cancelEditingThread: () => void
   handleCopyThreadLink: (threadId: string) => Promise<void>
-  handleDeleteThread: (threadId: string) => Promise<void>
+  handleArchiveThread: (threadId: string) => Promise<void>
+  handleRestoreThread: (threadId: string) => Promise<void>
   handleSetThreadPinned: (threadId: string, pinned: boolean) => Promise<void>
   isPersisted: boolean
 }): NavItemType {
@@ -206,6 +211,7 @@ function buildThreadItem({
     status === 'pending' || status === 'generation' || status === undefined
   const showError = status === 'failed'
   const isEditing = editingThreadId === thread.threadId
+  const isArchived = thread.visibility === 'archived'
 
   const trailing = showSpinner ? (
     <SidebarGroupTooltip
@@ -238,10 +244,27 @@ function buildThreadItem({
     </SidebarGroupTooltip>
   ) : undefined
 
+  const sharedBadge = thread.isShared ? (
+    <Badge
+      variant="outline"
+      className="border-sky-500/25 bg-sky-500/10 text-[10px] uppercase tracking-[0.18em] text-sky-300"
+    >
+      Shared
+    </Badge>
+  ) : undefined
+
+  const trailingContent =
+    sharedBadge || trailing ? (
+      <div className="flex items-center gap-2">
+        {sharedBadge}
+        {trailing}
+      </div>
+    ) : undefined
+
   return {
     name: currentTitle,
     href: `${CHAT_HREF}/${thread.threadId}`,
-    trailing: isEditing ? undefined : trailing,
+    trailing: isEditing ? undefined : trailingContent,
     disableLink: isEditing,
     ...(isEditing && {
       label: (
@@ -275,24 +298,39 @@ function buildThreadItem({
             <Copy />
             {m.chat_sidebar_copy_link()}
           </ContextMenuItem>
-          <ContextMenuItem
-            onClick={() => {
-              void handleSetThreadPinned(thread.threadId, !thread.pinned)
-            }}
-          >
-            {thread.pinned ? <PinOff /> : <Pin />}
-            {thread.pinned ? m.chat_sidebar_unpin() : m.chat_sidebar_pin()}
-          </ContextMenuItem>
-          <ContextMenuSeparator />
-          <ContextMenuItem
-            variant="destructive"
-            onClick={() => {
-              void handleDeleteThread(thread.threadId)
-            }}
-          >
-            <Trash2 />
-            {m.chat_sidebar_delete()}
-          </ContextMenuItem>
+          {isArchived ? (
+            <>
+              <ContextMenuSeparator />
+              <ContextMenuItem
+                onClick={() => {
+                  void handleRestoreThread(thread.threadId)
+                }}
+              >
+                <Undo2 />
+                Restore to history
+              </ContextMenuItem>
+            </>
+          ) : (
+            <>
+              <ContextMenuItem
+                onClick={() => {
+                  void handleSetThreadPinned(thread.threadId, !thread.pinned)
+                }}
+              >
+                {thread.pinned ? <PinOff /> : <Pin />}
+                {thread.pinned ? m.chat_sidebar_unpin() : m.chat_sidebar_pin()}
+              </ContextMenuItem>
+              <ContextMenuSeparator />
+              <ContextMenuItem
+                onClick={() => {
+                  void handleArchiveThread(thread.threadId)
+                }}
+              >
+                <Archive />
+                Archive chat
+              </ContextMenuItem>
+            </>
+          )}
         </>
       ) : undefined,
   }
@@ -328,6 +366,24 @@ function ThreadHistoryGroupHeaderRow({
       <div className={GROUP_HEADER_CLASS}>{label}</div>
     </div>
   )
+}
+
+function normalizeThreadRow(
+  thread: ThreadHistoryRow,
+  visibility: 'visible' | 'archived',
+): ThreadItemRow {
+  const memberStates = Array.isArray(thread.memberStates)
+    ? thread.memberStates
+    : []
+  return {
+    threadId: thread.threadId,
+    title: thread.title,
+    pinned: thread.pinned,
+    updatedAt: thread.updatedAt,
+    generationStatus: thread.generationStatus,
+    visibility,
+    isShared: memberStates.length > 1,
+  }
 }
 
 type ThreadRenameInputProps = {
@@ -403,7 +459,18 @@ function ChatSidebarHistory({
   const [discoveredHistoryGroups, setDiscoveredHistoryGroups] = useState<
     readonly ThreadHistoryGroupKey[]
   >([])
+  const [isArchivedExpanded, setIsArchivedExpanded] = useState(false)
   const activeThreadId = getActiveThreadId(pathname)
+  const [archivedRows, archivedResult] = useQuery(
+    queries.threads.historyPage({
+      organizationId: activeOrganizationId,
+      limit: CHAT_SIDEBAR_PAGE_SIZE,
+      start: null,
+      dir: 'forward',
+      inclusive: true,
+      visibility: 'archived',
+    }),
+  )
   const listContextParams = useMemo<ThreadHistoryListContext>(
     () => ({
       organizationId: activeOrganizationId,
@@ -430,6 +497,7 @@ function ChatSidebarHistory({
         start,
         dir,
         inclusive: start === null,
+        visibility: 'visible',
       }),
       options: settled ? CACHE_CHAT_NAV : undefined,
     }),
@@ -618,6 +686,37 @@ function ChatSidebarHistory({
     [z],
   )
 
+  /**
+   * Both visible and archived lists are driven from the same paged query model.
+   * Refreshing both slices after a visibility change keeps the collapsed archive
+   * folder and the primary history list in sync without waiting for a manual
+   * navigation or subscription boundary to settle.
+   */
+  const preloadHistorySlices = useCallback(() => {
+    z.preload(
+      queries.threads.historyPage({
+        organizationId: activeOrganizationId,
+        limit: CHAT_SIDEBAR_PAGE_SIZE,
+        start: null,
+        dir: 'forward',
+        inclusive: true,
+        visibility: 'visible',
+      }),
+      CACHE_CHAT_NAV,
+    )
+    z.preload(
+      queries.threads.historyPage({
+        organizationId: activeOrganizationId,
+        limit: CHAT_SIDEBAR_PAGE_SIZE,
+        start: null,
+        dir: 'forward',
+        inclusive: true,
+        visibility: 'archived',
+      }),
+      CACHE_CHAT_NAV,
+    )
+  }, [activeOrganizationId, z])
+
   const startEditingThread = useCallback(
     (threadId: string, currentTitle: string) => {
       setEditingThreadId(threadId)
@@ -657,35 +756,47 @@ function ChatSidebarHistory({
     [editingTitle, cancelEditingThread, z],
   )
 
-  const handleDeleteThread = useCallback(
+  const handleArchiveThread = useCallback(
     async (threadId: string) => {
       try {
-        const write = z.mutate(mutators.threads.delete({ threadId }))
+        const write = z.mutate(mutators.threads.archive({ threadId }))
         await write.client
-        z.preload(
-          queries.threads.historyPage({
-            organizationId: activeOrganizationId,
-            limit: CHAT_SIDEBAR_PAGE_SIZE,
-            start: null,
-            dir: 'forward',
-            inclusive: true,
-          }),
-          CACHE_CHAT_NAV,
-        )
-        toast.success(m.chat_sidebar_thread_deleted())
+        preloadHistorySlices()
+        setDiscoveredHistoryGroups([])
+        setIsArchivedExpanded(true)
+        toast.success('Chat moved to archived.')
         if (activeThreadId === threadId) {
           navigate({ to: CHAT_HREF })
         }
         const serverRes = await write.server
         if (serverRes.type === 'error') {
-          toast.error(m.chat_sidebar_thread_delete_failed())
+          toast.error('Failed to archive chat.')
         }
       } catch (error) {
-        console.error('Failed to delete thread:', error)
-        toast.error(m.chat_sidebar_thread_delete_failed())
+        console.error('Failed to archive thread:', error)
+        toast.error('Failed to archive chat.')
       }
     },
-    [activeOrganizationId, activeThreadId, navigate, z],
+    [activeThreadId, navigate, preloadHistorySlices, z],
+  )
+
+  const handleRestoreThread = useCallback(
+    async (threadId: string) => {
+      try {
+        const write = z.mutate(mutators.threads.restore({ threadId }))
+        await write.client
+        preloadHistorySlices()
+        toast.success('Chat restored to history.')
+        const serverRes = await write.server
+        if (serverRes.type === 'error') {
+          toast.error('Failed to restore chat.')
+        }
+      } catch (error) {
+        console.error('Failed to restore thread:', error)
+        toast.error('Failed to restore chat.')
+      }
+    },
+    [preloadHistorySlices, z],
   )
 
   const handleSetThreadPinned = useCallback(
@@ -707,7 +818,11 @@ function ChatSidebarHistory({
   }, [])
 
   const renderRow = useCallback(
-    (thread: ThreadItemRow, style: CSSProperties, isPersisted: boolean) => {
+    (
+      thread: ThreadItemRow,
+      style: CSSProperties | undefined,
+      isPersisted: boolean,
+    ) => {
       const item = buildThreadItem({
         thread,
         editingThreadId,
@@ -718,7 +833,8 @@ function ChatSidebarHistory({
         submitRenameThread,
         cancelEditingThread,
         handleCopyThreadLink,
-        handleDeleteThread,
+        handleArchiveThread,
+        handleRestoreThread,
         handleSetThreadPinned,
         isPersisted,
       })
@@ -727,7 +843,7 @@ function ChatSidebarHistory({
         <div
           key={thread.threadId}
           style={style}
-          className="absolute left-0 top-0 w-full"
+          className={style ? 'absolute left-0 top-0 w-full' : 'w-full'}
           onPointerEnter={() => preloadThreadMessages(thread.threadId)}
           onFocus={() => preloadThreadMessages(thread.threadId)}
         >
@@ -745,8 +861,9 @@ function ChatSidebarHistory({
       cancelEditingThread,
       editingThreadId,
       editingTitle,
+      handleArchiveThread,
       handleCopyThreadLink,
-      handleDeleteThread,
+      handleRestoreThread,
       handleSetThreadPinned,
       pathname,
       preloadThreadMessages,
@@ -754,56 +871,103 @@ function ChatSidebarHistory({
       submitRenameThread,
     ],
   )
+
+  const archivedThreads = useMemo(
+    () =>
+      archivedRows.map((thread) =>
+        normalizeThreadRow(thread, 'archived'),
+      ),
+    [archivedRows],
+  )
+  const archivedCount = archivedThreads.length
+  const archivedIsLoading = archivedResult.type !== 'complete'
+  const visibleContentHeight =
+    rowsEmpty && complete
+      ? 0
+      : virtualizer.getTotalSize() +
+        effectiveDiscoveredGroups.length * GROUP_HEADER_HEIGHT
+
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto">
-        {rowsEmpty && complete ? null : (
-          <div
-            className="relative"
-            style={{
-              height:
-                virtualizer.getTotalSize() +
-                effectiveDiscoveredGroups.length * GROUP_HEADER_HEIGHT,
-            }}
-          >
-            {renderableHistoryItems.map((item) => {
-              if (item.kind === 'header') {
-                const groupKey = item.groupKey as ThreadHistoryGroupKey
+        <div className="flex flex-col">
+          {rowsEmpty && complete ? null : (
+            <div className="relative" style={{ height: visibleContentHeight }}>
+              {renderableHistoryItems.map((item) => {
+                if (item.kind === 'header') {
+                  const groupKey = item.groupKey as ThreadHistoryGroupKey
+                  const start =
+                    item.start + (groupOffsetBeforeByKey.get(groupKey) ?? 0)
+
+                  return (
+                    <ThreadHistoryGroupHeaderRow
+                      key={item.key}
+                      label={getHistoryGroupLabel(groupKey)}
+                      style={{ transform: `translateY(${start}px)` }}
+                    />
+                  )
+                }
+
+                if (item.kind === 'skeleton') {
+                  return (
+                    <ThreadHistorySkeletonRow
+                      key={item.key}
+                      style={{ transform: `translateY(${item.start}px)` }}
+                    />
+                  )
+                }
+
                 const start =
-                  item.start + (groupOffsetBeforeByKey.get(groupKey) ?? 0)
+                  item.start +
+                  (groupOffsetThroughByKey.get(
+                    getThreadHistoryGroupKey(item.thread),
+                  ) ?? 0)
 
-                return (
-                  <ThreadHistoryGroupHeaderRow
-                    key={item.key}
-                    label={getHistoryGroupLabel(groupKey)}
-                    style={{ transform: `translateY(${start}px)` }}
-                  />
+                return renderRow(
+                  normalizeThreadRow(item.thread, 'visible'),
+                  { transform: `translateY(${start}px)` },
+                  true,
                 )
-              }
+              })}
+            </div>
+          )}
 
-              if (item.kind === 'skeleton') {
-                return (
-                  <ThreadHistorySkeletonRow
-                    key={item.key}
-                    style={{ transform: `translateY(${item.start}px)` }}
-                  />
-                )
-              }
+          {archivedCount > 0 || archivedIsLoading ? (
+            <div className="mt-4 border-t border-border-base/70 pt-3">
+              <button
+                type="button"
+                className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-foreground-secondary transition-colors hover:text-foreground-primary"
+                onClick={() => setIsArchivedExpanded((current) => !current)}
+              >
+                <span className="flex items-center gap-2">
+                  {isArchivedExpanded ? (
+                    <ChevronDown className="size-4" aria-hidden />
+                  ) : (
+                    <ChevronRight className="size-4" aria-hidden />
+                  )}
+                  <Archive className="size-4" aria-hidden />
+                  <span className="font-medium text-foreground-primary">Archived</span>
+                </span>
+                <span className="rounded-full border border-border-base bg-surface-base px-2 py-0.5 text-xs text-foreground-tertiary">
+                  {archivedCount}
+                </span>
+              </button>
 
-              const start =
-                item.start +
-                (groupOffsetThroughByKey.get(
-                  getThreadHistoryGroupKey(item.thread),
-                ) ?? 0)
-
-              return renderRow(
-                item.thread,
-                { transform: `translateY(${start}px)` },
-                true,
-              )
-            })}
-          </div>
-        )}
+              {isArchivedExpanded ? (
+                <div className="mt-1 space-y-1">
+                  {archivedThreads.map((thread) =>
+                    renderRow(thread, undefined, true),
+                  )}
+                  {archivedIsLoading ? (
+                    <div className="px-3 py-2 text-xs text-foreground-tertiary">
+                      Loading archived chats…
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
       </div>
     </div>
   )

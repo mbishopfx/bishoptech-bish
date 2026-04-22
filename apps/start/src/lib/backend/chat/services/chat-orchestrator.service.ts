@@ -110,6 +110,52 @@ function withGatewayComplianceProviderOptions(input: {
   }
 }
 
+function buildModelSwitchBridgeMessage(input: {
+  readonly previousModelId?: string
+  readonly nextModelId: string
+  readonly messages: readonly UIMessage[]
+}): UIMessage | null {
+  const recentMessages = input.messages
+    .slice(-10)
+    .map((message) => {
+      const text = message.parts
+        .filter(
+          (part): part is Extract<typeof part, { type: 'text'; text: string }> =>
+            part.type === 'text' &&
+            typeof (part as { text?: unknown }).text === 'string',
+        )
+        .map((part) => part.text)
+        .join('\n')
+        .trim()
+
+      if (!text) return null
+      return `${message.role.toUpperCase()}: ${text}`
+    })
+    .filter((message): message is string => Boolean(message))
+
+  if (recentMessages.length === 0) {
+    return null
+  }
+
+  return {
+    id: crypto.randomUUID(),
+    role: 'system',
+    parts: [
+      {
+        type: 'text',
+        text: [
+          `Model continuity notice: the assistant just switched from ${input.previousModelId ?? 'the previous model'} to ${input.nextModelId}.`,
+          'Use the recent transcript below to preserve continuity on the first response after the switch.',
+          'Advise the user that starting a new chat is still best when they need full long-range context fidelity.',
+          '',
+          'Recent transcript window:',
+          ...recentMessages,
+        ].join('\n'),
+      },
+    ],
+  }
+}
+
 /**
  * High-level chat orchestration boundary.
  * Coordinates cross-cutting concerns (authz, throttling, model policy, persistence,
@@ -633,6 +679,22 @@ export class ChatOrchestratorService extends ServiceMap.Service<
 
             messages = nextMessages
             assistantParentMessageId = command.message!.id
+          }
+
+          if (threadAccess.modelSwitchPending) {
+            const bridgeMessage = buildModelSwitchBridgeMessage({
+              previousModelId: threadAccess.lastModelSwitchFrom,
+              nextModelId: modelResolution.modelId,
+              messages,
+            })
+            if (bridgeMessage) {
+              messages = [bridgeMessage, ...messages]
+            }
+            yield* threads.clearPendingModelSwitch({
+              userId,
+              threadId,
+              requestId,
+            })
           }
 
           quotaReservation = yield* usageQuota.reserveChatQuota({

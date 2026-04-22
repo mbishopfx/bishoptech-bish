@@ -45,6 +45,10 @@ const archiveThreadArgs = z.object({
   threadId: z.string(),
 })
 
+const restoreThreadArgs = z.object({
+  threadId: z.string(),
+})
+
 const deleteThreadArgs = z.object({
   threadId: z.string(),
 })
@@ -75,6 +79,11 @@ const activateBranchPathArgs = z.object({
 const setThreadModeArgs = z.object({
   threadId: z.string(),
   modeId: z.string().nullable(),
+})
+
+const setThreadModelArgs = z.object({
+  threadId: z.string(),
+  modelId: z.string().trim().min(1),
 })
 
 const setThreadDisabledToolKeysArgs = z.object({
@@ -199,6 +208,41 @@ async function loadScopedOwnedThread(input: {
   return thread ?? null
 }
 
+/**
+ * Shared-thread access is driven by `thread_member_state` so every viewer has
+ * an explicit row describing whether the thread is visible or archived for them.
+ * That lets collaboration preserve per-user archiving without mutating the
+ * canonical thread record for everyone else.
+ */
+async function loadThreadMemberState(input: {
+  readonly tx: any
+  readonly ctx: {
+    readonly userID: string
+    readonly organizationId?: string
+    readonly isAnonymous?: boolean
+  }
+  readonly threadId: string
+}) {
+  const scoped = requireOrgContext(
+    {
+      organizationId: input.ctx.organizationId,
+      userID: input.ctx.userID,
+      isAnonymous: input.ctx.isAnonymous ?? false,
+    },
+    'Organization context is required to access thread memberships',
+  )
+
+  return (
+    (await input.tx.run(
+      zql.threadMemberState
+        .where('threadId', input.threadId)
+        .where('organizationId', scoped.organizationId)
+        .where('userId', scoped.userID)
+        .one(),
+    )) ?? null
+  )
+}
+
 async function loadValidatedBranchThread(input: {
   readonly tx: BranchMutatorTx
   readonly ctx: BranchMutatorCtx
@@ -321,18 +365,31 @@ export const chatMutatorDefinitions = {
       })
 
       try {
-        await tx.mutate.thread.insert(
-          buildBootstrapThreadRecord({
+        const bootstrapThread = buildBootstrapThreadRecord({
+          threadId: args.threadId,
+          createdAt: args.createdAt,
+          userId: ctx.userID,
+          modelId: args.modelId,
+          modeId: threadModeId,
+          contextWindowMode: args.contextWindowMode,
+          organizationId: ctx.organizationId,
+          disabledToolKeys,
+        })
+
+        await tx.mutate.thread.insert(bootstrapThread)
+        if (ctx.organizationId) {
+          await tx.mutate.threadMemberState.insert({
+            id: `thread_member_${args.threadId}_${ctx.userID}`,
             threadId: args.threadId,
-            createdAt: args.createdAt,
-            userId: ctx.userID,
-            modelId: args.modelId,
-            modeId: threadModeId,
-            contextWindowMode: args.contextWindowMode,
             organizationId: ctx.organizationId,
-            disabledToolKeys,
-          }),
-        )
+            userId: ctx.userID,
+            accessRole: 'owner',
+            visibility: 'visible',
+            addedByUserId: ctx.userID,
+            createdAt: args.createdAt,
+            updatedAt: args.createdAt,
+          })
+        }
       } catch (error) {
         const current = await tx.run(
           zql.thread.where('threadId', args.threadId).one(),
@@ -375,22 +432,58 @@ export const chatMutatorDefinitions = {
     }),
 
     archive: defineMutator(archiveThreadArgs, async ({ tx, args, ctx }) => {
-      const thread = await tx.run(zql.thread.where('threadId', args.threadId).one())
-      if (!thread || thread.userId !== ctx.userID) {
+      const membership = await loadThreadMemberState({
+        tx,
+        ctx,
+        threadId: args.threadId,
+      })
+      if (!membership || membership.visibility === 'archived') {
         return
       }
-      if (
-        !isThreadVisibleInContext({
-          threadOwnerOrgId: thread.ownerOrgId,
-          contextOrganizationId: ctx.organizationId,
-        })
-      ) {
+      await tx.mutate.threadMemberState.update({
+        id: membership.id,
+        visibility: 'archived',
+        updatedAt: Date.now(),
+      })
+    }),
+
+    restore: defineMutator(restoreThreadArgs, async ({ tx, args, ctx }) => {
+      const membership = await loadThreadMemberState({
+        tx,
+        ctx,
+        threadId: args.threadId,
+      })
+      if (!membership || membership.visibility === 'visible') {
+        return
+      }
+      await tx.mutate.threadMemberState.update({
+        id: membership.id,
+        visibility: 'visible',
+        updatedAt: Date.now(),
+      })
+    }),
+
+    setModel: defineMutator(setThreadModelArgs, async ({ tx, args, ctx }) => {
+      const membership = await loadThreadMemberState({
+        tx,
+        ctx,
+        threadId: args.threadId,
+      })
+      if (!membership) {
+        return
+      }
+
+      const thread = await tx.run(zql.thread.where('threadId', args.threadId).one())
+      if (!thread || thread.model === args.modelId) {
         return
       }
 
       await tx.mutate.thread.update({
         id: thread.id,
-        visibility: 'archived',
+        model: args.modelId,
+        modelSwitchPending: true,
+        lastModelSwitchAt: Date.now(),
+        lastModelSwitchFrom: thread.model,
         updatedAt: Date.now(),
       })
     }),
@@ -427,10 +520,16 @@ export const chatMutatorDefinitions = {
       }
 
       const messages = await tx.run(
-        zql.message.where('threadId', args.threadId).where('userId', ctx.userID),
+        zql.message.where('threadId', args.threadId),
       )
       for (const message of messages) {
         await tx.mutate.message.delete({ id: message.id })
+      }
+      const memberStates = await tx.run(
+        zql.threadMemberState.where('threadId', args.threadId),
+      )
+      for (const memberState of memberStates) {
+        await tx.mutate.threadMemberState.delete({ id: memberState.id })
       }
       await tx.mutate.thread.delete({ id: thread.id })
     }),

@@ -82,7 +82,10 @@ CREATE TABLE IF NOT EXISTS threads (
   reasoning_effort TEXT,
   mode_id TEXT,
   disabled_tool_keys JSONB NOT NULL DEFAULT '[]'::jsonb,
-  context_window_mode TEXT NOT NULL DEFAULT 'standard'
+  context_window_mode TEXT NOT NULL DEFAULT 'standard',
+  model_switch_pending BOOLEAN NOT NULL DEFAULT FALSE,
+  last_model_switch_at BIGINT,
+  last_model_switch_from TEXT
 );
 ALTER TABLE threads
 ADD COLUMN IF NOT EXISTS active_child_by_parent JSONB NOT NULL DEFAULT '{}'::jsonb;
@@ -94,6 +97,12 @@ ALTER TABLE threads
 ADD COLUMN IF NOT EXISTS disabled_tool_keys JSONB NOT NULL DEFAULT '[]'::jsonb;
 ALTER TABLE threads
 ADD COLUMN IF NOT EXISTS context_window_mode TEXT NOT NULL DEFAULT 'standard';
+ALTER TABLE threads
+ADD COLUMN IF NOT EXISTS model_switch_pending BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE threads
+ADD COLUMN IF NOT EXISTS last_model_switch_at BIGINT;
+ALTER TABLE threads
+ADD COLUMN IF NOT EXISTS last_model_switch_from TEXT;
 CREATE INDEX IF NOT EXISTS threads_user_id ON threads (user_id);
 CREATE INDEX IF NOT EXISTS threads_thread_id ON threads (thread_id);
 CREATE INDEX IF NOT EXISTS threads_user_updated ON threads (user_id, updated_at);
@@ -102,12 +111,34 @@ CREATE INDEX IF NOT EXISTS threads_user_org_visibility_updated
 CREATE INDEX IF NOT EXISTS threads_share_id ON threads (share_id);
 CREATE INDEX IF NOT EXISTS threads_reasoning_effort ON threads (reasoning_effort);
 CREATE INDEX IF NOT EXISTS threads_context_window_mode ON threads (context_window_mode);
+CREATE INDEX IF NOT EXISTS threads_model_switch_pending ON threads (model_switch_pending);
 CREATE INDEX IF NOT EXISTS threads_title_search_fts
   ON threads
   USING GIN (to_tsvector('simple', COALESCE(title, '')));
 CREATE INDEX IF NOT EXISTS threads_title_search_trgm
   ON threads
   USING GIN (LOWER(title) gin_trgm_ops);
+
+-- thread_member_state
+CREATE TABLE IF NOT EXISTS thread_member_state (
+  id TEXT PRIMARY KEY,
+  thread_id TEXT NOT NULL,
+  organization_id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  access_role TEXT NOT NULL DEFAULT 'participant',
+  visibility TEXT NOT NULL DEFAULT 'visible',
+  added_by_user_id TEXT,
+  created_at BIGINT NOT NULL,
+  updated_at BIGINT NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS thread_member_state_thread_user_unique
+  ON thread_member_state (thread_id, user_id);
+CREATE INDEX IF NOT EXISTS thread_member_state_user_visibility_updated
+  ON thread_member_state (user_id, visibility, updated_at DESC);
+CREATE INDEX IF NOT EXISTS thread_member_state_org_idx
+  ON thread_member_state (organization_id);
+CREATE INDEX IF NOT EXISTS thread_member_state_thread_idx
+  ON thread_member_state (thread_id);
 
 -- messages
 CREATE TABLE IF NOT EXISTS messages (
@@ -207,6 +238,95 @@ CREATE INDEX IF NOT EXISTS messages_user_created_desc
 CREATE INDEX IF NOT EXISTS messages_user_thread_search_scope
   ON messages (user_id, thread_id, created_at DESC)
   WHERE status = 'done' AND role IN ('user', 'assistant');
+
+-- huddle_room
+CREATE TABLE IF NOT EXISTS huddle_room (
+  id TEXT PRIMARY KEY,
+  room_id TEXT NOT NULL,
+  organization_id TEXT NOT NULL,
+  thread_id TEXT,
+  name TEXT NOT NULL,
+  room_type TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'active',
+  created_by_user_id TEXT NOT NULL,
+  created_at BIGINT NOT NULL,
+  updated_at BIGINT NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS huddle_room_room_id_unique
+  ON huddle_room (room_id);
+CREATE INDEX IF NOT EXISTS huddle_room_org_status_updated
+  ON huddle_room (organization_id, status, updated_at DESC);
+CREATE INDEX IF NOT EXISTS huddle_room_thread_idx
+  ON huddle_room (thread_id);
+
+-- huddle_member
+CREATE TABLE IF NOT EXISTS huddle_member (
+  id TEXT PRIMARY KEY,
+  room_id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  member_role TEXT NOT NULL DEFAULT 'member',
+  is_muted BOOLEAN NOT NULL DEFAULT FALSE,
+  session_id TEXT,
+  audio_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+  is_speaking BOOLEAN NOT NULL DEFAULT FALSE,
+  audio_level DOUBLE PRECISION NOT NULL DEFAULT 0,
+  connection_state TEXT NOT NULL DEFAULT 'idle',
+  joined_at BIGINT NOT NULL,
+  last_seen_at BIGINT NOT NULL,
+  created_at BIGINT NOT NULL,
+  updated_at BIGINT NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS huddle_member_room_user_unique
+  ON huddle_member (room_id, user_id);
+CREATE INDEX IF NOT EXISTS huddle_member_room_last_seen
+  ON huddle_member (room_id, last_seen_at DESC);
+
+CREATE INDEX IF NOT EXISTS huddle_member_room_session_idx
+  ON huddle_member (room_id, session_id);
+
+-- huddle_reaction
+CREATE TABLE IF NOT EXISTS huddle_reaction (
+  id TEXT PRIMARY KEY,
+  room_id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  created_at BIGINT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS huddle_reaction_room_created
+  ON huddle_reaction (room_id, created_at DESC);
+
+-- huddle_signal
+CREATE TABLE IF NOT EXISTS huddle_signal (
+  id TEXT PRIMARY KEY,
+  room_id TEXT NOT NULL,
+  sender_user_id TEXT NOT NULL,
+  sender_session_id TEXT NOT NULL,
+  recipient_user_id TEXT NOT NULL,
+  signal_type TEXT NOT NULL,
+  payload TEXT NOT NULL,
+  created_at BIGINT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS huddle_signal_recipient_created_idx
+  ON huddle_signal (recipient_user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS huddle_signal_room_created_idx
+  ON huddle_signal (room_id, created_at DESC);
+
+-- huddle_note
+CREATE TABLE IF NOT EXISTS huddle_note (
+  id TEXT PRIMARY KEY,
+  room_id TEXT NOT NULL,
+  organization_id TEXT NOT NULL,
+  created_by_user_id TEXT NOT NULL,
+  title TEXT NOT NULL DEFAULT 'Sticky note',
+  content TEXT NOT NULL DEFAULT '',
+  color TEXT NOT NULL DEFAULT 'amber',
+  position_x DOUBLE PRECISION NOT NULL DEFAULT 0,
+  position_y DOUBLE PRECISION NOT NULL DEFAULT 0,
+  created_at BIGINT NOT NULL,
+  updated_at BIGINT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS huddle_note_room_updated
+  ON huddle_note (room_id, updated_at DESC);
 
 -- org_ai_policy
 CREATE TABLE IF NOT EXISTS org_ai_policy (

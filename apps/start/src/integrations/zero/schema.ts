@@ -232,6 +232,24 @@ const thread = table('thread')
     contextWindowMode: enumeration<'standard' | 'max'>()
       .from('context_window_mode')
       .optional(),
+    modelSwitchPending: boolean().from('model_switch_pending').optional(),
+    lastModelSwitchAt: number().from('last_model_switch_at').optional(),
+    lastModelSwitchFrom: string().from('last_model_switch_from').optional(),
+  })
+  .primaryKey('id')
+
+const threadMemberState = table('threadMemberState')
+  .from('thread_member_state')
+  .columns({
+    id: string(),
+    threadId: string().from('thread_id'),
+    organizationId: string().from('organization_id'),
+    userId: string().from('user_id'),
+    accessRole: enumeration<'owner' | 'participant'>().from('access_role'),
+    visibility: enumeration<'visible' | 'archived'>(),
+    addedByUserId: string().from('added_by_user_id').optional(),
+    createdAt: number().from('created_at'),
+    updatedAt: number().from('updated_at'),
   })
   .primaryKey('id')
 
@@ -346,6 +364,84 @@ const attachment = table('attachment')
   })
   .primaryKey('id')
 
+const huddleRoom = table('huddleRoom')
+  .from('huddle_room')
+  .columns({
+    id: string(),
+    roomId: string().from('room_id'),
+    organizationId: string().from('organization_id'),
+    threadId: string().from('thread_id').optional(),
+    name: string(),
+    roomType: enumeration<'thread' | 'named'>().from('room_type'),
+    status: enumeration<'active' | 'archived'>(),
+    createdByUserId: string().from('created_by_user_id'),
+    createdAt: number().from('created_at'),
+    updatedAt: number().from('updated_at'),
+  })
+  .primaryKey('id')
+
+const huddleMember = table('huddleMember')
+  .from('huddle_member')
+  .columns({
+    id: string(),
+    roomId: string().from('room_id'),
+    userId: string().from('user_id'),
+    memberRole: enumeration<'host' | 'member'>().from('member_role'),
+    isMuted: boolean().from('is_muted'),
+    sessionId: string().from('session_id').optional(),
+    audioEnabled: boolean().from('audio_enabled'),
+    isSpeaking: boolean().from('is_speaking'),
+    audioLevel: number().from('audio_level'),
+    connectionState: string().from('connection_state'),
+    joinedAt: number().from('joined_at'),
+    lastSeenAt: number().from('last_seen_at'),
+    createdAt: number().from('created_at'),
+    updatedAt: number().from('updated_at'),
+  })
+  .primaryKey('id')
+
+const huddleSignal = table('huddleSignal')
+  .from('huddle_signal')
+  .columns({
+    id: string(),
+    roomId: string().from('room_id'),
+    senderUserId: string().from('sender_user_id'),
+    senderSessionId: string().from('sender_session_id'),
+    recipientUserId: string().from('recipient_user_id'),
+    signalType: string().from('signal_type'),
+    payload: string(),
+    createdAt: number().from('created_at'),
+  })
+  .primaryKey('id')
+
+const huddleReaction = table('huddleReaction')
+  .from('huddle_reaction')
+  .columns({
+    id: string(),
+    roomId: string().from('room_id'),
+    userId: string().from('user_id'),
+    kind: string(),
+    createdAt: number().from('created_at'),
+  })
+  .primaryKey('id')
+
+const huddleNote = table('huddleNote')
+  .from('huddle_note')
+  .columns({
+    id: string(),
+    roomId: string().from('room_id'),
+    organizationId: string().from('organization_id'),
+    createdByUserId: string().from('created_by_user_id'),
+    title: string(),
+    content: string(),
+    color: string(),
+    positionX: number().from('position_x'),
+    positionY: number().from('position_y'),
+    createdAt: number().from('created_at'),
+    updatedAt: number().from('updated_at'),
+  })
+  .primaryKey('id')
+
 // ---------------------------------------------------------------------------
 // Relationships (optional; use for .related() in ZQL)
 // ---------------------------------------------------------------------------
@@ -411,6 +507,42 @@ const memberRelationships = relationships(member, ({ one }) => ({
   }),
 }))
 
+const threadRelationships = relationships(thread, ({ many, one }) => ({
+  owner: one({
+    sourceField: ['userId'],
+    destField: ['id'],
+    destSchema: user,
+  }),
+  memberStates: many({
+    sourceField: ['threadId'],
+    destSchema: threadMemberState,
+    destField: ['threadId'],
+  }),
+}))
+
+const threadMemberStateRelationships = relationships(threadMemberState, ({ one }) => ({
+  thread: one({
+    sourceField: ['threadId'],
+    destField: ['threadId'],
+    destSchema: thread,
+  }),
+  organization: one({
+    sourceField: ['organizationId'],
+    destField: ['id'],
+    destSchema: organization,
+  }),
+  user: one({
+    sourceField: ['userId'],
+    destField: ['id'],
+    destSchema: user,
+  }),
+  addedByUser: one({
+    sourceField: ['addedByUserId'],
+    destField: ['id'],
+    destSchema: user,
+  }),
+}))
+
 const orgAiPolicyRelationships = relationships(orgAiPolicy, ({ one }) => ({
   organization: one({
     sourceField: ['organizationId'],
@@ -454,6 +586,111 @@ const messageRelationships = relationships(message, ({ one }) => ({
     destField: ['threadId'],
     destSchema: thread,
   }),
+  author: one({
+    sourceField: ['userId'],
+    destField: ['id'],
+    destSchema: user,
+  }),
+}))
+
+const huddleRoomRelationships = relationships(huddleRoom, ({ many, one }) => ({
+  organization: one({
+    sourceField: ['organizationId'],
+    destField: ['id'],
+    destSchema: organization,
+  }),
+  thread: one({
+    sourceField: ['threadId'],
+    destField: ['threadId'],
+    destSchema: thread,
+  }),
+  createdByUser: one({
+    sourceField: ['createdByUserId'],
+    destField: ['id'],
+    destSchema: user,
+  }),
+  members: many({
+    sourceField: ['roomId'],
+    destSchema: huddleMember,
+    destField: ['roomId'],
+  }),
+  reactions: many({
+    sourceField: ['roomId'],
+    destSchema: huddleReaction,
+    destField: ['roomId'],
+  }),
+  signals: many({
+    sourceField: ['roomId'],
+    destSchema: huddleSignal,
+    destField: ['roomId'],
+  }),
+  notes: many({
+    sourceField: ['roomId'],
+    destSchema: huddleNote,
+    destField: ['roomId'],
+  }),
+}))
+
+const huddleMemberRelationships = relationships(huddleMember, ({ one }) => ({
+  room: one({
+    sourceField: ['roomId'],
+    destField: ['roomId'],
+    destSchema: huddleRoom,
+  }),
+  user: one({
+    sourceField: ['userId'],
+    destField: ['id'],
+    destSchema: user,
+  }),
+}))
+
+const huddleReactionRelationships = relationships(huddleReaction, ({ one }) => ({
+  room: one({
+    sourceField: ['roomId'],
+    destField: ['roomId'],
+    destSchema: huddleRoom,
+  }),
+  user: one({
+    sourceField: ['userId'],
+    destField: ['id'],
+    destSchema: user,
+  }),
+}))
+
+const huddleSignalRelationships = relationships(huddleSignal, ({ one }) => ({
+  room: one({
+    sourceField: ['roomId'],
+    destField: ['roomId'],
+    destSchema: huddleRoom,
+  }),
+  senderUser: one({
+    sourceField: ['senderUserId'],
+    destField: ['id'],
+    destSchema: user,
+  }),
+  recipientUser: one({
+    sourceField: ['recipientUserId'],
+    destField: ['id'],
+    destSchema: user,
+  }),
+}))
+
+const huddleNoteRelationships = relationships(huddleNote, ({ one }) => ({
+  room: one({
+    sourceField: ['roomId'],
+    destField: ['roomId'],
+    destSchema: huddleRoom,
+  }),
+  organization: one({
+    sourceField: ['organizationId'],
+    destField: ['id'],
+    destSchema: organization,
+  }),
+  createdByUser: one({
+    sourceField: ['createdByUserId'],
+    destField: ['id'],
+    destSchema: user,
+  }),
 }))
 
 // ---------------------------------------------------------------------------
@@ -473,17 +710,30 @@ export const schema = createSchema({
     orgMemberAccess,
     orgUserUsageSummary,
     thread,
+    threadMemberState,
     message,
     attachment,
+    huddleRoom,
+    huddleMember,
+    huddleSignal,
+    huddleReaction,
+    huddleNote,
   ],
   relationships: [
     organizationRelationships,
     memberRelationships,
+    threadRelationships,
+    threadMemberStateRelationships,
     orgAiPolicyRelationships,
     attachmentRelationships,
     orgSubscriptionRelationships,
     orgUserUsageSummaryRelationships,
     messageRelationships,
+    huddleRoomRelationships,
+    huddleMemberRelationships,
+    huddleSignalRelationships,
+    huddleReactionRelationships,
+    huddleNoteRelationships,
   ],
 })
 

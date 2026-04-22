@@ -1,6 +1,7 @@
 import { defineMutatorsWithType } from '@rocicorp/zero'
 import type { Schema } from './schema'
 import { chatMutatorDefinitions } from './mutators/chat.mutators'
+import { huddleMutatorDefinitions } from './mutators/huddle.mutators'
 import { orgPolicyMutatorDefinitions } from './mutators/org-policy.mutators'
 
 /**
@@ -9,5 +10,6 @@ import { orgPolicyMutatorDefinitions } from './mutators/org-policy.mutators'
  */
 export const mutators = defineMutatorsWithType<Schema>()({
   ...chatMutatorDefinitions,
+  ...huddleMutatorDefinitions,
   ...orgPolicyMutatorDefinitions,
 })

@@ -34,6 +34,7 @@ import {
   shouldProvisionDefaultOrganization,
   slugifyOrganizationName,
 } from '@/lib/backend/auth/services/default-organization.service'
+import { isDefaultOrganizationProvisioningSuppressed } from '@/lib/backend/auth/services/auth-provisioning-context'
 import {
   sendAuthOtpEmail,
   sendOrganizationInvitationEmail,
@@ -432,6 +433,9 @@ export const auth = betterAuth({
     user: {
       create: {
         after: async (user) => {
+          if (isDefaultOrganizationProvisioningSuppressed()) {
+            return
+          }
           if (
             !shouldProvisionDefaultOrganization({
               isAnonymous:

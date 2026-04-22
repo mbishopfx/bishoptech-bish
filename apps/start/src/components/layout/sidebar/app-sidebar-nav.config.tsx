@@ -10,6 +10,11 @@ import {
   OPERATOR_AREA_KEY,
 } from '@/routes/(app)/_layout/operator/-operator-nav'
 import {
+  huddleNavArea,
+  HUDDLE_AREA_KEY,
+  isHuddlePath,
+} from '@/routes/(app)/_layout/huddle/-huddle-nav'
+import {
   isSettingsPath,
   settingsNavArea,
   SETTINGS_AREA_KEY,
@@ -64,10 +69,12 @@ export const NAV_AREAS: SidebarNavAreas = {
   [OPERATOR_AREA_KEY]: operatorNavArea,
   [ORG_SETTINGS_AREA_KEY]: orgSettingsNavArea,
   [CHAT_AREA_KEY]: chatNavArea,
+  [HUDDLE_AREA_KEY]: huddleNavArea,
   [SETTINGS_AREA_KEY]: settingsNavArea,
 }
 
 export { CHAT_AREA_KEY }
+export { HUDDLE_AREA_KEY }
 export { SETTINGS_AREA_KEY }
 export { OPERATOR_AREA_KEY }
 
@@ -79,5 +86,6 @@ export function getCurrentArea(pathname: string): string | null {
   if (isOrgSettingsPath(pathname)) return ORG_SETTINGS_AREA_KEY
   if (isSettingsPath(pathname)) return SETTINGS_AREA_KEY
   if (isChatPath(pathname)) return CHAT_AREA_KEY
+  if (isHuddlePath(pathname)) return HUDDLE_AREA_KEY
   return null
 }

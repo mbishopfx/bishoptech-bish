@@ -1,8 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import { Braces, Mic, PanelLeftClose, PanelLeftOpen, Sparkles } from 'lucide-react'
 import { Button } from '@bish/ui/button'
+import { cn } from '@bish/utils'
 import { useHotkey } from '@tanstack/react-hotkeys'
 import { useMediaQuery } from '@bish/ui/hooks/useMediaQuery'
 import { useSideNav } from '@/components/layout/main-nav'
@@ -13,6 +14,59 @@ import { toast } from 'sonner'
 import { useChatComposer } from './chat-context'
 import { ChatInput } from './chat-input'
 import { ChatThread } from './chat-thread'
+import { useAppAuth } from '@/lib/frontend/auth/use-auth'
+import { useQuery, useZero } from '@rocicorp/zero/react'
+import { mutators, queries } from '@/integrations/zero'
+import { ThreadShareDialog } from './thread-share-dialog'
+import { useNavigate } from '@tanstack/react-router'
+import { useHuddleSession } from '@/components/huddle/huddle-session'
+
+function HandoffTargetButton({
+  label,
+  target,
+  pending,
+  disabled,
+  onClick,
+}: {
+  label: string
+  target: 'gemini' | 'codex'
+  pending: boolean
+  disabled: boolean
+  onClick: () => Promise<void>
+}) {
+  const isGemini = target === 'gemini'
+  const Icon = isGemini ? Sparkles : Braces
+
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      disabled={disabled}
+      onClick={() => {
+        void onClick()
+      }}
+      className={cn(
+        'h-9 rounded-full border-border-base bg-surface-base/95 px-2.5 text-foreground-primary shadow-sm transition-colors hover:bg-surface-elevated',
+        pending ? 'opacity-80' : undefined,
+      )}
+    >
+      <span
+        className={cn(
+          'mr-2 inline-flex size-6 items-center justify-center rounded-full border text-white',
+          isGemini
+            ? 'border-sky-400/30 bg-gradient-to-br from-sky-500 to-cyan-400'
+            : 'border-violet-400/30 bg-gradient-to-br from-violet-500 to-fuchsia-500',
+        )}
+      >
+        <Icon className="size-3.5" aria-hidden />
+      </span>
+      <span className="text-xs font-medium uppercase tracking-[0.16em]">
+        {pending ? 'Sending…' : label}
+      </span>
+    </Button>
+  )
+}
 
 /**
  * Shared shell used by both `/chat` and `/chat/$threadId`.
@@ -20,12 +74,37 @@ import { ChatThread } from './chat-thread'
  */
 export function ChatPageShell() {
   const { activeThreadId } = useChatComposer()
+  const { activeOrganizationId, user } = useAppAuth()
+  const z = useZero()
+  const navigate = useNavigate()
+  const { setActiveSession } = useHuddleSession()
   const { isMobile } = useMediaQuery()
   const { isOpen: isMobileNavOpen, setIsOpen: setIsMobileNavOpen } =
     useSideNav()
   const { isChatPageSidebarCollapsed, setIsChatPageSidebarCollapsed } =
     usePageSidebarVisibility()
   const [pendingTarget, setPendingTarget] = useState<'gemini' | 'codex' | null>(null)
+  const [activeThreadRow] = useQuery(
+    queries.threads.byId({
+      threadId: activeThreadId ?? '',
+      organizationId: activeOrganizationId ?? undefined,
+    }),
+  )
+  const [threadHuddleRooms] = useQuery(
+    queries.huddle.rooms({
+      threadId: activeThreadId ?? undefined,
+    }),
+  )
+  const activeThreadMemberships = Array.isArray(activeThreadRow?.memberStates)
+    ? activeThreadRow.memberStates
+    : []
+  const existingThreadHuddle = Array.isArray(threadHuddleRooms)
+    ? threadHuddleRooms[0] ?? null
+    : null
+  const canDispatchHandoff = activeThreadMemberships.some(
+    (membership) =>
+      membership.userId === user?.id && membership.accessRole === 'owner',
+  )
 
   const toggleSidebar = () => {
     if (isMobile) {
@@ -77,11 +156,63 @@ export function ChatPageShell() {
           </div>
           {activeThreadId ? (
             <div className="pointer-events-auto ml-auto flex items-center gap-2">
+              <ThreadShareDialog threadId={activeThreadId} />
               <Button
                 type="button"
-                variant="ghost"
+                variant="outline"
                 size="sm"
-                disabled={pendingTarget !== null}
+                className="h-9 rounded-full border-border-base bg-surface-base/95 px-3 text-xs font-medium uppercase tracking-[0.16em] text-foreground-primary shadow-sm transition-colors hover:bg-surface-elevated"
+                onClick={() => {
+                  void (async () => {
+                    try {
+                      if (existingThreadHuddle) {
+                        await z.mutate(
+                          mutators.huddle.joinRoom({
+                            roomId: existingThreadHuddle.roomId,
+                          }),
+                        ).client
+                        setActiveSession({
+                          roomId: existingThreadHuddle.roomId,
+                          roomName: existingThreadHuddle.name,
+                          threadId: existingThreadHuddle.threadId ?? undefined,
+                        })
+                      } else {
+                        const title = activeThreadRow?.title?.trim() || 'Thread'
+                        const created = await z.mutate(
+                          mutators.huddle.createRoom({
+                            name: `${title} Huddle`,
+                            roomType: 'thread',
+                            threadId: activeThreadId,
+                          }),
+                        ).client
+                        if (created?.roomId) {
+                          setActiveSession({
+                            roomId: created.roomId,
+                            roomName: `${title} Huddle`,
+                            threadId: activeThreadId,
+                          })
+                        }
+                      }
+                      toast.success('Opened the live thread huddle.')
+                      await navigate({ to: '/huddle' })
+                    } catch (error) {
+                      toast.error(
+                        error instanceof Error
+                          ? error.message
+                          : 'Failed to open the thread huddle.',
+                      )
+                    }
+                  })()
+                }}
+              >
+                <Mic className="mr-2 size-3.5" />
+                {existingThreadHuddle ? 'Open Huddle' : 'Start Huddle'}
+              </Button>
+              <HandoffTargetButton
+                label="Gemini"
+                target="gemini"
+                pending={pendingTarget === 'gemini'}
+                disabled={pendingTarget !== null || !canDispatchHandoff}
                 onClick={async () => {
                   try {
                     setPendingTarget('gemini')
@@ -99,14 +230,12 @@ export function ChatPageShell() {
                     setPendingTarget(null)
                   }
                 }}
-              >
-                {pendingTarget === 'gemini' ? 'Sending…' : 'Handoff to Gemini'}
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                disabled={pendingTarget !== null}
+              />
+              <HandoffTargetButton
+                label="Codex"
+                target="codex"
+                pending={pendingTarget === 'codex'}
+                disabled={pendingTarget !== null || !canDispatchHandoff}
                 onClick={async () => {
                   try {
                     setPendingTarget('codex')
@@ -124,9 +253,7 @@ export function ChatPageShell() {
                     setPendingTarget(null)
                   }
                 }}
-              >
-                {pendingTarget === 'codex' ? 'Sending…' : 'Handoff to Codex'}
-              </Button>
+              />
             </div>
           ) : null}
         </div>

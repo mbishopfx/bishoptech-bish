@@ -34,6 +34,7 @@ import { Route as ApiFilesMarkdownRouteRouteImport } from './routes/api/files/ma
 import { Route as appLayoutSettingsRouteRouteImport } from './routes/(app)/_layout/settings/route'
 import { Route as appLayoutOrganizationRouteRouteImport } from './routes/(app)/_layout/organization/route'
 import { Route as appLayoutOperatorRouteRouteImport } from './routes/(app)/_layout/operator/route'
+import { Route as appLayoutHuddleRouteRouteImport } from './routes/(app)/_layout/huddle/route'
 import { Route as appLayoutChatRouteRouteImport } from './routes/(app)/_layout/chat/route'
 import { Route as appLayoutSettingsIndexRouteImport } from './routes/(app)/_layout/settings/index'
 import { Route as appLayoutChatIndexRouteImport } from './routes/(app)/_layout/chat/index'
@@ -199,6 +200,11 @@ const appLayoutOrganizationRouteRoute =
 const appLayoutOperatorRouteRoute = appLayoutOperatorRouteRouteImport.update({
   id: '/operator',
   path: '/operator',
+  getParentRoute: () => appLayoutRouteRoute,
+} as any)
+const appLayoutHuddleRouteRoute = appLayoutHuddleRouteRouteImport.update({
+  id: '/huddle',
+  path: '/huddle',
   getParentRoute: () => appLayoutRouteRoute,
 } as any)
 const appLayoutChatRouteRoute = appLayoutChatRouteRouteImport.update({
@@ -449,6 +455,7 @@ export interface FileRoutesByFullPath {
   '/legal/privacy': typeof LegalPrivacyRouteRoute
   '/legal/terms': typeof LegalTermsRouteRoute
   '/chat': typeof appLayoutChatRouteRouteWithChildren
+  '/huddle': typeof appLayoutHuddleRouteRoute
   '/operator': typeof appLayoutOperatorRouteRoute
   '/organization': typeof appLayoutOrganizationRouteRouteWithChildren
   '/settings': typeof appLayoutSettingsRouteRouteWithChildren
@@ -514,6 +521,7 @@ export interface FileRoutesByTo {
   '/legal/acceptable-use': typeof LegalAcceptableUseRouteRoute
   '/legal/privacy': typeof LegalPrivacyRouteRoute
   '/legal/terms': typeof LegalTermsRouteRoute
+  '/huddle': typeof appLayoutHuddleRouteRoute
   '/operator': typeof appLayoutOperatorRouteRoute
   '/organization': typeof appLayoutOrganizationRouteRouteWithChildren
   '/api/files/markdown': typeof ApiFilesMarkdownRouteRoute
@@ -579,6 +587,7 @@ export interface FileRoutesById {
   '/legal/privacy': typeof LegalPrivacyRouteRoute
   '/legal/terms': typeof LegalTermsRouteRoute
   '/(app)/_layout/chat': typeof appLayoutChatRouteRouteWithChildren
+  '/(app)/_layout/huddle': typeof appLayoutHuddleRouteRoute
   '/(app)/_layout/operator': typeof appLayoutOperatorRouteRoute
   '/(app)/_layout/organization': typeof appLayoutOrganizationRouteRouteWithChildren
   '/(app)/_layout/settings': typeof appLayoutSettingsRouteRouteWithChildren
@@ -647,6 +656,7 @@ export interface FileRouteTypes {
     | '/legal/privacy'
     | '/legal/terms'
     | '/chat'
+    | '/huddle'
     | '/operator'
     | '/organization'
     | '/settings'
@@ -712,6 +722,7 @@ export interface FileRouteTypes {
     | '/legal/acceptable-use'
     | '/legal/privacy'
     | '/legal/terms'
+    | '/huddle'
     | '/operator'
     | '/organization'
     | '/api/files/markdown'
@@ -776,6 +787,7 @@ export interface FileRouteTypes {
     | '/legal/privacy'
     | '/legal/terms'
     | '/(app)/_layout/chat'
+    | '/(app)/_layout/huddle'
     | '/(app)/_layout/operator'
     | '/(app)/_layout/organization'
     | '/(app)/_layout/settings'
@@ -1039,6 +1051,13 @@ declare module '@tanstack/react-router' {
       path: '/operator'
       fullPath: '/operator'
       preLoaderRoute: typeof appLayoutOperatorRouteRouteImport
+      parentRoute: typeof appLayoutRouteRoute
+    }
+    '/(app)/_layout/huddle': {
+      id: '/(app)/_layout/huddle'
+      path: '/huddle'
+      fullPath: '/huddle'
+      preLoaderRoute: typeof appLayoutHuddleRouteRouteImport
       parentRoute: typeof appLayoutRouteRoute
     }
     '/(app)/_layout/chat': {
@@ -1458,6 +1477,7 @@ const appLayoutSettingsRouteRouteWithChildren =
 
 interface appLayoutRouteRouteChildren {
   appLayoutChatRouteRoute: typeof appLayoutChatRouteRouteWithChildren
+  appLayoutHuddleRouteRoute: typeof appLayoutHuddleRouteRoute
   appLayoutOperatorRouteRoute: typeof appLayoutOperatorRouteRoute
   appLayoutOrganizationRouteRoute: typeof appLayoutOrganizationRouteRouteWithChildren
   appLayoutSettingsRouteRoute: typeof appLayoutSettingsRouteRouteWithChildren
@@ -1467,6 +1487,7 @@ interface appLayoutRouteRouteChildren {
 
 const appLayoutRouteRouteChildren: appLayoutRouteRouteChildren = {
   appLayoutChatRouteRoute: appLayoutChatRouteRouteWithChildren,
+  appLayoutHuddleRouteRoute: appLayoutHuddleRouteRoute,
   appLayoutOperatorRouteRoute: appLayoutOperatorRouteRoute,
   appLayoutOrganizationRouteRoute: appLayoutOrganizationRouteRouteWithChildren,
   appLayoutSettingsRouteRoute: appLayoutSettingsRouteRouteWithChildren,

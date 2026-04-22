@@ -28,6 +28,7 @@ import { MEMBERS_DIRECTORY_PAGE_SIZE } from '@/integrations/zero/queries/org-set
 import { useMembersPageLogic  } from './members-page.logic'
 import type {MemberRow} from './members-page.logic';
 import { InviteMembersDialog } from './invite-members-dialog'
+import { CreateMemberDialog } from './create-member-dialog'
 import { m } from '@/paraglide/messages.js'
 
 /** Maps member role to Badge variant and optional custom classes for visual hierarchy. */
@@ -363,7 +364,12 @@ export function MembersPage() {
           rowsSelected: 'row(s) selected.',
         }}
         tableWrapperClassName="border-border-base bg-surface-base/95"
-        toolbarActionsRight={<InviteMembersDialog />}
+        toolbarActionsRight={
+          <div className="flex items-center gap-2">
+            <CreateMemberDialog />
+            <InviteMembersDialog />
+          </div>
+        }
       />
     </ContentPage>
   )

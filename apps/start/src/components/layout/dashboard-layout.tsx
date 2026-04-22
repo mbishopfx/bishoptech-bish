@@ -6,22 +6,30 @@ import { PageSidebarVisibilityProvider } from '@/components/layout/page-sidebar-
 import { RightSidebarProvider } from '@/components/layout/right-sidebar-context'
 import { ChatSearchCommand } from '@/components/chat/chat-search-command'
 import { ActiveOrganizationProvider } from '@/lib/frontend/auth/active-organization'
+import {
+  HuddleSessionDock,
+  HuddleSessionProvider,
+} from '@/components/huddle/huddle-session'
 
 export function DashboardLayout({ children }: { children: ReactNode }) {
   return (
     <>
       <div className="scrollbar-app min-h-screen w-full bg-surface-base">
         <ActiveOrganizationProvider>
-          <PageSidebarVisibilityProvider>
-            <RightSidebarProvider>
-              <MainNav sidebar={AppSidebar}>{children}</MainNav>
-              <ChatSearchCommand />
-            </RightSidebarProvider>
-          </PageSidebarVisibilityProvider>
+          <HuddleSessionProvider>
+            <PageSidebarVisibilityProvider>
+              <RightSidebarProvider>
+                <MainNav sidebar={AppSidebar}>{children}</MainNav>
+                <ChatSearchCommand />
+              </RightSidebarProvider>
+            </PageSidebarVisibilityProvider>
+          </HuddleSessionProvider>
         </ActiveOrganizationProvider>
       </div>
       <div className="fixed bottom-0 ltr:right-0 rtl:left-0 z-40 m-5">
-        <div className="flex items-center gap-3" />
+        <div className="flex items-center gap-3">
+          <HuddleSessionDock />
+        </div>
       </div>
     </>
   )

@@ -56,6 +56,8 @@ export type ThreadServiceShape = {
       readonly modeId?: ChatModeId
       readonly contextWindowMode: AiContextWindowMode
       readonly disabledToolKeys: readonly string[]
+      readonly modelSwitchPending?: boolean
+      readonly lastModelSwitchFrom?: string
       readonly generationStatus:
         | 'pending'
         | 'generation'
@@ -100,6 +102,11 @@ export type ThreadServiceShape = {
     AiContextWindowMode,
     ThreadNotFoundError | ThreadForbiddenError | MessagePersistenceError
   >
+  readonly clearPendingModelSwitch: (input: {
+    readonly userId: string
+    readonly threadId: string
+    readonly requestId: string
+  }) => Effect.Effect<void, ThreadNotFoundError | ThreadForbiddenError | MessagePersistenceError>
 }
 
 function isThreadAccessibleForOrganization(input: {
@@ -176,6 +183,19 @@ export class ThreadService extends ServiceMap.Service<
               try: async () => {
                 await db.transaction(async (tx) => {
                   await tx.mutate.thread.insert(bootstrapThread)
+                  if (organizationId) {
+                    await tx.mutate.threadMemberState.insert({
+                      id: `thread_member_${threadId}_${userId}`,
+                      threadId,
+                      organizationId,
+                      userId,
+                      accessRole: 'owner',
+                      visibility: 'visible',
+                      addedByUserId: userId,
+                      createdAt: now,
+                      updatedAt: now,
+                    })
+                  }
                 })
               },
               catch: (error) =>
@@ -259,6 +279,19 @@ export class ThreadService extends ServiceMap.Service<
                     await db.transaction(async (tx) => {
                       // Uses deterministic IDs so first-message bootstrap can be retried safely.
                       await tx.mutate.thread.insert(bootstrapThread)
+                      if (organizationId) {
+                        await tx.mutate.threadMemberState.insert({
+                          id: `thread_member_${threadId}_${userId}`,
+                          threadId,
+                          organizationId,
+                          userId,
+                          accessRole: 'owner',
+                          visibility: 'visible',
+                          addedByUserId: userId,
+                          createdAt: now,
+                          updatedAt: now,
+                        })
+                      }
                     })
                   } catch {
                     // Another writer may have created this thread concurrently.
@@ -287,10 +320,34 @@ export class ThreadService extends ServiceMap.Service<
               },
             })
 
-            if (thread.userId !== userId) {
+            const membership = organizationId
+              ? yield* Effect.tryPromise({
+                  try: () =>
+                    db.run(
+                      zql.threadMemberState
+                        .where('threadId', threadId)
+                        .where('organizationId', organizationId)
+                        .where('userId', userId)
+                        .one(),
+                    ),
+                  catch: (error) =>
+                    new MessagePersistenceError({
+                      message: 'Failed to validate thread access',
+                      requestId,
+                      threadId,
+                      cause: String(error),
+                    }),
+                })
+              : null
+
+            const hasThreadAccess = organizationId
+              ? Boolean(membership)
+              : thread.userId === userId
+
+            if (!hasThreadAccess) {
               return yield* Effect.fail(
                 new ThreadForbiddenError({
-                  message: 'Thread is not owned by user',
+                  message: 'Thread is not available to user',
                   requestId,
                   threadId,
                   userId,
@@ -329,6 +386,11 @@ export class ThreadService extends ServiceMap.Service<
                   : DEFAULT_CONTEXT_WINDOW_MODE,
               disabledToolKeys:
                 Array.isArray(thread.disabledToolKeys) ? thread.disabledToolKeys : [],
+              modelSwitchPending: thread.modelSwitchPending === true,
+              lastModelSwitchFrom:
+                typeof thread.lastModelSwitchFrom === 'string'
+                  ? thread.lastModelSwitchFrom
+                  : undefined,
               generationStatus: thread.generationStatus,
               branchVersion: thread.branchVersion,
             }
@@ -363,7 +425,26 @@ export class ThreadService extends ServiceMap.Service<
                 }),
             })
             if (!thread) return
-            if (thread.userId !== userId) return
+            if (thread.ownerOrgId) {
+              const membership = yield* Effect.tryPromise({
+                try: () =>
+                  db.run(
+                    zql.threadMemberState
+                      .where('threadId', threadId)
+                      .where('organizationId', thread.ownerOrgId)
+                      .where('userId', userId)
+                      .one(),
+                  ),
+                catch: (error) =>
+                  new MessagePersistenceError({
+                    message: 'Failed to auto-generate thread title',
+                    requestId,
+                    threadId,
+                    cause: String(error),
+                  }),
+              })
+              if (!membership) return
+            } else if (thread.userId !== userId) return
             if (thread.userSetTitle) return
             if (thread.title !== DEFAULT_THREAD_TITLE) return
 
@@ -441,7 +522,26 @@ User message: ${trimmedMessage}`,
                 }),
             })
             if (!thread) return
-            if (thread.userId !== userId) return
+            if (thread.ownerOrgId) {
+              const membership = yield* Effect.tryPromise({
+                try: () =>
+                  db.run(
+                    zql.threadMemberState
+                      .where('threadId', threadId)
+                      .where('organizationId', thread.ownerOrgId)
+                      .where('userId', userId)
+                      .one(),
+                  ),
+                catch: (error) =>
+                  new MessagePersistenceError({
+                    message: 'Failed to mark thread as failed',
+                    requestId,
+                    threadId,
+                    cause: String(error),
+                  }),
+              })
+              if (!membership) return
+            } else if (thread.userId !== userId) return
 
             if (
               thread.generationStatus !== 'pending' &&
@@ -508,10 +608,34 @@ User message: ${trimmedMessage}`,
               )
             }
 
-            if (thread.userId !== userId) {
+            const membership = thread.ownerOrgId
+              ? yield* Effect.tryPromise({
+                  try: () =>
+                    db.run(
+                      zql.threadMemberState
+                        .where('threadId', threadId)
+                        .where('organizationId', thread.ownerOrgId)
+                        .where('userId', userId)
+                        .one(),
+                    ),
+                  catch: (error) =>
+                    new MessagePersistenceError({
+                      message: 'Failed to update thread mode',
+                      requestId,
+                      threadId,
+                      cause: String(error),
+                    }),
+                })
+              : null
+
+            const canUpdateThreadMode = thread.ownerOrgId
+              ? Boolean(membership)
+              : thread.userId === userId
+
+            if (!canUpdateThreadMode) {
               return yield* Effect.fail(
                 new ThreadForbiddenError({
-                  message: 'Thread is not owned by user',
+                  message: 'Thread is not available to user',
                   requestId,
                   threadId,
                   userId,
@@ -578,10 +702,34 @@ User message: ${trimmedMessage}`,
               )
             }
 
-            if (thread.userId !== userId) {
+            const membership = thread.ownerOrgId
+              ? yield* Effect.tryPromise({
+                  try: () =>
+                    db.run(
+                      zql.threadMemberState
+                        .where('threadId', threadId)
+                        .where('organizationId', thread.ownerOrgId)
+                        .where('userId', userId)
+                        .one(),
+                    ),
+                  catch: (error) =>
+                    new MessagePersistenceError({
+                      message: 'Failed to update thread tools',
+                      requestId,
+                      threadId,
+                      cause: String(error),
+                    }),
+                })
+              : null
+
+            const canUpdateThreadTools = thread.ownerOrgId
+              ? Boolean(membership)
+              : thread.userId === userId
+
+            if (!canUpdateThreadTools) {
               return yield* Effect.fail(
                 new ThreadForbiddenError({
-                  message: 'Thread is not owned by user',
+                  message: 'Thread is not available to user',
                   requestId,
                   threadId,
                   userId,
@@ -650,10 +798,34 @@ User message: ${trimmedMessage}`,
               )
             }
 
-            if (thread.userId !== userId) {
+            const membership = thread.ownerOrgId
+              ? yield* Effect.tryPromise({
+                  try: () =>
+                    db.run(
+                      zql.threadMemberState
+                        .where('threadId', threadId)
+                        .where('organizationId', thread.ownerOrgId)
+                        .where('userId', userId)
+                        .one(),
+                    ),
+                  catch: (error) =>
+                    new MessagePersistenceError({
+                      message: 'Failed to update thread context window mode',
+                      requestId,
+                      threadId,
+                      cause: String(error),
+                    }),
+                })
+              : null
+
+            const canUpdateThreadContextWindow = thread.ownerOrgId
+              ? Boolean(membership)
+              : thread.userId === userId
+
+            if (!canUpdateThreadContextWindow) {
               return yield* Effect.fail(
                 new ThreadForbiddenError({
-                  message: 'Thread is not owned by user',
+                  message: 'Thread is not available to user',
                   requestId,
                   threadId,
                   userId,
@@ -692,6 +864,93 @@ User message: ${trimmedMessage}`,
           }),
       )
 
+      const clearPendingModelSwitch = Effect.fn(
+        'ThreadService.clearPendingModelSwitch',
+      )(
+        ({ userId, threadId, requestId }) =>
+          Effect.gen(function* () {
+            const db = yield* loadDb({ requestId, threadId })
+            const thread = yield* Effect.tryPromise({
+              try: () => db.run(zql.thread.where('threadId', threadId).one()),
+              catch: (error) =>
+                new MessagePersistenceError({
+                  message: 'Failed to clear thread model switch state',
+                  requestId,
+                  threadId,
+                  cause: String(error),
+                }),
+            })
+
+            if (!thread) {
+              return yield* Effect.fail(
+                new ThreadNotFoundError({
+                  message: 'Thread not found',
+                  requestId,
+                  threadId,
+                }),
+              )
+            }
+
+            const membership = thread.ownerOrgId
+              ? yield* Effect.tryPromise({
+                  try: () =>
+                    db.run(
+                      zql.threadMemberState
+                        .where('threadId', threadId)
+                        .where('organizationId', thread.ownerOrgId)
+                        .where('userId', userId)
+                        .one(),
+                    ),
+                  catch: (error) =>
+                    new MessagePersistenceError({
+                      message: 'Failed to clear thread model switch state',
+                      requestId,
+                      threadId,
+                      cause: String(error),
+                    }),
+                })
+              : null
+
+            const canAccessThread = thread.ownerOrgId
+              ? Boolean(membership)
+              : thread.userId === userId
+
+            if (!canAccessThread) {
+              return yield* Effect.fail(
+                new ThreadForbiddenError({
+                  message: 'Thread is not available to user',
+                  requestId,
+                  threadId,
+                  userId,
+                }),
+              )
+            }
+
+            if (!thread.modelSwitchPending) {
+              return
+            }
+
+            yield* Effect.tryPromise({
+              try: async () => {
+                await db.transaction(async (tx) => {
+                  await tx.mutate.thread.update({
+                    id: thread.id,
+                    modelSwitchPending: false,
+                    updatedAt: Date.now(),
+                  })
+                })
+              },
+              catch: (error) =>
+                new MessagePersistenceError({
+                  message: 'Failed to clear thread model switch state',
+                  requestId,
+                  threadId,
+                  cause: String(error),
+                }),
+            })
+          }),
+      )
+
       return {
         createThread,
         assertThreadAccess,
@@ -700,6 +959,7 @@ User message: ${trimmedMessage}`,
         setThreadMode,
         setThreadDisabledToolKeys,
         setThreadContextWindowMode,
+        clearPendingModelSwitch,
       }
     }),
   )
@@ -819,6 +1079,8 @@ User message: ${trimmedMessage}`,
           contextWindowMode:
             thread.contextWindowMode ?? DEFAULT_CONTEXT_WINDOW_MODE,
           disabledToolKeys: thread.disabledToolKeys ?? [],
+          modelSwitchPending: false,
+          lastModelSwitchFrom: undefined,
           generationStatus: 'completed' as const,
           branchVersion: 1,
         }
@@ -915,6 +1177,9 @@ User message: ${trimmedMessage}`,
         return contextWindowMode
       }),
     ),
+    clearPendingModelSwitch: Effect.fn(
+      'ThreadService.clearPendingModelSwitchMemory',
+    )(() => Effect.void),
   })
 }
 const TITLE_GENERATION_MODEL = 'meta/llama-4-maverick'

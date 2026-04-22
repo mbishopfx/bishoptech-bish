@@ -18,6 +18,7 @@ import type { LanguageModelUsage, UIMessage  } from 'ai'
 import { useQuery, useZero  } from '@rocicorp/zero/react'
 import { DefaultChatTransport } from 'ai'
 import { flushSync } from 'react-dom'
+import { toast } from 'sonner'
 import { mutators, queries } from '@/integrations/zero'
 import { CACHE_CHAT_NAV } from '@/integrations/zero/query-cache-policy'
 import {
@@ -325,6 +326,14 @@ function toUIMessageFromStoredMessage(message: {
   readonly content: string
   readonly reasoning?: string | null
   readonly model: string
+  readonly userId?: string
+  readonly author?: {
+    readonly id?: string
+    readonly name?: string
+    readonly email?: string
+    readonly image?: string | null
+  } | null
+  readonly threadOwnerUserId?: string
   readonly sources?:
     | readonly { sourceId: string; url: string; title?: string }[]
     | null
@@ -365,6 +374,22 @@ function toUIMessageFromStoredMessage(message: {
     metadata: {
       ...(message.role === 'assistant' ? { model: message.model } : {}),
       ...(attachments.length > 0 ? { attachments } : {}),
+      ...(message.userId
+        ? {
+            author: {
+              userId: message.userId,
+              name:
+                message.author?.name?.trim() ||
+                message.author?.email?.trim() ||
+                'Member',
+              email: message.author?.email ?? null,
+              image: message.author?.image ?? null,
+              isThreadOwner:
+                message.threadOwnerUserId != null &&
+                message.userId === message.threadOwnerUserId,
+            },
+          }
+        : {}),
     },
   }
 }
@@ -441,17 +466,25 @@ function buildCanonicalUIMessageSnapshot(input: {
   readonly storedMessages: readonly {
     readonly messageId: string
     readonly role: 'user' | 'assistant' | 'system'
+    readonly userId: string
     readonly parentMessageId?: string | null
     readonly branchIndex: number
     readonly created_at: number
     readonly content: string
     readonly reasoning?: string | null
     readonly model: string
+    readonly author?: {
+      readonly id?: string
+      readonly name?: string
+      readonly email?: string
+      readonly image?: string | null
+    } | null
     readonly sources?:
       | readonly { sourceId: string; url: string; title?: string }[]
       | null
   }[]
   readonly activeChildByParent: Record<string, string>
+  readonly threadOwnerUserId?: string
 }): ChatUIMessage[] {
   const messageById = new Map(
     input.storedMessages.map((message) => [message.messageId, message]),
@@ -470,7 +503,12 @@ function buildCanonicalUIMessageSnapshot(input: {
   return canonicalIds
     .map((messageId) => messageById.get(messageId))
     .filter((message): message is NonNullable<typeof message> => !!message)
-    .map(toUIMessageFromStoredMessage)
+    .map((message) =>
+      toUIMessageFromStoredMessage({
+        ...message,
+        threadOwnerUserId: input.threadOwnerUserId,
+      }),
+    )
 }
 
 function buildBranchCost(
@@ -1963,6 +2001,7 @@ export function ChatProvider({
             buildCanonicalUIMessageSnapshot({
               storedMessages: storedMessagesRef.current,
               activeChildByParent: nextSelections,
+              threadOwnerUserId: threadRowRef.current?.userId,
             }),
           )
         }
@@ -2064,6 +2103,7 @@ export function ChatProvider({
           buildCanonicalUIMessageSnapshot({
             storedMessages: currentStoredMessages,
             activeChildByParent: optimisticSelections,
+            threadOwnerUserId: currentThreadRow.userId,
           }),
         )
         return true
@@ -2098,10 +2138,34 @@ export function ChatProvider({
     (modelId: string) => {
       const nextModel = selectableModels.find((model) => model.id === modelId)
       if (!nextModel) return
+      const previousModelId = selectedModelIdRef.current
+      if (previousModelId === nextModel.id) {
+        return
+      }
       setSelectedModelId(nextModel.id)
       setSelectedReasoningEffort(nextModel.defaultReasoningEffort)
+      if (activeThreadId) {
+        void z
+          .mutate(
+            mutators.threads.setModel({
+              threadId: activeThreadId,
+              modelId: nextModel.id,
+            }),
+          )
+          .client
+          .catch((error) => {
+            toast.error(
+              error instanceof Error
+                ? error.message
+                : 'Failed to persist the chat model switch.',
+            )
+          })
+        toast.info(
+          'Model switched. The next reply will carry recent context forward, but a new chat is still best for full-context fidelity.',
+        )
+      }
     },
-    [selectableModels],
+    [activeThreadId, selectableModels, z],
   )
   const setReasoningSelection = useCallback(
     (reasoningEffort?: AiReasoningEffort) => {

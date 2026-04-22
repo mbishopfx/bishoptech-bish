@@ -13,6 +13,14 @@ export type LocalListenerMessageMetadata = {
   readonly artifactNames?: readonly string[]
 }
 
+export type ChatMessageAuthorMetadata = {
+  readonly userId: string
+  readonly name: string
+  readonly email?: string | null
+  readonly image?: string | null
+  readonly isThreadOwner?: boolean
+}
+
 /**
  * Metadata added by the server to streamed assistant messages.
  * This type is intentionally client-safe (no backend runtime imports).
@@ -27,4 +35,5 @@ export type ChatMessageMetadata = {
   readonly totalTokens?: number
   readonly attachments?: readonly ChatAttachment[]
   readonly localListener?: LocalListenerMessageMetadata
+  readonly author?: ChatMessageAuthorMetadata
 }

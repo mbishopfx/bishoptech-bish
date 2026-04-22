@@ -23,6 +23,7 @@ const threadHistoryPageArgs = z.object({
   start: threadHistoryCursor.nullable().optional(),
   dir: z.enum(['forward', 'backward']),
   inclusive: z.boolean().optional(),
+  visibility: z.enum(['visible', 'archived']).optional(),
 })
 
 /**
@@ -38,9 +39,13 @@ export const chatQueryDefinitions = {
     historyPage: defineQuery(threadHistoryPageArgs, ({ args, ctx }) => {
       const orderDirection = args.dir === 'forward' ? 'desc' : 'asc'
       const organizationId = args.organizationId?.trim()
+      const visibility = args.visibility ?? 'visible'
       let q = zql.thread
-        .where('userId', ctx.userID)
-        .where('visibility', 'visible')
+        .whereExists('memberStates', (memberStates) =>
+          memberStates
+            .where('userId', ctx.userID)
+            .where('visibility', visibility),
+        )
         .orderBy('pinned', orderDirection)
         .orderBy('updatedAt', orderDirection)
         .orderBy('threadId', orderDirection)
@@ -54,18 +59,24 @@ export const chatQueryDefinitions = {
         q = q.start(args.start, { inclusive: args.inclusive ?? false })
       }
 
-      return q
+      return q.related('memberStates', (memberStates) =>
+        memberStates.related('user'),
+      )
     }),
     byId: defineQuery(orgScopedThreadByIdArgs, ({ args, ctx }) => {
       const organizationId = args.organizationId?.trim()
       let q = zql.thread
         .where('threadId', args.threadId)
-        .where('userId', ctx.userID)
+        .whereExists('memberStates', (memberStates) =>
+          memberStates.where('userId', ctx.userID),
+        )
       if (organizationId) {
         q = q.where('ownerOrgId', organizationId)
       }
 
-      return q.one()
+      return q.related('memberStates', (memberStates) =>
+        memberStates.where('visibility', 'IN', ['visible', 'archived']).related('user'),
+      ).one()
     }),
   },
   messages: {
@@ -73,7 +84,12 @@ export const chatQueryDefinitions = {
     byThread: defineQuery(z.object({ threadId: z.string() }), ({ args, ctx }) =>
       zql.message
         .where('threadId', args.threadId)
-        .where('userId', ctx.userID)
+        .whereExists('thread', (thread) =>
+          thread.whereExists('memberStates', (memberStates) =>
+            memberStates.where('userId', ctx.userID),
+          ),
+        )
+        .related('author')
         .orderBy('created_at', 'asc'),
     ),
   },
