@@ -26,6 +26,11 @@ import { isBishOperatorEmail } from '@/lib/backend/bish/operator-access'
 import { useAppAuth } from '@/lib/frontend/auth/use-auth'
 import { Link, useRouterState } from '@tanstack/react-router'
 import { waitForPageSettled } from '@/lib/frontend/performance/page-settled'
+import {
+  readWorkspaceToolNavPersistence,
+  persistWorkspaceToolNavVisibility,
+  subscribeWorkspaceToolNavUpdates,
+} from '@/lib/frontend/workspace-tools/nav-persistence'
 import { useQuery } from '@rocicorp/zero/react'
 import { queries } from '@/integrations/zero'
 import { SidebarChatThreadPreloader } from './sidebar/sidebar-chat-thread-preloader'
@@ -129,28 +134,102 @@ export const AppSidebar: ComponentType = () => {
       cancelAnimationFrame(frame)
     }
   }, [effectiveCurrentArea, isTransitionReady])
-  const { user, loading, isAnonymous } = useAppAuth()
+  const { user, loading, isAnonymous, activeOrganizationId } = useAppAuth()
   const [pluginInstallations] = useQuery(
     queries.workspaceTools.pluginInstallations({}),
   )
   const { isChatPageSidebarCollapsed } = usePageSidebarVisibility()
   const direction = useDirection()
   const canAccessOperator = isBishOperatorEmail(user?.email)
+  const normalizedOrganizationId = activeOrganizationId?.trim() || null
+  const [stickyPluginKeys, setStickyPluginKeys] = useState<
+    readonly (keyof typeof WORKSPACE_PLUGIN_AREA_KEYS)[]
+  >([])
+  const [hasStickyPluginCache, setHasStickyPluginCache] = useState(false)
+  const serverVisiblePluginKeys = useMemo(
+    () =>
+      (pluginInstallations ?? [])
+        .filter(
+          (installation) =>
+            installation.activation_status === 'active' &&
+            installation.nav_visible &&
+            installation.plugin_key in WORKSPACE_PLUGIN_AREA_KEYS,
+        )
+        .map(
+          (installation) =>
+            installation.plugin_key as keyof typeof WORKSPACE_PLUGIN_AREA_KEYS,
+        ),
+    [pluginInstallations],
+  )
+
+  useEffect(() => {
+    if (!normalizedOrganizationId) {
+      setStickyPluginKeys([])
+      setHasStickyPluginCache(false)
+      return
+    }
+
+    const persisted = readWorkspaceToolNavPersistence(normalizedOrganizationId)
+    if (persisted) {
+      setStickyPluginKeys(
+        persisted.filter(
+          (pluginKey): pluginKey is keyof typeof WORKSPACE_PLUGIN_AREA_KEYS =>
+            pluginKey in WORKSPACE_PLUGIN_AREA_KEYS,
+        ),
+      )
+      setHasStickyPluginCache(true)
+      return
+    }
+
+    setStickyPluginKeys([])
+    setHasStickyPluginCache(false)
+  }, [normalizedOrganizationId])
+
+  useEffect(() => {
+    if (
+      !normalizedOrganizationId ||
+      hasStickyPluginCache ||
+      serverVisiblePluginKeys.length === 0
+    ) {
+      return
+    }
+
+    persistWorkspaceToolNavVisibility({
+      organizationId: normalizedOrganizationId,
+      pluginKeys: serverVisiblePluginKeys,
+    })
+    setStickyPluginKeys(serverVisiblePluginKeys)
+    setHasStickyPluginCache(true)
+  }, [
+    hasStickyPluginCache,
+    normalizedOrganizationId,
+    serverVisiblePluginKeys,
+  ])
+
+  useEffect(() => {
+    return subscribeWorkspaceToolNavUpdates((detail) => {
+      if (detail.organizationId !== normalizedOrganizationId) {
+        return
+      }
+
+      setStickyPluginKeys(
+        detail.pluginKeys.filter(
+          (pluginKey): pluginKey is keyof typeof WORKSPACE_PLUGIN_AREA_KEYS =>
+            pluginKey in WORKSPACE_PLUGIN_AREA_KEYS,
+        ),
+      )
+      setHasStickyPluginCache(true)
+    })
+  }, [normalizedOrganizationId])
+
   const visiblePluginAreaKeys = useMemo(() => {
     const visible = new Set<string>([MARKETPLACE_AREA_KEY])
+    const effectivePluginKeys = hasStickyPluginCache
+      ? stickyPluginKeys
+      : serverVisiblePluginKeys
 
-    for (const installation of pluginInstallations ?? []) {
-      if (
-        installation.activation_status === 'active' &&
-        installation.nav_visible &&
-        installation.plugin_key in WORKSPACE_PLUGIN_AREA_KEYS
-      ) {
-        visible.add(
-          WORKSPACE_PLUGIN_AREA_KEYS[
-            installation.plugin_key as keyof typeof WORKSPACE_PLUGIN_AREA_KEYS
-          ],
-        )
-      }
+    for (const pluginKey of effectivePluginKeys) {
+      visible.add(WORKSPACE_PLUGIN_AREA_KEYS[pluginKey])
     }
 
     if (effectiveCurrentArea && effectiveCurrentArea in NAV_AREAS) {
@@ -158,7 +237,12 @@ export const AppSidebar: ComponentType = () => {
     }
 
     return visible
-  }, [effectiveCurrentArea, pluginInstallations])
+  }, [
+    effectiveCurrentArea,
+    hasStickyPluginCache,
+    serverVisiblePluginKeys,
+    stickyPluginKeys,
+  ])
   // Keep non-chat areas unchanged. For chat routes, allow collapsing just the
   // area panel while keeping the primary icon rail visible.
   const showAreaPanel =

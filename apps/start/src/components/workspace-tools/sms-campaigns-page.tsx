@@ -10,6 +10,12 @@ import { Textarea } from '@bish/ui/textarea'
 import { ContentPage } from '@/components/layout'
 import { createSmsCampaign } from '@/lib/frontend/workspace-tools/workspace-tools.functions'
 import { toast } from 'sonner'
+import {
+  WorkspaceEmptyState,
+  WorkspaceMetricGrid,
+  WorkspaceSurfaceCard,
+  WORKSPACE_TOOL_BUTTON_CLASS_NAME,
+} from './workspace-tool-ui'
 
 type SmsSnapshot = Awaited<
   ReturnType<
@@ -62,99 +68,129 @@ export function SmsCampaignsPage({
       title="SMS Campaigns"
       description="Twilio-powered outreach batches with list import, message template control, and delivery logging."
     >
-      <div className="rounded-[28px] border border-border-base bg-surface-strong p-3">
-        <div className="rounded-[22px] bg-surface-base px-5 py-5">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <h2 className="text-2xl font-semibold text-foreground-primary">
-                SMS runtime
-              </h2>
-              <p className="mt-1 text-sm text-foreground-secondary">
-                Twilio credentials stay organization-owned, while ARCH3R keeps campaign lists, logs, and replies inside one workspace lane.
-              </p>
-            </div>
-            <FormDialog
-              trigger={<Button size="sm">Import Recipients</Button>}
-              title="Create SMS campaign"
-              description="Upload a CSV list, choose the base message, and ARCH3R will create a tracked batch."
-              buttonText="Create campaign"
-              handleSubmit={handleCreateCampaign}
-            >
-              <div className="space-y-3">
-                <div className="space-y-2">
-                  <Label>Campaign name</Label>
-                  <Input
-                    value={campaignName}
-                    onChange={(event) => setCampaignName(event.target.value)}
-                    placeholder="Nurture Follow-up"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Message template</Label>
-                  <Textarea
-                    value={messageTemplate}
-                    onChange={(event) => setMessageTemplate(event.target.value)}
-                    placeholder="Hi {{name}}, quick follow-up from the ARCH3R workspace..."
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>CSV file</Label>
-                  <Input
-                    type="file"
-                    accept=".csv,text/csv"
-                    onChange={(event) =>
-                      setSelectedFile(event.target.files?.[0] ?? null)
-                    }
-                  />
-                </div>
-              </div>
-            </FormDialog>
+      <WorkspaceMetricGrid
+        metrics={[
+          {
+            label: 'Campaigns',
+            value: snapshot.campaigns.length,
+            hint: 'Tracked SMS campaign groups currently visible in the org.',
+          },
+          {
+            label: 'Recipients',
+            value: snapshot.campaigns.reduce(
+              (count, campaign) => count + campaign.rowCount,
+              0,
+            ),
+            hint: 'Imported recipient rows staged for delivery logging.',
+          },
+          {
+            label: 'Delivery States',
+            value: snapshot.campaigns.reduce(
+              (count, campaign) => count + campaign.deliveryStatuses.length,
+              0,
+            ),
+            hint: 'Status buckets captured across queued, sent, failed, and reply states.',
+          },
+        ]}
+      />
+
+      <WorkspaceSurfaceCard>
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-xs uppercase tracking-[0.2em] text-foreground-secondary">
+              Messaging
+            </p>
+            <h2 className="mt-2 text-2xl font-semibold text-foreground-primary">
+              SMS runtime
+            </h2>
+            <p className="mt-2 text-sm text-foreground-secondary">
+              Twilio credentials stay organization-owned, while ARCH3R keeps campaign lists, logs, and replies inside one workspace lane.
+            </p>
           </div>
+          <FormDialog
+            trigger={
+              <Button
+                size="default"
+                className={WORKSPACE_TOOL_BUTTON_CLASS_NAME}
+              >
+                Import Recipients
+              </Button>
+            }
+            title="Create SMS campaign"
+            description="Upload a CSV list, choose the base message, and ARCH3R will create a tracked batch."
+            buttonText="Create campaign"
+            handleSubmit={handleCreateCampaign}
+          >
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <Label>Campaign name</Label>
+                <Input
+                  value={campaignName}
+                  onChange={(event) => setCampaignName(event.target.value)}
+                  placeholder="Nurture Follow-up"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Message template</Label>
+                <Textarea
+                  value={messageTemplate}
+                  onChange={(event) => setMessageTemplate(event.target.value)}
+                  placeholder="Hi {{name}}, quick follow-up from the ARCH3R workspace..."
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>CSV file</Label>
+                <Input
+                  type="file"
+                  accept=".csv,text/csv"
+                  onChange={(event) =>
+                    setSelectedFile(event.target.files?.[0] ?? null)
+                  }
+                />
+              </div>
+            </div>
+          </FormDialog>
         </div>
-      </div>
+      </WorkspaceSurfaceCard>
 
       <div className="grid gap-4">
         {snapshot.campaigns.length > 0 ? (
           snapshot.campaigns.map((campaign) => (
-            <div
-              key={campaign.id}
-              className="rounded-[28px] border border-border-base bg-surface-strong p-3"
-            >
-              <div className="rounded-[22px] bg-surface-base px-5 py-5">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <h3 className="text-xl font-semibold text-foreground-primary">
-                      {campaign.title}
-                    </h3>
-                    <p className="mt-2 text-sm text-foreground-secondary">
-                      {campaign.messageTemplate}
-                    </p>
-                  </div>
-                  <Badge variant="outline" className="border-border-base">
-                    {campaign.status}
-                  </Badge>
+            <WorkspaceSurfaceCard key={campaign.id}>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-xl font-semibold text-foreground-primary">
+                    {campaign.title}
+                  </h3>
+                  <p className="mt-2 text-sm text-foreground-secondary">
+                    {campaign.messageTemplate}
+                  </p>
                 </div>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <Badge variant="outline" className="border-border-base">
-                    {campaign.rowCount} imported rows
-                  </Badge>
-                  {campaign.deliveryStatuses.map((entry) => (
-                    <Badge
-                      key={`${campaign.id}-${entry.status}`}
-                      variant="outline"
-                      className="border-border-base"
-                    >
-                      {entry.status}: {entry.count}
-                    </Badge>
-                  ))}
-                </div>
+                <Badge variant="outline" className="border-border-base">
+                  {campaign.status}
+                </Badge>
               </div>
-            </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Badge variant="outline" className="border-border-base">
+                  {campaign.rowCount} imported rows
+                </Badge>
+                {campaign.deliveryStatuses.map((entry) => (
+                  <Badge
+                    key={`${campaign.id}-${entry.status}`}
+                    variant="outline"
+                    className="border-border-base"
+                  >
+                    {entry.status}: {entry.count}
+                  </Badge>
+                ))}
+              </div>
+            </WorkspaceSurfaceCard>
           ))
         ) : (
-          <div className="rounded-[28px] border border-dashed border-border-base bg-surface-strong px-5 py-10 text-sm text-foreground-secondary">
-            No SMS campaigns imported yet.
-          </div>
+          <WorkspaceEmptyState
+            title="No SMS campaigns imported yet."
+            description="Import a first recipient batch to turn this lane into a tracked outreach workflow."
+          />
         )}
       </div>
     </ContentPage>

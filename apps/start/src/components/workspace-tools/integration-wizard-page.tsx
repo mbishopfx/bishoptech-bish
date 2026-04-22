@@ -14,6 +14,11 @@ import {
 } from '@/lib/shared/workspace-tools'
 import { upsertIntegrationConfig } from '@/lib/frontend/workspace-tools/workspace-tools.functions'
 import { toast } from 'sonner'
+import {
+  WorkspaceMetricGrid,
+  WorkspaceSurfaceCard,
+  WORKSPACE_TOOL_BUTTON_CLASS_NAME,
+} from './workspace-tool-ui'
 
 type ToolingSnapshot = Awaited<
   ReturnType<
@@ -89,7 +94,12 @@ function IntegrationEditor({
       open={open}
       onOpenChange={setOpen}
       trigger={
-        <Button type="button" variant="outline" size="sm">
+        <Button
+          type="button"
+          variant="outline"
+          size="default"
+          className={WORKSPACE_TOOL_BUTTON_CLASS_NAME}
+        >
           Configure
         </Button>
       }
@@ -216,6 +226,26 @@ export function IntegrationWizardPage({
       title="Integration Wizard"
       description="One admin surface for provider credentials, linked destinations, and readiness blocking states."
     >
+      <WorkspaceMetricGrid
+        metrics={[
+          {
+            label: 'Ready',
+            value: snapshot.integrations.filter((integration) => integration.status === 'ready').length,
+            hint: 'Integrations that are configured enough to support active lanes.',
+          },
+          {
+            label: 'Need Setup',
+            value: snapshot.integrations.filter((integration) => integration.status === 'needs_configuration').length,
+            hint: 'Providers still missing credentials, env wiring, or runtime configuration.',
+          },
+          {
+            label: 'Need Link',
+            value: snapshot.integrations.filter((integration) => integration.status === 'needs_linked_account').length,
+            hint: 'Providers waiting on a connected destination or export target.',
+          },
+        ]}
+      />
+
       {Object.entries(grouped).map(([groupKey, integrations]) => (
         <div key={groupKey} className="space-y-4">
           <div>
@@ -232,50 +262,45 @@ export function IntegrationWizardPage({
           </div>
           <div className="grid gap-4 lg:grid-cols-2">
             {integrations.map((integration) => (
-              <div
-                key={integration.providerKey}
-                className="rounded-[28px] border border-border-base bg-surface-strong p-3"
-              >
-                <div className="rounded-[22px] bg-surface-base px-5 py-5">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <h3 className="text-xl font-semibold text-foreground-primary">
-                        {integration.label}
-                      </h3>
-                      <p className="mt-2 text-sm text-foreground-secondary">
-                        {integration.description}
-                      </p>
-                    </div>
-                    <Badge variant="outline" className="border-border-base">
-                      {integration.status.replaceAll('_', ' ')}
-                    </Badge>
-                  </div>
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    <Badge variant="outline" className="border-border-base">
-                      {integration.authMode === 'platform_default'
-                        ? 'Platform defaults allowed'
-                        : 'Org-owned required'}
-                    </Badge>
-                    {integration.linkedAccountName ? (
-                      <Badge variant="outline" className="border-border-base">
-                        {integration.linkedAccountName}
-                      </Badge>
-                    ) : null}
-                  </div>
-                  {integration.missingEnv.length > 0 ? (
-                    <p className="mt-3 text-xs text-foreground-secondary">
-                      Missing env: {integration.missingEnv.join(', ')}
+              <WorkspaceSurfaceCard key={integration.providerKey}>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-xl font-semibold text-foreground-primary">
+                      {integration.label}
+                    </h3>
+                    <p className="mt-2 text-sm text-foreground-secondary">
+                      {integration.description}
                     </p>
-                  ) : null}
-                  <div className="mt-5">
-                    <IntegrationEditor
-                      providerKey={integration.providerKey}
-                      snapshot={snapshot}
-                      onSaved={setSnapshot}
-                    />
                   </div>
+                  <Badge variant="outline" className="border-border-base">
+                    {integration.status.replaceAll('_', ' ')}
+                  </Badge>
                 </div>
-              </div>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <Badge variant="outline" className="border-border-base">
+                    {integration.authMode === 'platform_default'
+                      ? 'Platform defaults allowed'
+                      : 'Org-owned required'}
+                  </Badge>
+                  {integration.linkedAccountName ? (
+                    <Badge variant="outline" className="border-border-base">
+                      {integration.linkedAccountName}
+                    </Badge>
+                  ) : null}
+                </div>
+                {integration.missingEnv.length > 0 ? (
+                  <p className="mt-3 text-xs text-foreground-secondary">
+                    Missing env: {integration.missingEnv.join(', ')}
+                  </p>
+                ) : null}
+                <div className="mt-5">
+                  <IntegrationEditor
+                    providerKey={integration.providerKey}
+                    snapshot={snapshot}
+                    onSaved={setSnapshot}
+                  />
+                </div>
+              </WorkspaceSurfaceCard>
             ))}
           </div>
         </div>

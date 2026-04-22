@@ -10,6 +10,12 @@ import { Textarea } from '@bish/ui/textarea'
 import { ContentPage } from '@/components/layout'
 import { upsertSocialPost } from '@/lib/frontend/workspace-tools/workspace-tools.functions'
 import { toast } from 'sonner'
+import {
+  WorkspaceEmptyState,
+  WorkspaceMetricGrid,
+  WorkspaceSurfaceCard,
+  WORKSPACE_TOOL_BUTTON_CLASS_NAME,
+} from './workspace-tool-ui'
 
 type SocialSnapshot = Awaited<
   ReturnType<
@@ -65,116 +71,141 @@ export function SocialPublishingPage({
       title="Social Publishing"
       description="Draft and schedule outbound social posts while keeping provider readiness and publish jobs visible."
     >
-      <div className="rounded-[28px] border border-border-base bg-surface-strong p-3">
-        <div className="rounded-[22px] bg-surface-base px-5 py-5">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <h2 className="text-2xl font-semibold text-foreground-primary">
-                Scheduler lane
-              </h2>
-              <p className="mt-1 text-sm text-foreground-secondary">
-                This v1 scope stays outbound-only: drafts, schedules, publish jobs, and failure logging.
-              </p>
-            </div>
-            <FormDialog
-              trigger={<Button size="sm">New Post</Button>}
-              title="Create scheduled post"
-              description="Choose the destinations, schedule time, and the post will fan out into provider-specific publish jobs."
-              buttonText="Save post"
-              handleSubmit={handleSubmit}
-            >
-              <div className="space-y-3">
-                <div className="space-y-2">
-                  <Label>Title</Label>
-                  <Input
-                    value={title}
-                    onChange={(event) => setTitle(event.target.value)}
-                    placeholder="Launch announcement"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Content</Label>
-                  <Textarea
-                    value={content}
-                    onChange={(event) => setContent(event.target.value)}
-                    placeholder="Write the post body."
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Schedule time</Label>
-                  <Input
-                    type="datetime-local"
-                    value={scheduledFor}
-                    onChange={(event) => setScheduledFor(event.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Channels</Label>
-                  <div className="flex flex-wrap gap-2">
-                    {SOCIAL_CHANNELS.map((channel) => (
-                      <Button
-                        key={channel.key}
-                        type="button"
-                        variant={channels.includes(channel.key) ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() =>
-                          setChannels((current) =>
-                            current.includes(channel.key)
-                              ? current.filter((value) => value !== channel.key)
-                              : [...current, channel.key],
-                          )
-                        }
-                      >
-                        {channel.label}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </FormDialog>
-          </div>
-        </div>
-      </div>
+      <WorkspaceMetricGrid
+        metrics={[
+          {
+            label: 'Drafts',
+            value: snapshot.posts.filter((post) => post.status === 'draft').length,
+            hint: 'Posts still waiting on a schedule or final approval.',
+          },
+          {
+            label: 'Scheduled',
+            value: snapshot.posts.filter((post) => post.status === 'scheduled').length,
+            hint: 'Outbound posts already placed into the scheduler lane.',
+          },
+          {
+            label: 'Publish Jobs',
+            value: snapshot.posts.reduce((count, post) => count + post.jobs.length, 0),
+            hint: 'Per-channel delivery jobs created from the saved post set.',
+          },
+        ]}
+      />
 
-      <div className="grid gap-4">
-        {snapshot.posts.length > 0 ? (
-          snapshot.posts.map((post) => (
-            <div
-              key={post.id}
-              className="rounded-[28px] border border-border-base bg-surface-strong p-3"
-            >
-              <div className="rounded-[22px] bg-surface-base px-5 py-5">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <h3 className="text-xl font-semibold text-foreground-primary">
-                      {post.title}
-                    </h3>
-                    <p className="mt-2 text-sm text-foreground-secondary">
-                      {post.content}
-                    </p>
-                  </div>
-                  <Badge variant="outline" className="border-border-base">
-                    {post.status}
-                  </Badge>
-                </div>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {post.jobs.map((job) => (
-                    <Badge
-                      key={`${post.id}-${job.providerKey}`}
-                      variant="outline"
-                      className="border-border-base"
+      <WorkspaceSurfaceCard>
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-xs uppercase tracking-[0.2em] text-foreground-secondary">
+              Publisher
+            </p>
+            <h2 className="mt-2 text-2xl font-semibold text-foreground-primary">
+              Scheduler lane
+            </h2>
+            <p className="mt-2 text-sm text-foreground-secondary">
+              This v1 scope stays outbound-only: drafts, schedules, publish jobs, and failure logging.
+            </p>
+          </div>
+          <FormDialog
+            trigger={
+              <Button
+                size="default"
+                className={WORKSPACE_TOOL_BUTTON_CLASS_NAME}
+              >
+                New Post
+              </Button>
+            }
+            title="Create scheduled post"
+            description="Choose the destinations, schedule time, and the post will fan out into provider-specific publish jobs."
+            buttonText="Save post"
+            handleSubmit={handleSubmit}
+          >
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <Label>Title</Label>
+                <Input
+                  value={title}
+                  onChange={(event) => setTitle(event.target.value)}
+                  placeholder="Launch announcement"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Content</Label>
+                <Textarea
+                  value={content}
+                  onChange={(event) => setContent(event.target.value)}
+                  placeholder="Write the post body."
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Schedule time</Label>
+                <Input
+                  type="datetime-local"
+                  value={scheduledFor}
+                  onChange={(event) => setScheduledFor(event.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Channels</Label>
+                <div className="flex flex-wrap gap-2">
+                  {SOCIAL_CHANNELS.map((channel) => (
+                    <Button
+                      key={channel.key}
+                      type="button"
+                      variant={channels.includes(channel.key) ? 'default' : 'outline'}
+                      size="default"
+                      className={WORKSPACE_TOOL_BUTTON_CLASS_NAME}
+                      onClick={() =>
+                        setChannels((current) =>
+                          current.includes(channel.key)
+                            ? current.filter((value) => value !== channel.key)
+                            : [...current, channel.key],
+                        )
+                      }
                     >
-                      {job.providerKey.replace('social_', '')}: {job.status}
-                    </Badge>
+                      {channel.label}
+                    </Button>
                   ))}
                 </div>
               </div>
             </div>
+          </FormDialog>
+        </div>
+      </WorkspaceSurfaceCard>
+
+      <div className="grid gap-4">
+        {snapshot.posts.length > 0 ? (
+          snapshot.posts.map((post) => (
+            <WorkspaceSurfaceCard key={post.id}>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-xl font-semibold text-foreground-primary">
+                    {post.title}
+                  </h3>
+                  <p className="mt-2 text-sm text-foreground-secondary">
+                    {post.content}
+                  </p>
+                </div>
+                <Badge variant="outline" className="border-border-base">
+                  {post.status}
+                </Badge>
+              </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {post.jobs.map((job) => (
+                  <Badge
+                    key={`${post.id}-${job.providerKey}`}
+                    variant="outline"
+                    className="border-border-base"
+                  >
+                    {job.providerKey.replace('social_', '')}: {job.status}
+                  </Badge>
+                ))}
+              </div>
+            </WorkspaceSurfaceCard>
           ))
         ) : (
-          <div className="rounded-[28px] border border-dashed border-border-base bg-surface-strong px-5 py-10 text-sm text-foreground-secondary">
-            No scheduled posts yet.
-          </div>
+          <WorkspaceEmptyState
+            title="No scheduled posts yet."
+            description="Create the first outbound post to start building a shared publishing history."
+          />
         )}
       </div>
     </ContentPage>
