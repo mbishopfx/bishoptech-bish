@@ -40,6 +40,9 @@ const runtimeMode = (readEnv('BISH_LISTENER_RUNTIME_MODE', 'BISH_RUNTIME_MODE')
 const defaultTarget = (
   readEnv('BISH_LISTENER_DEFAULT_TARGET') || 'gemini'
 ) as LocalListenerTarget
+const visiblePromptDelaySeconds = Number(
+  readEnv('BISH_LISTENER_VISIBLE_PROMPT_DELAY_SECONDS') || '18',
+)
 const supportedTargets = (
   readEnv('BISH_LISTENER_SUPPORTED_TARGETS', 'BISH_SUPPORTED_TARGETS')
   || 'gemini,codex'
@@ -262,14 +265,15 @@ async function launchVisibleMacos(input: {
       : 'codex --dangerously-bypass-approvals-and-sandbox'
   const escapedWorkspace = workspaceDir.replace(/"/g, '\\"')
   const escapedCommand = command.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
-  const escapedPrompt = input.prompt
+  const escapedPrompt = `${input.prompt}\n`
     .replace(/\\/g, '\\\\')
     .replace(/"/g, '\\"')
 
   /**
    * Target the exact Terminal tab opened for the handoff instead of relying on
-   * global keystrokes landing in the correct frontmost window. This is more
-   * reliable when the operator already has multiple terminal windows open.
+   * global keystrokes landing in the correct frontmost window. We also avoid
+   * re-activating Terminal so the listener does not steal focus from whatever
+   * the operator is doing in another app while the handoff boots.
    */
   await execFileAsync('osascript', [
     '-e',
@@ -281,11 +285,9 @@ async function launchVisibleMacos(input: {
     '-e',
     'tell application "Terminal"',
     '-e',
-    'activate',
-    '-e',
     'set targetTab to do script ("cd " & quoted form of workspacePath & " && " & launchCommand)',
     '-e',
-    'delay 15',
+    `delay ${Number.isFinite(visiblePromptDelaySeconds) ? Math.max(1, visiblePromptDelaySeconds) : 18}`,
     '-e',
     'do script promptText in targetTab',
     '-e',
