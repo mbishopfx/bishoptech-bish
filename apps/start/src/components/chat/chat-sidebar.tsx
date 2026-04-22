@@ -2,7 +2,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { CSSProperties, KeyboardEvent, RefObject } from 'react'
+import type { CSSProperties, KeyboardEvent, ReactNode, RefObject } from 'react'
 import type { QueryResultType } from '@rocicorp/zero'
 import {
   useHistoryScrollState,
@@ -24,6 +24,7 @@ import PinOff from 'lucide-react/dist/esm/icons/pin-off'
 import Search from 'lucide-react/dist/esm/icons/search'
 import { SidebarGroupTooltip } from '@bish/ui/tooltip'
 import { ContextMenuItem, ContextMenuSeparator } from '@bish/ui/context-menu'
+import { DropdownMenuItem, DropdownMenuSeparator } from '@bish/ui/dropdown-menu'
 import { Spinner } from '@bish/ui/spinner'
 import { toast } from 'sonner'
 import { isAreaPath } from '@/utils/nav-utils'
@@ -94,6 +95,19 @@ type ThreadHistoryListContext = {
 
 type ThreadHistoryGroupKey = ChatSidebarDateGroupKey | 'pinned'
 
+type ThreadMenuAction =
+  | {
+      readonly kind: 'item'
+      readonly key: string
+      readonly icon: ReactNode
+      readonly label: string
+      readonly onSelect: () => void
+    }
+  | {
+      readonly kind: 'separator'
+      readonly key: string
+    }
+
 const THREAD_HISTORY_GROUP_ORDER: readonly ThreadHistoryGroupKey[] = [
   'pinned',
   'today',
@@ -126,6 +140,44 @@ function getThreadHistoryGroupKey(
   return thread.pinned
     ? 'pinned'
     : resolveChatSidebarDateGroup(thread.updatedAt)
+}
+
+function renderThreadContextMenuActions(
+  actions: readonly ThreadMenuAction[],
+) {
+  return (
+    <>
+      {actions.map((action) =>
+        action.kind === 'separator' ? (
+          <ContextMenuSeparator key={action.key} />
+        ) : (
+          <ContextMenuItem key={action.key} onClick={action.onSelect}>
+            {action.icon}
+            {action.label}
+          </ContextMenuItem>
+        ),
+      )}
+    </>
+  )
+}
+
+function renderThreadDropdownMenuActions(
+  actions: readonly ThreadMenuAction[],
+) {
+  return (
+    <>
+      {actions.map((action) =>
+        action.kind === 'separator' ? (
+          <DropdownMenuSeparator key={action.key} />
+        ) : (
+          <DropdownMenuItem key={action.key} onClick={action.onSelect}>
+            {action.icon}
+            {action.label}
+          </DropdownMenuItem>
+        ),
+      )}
+    </>
+  )
 }
 
 /** Static sections only. Dynamic history is rendered as a dedicated virtualized pane. */
@@ -261,11 +313,94 @@ function buildThreadItem({
       </div>
     ) : undefined
 
+  const threadMenuActions: readonly ThreadMenuAction[] = isPersisted && !isEditing
+    ? isArchived
+      ? [
+          {
+            kind: 'item',
+            key: 'rename',
+            icon: <Pencil />,
+            label: m.chat_sidebar_rename(),
+            onSelect: () => {
+              startEditingThread(thread.threadId, currentTitle)
+            },
+          },
+          {
+            kind: 'item',
+            key: 'copy-link',
+            icon: <Copy />,
+            label: m.chat_sidebar_copy_link(),
+            onSelect: () => {
+              void handleCopyThreadLink(thread.threadId)
+            },
+          },
+          {
+            kind: 'separator',
+            key: 'restore-separator',
+          },
+          {
+            kind: 'item',
+            key: 'restore',
+            icon: <Undo2 />,
+            label: 'Restore to history',
+            onSelect: () => {
+              void handleRestoreThread(thread.threadId)
+            },
+          },
+        ]
+      : [
+          {
+            kind: 'item',
+            key: 'rename',
+            icon: <Pencil />,
+            label: m.chat_sidebar_rename(),
+            onSelect: () => {
+              startEditingThread(thread.threadId, currentTitle)
+            },
+          },
+          {
+            kind: 'item',
+            key: 'copy-link',
+            icon: <Copy />,
+            label: m.chat_sidebar_copy_link(),
+            onSelect: () => {
+              void handleCopyThreadLink(thread.threadId)
+            },
+          },
+          {
+            kind: 'item',
+            key: 'pin',
+            icon: thread.pinned ? <PinOff /> : <Pin />,
+            label: thread.pinned ? m.chat_sidebar_unpin() : m.chat_sidebar_pin(),
+            onSelect: () => {
+              void handleSetThreadPinned(thread.threadId, !thread.pinned)
+            },
+          },
+          {
+            kind: 'separator',
+            key: 'archive-separator',
+          },
+          {
+            kind: 'item',
+            key: 'archive',
+            icon: <Archive />,
+            label: 'Archive chat',
+            onSelect: () => {
+              void handleArchiveThread(thread.threadId)
+            },
+          },
+        ]
+    : []
+
   return {
     name: currentTitle,
     href: `${CHAT_HREF}/${thread.threadId}`,
     trailing: isEditing ? undefined : trailingContent,
     disableLink: isEditing,
+    actionMenuContent:
+      threadMenuActions.length > 0
+        ? renderThreadDropdownMenuActions(threadMenuActions)
+        : undefined,
     ...(isEditing && {
       label: (
         <ThreadRenameInput
@@ -280,59 +415,9 @@ function buildThreadItem({
       ),
     }),
     contextMenuContent:
-      isPersisted && !isEditing ? (
-        <>
-          <ContextMenuItem
-            onClick={() => {
-              startEditingThread(thread.threadId, currentTitle)
-            }}
-          >
-            <Pencil />
-            {m.chat_sidebar_rename()}
-          </ContextMenuItem>
-          <ContextMenuItem
-            onClick={() => {
-              void handleCopyThreadLink(thread.threadId)
-            }}
-          >
-            <Copy />
-            {m.chat_sidebar_copy_link()}
-          </ContextMenuItem>
-          {isArchived ? (
-            <>
-              <ContextMenuSeparator />
-              <ContextMenuItem
-                onClick={() => {
-                  void handleRestoreThread(thread.threadId)
-                }}
-              >
-                <Undo2 />
-                Restore to history
-              </ContextMenuItem>
-            </>
-          ) : (
-            <>
-              <ContextMenuItem
-                onClick={() => {
-                  void handleSetThreadPinned(thread.threadId, !thread.pinned)
-                }}
-              >
-                {thread.pinned ? <PinOff /> : <Pin />}
-                {thread.pinned ? m.chat_sidebar_unpin() : m.chat_sidebar_pin()}
-              </ContextMenuItem>
-              <ContextMenuSeparator />
-              <ContextMenuItem
-                onClick={() => {
-                  void handleArchiveThread(thread.threadId)
-                }}
-              >
-                <Archive />
-                Archive chat
-              </ContextMenuItem>
-            </>
-          )}
-        </>
-      ) : undefined,
+      threadMenuActions.length > 0
+        ? renderThreadContextMenuActions(threadMenuActions)
+        : undefined,
   }
 }
 

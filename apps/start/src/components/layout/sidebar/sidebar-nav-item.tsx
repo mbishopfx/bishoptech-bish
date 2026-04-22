@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { useMemo, useState } from 'react'
+import MoreHorizontal from 'lucide-react/dist/esm/icons/more-horizontal'
 
 import { cn } from '@bish/utils'
 import { Button, buttonVariants } from '@bish/ui/button'
@@ -8,6 +9,11 @@ import {
   ContextMenuContent,
   ContextMenuTrigger,
 } from '@bish/ui/context-menu'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from '@bish/ui/dropdown-menu'
 import { isPathActive } from '@/utils/nav-utils'
 import type { NavItemType } from './app-sidebar-nav.config'
 
@@ -30,6 +36,7 @@ export function SidebarNavItem({
     onSelect,
     trailing,
     contextMenuContent,
+    actionMenuContent,
     label: customLabel,
     disableLink,
   } = item
@@ -49,7 +56,7 @@ export function SidebarNavItem({
     <span className="min-w-0 flex-1 truncate">{name}</span>
   )
   const rowContent = (
-    <span className="flex w-full items-center gap-2">
+    <span className="flex min-w-0 flex-1 items-center gap-2">
       {Icon ? (
         <Icon
           className={cn('size-4', isActive ? 'text-foreground-info' : '')}
@@ -57,7 +64,11 @@ export function SidebarNavItem({
         />
       ) : null}
       {labelContent}
-      {trailing}
+      {trailing ? (
+        <span className="ml-auto flex shrink-0 items-center gap-2">
+          {trailing}
+        </span>
+      ) : null}
     </span>
   )
 
@@ -113,15 +124,57 @@ export function SidebarNavItem({
     </Button>
   )
 
+  const inlineActionMenu =
+    actionMenuContent && !disableLink ? (
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <Button
+              type="button"
+              variant="ghost"
+              size="iconSmall"
+              className={cn(
+                'h-7 w-7 rounded-md border border-transparent text-foreground-secondary hover:border-border-base hover:bg-surface-inverse/5 hover:text-foreground-primary',
+                isActive ? 'text-foreground-info' : '',
+              )}
+              aria-label={`${name} actions`}
+            >
+              <MoreHorizontal className="size-4" />
+            </Button>
+          }
+        />
+        <DropdownMenuContent align="end" side="bottom" sideOffset={6} className="min-w-40">
+          {actionMenuContent}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    ) : null
+
+  const itemContent = actionMenuContent ? (
+    <div className="group/sidebar-nav-item flex min-w-0 items-center gap-1">
+      {contextMenuContent ? (
+        <ContextMenuTrigger className="block min-w-0 flex-1">
+          {linkContent}
+        </ContextMenuTrigger>
+      ) : (
+        <div className="min-w-0 flex-1">{linkContent}</div>
+      )}
+      {inlineActionMenu}
+    </div>
+  ) : contextMenuContent ? (
+    <ContextMenuTrigger className="block w-full">
+      {linkContent}
+    </ContextMenuTrigger>
+  ) : (
+    linkContent
+  )
+
   if (!contextMenuContent) {
-    return linkContent
+    return itemContent
   }
 
   return (
     <ContextMenu key={contextMenuResetToken}>
-      <ContextMenuTrigger className="block w-full">
-        {linkContent}
-      </ContextMenuTrigger>
+      {itemContent}
       <ContextMenuContent>{contextMenuContent}</ContextMenuContent>
     </ContextMenu>
   )
