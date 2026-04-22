@@ -7,7 +7,7 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  /* Geist is the only default type family used by BISH. */
+  /* Geist is the only default type family used by ARCH3R. */
   --font-geist: "Geist", system-ui, sans-serif;
   --font-geist-mono: "Geist Mono", ui-monospace, monospace;
 
@@ -62,7 +62,7 @@
   --ring: 218 31% 42%;
 
   /*
-   * BISH leans into warm off-white neutrals so operational pages stay bright
+   * ARCH3R leans into warm off-white neutrals so operational pages stay bright
    * without washing out borders, badges, or dense table content.
    */
   --surface-base: rgb(244 241 236);

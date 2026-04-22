@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://bish.local/sitemap.xml
+Sitemap: https://arch3r.local/sitemap.xml

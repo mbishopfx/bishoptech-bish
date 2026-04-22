@@ -24,7 +24,7 @@ export const Route = createFileRoute('/setup')({
   head: () => ({
     meta: buildPageMetadata({
       title: 'Setup',
-      description: 'Configure the initial BISH self-hosted environment before signing in.',
+      description: 'Configure the initial ARCH3R self-hosted environment before signing in.',
       robots: 'noindex,nofollow',
     }),
   }),

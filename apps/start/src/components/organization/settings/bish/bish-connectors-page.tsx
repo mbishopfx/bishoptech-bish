@@ -221,7 +221,7 @@ export function BishConnectorsPage({
     const message = url.searchParams.get('message')
 
     if (connectorAuth === 'success') {
-      toast.success(`${providerLabel} connected to BISH.`)
+      toast.success(`${providerLabel} connected to ARCH3R.`)
     } else {
       toast.error(message ?? `Failed to connect ${providerLabel}.`)
     }
@@ -426,8 +426,8 @@ export function BishConnectorsPage({
   return (
     <BishPageShell
       eyebrow="Live context lanes"
-      title="BISH Connectors"
-      description="Install and monitor the systems that keep BISH grounded in real operational data. The UX here is tuned to show setup readiness first, then live inventory and sync pressure."
+      title="ARCH3R Connectors"
+      description="Install and monitor the systems that keep ARCH3R grounded in real operational data. The UX here is tuned to show setup readiness first, then live inventory and sync pressure."
       icon={PlugZap}
       metrics={[
         {
@@ -557,7 +557,7 @@ export function BishConnectorsPage({
           showColumnToggle={false}
           tableWrapperClassName="rounded-none border-none bg-transparent"
           messages={{
-            noResults: 'No BISH connectors installed yet.',
+            noResults: 'No ARCH3R connectors installed yet.',
           }}
         />
       </BishSectionCard>
@@ -583,7 +583,7 @@ export function BishConnectorsPage({
           showColumnToggle={false}
           tableWrapperClassName="rounded-none border-none bg-transparent"
           messages={{
-            noResults: 'No BISH sync jobs have been queued yet.',
+            noResults: 'No ARCH3R sync jobs have been queued yet.',
           }}
         />
       </BishSectionCard>

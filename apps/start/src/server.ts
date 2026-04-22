@@ -2,7 +2,7 @@ import { paraglideMiddleware } from './paraglide/server.js'
 import handler from '@tanstack/react-start/server-entry'
 
 /**
- * Middleware to redirect www.bish.local to bish.local (naked domain).
+ * Middleware to redirect www.arch3r.local to arch3r.local (naked domain).
  */
 function wwwRedirectMiddleware(
   request: Request,

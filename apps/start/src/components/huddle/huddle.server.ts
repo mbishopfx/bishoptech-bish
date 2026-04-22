@@ -7,7 +7,7 @@ type ExportHuddleNotesInput = {
 }
 
 /**
- * BISH huddles export to an organization-level workspace target. We explicitly
+ * ARCH3R huddles export to an organization-level workspace target. We explicitly
  * block when no org workspace connector is configured instead of silently
  * falling back to a personal user drive.
  */

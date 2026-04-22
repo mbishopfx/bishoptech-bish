@@ -90,7 +90,7 @@ function normalizeInstanceSettingsRow(
     signupPolicy: row?.signup_policy ?? 'invite_only',
     signupSecretHash: row?.signup_secret_hash ?? null,
     /**
-     * BISH client deployments are private workspaces. Treat the public app
+     * ARCH3R client deployments are private workspaces. Treat the public app
      * lock as effectively mandatory in self-hosted mode so a stale database
      * flag cannot reopen the product to anonymous browsing.
      */

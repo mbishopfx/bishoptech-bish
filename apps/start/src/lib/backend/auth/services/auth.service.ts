@@ -423,7 +423,7 @@ async function ensureDefaultOrganizationForUser(input: {
  * exact same configuration that the app uses at runtime.
  */
 export const auth = betterAuth({
-  appName: 'BISH',
+  appName: 'ARCH3R',
   baseURL: authBaseURL,
   basePath: '/api/auth',
   secret: requireEnv('BETTER_AUTH_SECRET'),
@@ -487,7 +487,7 @@ export const auth = betterAuth({
     minPasswordLength: 8,
     maxPasswordLength: 128,
     /**
-     * BISH v1 now treats email/password as the primary self-serve login path.
+     * ARCH3R v1 now treats email/password as the primary self-serve login path.
      * Requiring inbox verification during sign-in was blocking legitimate
      * workspace access when transactional email was not fully configured.
      * Password reset still uses OTP delivery, but successful sign-up should
@@ -651,7 +651,7 @@ export const auth = betterAuth({
       maximumSessions: 10,
     }),
     twoFactor({
-      issuer: 'BISH',
+      issuer: 'ARCH3R',
       totpOptions: {
         digits: 6,
         period: 30,

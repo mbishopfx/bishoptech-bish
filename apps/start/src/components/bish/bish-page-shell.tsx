@@ -20,7 +20,7 @@ type BishPageShellMetric = {
 }
 
 /**
- * Shared page shell for the BISH operator and tenant control planes.
+ * Shared page shell for the ARCH3R operator and tenant control planes.
  * It gives every screen the same visual rhythm: a strong intro band, a compact
  * right-hand status rail, and consistent spacing for the dense operational UI below.
  */
@@ -118,7 +118,7 @@ export function BishPageShell({
 
 /**
  * Section wrapper used beneath the page shell to keep tables, action zones,
- * and readiness blocks visually consistent across all BISH screens.
+ * and readiness blocks visually consistent across all ARCH3R screens.
  */
 export function BishSectionCard({
   title,

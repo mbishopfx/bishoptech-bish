@@ -50,7 +50,7 @@ async function requireBishOrgSession() {
 async function requireBishOperatorSession() {
   const session = await requireBishOrgSession()
   if (!isBishOperatorEmail(session.email)) {
-    throw new Error('BISH operator access is required')
+    throw new Error('ARCH3R operator access is required')
   }
   return session
 }

@@ -102,7 +102,7 @@ export function BishApprovalsPage({
   )
   const [listenerPrompt, setListenerPrompt] = useState(
     primaryListener?.systemPromptTemplate
-    ?? 'You are continuing a BISH handoff on the local machine. Use the markdown handoff file as the source of truth, work directly in the local repository, and summarize what you changed before you stop.',
+    ?? 'You are continuing an ARCH3R handoff on the local machine. Use the markdown handoff file as the source of truth, work directly in the local repository, and summarize what you changed before you stop.',
   )
   const [defaultTarget, setDefaultTarget] = useState<'gemini' | 'codex'>(
     primaryListener?.defaultTarget === 'codex' ? 'codex' : 'gemini',
@@ -114,7 +114,7 @@ export function BishApprovalsPage({
     setListenerLabel(primaryListener?.label ?? 'Primary Listener')
     setListenerPrompt(
       primaryListener?.systemPromptTemplate
-      ?? 'You are continuing a BISH handoff on the local machine. Use the markdown handoff file as the source of truth, work directly in the local repository, and summarize what you changed before you stop.',
+      ?? 'You are continuing an ARCH3R handoff on the local machine. Use the markdown handoff file as the source of truth, work directly in the local repository, and summarize what you changed before you stop.',
     )
     setDefaultTarget(primaryListener?.defaultTarget === 'codex' ? 'codex' : 'gemini')
   }, [primaryListener?.defaultTarget, primaryListener?.label, primaryListener?.systemPromptTemplate])
@@ -233,8 +233,8 @@ export function BishApprovalsPage({
   return (
     <BishPageShell
       eyebrow="Write approvals"
-      title="BISH Approvals"
-      description="Keep external writes human-readable and easy to act on. Operators should understand what BISH wants to do, which system it would touch, and why it is still waiting for a gate."
+      title="ARCH3R Approvals"
+      description="Keep external writes human-readable and easy to act on. Operators should understand what ARCH3R wants to do, which system it would touch, and why it is still waiting for a gate."
       icon={Shield}
       metrics={[
         {
@@ -265,7 +265,7 @@ export function BishApprovalsPage({
           {
             label: 'Agents',
             value: snapshot.stats.agentCount,
-            hint: 'Active BISH agent instances in this organization.',
+            hint: 'Active ARCH3R agent instances in this organization.',
             tone: 'accent',
           },
           {
@@ -311,7 +311,7 @@ export function BishApprovalsPage({
 
       <BishSectionCard
         title="Local listener"
-        description="Register a customer-local daemon that can accept signed handoffs, launch Gemini or Codex on their machine, and loop selected repo artifacts back into BISH knowledge."
+        description="Register a customer-local daemon that can accept signed handoffs, launch Gemini or Codex on their machine, and loop selected repo artifacts back into ARCH3R knowledge."
         action={
           <ListenerStatusBadge value={primaryListener?.status ?? 'awaiting_registration'} />
         }
@@ -417,7 +417,7 @@ export function BishApprovalsPage({
                 <p className="font-medium">Listener secret</p>
                 <p className="mt-2 break-all font-mono text-xs">{listenerSecret}</p>
                 <p className="mt-2 text-xs text-emerald-800">
-                  Copy this into the local listener install command now. BISH only shows the raw secret immediately after rotation.
+                  Copy this into the local listener install command now. ARCH3R only shows the raw secret immediately after rotation.
                 </p>
               </div>
             ) : null}
@@ -468,7 +468,7 @@ export function BishApprovalsPage({
                 Install outline
               </p>
               <p className="text-sm text-foreground-secondary">
-                Run the local listener with your tunnel URL and the rotated secret, then let it register back to BISH.
+                Run the local listener with your tunnel URL and the rotated secret, then let it register back to ARCH3R.
               </p>
             </div>
             <pre className="overflow-x-auto rounded-xl border border-border-base bg-background px-3 py-3 text-xs text-foreground-primary">
@@ -580,14 +580,14 @@ BISH_LISTENER_DEFAULT_TARGET=${defaultTarget}
           showColumnToggle={false}
           tableWrapperClassName="rounded-none border-none bg-transparent"
           messages={{
-            noResults: 'No BISH approvals yet.',
+            noResults: 'No ARCH3R approvals yet.',
           }}
         />
       </BishSectionCard>
 
       <BishSectionCard
         title="Recent handoffs"
-        description="Every local-machine dispatch is auditable so operators can see whether the listener received it, failed it, or pushed artifacts back into BISH knowledge."
+        description="Every local-machine dispatch is auditable so operators can see whether the listener received it, failed it, or pushed artifacts back into ARCH3R knowledge."
       >
         <div className="space-y-3">
           {snapshot.handoffs.length === 0 ? (

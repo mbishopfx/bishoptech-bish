@@ -84,10 +84,10 @@ function coerceTimestamp(
 
 function buildDefaultSystemPrompt() {
   return [
-    'You are continuing a BISH handoff on the local machine.',
+    'You are continuing an ARCH3R handoff on the local machine.',
     'Use the provided markdown handoff file as the source of truth for the conversation context, build intent, constraints, and expected outputs.',
     'Use the isolated handoff workspace for new files and experiments unless the handoff explicitly instructs you to patch an existing repository.',
-    'Keep changes scoped, avoid modifying the BISH listener/system code by default, and summarize what you changed before you stop.',
+    'Keep changes scoped, avoid modifying the ARCH3R listener/system code by default, and summarize what you changed before you stop.',
   ].join(' ')
 }
 
@@ -694,7 +694,7 @@ async function buildThreadHandoffMarkdown(input: {
     throw new Error('This chat thread has no messages to hand off yet.')
   }
 
-  const title = threadResult.rows[0]?.title?.trim() || 'Untitled BISH Handoff'
+  const title = threadResult.rows[0]?.title?.trim() || 'Untitled ARCH3R Handoff'
   const transcript = messagesResult.rows
     .map(
       (message) => {
@@ -1049,7 +1049,7 @@ export async function reportLocalListenerArtifactsFromSecret(input: {
       status: input.data.status,
       summary:
         input.data.status === 'completed'
-          ? 'The local listener run finished and posted its latest artifact metadata back to BISH.'
+          ? 'The local listener run finished and posted its latest artifact metadata back to ARCH3R.'
           : input.data.errorMessage?.trim() || 'The local listener run exited with a failure status.',
       content: formatLocalListenerThreadUpdate({
         title: handoff.title,
@@ -1057,7 +1057,7 @@ export async function reportLocalListenerArtifactsFromSecret(input: {
         status: input.data.status,
         message:
           input.data.status === 'completed'
-            ? 'The local listener run finished and posted its latest artifact metadata back to BISH.'
+            ? 'The local listener run finished and posted its latest artifact metadata back to ARCH3R.'
             : input.data.errorMessage?.trim() || 'The local listener run exited with a failure status.',
         metadata: {
           repoBranch: input.data.repoBranch ?? null,

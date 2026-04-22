@@ -36,7 +36,7 @@ const HuddleSessionContext = createContext<HuddleSessionContextValue | null>(nul
 
 /**
  * Keeps the currently active huddle room outside the route tree so the user can
- * navigate across BISH without losing their room context. This is the UI-layer
+ * navigate across ARCH3R without losing their room context. This is the UI-layer
  * equivalent of "stay in the huddle while I check another screen".
  */
 export function HuddleSessionProvider({ children }: { children: ReactNode }) {

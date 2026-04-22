@@ -2,11 +2,11 @@ import type * as React from 'react'
 import { createServerFn } from '@tanstack/react-start'
 
 export const DEFAULT_SITE_METADATA = {
-  title: 'BISH',
+  title: 'ARCH3R',
   description: 'Chat with every AI model in one place.',
-  siteName: 'BISH',
+  siteName: 'ARCH3R',
   socialImagePath: '/og.png',
-  socialImageAlt: 'BISH preview image',
+  socialImageAlt: 'ARCH3R preview image',
   socialImageWidth: 1200,
   socialImageHeight: 630,
 } as const

@@ -1,7 +1,7 @@
 import { getCatalogModel } from './index'
 
 /**
- * Curated models that match the current BISH v1 deployment posture.
+ * Curated models that match the current ARCH3R v1 deployment posture.
  *
  * These models are deliberately biased toward practical SMB workloads:
  * - one strong default general model
@@ -19,21 +19,21 @@ export const BISH_RECOMMENDED_MODEL_IDS = [
   'openai/gpt-5.3-codex',
 ] as const
 
-const BISH_RECOMMENDED_MODEL_ORDER = new Map(
+const ARCH3R_RECOMMENDED_MODEL_ORDER = new Map(
   BISH_RECOMMENDED_MODEL_IDS.map((modelId, index) => [modelId, index]),
 )
 
 /**
- * BISH prefers a short recommended list in chat so operators and clients are
+ * ARCH3R prefers a short recommended list in chat so operators and clients are
  * not forced to wade through the full provider catalog for everyday work.
  */
 export function isBishRecommendedModelId(modelId: string): boolean {
-  return BISH_RECOMMENDED_MODEL_ORDER.has(modelId)
+  return ARCH3R_RECOMMENDED_MODEL_ORDER.has(modelId)
 }
 
 /**
  * Returns models sorted for the chat selector:
- * 1) BISH-recommended models first
+ * 1) ARCH3R-recommended models first
  * 2) then by provider
  * 3) then by display name
  *
@@ -44,8 +44,8 @@ export function sortModelsForBishSelector<
   TModel extends { readonly id: string; readonly name: string },
 >(models: readonly TModel[]): TModel[] {
   return [...models].sort((left, right) => {
-    const leftRecommended = BISH_RECOMMENDED_MODEL_ORDER.get(left.id)
-    const rightRecommended = BISH_RECOMMENDED_MODEL_ORDER.get(right.id)
+    const leftRecommended = ARCH3R_RECOMMENDED_MODEL_ORDER.get(left.id)
+    const rightRecommended = ARCH3R_RECOMMENDED_MODEL_ORDER.get(right.id)
 
     if (leftRecommended != null || rightRecommended != null) {
       if (leftRecommended == null) return 1

@@ -30,7 +30,7 @@ const baseUrl = process.env.BISH_BASE_URL?.trim()
 const listenerSecret = process.env.BISH_LISTENER_SECRET?.trim()
 const tunnelUrl = process.env.BISH_TUNNEL_URL?.trim()
 const outputDir = readEnv('BISH_LISTENER_OUTPUT_DIR', 'BISH_OUTPUT_DIR')
-  || join(homedir(), 'BISH', 'listener-handoffs')
+  || join(homedir(), 'ARCH3R', 'listener-handoffs')
 const workspaceDir =
   readEnv('BISH_LISTENER_WORKSPACE_DIR', 'BISH_WORKSPACE_DIR') || process.cwd()
 const runtimeMode = (readEnv('BISH_LISTENER_RUNTIME_MODE', 'BISH_RUNTIME_MODE')
@@ -100,7 +100,7 @@ function sanitizeSlug(input: string) {
 
 /**
  * Each local handoff gets a dedicated working directory inside the configured
- * workspace so Gemini/Codex can create files without treating the BISH repo
+ * workspace so Gemini/Codex can create files without treating the ARCH3R repo
  * itself as the handoff target. Keeping the folder inside the workspace also
  * preserves file-tool access for CLIs that restrict reads to their cwd tree.
  */
@@ -222,12 +222,12 @@ function buildPromptMessage(input: {
     '',
     `Isolated handoff workspace: ${input.handoffWorkspacePath}`,
     'Use that isolated folder for any files, notes, prototypes, or generated code created during this run.',
-    'Do not modify the BISH listener/system code unless the handoff explicitly instructs you to patch an existing repository.',
+    'Do not modify the ARCH3R listener/system code unless the handoff explicitly instructs you to patch an existing repository.',
     '',
     `Handoff markdown: ${input.markdownPath}`,
     `Activity helper: ${input.activityHelperPath}`,
     '',
-    'If you need human help or want to report progress back to BISH, run one of these commands from the shell session:',
+    'If you need human help or want to report progress back to ARCH3R, run one of these commands from the shell session:',
     `${input.activityHelperPath} info "Started implementation work"`,
     `${input.activityHelperPath} input_required "Need an environment variable or approval"`,
     `${input.activityHelperPath} resolved "Unblocked and continuing"`,
@@ -271,9 +271,9 @@ fetch(url, {
     const text = await response.text()
     throw new Error(text || \`HTTP \${response.status}\`)
   }
-  console.log("BISH activity sent")
+  console.log("ARCH3R activity sent")
 }).catch((error) => {
-  console.error("BISH activity failed", error instanceof Error ? error.message : String(error))
+  console.error("ARCH3R activity failed", error instanceof Error ? error.message : String(error))
   process.exit(1)
 })
 ' "\${KIND}" "\${MESSAGE}" "${activityUrl}" "${validatedListenerSecret}" "${input.handoffId}"
@@ -446,7 +446,7 @@ async function executeHandoff(payload: LocalListenerHandoffPayload) {
       handoffId: payload.handoffId,
       kind: 'info',
       message:
-        'Interactive terminal handoff launched. Use the activity helper if you need human input or want to post progress updates back to BISH.',
+        'Interactive terminal handoff launched. Use the activity helper if you need human input or want to post progress updates back to ARCH3R.',
       metadata: {
         activityHelperPath,
         handoffWorkspacePath,
@@ -593,10 +593,10 @@ const server = createServer(async (request, response) => {
 })
 
 server.listen(port, async () => {
-  console.log(`BISH local listener listening on http://127.0.0.1:${port}/handoff`)
+  console.log(`ARCH3R local listener listening on http://127.0.0.1:${port}/handoff`)
   try {
     await registerListener()
-    console.log('BISH local listener registered successfully')
+    console.log('ARCH3R local listener registered successfully')
   } catch (error) {
     console.error('listener registration failed', error)
   }

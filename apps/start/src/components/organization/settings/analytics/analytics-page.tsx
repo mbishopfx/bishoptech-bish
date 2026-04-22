@@ -13,7 +13,7 @@ const INTENTION_EXTRACTION_FLAG = 'intention_extraction_enabled' as const
 /**
  * Analytics & Insights settings page.
  * Extraction toggles (topic, sentiment/emotion, intention) are disabled by default.
- * Contact BISH support to enable. Analytics are org-internal only, not shared externally.
+ * Contact ARCH3R support to enable. Analytics are org-internal only, not shared externally.
  */
 export function AnalyticsPage() {
   const { payload, error, update } = useProviderPolicy()
@@ -37,7 +37,7 @@ export function AnalyticsPage() {
         title={m.org_analytics_section_title()}
         description={m.org_analytics_section_description()}
         helpText={m.org_analytics_section_help()}
-        helpLearnMoreHref="mailto:enterprise@bish.local"
+        helpLearnMoreHref="mailto:enterprise@arch3r.local"
         helpLearnMoreLabel={m.org_analytics_section_contact_link()}
         toggleSection={{
           sectionTitle: m.org_analytics_section_toggle_title(),

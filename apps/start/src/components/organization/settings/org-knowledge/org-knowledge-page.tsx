@@ -337,7 +337,7 @@ export function OrgKnowledgePage() {
                 Google Drive Picker
               </p>
               <h2 className="text-lg font-semibold text-foreground-primary">
-                Select Google docs to ingest into BISH RAG
+                Select Google docs to ingest into ARCH3R RAG
               </h2>
               <p className="max-w-2xl text-sm text-foreground-secondary">
                 This is the user-selected lane. It keeps Google Workspace sync separate from explicit
@@ -487,7 +487,7 @@ export function OrgKnowledgePage() {
               </p>
               <p className="mt-2 text-sm text-amber-900/90">
                 Create a Google Cloud OAuth client for a web application, then add the client ID,
-                client secret, and redirect URI to BISH. Use this exact redirect URI in Google Cloud:
+                client secret, and redirect URI to ARCH3R. Use this exact redirect URI in Google Cloud:
               </p>
               <pre className="mt-3 overflow-x-auto rounded-xl border border-amber-500/20 bg-background px-3 py-3 text-xs text-foreground-primary">
 {`${appOrigin}/api/org/knowledge/google/callback`}

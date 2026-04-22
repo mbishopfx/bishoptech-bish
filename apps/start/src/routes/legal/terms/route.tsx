@@ -9,7 +9,7 @@ export const Route = createFileRoute('/legal/terms')({
     meta: buildPageMetadata({
       title: 'Terms of Service',
       description:
-        'Read BISH\'s terms of service covering eligibility, account responsibilities, payments, and use of AI-powered features.',
+        'Read ARCH3R\'s terms of service covering eligibility, account responsibilities, payments, and use of AI-powered features.',
     }),
   }),
   component: TermsOfServicePage,
@@ -47,9 +47,9 @@ function TermsOfServicePage() {
                 <p className="text-foreground-primary dark:text-foreground-primary text-sm leading-6">
                   These Terms of Service (&quot;Terms&quot;) constitute a
                   legally binding agreement between The Unreal Compound SA de CV
-                  (&quot;Company&quot;, &quot;BISH&quot;, &quot;we&quot;) and
+                  (&quot;Company&quot;, &quot;ARCH3R&quot;, &quot;we&quot;) and
                   you (&quot;User&quot;, &quot;you&quot;) regarding your use of
-                  BISH services, including the website https://bish.local and
+                  ARCH3R services, including the website https://arch3r.local and
                   any associated products or services (collectively, the
                   &quot;Services&quot;). By accessing or using the Services, you
                   agree to be bound by these Terms. If you do not agree to any
@@ -144,7 +144,7 @@ function TermsOfServicePage() {
                 </p>
                 <ul className="list-disc pl-6 space-y-2 text-foreground-primary dark:text-foreground-primary text-sm leading-6">
                   <li>
-                    Grant BISH a worldwide, royalty-free, transferable,
+                    Grant ARCH3R a worldwide, royalty-free, transferable,
                     sublicensable, and exclusive license to use, reproduce,
                     display, distribute, and modify such content for the purpose
                     of providing the Services;
@@ -155,7 +155,7 @@ function TermsOfServicePage() {
                     of third parties;
                   </li>
                   <li>
-                    Accept that BISH may use the User Content to improve the
+                    Accept that ARCH3R may use the User Content to improve the
                     Services, but NOT to train artificial intelligence models.
                   </li>
                 </ul>
@@ -169,7 +169,7 @@ function TermsOfServicePage() {
                   The Services and all content available through the Services,
                   including but not limited to text, graphics, logos, images,
                   audio, video, software, and other materials, are the property
-                  of BISH or its licensors and are protected by copyright,
+                  of ARCH3R or its licensors and are protected by copyright,
                   trademark, and other intellectual property laws.
                 </p>
                 <p className="text-foreground-primary dark:text-foreground-primary text-sm leading-6">
@@ -189,7 +189,7 @@ function TermsOfServicePage() {
                 </p>
                 <ul className="list-disc pl-6 space-y-2 text-foreground-primary dark:text-foreground-primary text-sm leading-6">
                   <li>
-                    Authorize BISH to charge the designated payment method
+                    Authorize ARCH3R to charge the designated payment method
                     for applicable fees;
                   </li>
                   <li>
@@ -232,10 +232,10 @@ function TermsOfServicePage() {
                   </li>
                   <li>
                     AI may generate content that does not reflect the views of
-                    BISH;
+                    ARCH3R;
                   </li>
                   <li>
-                    BISH does not guarantee the accuracy, completeness, or
+                    ARCH3R does not guarantee the accuracy, completeness, or
                     usefulness of any AI-generated content;
                   </li>
                   <li>
@@ -280,7 +280,7 @@ function TermsOfServicePage() {
                   11. Indemnification
                 </h2>
                 <p className="text-foreground-primary dark:text-foreground-primary text-sm leading-6">
-                  You agree to defend, indemnify, and hold harmless BISH, its
+                  You agree to defend, indemnify, and hold harmless ARCH3R, its
                   affiliates, directors, officers, employees, and agents from
                   any claim, action, demand, loss, damage, cost, or expense,
                   including reasonable legal fees, arising out of or related to
@@ -361,10 +361,10 @@ function TermsOfServicePage() {
                   <p className="mt-2">
                     Email:{' '}
                     <a
-                      href="mailto:legal@bish.local"
+                      href="mailto:legal@arch3r.local"
                       className="text-foreground-info hover:underline"
                     >
-                      legal@bish.local
+                      legal@arch3r.local
                     </a>
                   </p>
                 </div>

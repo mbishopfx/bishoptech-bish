@@ -95,7 +95,7 @@ export function getMainPlans(): LandingPlan[] {
       usdPriceAmount: 499,
       billingPeriodLabel: m.pricing_billing_period_mo(),
       billingPeriodLabelEn: 'mo',
-      description: 'BISH for small businesses that need Google-backed RAG, approvals, and one listener bridge.',
+      description: 'ARCH3R for small businesses that need Google-backed RAG, approvals, and one listener bridge.',
       featureIntro: 'Includes 5 seats and a bundled AI budget for light daily usage.',
       setupFeeUsd: 2_000,
       features: [
@@ -196,7 +196,7 @@ export function getEnterprisePlan(): LandingPlan {
       { text: 'On-prem / private infrastructure options', iconId: 'shield' },
     ],
     buttonText: m.pricing_cta_contact_sales(),
-    href: 'mailto:sales@bish.local',
+    href: 'mailto:sales@arch3r.local',
     gradientId: '5',
     isEnterprise: true,
   }
@@ -234,7 +234,7 @@ export function getSelfHostingPlan(): LandingPlan {
       },
     ],
     buttonText: m.pricing_cta_get_in_touch(),
-    href: 'mailto:enterprise@bish.local',
+    href: 'mailto:enterprise@arch3r.local',
     gradientId: '6',
   }
 }

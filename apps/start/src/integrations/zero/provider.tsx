@@ -29,7 +29,7 @@ function MissingZeroConfigurationState() {
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 rounded-[28px] border border-black/10 bg-white/80 p-8 shadow-[0_20px_80px_rgba(15,23,42,0.08)] backdrop-blur">
         <div className="flex flex-col gap-3">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-black/45">
-            BISH Sync Setup Required
+            ARCH3R Sync Setup Required
           </p>
           <h1 className="text-3xl font-semibold tracking-tight text-black">
             The realtime data layer is not configured for this deployment.
@@ -71,7 +71,7 @@ function MissingZeroConfigurationState() {
             {' '}
             <code>ZERO_MUTATE_URL</code>
             {' '}
-            targeting this BISH web app.
+            targeting this ARCH3R web app.
           </p>
         </div>
       </div>
