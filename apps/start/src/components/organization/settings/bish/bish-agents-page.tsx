@@ -180,7 +180,7 @@ export function BishAgentsPage({
   return (
     <BishPageShell
       eyebrow="Controlled evolution"
-      title="ARCH3R Agents"
+      title="Agents"
       description="Treat prompt and policy evolution like an operating discipline, not a guessing game. The UX here keeps champion staging obvious while preserving approval-first safety."
       icon={Bot}
       metrics={[
@@ -252,7 +252,7 @@ export function BishAgentsPage({
 
       <BishSectionCard
         title="Evolution guardrails"
-        description="ARCH3R can create and score candidate variants quickly, but promotion remains intentionally manual once a version reaches champion quality."
+        description="The system can create and score candidate variants quickly, but promotion remains intentionally manual once a version reaches champion quality."
         action={
           <div className="flex flex-wrap gap-2">
             <Badge
@@ -296,7 +296,7 @@ export function BishAgentsPage({
           data={[...snapshot.agents]}
           showColumnToggle={false}
           tableWrapperClassName="rounded-none border-none bg-transparent"
-          messages={{ noResults: 'No ARCH3R agents configured yet.' }}
+          messages={{ noResults: 'No agents configured yet.' }}
         />
       </BishSectionCard>
 

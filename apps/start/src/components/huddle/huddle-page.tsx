@@ -268,7 +268,7 @@ export function HuddlePage() {
                       {selectedRoom.name}
                     </h2>
                     <p className="mt-2 max-w-3xl text-foreground-secondary">
-                      Huddles stay active as a collaboration layer while teammates move through the rest of ARCH3R. The room state below already supports shared presence, reactions, and sticky notes.
+                      Huddles stay active as a collaboration layer while teammates move through the rest of the workspace. The room state below already supports shared presence, reactions, and sticky notes.
                     </p>
                   </div>
                   <div className="flex items-center gap-2">

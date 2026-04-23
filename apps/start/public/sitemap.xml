@@ -1,18 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://arch3r.local/chat</loc>
+    <loc>https://web-production-070f1.up.railway.app/chat</loc>
   </url>
   <url>
-    <loc>https://arch3r.local/pricing</loc>
+    <loc>https://web-production-070f1.up.railway.app/pricing</loc>
   </url>
   <url>
-    <loc>https://arch3r.local/legal/acceptable-use</loc>
+    <loc>https://web-production-070f1.up.railway.app/legal/acceptable-use</loc>
   </url>
   <url>
-    <loc>https://arch3r.local/legal/privacy</loc>
+    <loc>https://web-production-070f1.up.railway.app/legal/privacy</loc>
   </url>
   <url>
-    <loc>https://arch3r.local/legal/terms</loc>
+    <loc>https://web-production-070f1.up.railway.app/legal/terms</loc>
   </url>
 </urlset>

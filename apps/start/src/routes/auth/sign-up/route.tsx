@@ -25,7 +25,7 @@ export const Route = createFileRoute('/auth/sign-up')({
   head: () => ({
     meta: buildPageMetadata({
       title: 'Sign Up',
-      description: 'Create an ARCH3R account to start chatting with multiple AI models in one place.',
+      description: 'Create an account to start chatting with multiple AI models in one place.',
       robots: 'noindex,follow',
     }),
   }),

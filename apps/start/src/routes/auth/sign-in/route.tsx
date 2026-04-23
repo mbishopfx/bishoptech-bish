@@ -25,7 +25,7 @@ export const Route = createFileRoute('/auth/sign-in')({
   head: () => ({
     meta: buildPageMetadata({
       title: 'Sign In',
-      description: 'Sign in to ARCH3R to continue your chats, teams, and model workspace.',
+      description: 'Sign in to continue your chats, teams, and model workspace.',
       robots: 'noindex,follow',
     }),
   }),

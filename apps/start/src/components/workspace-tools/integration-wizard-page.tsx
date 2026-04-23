@@ -256,7 +256,7 @@ export function IntegrationWizardPage({
               {groupKey === 'social'
                 ? 'Social channels can use platform defaults first, then switch to org-owned credentials whenever needed.'
                 : groupKey === 'runtimes'
-                  ? 'Voice defaults to the ARCH3R-managed runtime and can flip to BYOK, while SMS remains customer-owned.'
+                  ? 'Voice defaults to the managed runtime and can flip to BYOK, while SMS remains customer-owned.'
                   : 'Exports use the shared organization destination, not personal accounts.'}
             </p>
           </div>

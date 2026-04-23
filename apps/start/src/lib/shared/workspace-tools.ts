@@ -41,7 +41,7 @@ export const ARCH3R_PLUGIN_DEFINITIONS: readonly Arch3rPluginDefinition[] = [
     key: 'marketplace',
     name: 'Plugin Marketplace',
     description:
-      'Browse ARCH3R modules, readiness requirements, and activation status.',
+      'Browse available modules, readiness requirements, and activation status.',
     category: 'system',
     entitlementMode: 'included',
     routeHref: '/marketplace',
@@ -107,7 +107,7 @@ export function getArch3rPluginDefinition(key: Arch3rPluginKey) {
     (candidate) => candidate.key === key,
   )
   if (!definition) {
-    throw new Error(`Unknown ARCH3R plugin key: ${key}`)
+    throw new Error(`Unknown plugin key: ${key}`)
   }
   return definition
 }
@@ -154,7 +154,7 @@ export const ARCH3R_INTEGRATION_DEFINITIONS: readonly Arch3rIntegrationDefinitio
     key: 'social_x',
     label: 'X Publishing',
     description:
-      'Use ARCH3R-managed social apps or an org-owned override to publish scheduled posts.',
+      'Use platform-managed social apps or an org-owned override to publish scheduled posts.',
     authMode: 'platform_default',
     requiredEnv: ['X_CLIENT_ID', 'X_CLIENT_SECRET'],
     linkedAccountLabel: 'Linked X account',
@@ -190,7 +190,7 @@ export const ARCH3R_INTEGRATION_DEFINITIONS: readonly Arch3rIntegrationDefinitio
     key: 'vapi',
     label: 'Vapi Voice Runtime',
     description:
-      'Run voice campaigns through the ARCH3R-managed Vapi account by default, with a BYOK override for organizations that already have Vapi.',
+      'Run voice campaigns through the managed Vapi account by default, with a BYOK override for organizations that already have Vapi.',
     authMode: 'platform_default',
     requiredEnv: ['VAPI_API_KEY'],
   },
@@ -220,7 +220,7 @@ export function getArch3rIntegrationDefinition(
     (candidate) => candidate.key === key,
   )
   if (!definition) {
-    throw new Error(`Unknown ARCH3R integration key: ${key}`)
+    throw new Error(`Unknown integration key: ${key}`)
   }
   return definition
 }

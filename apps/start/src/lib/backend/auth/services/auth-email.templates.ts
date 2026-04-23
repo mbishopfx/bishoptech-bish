@@ -55,7 +55,7 @@ export type BuildAuthActionLinkTemplateInput = {
   subjectLine: string
 }
 
-const EMAIL_BRAND_NAME = 'ARCH3R'
+const EMAIL_BRAND_NAME = 'Workspace'
 const EMAIL_BACKGROUND = 'transparent'
 const EMAIL_SURFACE = '#ffffff'
 const EMAIL_TEXT_PRIMARY = '#18181b'

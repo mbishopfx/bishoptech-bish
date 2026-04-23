@@ -91,7 +91,7 @@ export function PluginMarketplacePage({
   return (
     <ContentPage
       title="Plugin Marketplace"
-      description="Global ARCH3R tools ship here first. Org admins activate the lanes they want to expose in the left toolbar."
+      description="New tool surfaces ship here first. Org admins activate the lanes they want to expose in the left toolbar."
     >
       <WorkspaceMetricGrid
         metrics={[

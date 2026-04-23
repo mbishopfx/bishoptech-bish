@@ -37,7 +37,7 @@ export function AnalyticsPage() {
         title={m.org_analytics_section_title()}
         description={m.org_analytics_section_description()}
         helpText={m.org_analytics_section_help()}
-        helpLearnMoreHref="mailto:enterprise@arch3r.local"
+        helpLearnMoreHref="mailto:enterprise@service.local"
         helpLearnMoreLabel={m.org_analytics_section_contact_link()}
         toggleSection={{
           sectionTitle: m.org_analytics_section_toggle_title(),

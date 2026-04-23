@@ -222,12 +222,12 @@ function buildPromptMessage(input: {
     '',
     `Isolated handoff workspace: ${input.handoffWorkspacePath}`,
     'Use that isolated folder for any files, notes, prototypes, or generated code created during this run.',
-    'Do not modify the ARCH3R listener/system code unless the handoff explicitly instructs you to patch an existing repository.',
+    'Do not modify the local listener/system code unless the handoff explicitly instructs you to patch an existing repository.',
     '',
     `Handoff markdown: ${input.markdownPath}`,
     `Activity helper: ${input.activityHelperPath}`,
     '',
-    'If you need human help or want to report progress back to ARCH3R, run one of these commands from the shell session:',
+    'If you need human help or want to report progress back to the workspace, run one of these commands from the shell session:',
     `${input.activityHelperPath} info "Started implementation work"`,
     `${input.activityHelperPath} input_required "Need an environment variable or approval"`,
     `${input.activityHelperPath} resolved "Unblocked and continuing"`,
@@ -271,9 +271,9 @@ fetch(url, {
     const text = await response.text()
     throw new Error(text || \`HTTP \${response.status}\`)
   }
-  console.log("ARCH3R activity sent")
+  console.log("Workspace activity sent")
 }).catch((error) => {
-  console.error("ARCH3R activity failed", error instanceof Error ? error.message : String(error))
+  console.error("Workspace activity failed", error instanceof Error ? error.message : String(error))
   process.exit(1)
 })
 ' "\${KIND}" "\${MESSAGE}" "${activityUrl}" "${validatedListenerSecret}" "${input.handoffId}"
@@ -446,7 +446,7 @@ async function executeHandoff(payload: LocalListenerHandoffPayload) {
       handoffId: payload.handoffId,
       kind: 'info',
       message:
-        'Interactive terminal handoff launched. Use the activity helper if you need human input or want to post progress updates back to ARCH3R.',
+        'Interactive terminal handoff launched. Use the activity helper if you need human input or want to post progress updates back to the workspace.',
       metadata: {
         activityHelperPath,
         handoffWorkspacePath,
@@ -593,10 +593,10 @@ const server = createServer(async (request, response) => {
 })
 
 server.listen(port, async () => {
-  console.log(`ARCH3R local listener listening on http://127.0.0.1:${port}/handoff`)
+  console.log(`Local listener listening on http://127.0.0.1:${port}/handoff`)
   try {
     await registerListener()
-    console.log('ARCH3R local listener registered successfully')
+    console.log('Local listener registered successfully')
   } catch (error) {
     console.error('listener registration failed', error)
   }

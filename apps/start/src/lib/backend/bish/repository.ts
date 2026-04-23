@@ -136,7 +136,7 @@ async function ensureOrgBootstrap(organizationId: string) {
             created_at,
             updated_at
           )
-          VALUES ($1, $2, 'bish-primary', 'BISH Primary Template', $3, $4, $4)
+          VALUES ($1, $2, 'bish-primary', 'Primary Template', $3, $4, $4)
         `,
         [
           templateId,
@@ -177,7 +177,7 @@ async function ensureOrgBootstrap(organizationId: string) {
             created_at,
             updated_at
           )
-          VALUES ($1, $2, $3, 'BISH Front Desk', 'active', $4, $5, $5)
+          VALUES ($1, $2, $3, 'Front Desk', 'active', $4, $5, $5)
         `,
         [agentInstanceId, organizationId, templateId, activeVersionId, timestamp],
       )
@@ -213,7 +213,7 @@ async function ensureOrgBootstrap(organizationId: string) {
           activeVersionId,
           organizationId,
           agentInstanceId,
-          'You are BISH, an operations-first assistant for a small business. Read broadly from connected systems, draft high-quality actions, and require approval before any external write.',
+          'You are an operations-first assistant for a small business. Read broadly from connected systems, draft high-quality actions, and require approval before any external write.',
           timestamp,
         ],
       )

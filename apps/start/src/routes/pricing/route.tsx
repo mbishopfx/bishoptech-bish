@@ -19,7 +19,7 @@ export const Route = createFileRoute('/pricing')({
     meta: buildPageMetadata({
       title: 'Pricing',
       description:
-        'Compare ARCH3R plans and pricing to chat with top AI models in one workspace.',
+        'Compare plans and pricing to chat with top AI models in one workspace.',
     }),
   }),
   component: PricingRouteComponent,

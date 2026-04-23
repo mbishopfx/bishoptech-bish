@@ -9,7 +9,7 @@ export const Route = createFileRoute('/legal/privacy')({
     meta: buildPageMetadata({
       title: 'Privacy Policy',
       description:
-        'Review how ARCH3R collects, uses, stores, and protects personal information across the website and product.',
+        'Review how the service collects, uses, stores, and protects personal information across the website and product.',
     }),
   }),
   component: PrivacyPolicyPage,
@@ -46,18 +46,18 @@ function PrivacyPolicyPage() {
                 </h2>
                 <p className="text-foreground-primary dark:text-foreground-primary text-sm leading-6">
                   This privacy policy (the "Policy") describes how The Unreal
-                  Compound SA de CV ("Company", "ARCH3R", "we") collects, uses,
-                  and shares personal information from users of this website,
-                  ARCH3R `https://arch3r.local` (the "Site"), as well as associated
-                  products and services (collectively, the "Services"). It
-                  applies to personal information we collect through the Site
-                  and our Services, as well as personal information you provide
-                  directly to us. This Policy also applies to any other website
-                  or Service of ours that posts this Policy. By using the Site
-                  or Services, you agree to the practices and policies described
-                  in this Policy and consent to our collection, use, and sharing
-                  of your personal information as described below. If you do not
-                  agree to this Policy, please do not use the Site or Services.
+                  Compound SA de CV ("Company", "we") collects, uses, and
+                  shares personal information from users of this website and
+                  associated products and services (collectively, the
+                  "Services"). It applies to personal information we collect
+                  through the Site and our Services, as well as personal
+                  information you provide directly to us. This Policy also
+                  applies to any other website or Service of ours that posts
+                  this Policy. By using the Site or Services, you agree to the
+                  practices and policies described in this Policy and consent to
+                  our collection, use, and sharing of your personal information
+                  as described below. If you do not agree to this Policy,
+                  please do not use the Site or Services.
                 </p>
               </section>
 
@@ -67,22 +67,22 @@ function PrivacyPolicyPage() {
                 </h2>
                 <p className="text-foreground-primary dark:text-foreground-primary text-sm leading-6 mb-4">
                   We collect personal information about you in various ways. Our
-                  product, ARCH3R, collects the following personal information:
+                  product collects the following personal information:
                 </p>
 
                 <div className="space-y-4">
                   <div>
                     <h3 className="font-semibold text-base leading-6 text-foreground-primary dark:text-foreground-primary mb-2">
-                      Personal information from ARCH3R users:
+                      Personal information from product users:
                     </h3>
                     <p className="text-foreground-primary dark:text-foreground-primary text-sm leading-6 mb-2">
-                      When you use our ARCH3R product, we collect the following
+                      When you use the product, we collect the following
                       personal information from you:
                     </p>
                     <ul className="list-disc pl-6 space-y-1 text-foreground-primary dark:text-foreground-primary text-sm leading-6">
                       <li>
                         User content, such as your instructions or queries to
-                        the ARCH3R product and other content you upload to the
+                        the product and other content you upload to the
                         product, including PDF files, images, and text files.
                       </li>
                       <li>
@@ -98,8 +98,8 @@ function PrivacyPolicyPage() {
                       general:
                     </h3>
                     <p className="text-foreground-primary dark:text-foreground-primary text-sm leading-6 mb-2">
-                      When you use our Services, including our website and ARCH3R
-                      AI, we collect the personal information you provide to us,
+                      When you use our Services, including our website and AI
+                      features, we collect the personal information you provide to us,
                       which may include the following categories, depending on
                       how you use our Services and communicate with us:
                     </p>
@@ -222,7 +222,7 @@ function PrivacyPolicyPage() {
                   Subject to this Privacy Policy, our terms of use, and the
                   applicable terms and conditions of third-party applications,
                   all data transmitted through the Site and Services is owned by
-                  ARCH3R. Generally, we may use the information in the
+                  the Company. Generally, we may use the information in the
                   following ways and as described in this Privacy Policy:
                 </p>
 
@@ -302,7 +302,7 @@ function PrivacyPolicyPage() {
                       permitted by law, including by postal and email mail. You
                       may opt out of receiving marketing communications by
                       following the unsubscribe instructions included in
-                      marketing emails or by emailing us at support@arch3r.local.
+                      marketing emails or by emailing us at support@service.local.
                     </p>
                   </div>
 
@@ -679,10 +679,10 @@ function PrivacyPolicyPage() {
                   <p className="mt-2">
                     Email:{' '}
                     <a
-                      href="mailto:privacy@arch3r.local"
+                      href="mailto:privacy@service.local"
                       className="text-foreground-info hover:underline"
                     >
-                      privacy@arch3r.local
+                      privacy@service.local
                     </a>
                   </p>
                 </div>

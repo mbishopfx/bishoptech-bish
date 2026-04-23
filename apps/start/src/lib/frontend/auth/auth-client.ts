@@ -24,7 +24,7 @@ function resolveAuthClientBaseURL(): string {
       (process.env.NODE_ENV === 'test' ? 'http://localhost:3000' : '')
     if (!raw) {
       throw new Error(
-        'Missing BETTER_AUTH_URL. Set it to app origin (e.g. https://demo.arch3r.local).',
+        'Missing BETTER_AUTH_URL. Set it to the app origin (for example https://app.example.com).',
       )
     }
     return `${trimTrailingSlash(raw)}/api/auth`

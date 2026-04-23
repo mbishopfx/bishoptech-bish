@@ -423,7 +423,7 @@ async function ensureDefaultOrganizationForUser(input: {
  * exact same configuration that the app uses at runtime.
  */
 export const auth = betterAuth({
-  appName: 'ARCH3R',
+  appName: 'Workspace',
   baseURL: authBaseURL,
   basePath: '/api/auth',
   secret: requireEnv('BETTER_AUTH_SECRET'),
@@ -651,7 +651,7 @@ export const auth = betterAuth({
       maximumSessions: 10,
     }),
     twoFactor({
-      issuer: 'ARCH3R',
+      issuer: 'Workspace',
       totpOptions: {
         digits: 6,
         period: 30,

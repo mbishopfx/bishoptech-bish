@@ -115,7 +115,7 @@ export function BishOperatorPage({
   return (
     <BishPageShell
       eyebrow="Cross-tenant control"
-      title="ARCH3R Operator Console"
+      title="Operator Console"
       description="Monitor onboarding posture, queue pressure, and failure patterns across every tenant without losing the approval-first guardrails that keep external actions safe."
       icon={ShieldCheck}
       metrics={[
@@ -159,7 +159,7 @@ export function BishOperatorPage({
           {
             label: 'Active agents',
             value: totals.agents,
-            hint: 'Live ARCH3R agent instances currently running in tenant space.',
+            hint: 'Live agent instances currently running in tenant space.',
             tone: 'success',
           },
         ]}

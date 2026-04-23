@@ -37,7 +37,7 @@ export const Route = createFileRoute('/api/org/bish/uploads')({
           })
           if (!allowed) {
             throw new OrgKnowledgeUnauthorizedError({
-              message: 'Only organization admins can upload ARCH3R knowledge.',
+              message: 'Only organization admins can upload shared knowledge.',
               requestId,
             })
           }

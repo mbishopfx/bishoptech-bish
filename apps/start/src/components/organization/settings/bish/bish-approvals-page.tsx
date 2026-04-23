@@ -94,7 +94,7 @@ export function BishApprovalsPage({
   const [snapshot, setSnapshot] = useState(initialSnapshot)
   const [pendingId, setPendingId] = useState<string | null>(null)
   const [listenerSecret, setListenerSecret] = useState<string | null>(null)
-  const [installOrigin, setInstallOrigin] = useState('https://your-bish-domain.com')
+  const [installOrigin, setInstallOrigin] = useState('https://your-app-domain.com')
   const listenerWorkspaceDir = '/absolute/path/to/local/workspace'
   const primaryListener = snapshot.listeners[0]
   const [listenerLabel, setListenerLabel] = useState(
@@ -102,7 +102,7 @@ export function BishApprovalsPage({
   )
   const [listenerPrompt, setListenerPrompt] = useState(
     primaryListener?.systemPromptTemplate
-    ?? 'You are continuing an ARCH3R handoff on the local machine. Use the markdown handoff file as the source of truth, work directly in the local repository, and summarize what you changed before you stop.',
+    ?? 'You are continuing a local handoff on the machine. Use the markdown handoff file as the source of truth, work directly in the local repository, and summarize what you changed before you stop.',
   )
   const [defaultTarget, setDefaultTarget] = useState<'gemini' | 'codex'>(
     primaryListener?.defaultTarget === 'codex' ? 'codex' : 'gemini',
@@ -114,7 +114,7 @@ export function BishApprovalsPage({
     setListenerLabel(primaryListener?.label ?? 'Primary Listener')
     setListenerPrompt(
       primaryListener?.systemPromptTemplate
-      ?? 'You are continuing an ARCH3R handoff on the local machine. Use the markdown handoff file as the source of truth, work directly in the local repository, and summarize what you changed before you stop.',
+      ?? 'You are continuing a local handoff on the machine. Use the markdown handoff file as the source of truth, work directly in the local repository, and summarize what you changed before you stop.',
     )
     setDefaultTarget(primaryListener?.defaultTarget === 'codex' ? 'codex' : 'gemini')
   }, [primaryListener?.defaultTarget, primaryListener?.label, primaryListener?.systemPromptTemplate])
@@ -233,8 +233,8 @@ export function BishApprovalsPage({
   return (
     <BishPageShell
       eyebrow="Write approvals"
-      title="ARCH3R Approvals"
-      description="Keep external writes human-readable and easy to act on. Operators should understand what ARCH3R wants to do, which system it would touch, and why it is still waiting for a gate."
+      title="Approvals"
+      description="Keep external writes human-readable and easy to act on. Operators should understand what the system wants to do, which system it would touch, and why it is still waiting for a gate."
       icon={Shield}
       metrics={[
         {
@@ -265,7 +265,7 @@ export function BishApprovalsPage({
           {
             label: 'Agents',
             value: snapshot.stats.agentCount,
-            hint: 'Active ARCH3R agent instances in this organization.',
+            hint: 'Active agent instances in this organization.',
             tone: 'accent',
           },
           {
@@ -311,7 +311,7 @@ export function BishApprovalsPage({
 
       <BishSectionCard
         title="Local listener"
-        description="Register a customer-local daemon that can accept signed handoffs, launch Gemini or Codex on their machine, and loop selected repo artifacts back into ARCH3R knowledge."
+        description="Register a customer-local daemon that can accept signed handoffs, launch Gemini or Codex on their machine, and loop selected repo artifacts back into shared knowledge."
         action={
           <ListenerStatusBadge value={primaryListener?.status ?? 'awaiting_registration'} />
         }
@@ -417,7 +417,7 @@ export function BishApprovalsPage({
                 <p className="font-medium">Listener secret</p>
                 <p className="mt-2 break-all font-mono text-xs">{listenerSecret}</p>
                 <p className="mt-2 text-xs text-emerald-800">
-                  Copy this into the local listener install command now. ARCH3R only shows the raw secret immediately after rotation.
+                  Copy this into the local listener install flow now. The raw secret is only shown immediately after rotation.
                 </p>
               </div>
             ) : null}
@@ -468,17 +468,16 @@ export function BishApprovalsPage({
                 Install outline
               </p>
               <p className="text-sm text-foreground-secondary">
-                Run the local listener with your tunnel URL and the rotated secret, then let it register back to ARCH3R.
+                Run the local listener with your tunnel URL and the rotated secret, then let it register back to this workspace.
               </p>
             </div>
-            <pre className="overflow-x-auto rounded-xl border border-border-base bg-background px-3 py-3 text-xs text-foreground-primary">
-{`BISH_BASE_URL=${installOrigin}
-BISH_LISTENER_SECRET=<paste-secret>
-BISH_LISTENER_WORKSPACE_DIR=${listenerWorkspaceDir}
-BISH_LISTENER_RUNTIME_MODE=visible
-BISH_LISTENER_DEFAULT_TARGET=${defaultTarget}
-./start.sh`}
-            </pre>
+            <div className="rounded-xl border border-border-base bg-background px-3 py-3 text-sm text-foreground-secondary">
+              <p>1. Open the local listener `.env.local` file.</p>
+              <p>2. Set the app origin to <span className="font-mono text-xs text-foreground-primary">{installOrigin}</span>.</p>
+              <p>3. Paste the rotated listener secret.</p>
+              <p>4. Point the listener workspace to <span className="font-mono text-xs text-foreground-primary">{listenerWorkspaceDir}</span>.</p>
+              <p>5. Use <span className="font-mono text-xs text-foreground-primary">{defaultTarget}</span> as the default target and run <span className="font-mono text-xs text-foreground-primary">./start.sh</span>.</p>
+            </div>
             <div className="space-y-2 text-sm text-foreground-secondary">
               <p>Platform: {primaryListener?.platform ?? 'Unknown'}</p>
               <p>
@@ -487,12 +486,7 @@ BISH_LISTENER_DEFAULT_TARGET=${defaultTarget}
                   ? 'Rotate a secret, start the listener, and wait for registration.'
                   : 'Listener should now accept handoffs from chat.'}
               </p>
-              <p>
-                Operator bootstrap API:{' '}
-                <span className="font-mono text-xs text-foreground-primary">
-                  {`${installOrigin}/api/operator/bish/listener-secret`}
-                </span>
-              </p>
+              <p>Rotate the listener secret from this screen before first install.</p>
             </div>
           </div>
         </div>
@@ -580,14 +574,14 @@ BISH_LISTENER_DEFAULT_TARGET=${defaultTarget}
           showColumnToggle={false}
           tableWrapperClassName="rounded-none border-none bg-transparent"
           messages={{
-            noResults: 'No ARCH3R approvals yet.',
+            noResults: 'No approvals yet.',
           }}
         />
       </BishSectionCard>
 
       <BishSectionCard
         title="Recent handoffs"
-        description="Every local-machine dispatch is auditable so operators can see whether the listener received it, failed it, or pushed artifacts back into ARCH3R knowledge."
+        description="Every local-machine dispatch is auditable so operators can see whether the listener received it, failed it, or pushed artifacts back into shared knowledge."
       >
         <div className="space-y-3">
           {snapshot.handoffs.length === 0 ? (

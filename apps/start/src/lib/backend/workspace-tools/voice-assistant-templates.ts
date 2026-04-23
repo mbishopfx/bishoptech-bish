@@ -14,7 +14,7 @@ export const ARCH3R_VOICE_ASSISTANT_TEMPLATES: readonly Arch3rVoiceAssistantTemp
   [
     {
       key: 'arch3r-outbound-default',
-      name: 'ARCH3R Outbound Default',
+      name: 'Managed Outbound Default',
       description:
         'Default outbound calling assistant for lead follow-up, qualification, and transcript-driven summaries.',
       vapiProfile: 'managed_outbound_sales',

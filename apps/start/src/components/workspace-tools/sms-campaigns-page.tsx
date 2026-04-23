@@ -104,7 +104,7 @@ export function SmsCampaignsPage({
               SMS runtime
             </h2>
             <p className="mt-2 text-sm text-foreground-secondary">
-              Twilio credentials stay organization-owned, while ARCH3R keeps campaign lists, logs, and replies inside one workspace lane.
+              Twilio credentials stay organization-owned, while the workspace keeps campaign lists, logs, and replies inside one workspace lane.
             </p>
           </div>
           <FormDialog
@@ -117,7 +117,7 @@ export function SmsCampaignsPage({
               </Button>
             }
             title="Create SMS campaign"
-            description="Upload a CSV list, choose the base message, and ARCH3R will create a tracked batch."
+            description="Upload a CSV list, choose the base message, and the workspace will create a tracked batch."
             buttonText="Create campaign"
             handleSubmit={handleCreateCampaign}
           >
@@ -135,7 +135,7 @@ export function SmsCampaignsPage({
                 <Textarea
                   value={messageTemplate}
                   onChange={(event) => setMessageTemplate(event.target.value)}
-                  placeholder="Hi {{name}}, quick follow-up from the ARCH3R workspace..."
+                  placeholder="Hi {{name}}, quick follow-up from the workspace..."
                 />
               </div>
               <div className="space-y-2">

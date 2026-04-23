@@ -99,7 +99,7 @@ export function VoiceCampaignsPage({
                   </h3>
                   <p className="mt-2 text-sm text-foreground-secondary">
                     {assistant.providerMode === 'managed'
-                      ? 'Using the ARCH3R-managed Vapi runtime.'
+                      ? 'Using the managed Vapi runtime.'
                       : 'Using an organization-provided Vapi runtime.'}
                   </p>
                 </div>
@@ -156,7 +156,7 @@ export function VoiceCampaignsPage({
               </Button>
             }
             title="Create voice campaign"
-            description="Upload a CSV list and ARCH3R will build a campaign batch against the locked default assistant template."
+            description="Upload a CSV list and the workspace will build a campaign batch against the locked default assistant template."
             buttonText="Create campaign"
             handleSubmit={handleCreateCampaign}
           >

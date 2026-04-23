@@ -50,9 +50,25 @@ async function requireBishOrgSession() {
 async function requireBishOperatorSession() {
   const session = await requireBishOrgSession()
   if (!isBishOperatorEmail(session.email)) {
-    throw new Error('ARCH3R operator access is required')
+    throw new Error('Operator access is required')
   }
   return session
+}
+
+/**
+ * Operator access is an env-configured allowlist. Client components cannot read
+ * server env, so this adapter returns a boolean that the UI can safely consume.
+ */
+export async function getBishOperatorAccessAction(): Promise<{
+  readonly canAccessOperator: boolean
+}> {
+  const headers = getRequestHeaders()
+  const session = await getSessionFromHeaders(headers)
+  if (!session?.user?.id || session.user.isAnonymous) {
+    return { canAccessOperator: false }
+  }
+
+  return { canAccessOperator: isBishOperatorEmail(session.user.email) }
 }
 
 export async function getBishOrgSnapshotAction(): Promise<BishOrgDashboardSnapshot> {
