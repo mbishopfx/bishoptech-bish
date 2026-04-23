@@ -54,8 +54,8 @@ describe('projectSeatCycleBucket', () => {
         now: Date.UTC(2026, 2, 16, 0, 0, 0),
       }),
     ).toEqual({
-      totalNanoUsd: 3_096_774_194,
-      remainingNanoUsd: 1_096_774_194,
+      totalNanoUsd: 19_354_838_710,
+      remainingNanoUsd: 17_354_838_710,
     })
   })
 
@@ -75,8 +75,8 @@ describe('projectSeatCycleBucket', () => {
         now: Date.UTC(2026, 2, 16, 0, 0, 0),
       }),
     ).toEqual({
-      totalNanoUsd: 3_096_774_194,
-      remainingNanoUsd: 0,
+      totalNanoUsd: 19_354_838_710,
+      remainingNanoUsd: 10_354_838_710,
     })
   })
 

@@ -14,6 +14,7 @@ import {
 import type {
   ConnectedLoginMethodViewModel,
 } from './security-page-shared'
+import { readPublicRuntimeEnv } from '@/utils/public-runtime-env'
 
 export type ConnectedLoginMethodsLogicResult = {
   connectedLoginMethods: Array<ConnectedLoginMethodViewModel>
@@ -284,4 +285,3 @@ export function useConnectedLoginMethodsLogic(canEdit: boolean) {
     unlinkConnectedLoginMethod,
   }
 }
-import { readPublicRuntimeEnv } from '@/utils/public-runtime-env'

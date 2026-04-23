@@ -4,8 +4,8 @@ import {
   diffDirtyBaseline,
   selectMarketplaceBacklogItem,
   selectMergedCodexBranchesForDeletion,
-  type MarketplaceBacklogManifest,
 } from './marketplace-ops'
+import type { MarketplaceBacklogManifest } from './marketplace-ops'
 
 describe('marketplace automation helpers', () => {
   it('resumes the current in-progress backlog item before planned work', () => {

@@ -26,10 +26,10 @@ describe('resolveUsagePolicySnapshot', () => {
 
     expect(snapshot.planId).toBe('plus')
     expect(snapshot.enabled).toBe(true)
-    expect(snapshot.organizationMonthlyBudgetNanoUsd).toBe(usdToNanoUsd(6))
+    expect(snapshot.organizationMonthlyBudgetNanoUsd).toBe(usdToNanoUsd(37.5))
     expect(snapshot.hasOrganizationMonthlyBudgetOverride).toBe(false)
-    expect(snapshot.seatMonthlyBudgetNanoUsd).toBe(usdToNanoUsd(6))
-    expect(snapshot.seatCycleBudgetNanoUsd).toBe(usdToNanoUsd(6))
+    expect(snapshot.seatMonthlyBudgetNanoUsd).toBe(usdToNanoUsd(37.5))
+    expect(snapshot.seatCycleBudgetNanoUsd).toBe(usdToNanoUsd(37.5))
   })
 
   it('supports an explicit organization monthly budget override', () => {

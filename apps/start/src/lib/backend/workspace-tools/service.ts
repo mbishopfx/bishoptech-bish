@@ -7,26 +7,28 @@ import {
   ARCH3R_PLUGIN_DEFINITIONS,
   getArch3rIntegrationDefinition,
   getArch3rPluginDefinition,
-  type Arch3rEntitlementStatus,
-  type Arch3rIntegrationProviderKey,
-  type Arch3rIntegrationSummary,
-  type Arch3rPluginKey,
-  type Arch3rPluginReadinessStatus,
-  type Arch3rPluginStateSummary,
-  type Arch3rVoiceProviderMode,
-  type Arch3rWorkspaceDashboardSnapshot,
-  type CreateProjectCardInput,
-  type CreateProjectArtifactInput,
-  type CreateProjectInput,
-  type CreateSmsCampaignInput,
-  type CreateTicketInput,
-  type CreateVoiceCampaignInput,
-  type DecideTicketInput,
-  type UpsertIntegrationConfigInput,
-  type UpsertPluginActivationInput,
-  type UpsertProjectNoteInput,
-  type UpsertSocialPostInput,
-  type UpdateProjectMembersInput,
+} from '@/lib/shared/workspace-tools'
+import type {
+  Arch3rEntitlementStatus,
+  Arch3rIntegrationProviderKey,
+  Arch3rIntegrationSummary,
+  Arch3rPluginKey,
+  Arch3rPluginReadinessStatus,
+  Arch3rPluginStateSummary,
+  Arch3rVoiceProviderMode,
+  Arch3rWorkspaceDashboardSnapshot,
+  CreateProjectCardInput,
+  CreateProjectArtifactInput,
+  CreateProjectInput,
+  CreateSmsCampaignInput,
+  CreateTicketInput,
+  CreateVoiceCampaignInput,
+  DecideTicketInput,
+  UpdateProjectMembersInput,
+  UpsertIntegrationConfigInput,
+  UpsertPluginActivationInput,
+  UpsertProjectNoteInput,
+  UpsertSocialPostInput,
 } from '@/lib/shared/workspace-tools'
 
 type OrgPluginInstallationRow = {
@@ -109,7 +111,7 @@ function parseCsvRows(csv: string) {
     throw new Error('CSV must include a header row and at least one data row.')
   }
 
-  const headers = lines[0]!.split(',').map((cell) => cell.trim())
+  const headers = lines[0].split(',').map((cell) => cell.trim())
   return lines.slice(1).map((line, rowIndex) => {
     const values = line.split(',').map((cell) => cell.trim())
     const payload: Record<string, string> = {}

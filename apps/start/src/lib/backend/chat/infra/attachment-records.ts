@@ -4,9 +4,10 @@ import {
   sqlJson,
 } from '@/lib/backend/server-effect/services/upstream-postgres.service'
 import {
-  ORG_KNOWLEDGE_KIND,
-  type OrgKnowledgeSourceLane,
+  ORG_KNOWLEDGE_KIND
+  
 } from '@/lib/shared/org-knowledge'
+import type {OrgKnowledgeSourceLane} from '@/lib/shared/org-knowledge';
 
 export type AttachmentPersistenceRow = {
   readonly id: string

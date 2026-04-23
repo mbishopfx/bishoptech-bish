@@ -4,9 +4,9 @@ import { Effect } from 'effect'
 const mockCanUseOrganizationProviderKeys = vi.fn(() => true)
 const mockGetOrgAiPolicy = vi.fn()
 const mockUpsertOrgAiPolicy = vi.fn()
-const mockUpsertOrgProviderApiKey = vi.fn()
-const mockDeleteOrgProviderApiKey = vi.fn()
-const mockReadOrgProviderApiKeyStatus = vi.fn()
+const mockUpsertOrgProviderApiKeyEffect = vi.fn()
+const mockDeleteOrgProviderApiKeyEffect = vi.fn()
+const mockReadOrgProviderApiKeyStatusEffect = vi.fn()
 
 vi.mock('@/utils/app-feature-flags', () => ({
   get canUseOrganizationProviderKeys() {
@@ -20,9 +20,9 @@ vi.mock('@/lib/backend/model-policy/repository', () => ({
 }))
 
 vi.mock('@/lib/backend/byok/infra/provider-key-store', () => ({
-  upsertOrgProviderApiKey: mockUpsertOrgProviderApiKey,
-  deleteOrgProviderApiKey: mockDeleteOrgProviderApiKey,
-  readOrgProviderApiKeyStatus: mockReadOrgProviderApiKeyStatus,
+  upsertOrgProviderApiKeyEffect: mockUpsertOrgProviderApiKeyEffect,
+  deleteOrgProviderApiKeyEffect: mockDeleteOrgProviderApiKeyEffect,
+  readOrgProviderApiKeyStatusEffect: mockReadOrgProviderApiKeyStatusEffect,
 }))
 
 describe('ByokExecutorService', () => {
@@ -30,9 +30,9 @@ describe('ByokExecutorService', () => {
     mockCanUseOrganizationProviderKeys.mockReset()
     mockGetOrgAiPolicy.mockReset()
     mockUpsertOrgAiPolicy.mockReset()
-    mockUpsertOrgProviderApiKey.mockReset()
-    mockDeleteOrgProviderApiKey.mockReset()
-    mockReadOrgProviderApiKeyStatus.mockReset()
+    mockUpsertOrgProviderApiKeyEffect.mockReset()
+    mockDeleteOrgProviderApiKeyEffect.mockReset()
+    mockReadOrgProviderApiKeyStatusEffect.mockReset()
   })
 
   it('sets provider key and updates provider status snapshot', async () => {
@@ -40,11 +40,13 @@ describe('ByokExecutorService', () => {
 
     mockCanUseOrganizationProviderKeys.mockReturnValue(true)
     mockGetOrgAiPolicy.mockResolvedValue(undefined)
-    mockReadOrgProviderApiKeyStatus.mockResolvedValue({
-      openai: false,
-      anthropic: false,
-    })
-    mockUpsertOrgProviderApiKey.mockResolvedValue(undefined)
+    mockReadOrgProviderApiKeyStatusEffect.mockReturnValue(
+      Effect.succeed({
+        openai: false,
+        anthropic: false,
+      }),
+    )
+    mockUpsertOrgProviderApiKeyEffect.mockReturnValue(Effect.void)
     mockUpsertOrgAiPolicy.mockResolvedValue(undefined)
 
     const result = await Effect.runPromise(
@@ -58,7 +60,7 @@ describe('ByokExecutorService', () => {
       }).pipe(Effect.provide(ByokExecutorService.layer)),
     )
 
-    expect(mockUpsertOrgProviderApiKey).toHaveBeenCalledWith({
+    expect(mockUpsertOrgProviderApiKeyEffect).toHaveBeenCalledWith({
       organizationId: 'org-1',
       providerId: 'openai',
       apiKey: 'sk-valid',
@@ -74,11 +76,13 @@ describe('ByokExecutorService', () => {
 
     mockCanUseOrganizationProviderKeys.mockReturnValue(true)
     mockGetOrgAiPolicy.mockResolvedValue(undefined)
-    mockReadOrgProviderApiKeyStatus.mockResolvedValue({
-      openai: true,
-      anthropic: true,
-    })
-    mockDeleteOrgProviderApiKey.mockResolvedValue(undefined)
+    mockReadOrgProviderApiKeyStatusEffect.mockReturnValue(
+      Effect.succeed({
+        openai: true,
+        anthropic: true,
+      }),
+    )
+    mockDeleteOrgProviderApiKeyEffect.mockReturnValue(Effect.void)
     mockUpsertOrgAiPolicy.mockResolvedValue(undefined)
 
     const result = await Effect.runPromise(
@@ -91,7 +95,7 @@ describe('ByokExecutorService', () => {
       }).pipe(Effect.provide(ByokExecutorService.layer)),
     )
 
-    expect(mockDeleteOrgProviderApiKey).toHaveBeenCalledWith({
+    expect(mockDeleteOrgProviderApiKeyEffect).toHaveBeenCalledWith({
       organizationId: 'org-2',
       providerId: 'openai',
     })

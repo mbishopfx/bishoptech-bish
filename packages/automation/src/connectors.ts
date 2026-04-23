@@ -73,7 +73,7 @@ export const BISH_CONNECTOR_PROVIDER_DEFINITIONS = {
       { key: 'contacts.read', label: 'Read contacts' },
       { key: 'companies.read', label: 'Read companies' },
       { key: 'deals.read', label: 'Read deals' },
-      { key: 'activities.read', label: 'Read activities' },
+      { key: 'activities.read', label: 'Read activities', required: false },
     ],
     supportedSources: [
       {
@@ -101,6 +101,12 @@ export type BishConnectorProvider = (typeof BISH_CONNECTOR_PROVIDERS)[number]
 export type BishConnectorScopeDefinition = {
   readonly key: string
   readonly label: string
+  /**
+   * Scope defaults to required. Mark as optional (`required: false`) when
+   * missing access should skip only the dependent sources instead of forcing
+   * the connector into a `needs_auth` state.
+   */
+  readonly required?: boolean
 }
 
 export type BishConnectorSourceDefinition = {
@@ -391,10 +397,18 @@ class GoogleWorkspaceConnectorAdapter implements ConnectorAdapter {
     cursor: string | null,
   ): Promise<BishConnectorSyncResult> {
     const accessToken = await this.getAccessToken()
-    const modifiedAfter =
-      cursor && Number.isFinite(Number(cursor))
-        ? new Date(Number(cursor)).toISOString()
-        : null
+    const cursorMs = cursor && Number.isFinite(Number(cursor)) ? Number(cursor) : null
+    /**
+     * Drive `modifiedTime` values are RFC3339 with varying precision depending on
+     * the file type. If we query strictly for `modifiedTime > cursor`, we can
+     * miss updates that share the same timestamp as the cursor boundary (common
+     * when a batch of docs are edited/saved in quick succession). We skew the
+     * cursor backwards slightly and rely on fingerprint/upsert logic downstream
+     * to safely de-duplicate records.
+     */
+    const modifiedAfter = cursorMs
+      ? new Date(Math.max(0, cursorMs - 5_000)).toISOString()
+      : null
     const mimeFilter =
       sourceRef.sourceType === 'docs'
         ? `mimeType='application/vnd.google-apps.document'`
@@ -808,6 +822,14 @@ async function fetchJsonOrThrow<T>(input: {
   readonly body?: BodyInit | null
   readonly provider: BishConnectorProvider
   readonly operation: string
+  /**
+   * Optional override for 403 responses. This is mainly used for staged/optional
+   * lanes where we want to surface "missing scope" without forcing a connector
+   * back into `needs_auth` for otherwise healthy installs.
+   */
+  readonly forbiddenErrorCode?: ConnectorAdapterError['code']
+  readonly forbiddenMessage?: string
+  readonly forbiddenDetails?: Record<string, unknown>
 }): Promise<T> {
   const response = await fetch(input.url, {
     method: input.method ?? 'GET',
@@ -816,27 +838,37 @@ async function fetchJsonOrThrow<T>(input: {
   })
 
   if (response.status === 401) {
+    const body = await readResponseBodySnippet(response)
     throw new ConnectorAdapterError({
       code: 'CONNECTOR_API_UNAUTHORIZED',
       message: `${definitionFor(input.provider).label} returned 401 for ${input.operation}.`,
-      details: { url: input.url, status: response.status },
+      details: { url: input.url, status: response.status, body },
     })
   }
 
   if (response.status === 403) {
+    const body = await readResponseBodySnippet(response)
     throw new ConnectorAdapterError({
-      code: 'CONNECTOR_API_FORBIDDEN',
-      message: `${definitionFor(input.provider).label} returned 403 for ${input.operation}.`,
-      details: { url: input.url, status: response.status },
+      code: input.forbiddenErrorCode ?? 'CONNECTOR_API_FORBIDDEN',
+      message:
+        input.forbiddenMessage
+        ?? `${definitionFor(input.provider).label} returned 403 for ${input.operation}.`,
+      details: {
+        url: input.url,
+        status: response.status,
+        body,
+        ...(input.forbiddenDetails ?? {}),
+      },
     })
   }
 
   if (response.status === 429) {
     const retryAfter = response.headers.get('retry-after')
+    const body = await readResponseBodySnippet(response)
     throw new ConnectorAdapterError({
       code: 'CONNECTOR_API_RATE_LIMITED',
       message: `${definitionFor(input.provider).label} rate limited ${input.operation}.`,
-      details: { url: input.url, status: response.status, retryAfter },
+      details: { url: input.url, status: response.status, retryAfter, body },
     })
   }
 
@@ -932,8 +964,15 @@ class AsanaConnectorAdapter implements ConnectorAdapter {
     const workspace = await getAsanaPrimaryWorkspace(accessToken)
 
     const cursorMs =
-      cursor && Number.isFinite(Number(cursor)) ? Number(cursor) : Date.now() - 7 * 24 * 60 * 60_000
-    const modifiedSinceIso = new Date(cursorMs).toISOString()
+      cursor && Number.isFinite(Number(cursor))
+        ? Number(cursor)
+        : Date.now() - 7 * 24 * 60 * 60_000
+    /**
+     * Asana's `modified_since` filtering is inclusive and timestamps can be
+     * coarser than the millisecond cursor we store. Skew the window slightly so
+     * we do not miss modifications that land on the cursor boundary.
+     */
+    const modifiedSinceIso = new Date(Math.max(0, cursorMs - 60_000)).toISOString()
 
     const headers = { authorization: `Bearer ${accessToken}` }
     const records: BishConnectorSyncRecord[] = []
@@ -1120,6 +1159,31 @@ function hubSpotDeepLink(input: {
   return `https://app.hubspot.com/contacts/${encodeURIComponent(input.portalId)}/record/${input.objectTypeId}/${encodeURIComponent(input.recordId)}`
 }
 
+function stripHtmlTags(input: string): string {
+  return input.replace(/<[^>]+>/g, ' ')
+}
+
+function compactWhitespace(input: string): string {
+  return input.replace(/\s+/g, ' ').trim()
+}
+
+function truncateText(input: string, maxChars: number): string {
+  if (input.length <= maxChars) return input
+  return `${input.slice(0, Math.max(0, maxChars - 1)).trimEnd()}…`
+}
+
+function hubSpotActivityText(body: string | null | undefined): {
+  readonly summary: string | null
+  readonly content: string
+} {
+  const text = body ? compactWhitespace(stripHtmlTags(body)) : ''
+  const summary = text ? truncateText(text, 160) : null
+  return {
+    summary,
+    content: text || 'HubSpot activity body was empty.',
+  }
+}
+
 class HubSpotConnectorAdapter implements ConnectorAdapter {
   readonly provider = 'hubspot' as const
   readonly authMethod = definitionFor('hubspot').authMethod
@@ -1143,10 +1207,119 @@ class HubSpotConnectorAdapter implements ConnectorAdapter {
     const state = parseHubSpotCursor(cursor)
 
     if (sourceRef.sourceType === 'activities') {
-      // v1 maturity: we stage activities behind optional HubSpot scopes and add it
-      // once we have a clear API lane (emails vs calls vs meetings). Keep the
-      // worker pipeline stable by treating this as a valid-but-empty sync.
-      return { cursor: JSON.stringify(state), records: [] }
+      const body = {
+        filterGroups: [
+          {
+            filters: [
+              {
+                propertyName: 'hs_lastmodifieddate',
+                operator: 'GTE',
+                value: String(state.lastModifiedMs),
+              },
+            ],
+          },
+        ],
+        sorts: ['hs_lastmodifieddate'],
+        properties: ['hs_note_body', 'hs_timestamp', 'hs_lastmodifieddate'],
+        limit: 100,
+        after: state.after ?? undefined,
+      }
+
+      const payload = await fetchJsonOrThrow<HubSpotSearchResponse>({
+        url: 'https://api.hubapi.com/crm/v3/objects/notes/search',
+        method: 'POST',
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify(body),
+        provider: this.provider,
+        operation: 'search.notes',
+        forbiddenErrorCode: 'CONNECTOR_SCOPE_MISSING',
+        forbiddenMessage:
+          'HubSpot activities sync requires optional scope crm.objects.notes.read.',
+        forbiddenDetails: {
+          requiredScope: 'crm.objects.notes.read',
+          sourceType: sourceRef.sourceType,
+        },
+      })
+
+      let maxModifiedMs = state.lastModifiedMs
+      const records = payload.results.map((result) => {
+        const modifiedRaw = result.properties.hs_lastmodifieddate
+        const modifiedMs = Number(modifiedRaw)
+        if (Number.isFinite(modifiedMs)) {
+          maxModifiedMs = Math.max(maxModifiedMs, modifiedMs)
+        }
+
+        const occurredAtRaw = result.properties.hs_timestamp
+        const occurredAtMs = Number(occurredAtRaw)
+        const updatedAt = result.updatedAt
+          ? new Date(result.updatedAt).getTime()
+          : Number.isFinite(modifiedMs)
+            ? modifiedMs
+            : Date.now()
+
+        const activityText = hubSpotActivityText(result.properties.hs_note_body)
+        const title = activityText.summary
+          ? `HubSpot note: ${activityText.summary}`
+          : `HubSpot note ${result.id}`
+
+        const content = [
+          `HubSpot activity (note): ${result.id}`,
+          occurredAtMs ? `Occurred: ${new Date(occurredAtMs).toISOString()}` : null,
+          '',
+          activityText.content,
+        ]
+          .filter(Boolean)
+          .join('\n')
+
+        return {
+          sourceType: sourceRef.sourceType,
+          sourceRef: sourceRef.sourceRef,
+          externalId: result.id,
+          title,
+          content,
+          sourceUrl: null,
+          updatedAt,
+          fingerprint: fingerprintRecord({
+            provider: this.provider,
+            sourceType: sourceRef.sourceType,
+            externalId: result.id,
+            updatedAt,
+            content,
+          }),
+          payload: {
+            activityType: 'note',
+            summary: activityText.summary,
+            occurredAt: Number.isFinite(occurredAtMs) ? occurredAtMs : null,
+            properties: result.properties,
+          },
+          metadata: {
+            ingestionLane: 'hubspot_connector',
+            objectType: 'notes',
+            hubspot: {
+              id: result.id,
+              lastModifiedMs: Number.isFinite(modifiedMs) ? modifiedMs : null,
+            },
+          },
+          crmObjectType: 'activity',
+          proposedActions: [
+            {
+              title: 'Draft CRM enrichment',
+              approvalType: 'crm_update',
+              payload: { objectType: 'notes', externalId: result.id },
+            },
+          ],
+        } satisfies BishConnectorSyncRecord
+      })
+
+      const after = payload.paging?.next?.after ?? null
+      const nextCursor: HubSpotCursorState = after
+        ? { lastModifiedMs: state.lastModifiedMs, after }
+        : { lastModifiedMs: maxModifiedMs, after: null }
+
+      return { cursor: JSON.stringify(nextCursor), records }
     }
 
     const objectType =

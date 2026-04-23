@@ -12,6 +12,9 @@ export default defineConfig(() => {
   }
 
   process.env.VITEST = 'true'
+  if (!process.env.ZERO_UPSTREAM_DB?.trim()) {
+    process.env.ZERO_UPSTREAM_DB = 'postgres://example.local/bish'
+  }
 
   return {
     plugins: [tsconfigPaths({ projects: ['./tsconfig.json'] })],

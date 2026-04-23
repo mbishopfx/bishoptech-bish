@@ -6,9 +6,10 @@ import { Badge } from '@bish/ui/badge'
 import { Button } from '@bish/ui/button'
 import { ContentPage } from '@/components/layout'
 import {
-  getArch3rPluginDefinition,
-  type Arch3rPluginKey,
+  getArch3rPluginDefinition
+  
 } from '@/lib/shared/workspace-tools'
+import type {Arch3rPluginKey} from '@/lib/shared/workspace-tools';
 import { upsertPluginActivation } from '@/lib/frontend/workspace-tools/workspace-tools.functions'
 import { updateWorkspaceToolNavVisibility } from '@/lib/frontend/workspace-tools/nav-persistence'
 import { useAppAuth } from '@/lib/frontend/auth/use-auth'

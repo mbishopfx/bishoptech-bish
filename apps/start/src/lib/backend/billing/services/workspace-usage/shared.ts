@@ -154,7 +154,7 @@ export function isUsagePlanEligible(planId: WorkspacePlanId): planId is Exclude<
 }
 
 export function buildDisabledUsagePolicy(planId: WorkspacePlanId): UsagePolicySnapshot {
-  const seatPriceUsd = getWorkspacePlan(planId).monthlyPriceUsd
+  const seatPriceUsd = getWorkspacePlan(planId).includedAiBudgetUsd ?? 0
 
   return {
     featureKey: CHAT_USAGE_FEATURE_KEY,
@@ -183,7 +183,7 @@ export function resolveUsagePolicySnapshot(
   }
 
   const seatCount = Math.max(1, input?.seatCount ?? 1)
-  const seatPriceUsd = getWorkspacePlan(planId).monthlyPriceUsd
+  const seatPriceUsd = getWorkspacePlan(planId).includedAiBudgetUsd ?? 0
   const defaultSeatMonthlyBudgetNanoUsd = Math.max(
     0,
     Math.round(

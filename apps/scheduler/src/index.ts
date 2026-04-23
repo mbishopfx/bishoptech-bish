@@ -150,8 +150,9 @@ async function queueScheduledSyncs() {
     [staleBefore],
   )
 
+  let insertedCount = 0
   for (const row of result.rows) {
-    await pool.query(
+    const insertResult = await pool.query(
       `
         INSERT INTO connector_sync_jobs (
           id,
@@ -179,6 +180,9 @@ async function queueScheduledSyncs() {
           $4,
           $4
         )
+        -- Prevent duplicate active jobs if multiple schedulers/manual triggers race.
+        -- This matches the partial unique index on (connector_account_id) for queued/running jobs.
+        ON CONFLICT (connector_account_id) WHERE status IN ('queued', 'running') DO NOTHING
       `,
       [
         crypto.randomUUID(),
@@ -187,10 +191,12 @@ async function queueScheduledSyncs() {
         timestamp,
       ],
     )
+
+    insertedCount += insertResult.rowCount ?? 0
   }
 
-  if (result.rowCount) {
-    console.log(`Queued ${result.rowCount} scheduled sync jobs`)
+  if (insertedCount) {
+    console.log(`Queued ${insertedCount} scheduled sync jobs`)
   }
 }
 

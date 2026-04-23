@@ -9,8 +9,10 @@ import {
   encryptBishSecretJson,
   encryptBishSecretValue,
   getConnectorInstallReadiness,
+  getConnectorProviderDefinition,
   type EncryptedPayload,
   type BishConnectorProvider,
+  type BishConnectorSourceDefinition,
   type BishConnectorSyncRecord,
   toVectorLiteral,
 } from '@bish/automation'
@@ -373,6 +375,7 @@ async function getOAuthAccessToken(input: {
 }
 
 async function claimSyncJob() {
+  const timestamp = Date.now()
   const result = await pool.query<{
     id: string
     organization_id: string
@@ -397,7 +400,10 @@ async function claimSyncJob() {
           ON ca.id = csj.connector_account_id
           AND ca.organization_id = csj.organization_id
         WHERE csj.status = 'queued'
-        ORDER BY csj.created_at ASC
+          AND (csj.next_run_at IS NULL OR csj.next_run_at <= $1)
+        ORDER BY
+          COALESCE(csj.next_run_at, csj.created_at) ASC,
+          csj.created_at ASC
         LIMIT 1
         FOR UPDATE SKIP LOCKED
       )
@@ -416,7 +422,7 @@ async function claimSyncJob() {
         next_job.source_type,
         next_job.source_ref
     `,
-    [Date.now()],
+    [timestamp],
   )
 
   return result.rows[0] ?? null
@@ -569,6 +575,120 @@ async function recordConnectorFailure(input: {
       Date.now(),
     ],
   )
+}
+
+function isPgUndefinedTableError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false
+  return (error as { code?: unknown }).code === '42P01'
+}
+
+async function readGrantedScopeKeys(connectorAccountId: string): Promise<Set<string> | null> {
+  let result: { rows: Array<{ scope_key: string; granted: boolean }> }
+  try {
+    result = await pool.query<{ scope_key: string; granted: boolean }>(
+      `
+        SELECT scope_key, granted
+        FROM connector_scopes
+        WHERE connector_account_id = $1
+      `,
+      [connectorAccountId],
+    )
+  } catch (error) {
+    /**
+     * If the `connector_scopes` table does not exist yet, the worker should
+     * fall back to adapter discovery instead of crashing the sync loop.
+     */
+    if (isPgUndefinedTableError(error)) {
+      return null
+    }
+    throw error
+  }
+
+  /**
+   * During early deployments it is possible for the worker to run before the
+   * `connector_scopes` table exists or is backfilled. In that case we cannot
+   * reliably gate sources by scope and should fall back to adapter discovery.
+   */
+  if (!result.rows.length) {
+    return null
+  }
+
+  const granted = new Set<string>()
+  for (const row of result.rows) {
+    if (row.granted) {
+      granted.add(row.scope_key)
+    }
+  }
+
+  return granted
+}
+
+type ScopedSourceGate = {
+  readonly eligible: readonly BishConnectorSourceDefinition[]
+  readonly skippedOptional: ReadonlyArray<{
+    readonly sourceType: string
+    readonly displayName: string
+    readonly missingScopeKeys: readonly string[]
+  }>
+  readonly missingRequiredScopes: readonly string[]
+  readonly grantedScopeKeys: readonly string[] | null
+}
+
+async function gateSourcesByScopes(input: {
+  readonly provider: BishConnectorProvider
+  readonly connectorAccountId: string
+  readonly discoveredSources: readonly BishConnectorSourceDefinition[]
+}): Promise<ScopedSourceGate> {
+  const grantedScopes = await readGrantedScopeKeys(input.connectorAccountId)
+  if (!grantedScopes) {
+    return {
+      eligible: input.discoveredSources,
+      skippedOptional: [],
+      missingRequiredScopes: [],
+      grantedScopeKeys: null,
+    }
+  }
+
+  const scopeDefinitions = getConnectorProviderDefinition(input.provider).scopes
+  const requiredByKey = new Map(
+    scopeDefinitions.map((scope) => [scope.key, scope.required !== false]),
+  )
+
+  const skippedOptional: ScopedSourceGate['skippedOptional'] = []
+  const missingRequiredScopes = new Set<string>()
+  const eligible: BishConnectorSourceDefinition[] = []
+
+  for (const source of input.discoveredSources) {
+    const missing = source.defaultScopeKeys.filter((key) => !grantedScopes.has(key))
+    if (missing.length === 0) {
+      eligible.push(source)
+      continue
+    }
+
+    const hasRequiredMissing = missing.some((key) => requiredByKey.get(key) !== false)
+    if (hasRequiredMissing) {
+      for (const key of missing) {
+        if (requiredByKey.get(key) !== false) {
+          missingRequiredScopes.add(key)
+        }
+      }
+      eligible.push(source)
+      continue
+    }
+
+    skippedOptional.push({
+      sourceType: source.sourceType,
+      displayName: source.displayName,
+      missingScopeKeys: missing,
+    })
+  }
+
+  return {
+    eligible,
+    skippedOptional,
+    missingRequiredScopes: Array.from(missingRequiredScopes),
+    grantedScopeKeys: Array.from(grantedScopes),
+  }
 }
 
 async function ensureKnowledgeSource(input: {
@@ -789,6 +909,26 @@ async function findCrmDealId(input: {
   return result.rows[0]?.id ?? null
 }
 
+function asNullableString(value: unknown): string | null {
+  if (typeof value !== 'string') return null
+  const trimmed = value.trim()
+  return trimmed.length > 0 ? trimmed : null
+}
+
+function asRequiredString(value: unknown, fallback: string): string {
+  const candidate = asNullableString(value)
+  return candidate ?? fallback
+}
+
+function asNullableNumber(value: unknown): number | null {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null
+  if (typeof value === 'string') {
+    const parsed = Number(value)
+    return Number.isFinite(parsed) ? parsed : null
+  }
+  return null
+}
+
 async function upsertCrmProjection(input: {
   organizationId: string
   connectorAccountId: string
@@ -834,10 +974,10 @@ async function upsertCrmProjection(input: {
         input.organizationId,
         input.connectorAccountId,
         input.record.externalId,
-        String(payload.fullName ?? input.record.title),
-        typeof payload.email === 'string' ? payload.email : null,
-        typeof payload.phone === 'string' ? payload.phone : null,
-        typeof payload.lifecycleStage === 'string' ? payload.lifecycleStage : null,
+        asRequiredString(payload.fullName, input.record.title),
+        asNullableString(payload.email),
+        asNullableString(payload.phone),
+        asNullableString(payload.lifecycleStage),
         projectionMetadata,
         input.record.updatedAt,
         timestamp,
@@ -876,9 +1016,9 @@ async function upsertCrmProjection(input: {
         input.organizationId,
         input.connectorAccountId,
         input.record.externalId,
-        String(payload.companyName ?? input.record.title),
-        typeof payload.website === 'string' ? payload.website : null,
-        typeof payload.industry === 'string' ? payload.industry : null,
+        asRequiredString(payload.companyName, input.record.title),
+        asNullableString(payload.website),
+        asNullableString(payload.industry),
         projectionMetadata,
         input.record.updatedAt,
         timestamp,
@@ -957,10 +1097,10 @@ async function upsertCrmProjection(input: {
         input.record.externalId,
         companyId,
         contactId,
-        String(payload.dealName ?? input.record.title),
-        typeof payload.stage === 'string' ? payload.stage : null,
-        typeof payload.amount === 'number' ? payload.amount : null,
-        typeof payload.currency === 'string' ? payload.currency : null,
+        asRequiredString(payload.dealName, input.record.title),
+        asNullableString(payload.stage),
+        asNullableNumber(payload.amount),
+        asNullableString(payload.currency),
         projectionMetadata,
         input.record.updatedAt,
         timestamp,
@@ -1036,9 +1176,9 @@ async function upsertCrmProjection(input: {
         input.record.externalId,
         contactId,
         dealId,
-        typeof payload.activityType === 'string' ? payload.activityType : 'activity',
-        typeof payload.summary === 'string' ? payload.summary : input.record.title,
-        input.record.updatedAt,
+        asRequiredString(payload.activityType, 'activity'),
+        asNullableString(payload.summary) ?? input.record.title,
+        asNullableNumber(payload.occurredAt) ?? input.record.updatedAt,
         projectionMetadata,
         input.record.updatedAt,
         timestamp,
@@ -1321,6 +1461,38 @@ async function ingestKnowledgeRecord(input: {
   return 1
 }
 
+function connectorStatusForFailure(input: {
+  readonly provider: BishConnectorProvider
+  readonly code: string
+}): 'connected' | 'needs_auth' | 'config_required' {
+  if (input.code === 'CONNECTOR_ENV_MISSING') {
+    return 'config_required'
+  }
+
+  if (
+    input.code === 'CONNECTOR_AUTH_MISSING'
+    || input.code === 'CONNECTOR_AUTH_EXPIRED'
+    || input.code === 'CONNECTOR_AUTH_REFRESH_FAILED'
+    || input.code === 'CONNECTOR_API_UNAUTHORIZED'
+  ) {
+    return 'needs_auth'
+  }
+
+  if (input.code === 'CONNECTOR_API_FORBIDDEN') {
+    return input.provider === 'google_workspace' ? 'config_required' : 'needs_auth'
+  }
+
+  /**
+   * Missing scope is treated as a non-fatal, operator-actionable failure when it
+   * only affects optional ingestion lanes.
+   */
+  if (input.code === 'CONNECTOR_SCOPE_MISSING') {
+    return 'connected'
+  }
+
+  return 'connected'
+}
+
 async function processSyncJob() {
   const job = await claimSyncJob()
   if (!job) return false
@@ -1433,6 +1605,44 @@ async function processSyncJob() {
       return true
     }
 
+    const sourceGate = await gateSourcesByScopes({
+      provider: job.provider,
+      connectorAccountId: job.connector_account_id,
+      discoveredSources,
+    })
+
+    if (sourceGate.missingRequiredScopes.length > 0) {
+      await recordConnectorFailure({
+        organizationId: job.organization_id,
+        connectorAccountId: job.connector_account_id,
+        syncJobId: job.id,
+        code: 'CONNECTOR_AUTH_MISSING',
+        message: `Connector is missing required granted scopes: ${sourceGate.missingRequiredScopes.join(', ')}`,
+        details: {
+          provider: job.provider,
+          missingScopeKeys: sourceGate.missingRequiredScopes,
+          grantedScopeKeys: sourceGate.grantedScopeKeys,
+        },
+      })
+
+      await failSyncJob({
+        syncJobId: job.id,
+        expectedOrganizationId: job.organization_id,
+        errorMessage: `Missing required scopes: ${sourceGate.missingRequiredScopes.join(', ')}`,
+        timestamp,
+      })
+
+      await markConnectorStatus({
+        connectorAccountId: job.connector_account_id,
+        expectedOrganizationId: job.organization_id,
+        status: 'needs_auth',
+        timestamp,
+        onlyIfCurrentStatus: 'syncing',
+      })
+
+      return true
+    }
+
     /**
      * Connector sync jobs can target a single source (legacy `source_type`
      * scheduling) or request a full connector run (`source_type` null). The
@@ -1440,12 +1650,96 @@ async function processSyncJob() {
      * lanes without requiring one job per source type.
      */
     const requestedSourceType = job.source_type?.trim() || null
+    const eligibleSources = sourceGate.eligible
     const explicitSource =
       requestedSourceType
-        ? discoveredSources.find((source) => source.sourceType === requestedSourceType) ?? null
+        ? eligibleSources.find((source) => source.sourceType === requestedSourceType) ?? null
         : null
+
+    const requestedSourceDefinition = requestedSourceType
+      ? discoveredSources.find((source) => source.sourceType === requestedSourceType) ?? null
+      : null
+    const requestedSourceSkippedOptional = requestedSourceType
+      ? sourceGate.skippedOptional.find((source) => source.sourceType === requestedSourceType) ?? null
+      : null
+
+    /**
+     * When a sync job targets a single source type we treat it as an explicit
+     * operator intent (manual run, legacy scheduler, etc). If the requested
+     * source cannot run we fail the job with a typed connector error instead of
+     * silently fanning out to other lanes.
+     *
+     * This keeps the worker predictable for ops: the job should either run the
+     * requested lane or clearly report why it cannot.
+     */
+    if (requestedSourceType && !explicitSource) {
+      if (!requestedSourceDefinition) {
+        await recordConnectorFailure({
+          organizationId: job.organization_id,
+          connectorAccountId: job.connector_account_id,
+          syncJobId: job.id,
+          code: 'CONNECTOR_SOURCE_MISSING',
+          message: `Unknown connector source type requested: ${requestedSourceType}`,
+          details: {
+            provider: job.provider,
+            requestedSourceType,
+          },
+        })
+
+        await failSyncJob({
+          syncJobId: job.id,
+          expectedOrganizationId: job.organization_id,
+          errorMessage: `Unknown connector source type: ${requestedSourceType}`,
+          timestamp,
+        })
+
+        await markConnectorStatus({
+          connectorAccountId: job.connector_account_id,
+          expectedOrganizationId: job.organization_id,
+          status: 'connected',
+          timestamp,
+          onlyIfCurrentStatus: 'syncing',
+        })
+
+        return true
+      }
+
+      if (requestedSourceSkippedOptional) {
+        const missingScopesLabel = requestedSourceSkippedOptional.missingScopeKeys.join(', ')
+        await recordConnectorFailure({
+          organizationId: job.organization_id,
+          connectorAccountId: job.connector_account_id,
+          syncJobId: job.id,
+          code: 'CONNECTOR_SCOPE_MISSING',
+          message: `Connector source ${requestedSourceType} is missing optional scopes: ${missingScopesLabel}`,
+          details: {
+            provider: job.provider,
+            sourceType: requestedSourceType,
+            missingScopeKeys: requestedSourceSkippedOptional.missingScopeKeys,
+            grantedScopeKeys: sourceGate.grantedScopeKeys,
+          },
+        })
+
+        await failSyncJob({
+          syncJobId: job.id,
+          expectedOrganizationId: job.organization_id,
+          errorMessage: `Missing optional scopes for ${requestedSourceType}: ${missingScopesLabel}`,
+          timestamp,
+        })
+
+        await markConnectorStatus({
+          connectorAccountId: job.connector_account_id,
+          expectedOrganizationId: job.organization_id,
+          status: 'connected',
+          timestamp,
+          onlyIfCurrentStatus: 'syncing',
+        })
+
+        return true
+      }
+    }
     const syncSources =
-      explicitSource ? [explicitSource] : discoveredSources
+      explicitSource ? [explicitSource] : eligibleSources
 
     type SourceSyncSummary = {
       readonly sourceType: string
@@ -1468,6 +1762,7 @@ async function processSyncJob() {
     let totalRecordsRead = 0
     let totalDocumentsIndexed = 0
     let totalProposedActions = 0
+    const skippedOptionalSources = sourceGate.skippedOptional
 
     for (const source of syncSources) {
       const sourceType = source.sourceType
@@ -1598,14 +1893,7 @@ async function processSyncJob() {
         connectorAccountId: job.connector_account_id,
         expectedOrganizationId: job.organization_id,
         status:
-          fallbackCode === 'CONNECTOR_ENV_MISSING'
-            ? 'config_required'
-            : fallbackCode === 'CONNECTOR_AUTH_MISSING'
-                || fallbackCode === 'CONNECTOR_AUTH_EXPIRED'
-                || fallbackCode === 'CONNECTOR_AUTH_REFRESH_FAILED'
-                || fallbackCode === 'CONNECTOR_API_UNAUTHORIZED'
-              ? 'needs_auth'
-              : 'connected',
+          connectorStatusForFailure({ provider: job.provider, code: fallbackCode }),
         timestamp,
         onlyIfCurrentStatus: 'syncing',
       })
@@ -1613,21 +1901,15 @@ async function processSyncJob() {
       return true
     }
 
-    const shouldRequireAuth = failures.some(
-      (failure) =>
-        failure.code === 'CONNECTOR_AUTH_MISSING'
-        || failure.code === 'CONNECTOR_AUTH_EXPIRED'
-        || failure.code === 'CONNECTOR_AUTH_REFRESH_FAILED'
-        || failure.code === 'CONNECTOR_API_UNAUTHORIZED',
+    const postSyncStatus = failures.reduce<'connected' | 'needs_auth' | 'config_required'>(
+      (status, failure) => {
+        const next = connectorStatusForFailure({ provider: job.provider, code: failure.code })
+        if (status === 'config_required' || next === 'config_required') return 'config_required'
+        if (status === 'needs_auth' || next === 'needs_auth') return 'needs_auth'
+        return 'connected'
+      },
+      'connected',
     )
-    const shouldRequireConfig = failures.some(
-      (failure) => failure.code === 'CONNECTOR_ENV_MISSING',
-    )
-    const postSyncStatus = shouldRequireConfig
-      ? 'config_required'
-      : shouldRequireAuth
-        ? 'needs_auth'
-        : 'connected'
 
     await pool.query(
       `
@@ -1684,6 +1966,8 @@ async function processSyncJob() {
           cursorBySource: lastCursorBySource,
           proposedActionCount: totalProposedActions,
           partialFailures: failures.length > 0 ? failures : null,
+          skippedOptionalSources:
+            skippedOptionalSources.length > 0 ? skippedOptionalSources : null,
           sourceTypeMismatch:
             requestedSourceType && !explicitSource ? requestedSourceType : null,
         }),
@@ -1727,14 +2011,7 @@ async function processSyncJob() {
       connectorAccountId: job.connector_account_id,
       expectedOrganizationId: job.organization_id,
       status:
-        failureCode === 'CONNECTOR_ENV_MISSING'
-          ? 'config_required'
-          : failureCode === 'CONNECTOR_AUTH_MISSING'
-            || failureCode === 'CONNECTOR_AUTH_EXPIRED'
-            || failureCode === 'CONNECTOR_AUTH_REFRESH_FAILED'
-            || failureCode === 'CONNECTOR_API_UNAUTHORIZED'
-          ? 'needs_auth'
-          : 'connected',
+        connectorStatusForFailure({ provider: job.provider, code: failureCode }),
       timestamp,
       onlyIfCurrentStatus: 'syncing',
     })

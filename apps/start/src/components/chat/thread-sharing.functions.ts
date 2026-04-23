@@ -12,7 +12,7 @@ export const updateThreadParticipants = createServerFn({ method: 'POST' })
   )
   .handler(async ({ data }) => {
     const { updateThreadParticipantsAction } = await import(
-      './thread-sharing.server'
+      '@/lib/frontend/chat/thread-sharing.server'
     )
     return updateThreadParticipantsAction(data)
   })

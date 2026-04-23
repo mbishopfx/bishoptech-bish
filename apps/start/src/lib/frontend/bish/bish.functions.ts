@@ -67,6 +67,13 @@ export const getBishOperatorSnapshot = createServerFn({ method: 'GET' }).handler
   },
 )
 
+export const getBishOperatorAccess = createServerFn({ method: 'GET' }).handler(
+  async () => {
+    const { getBishOperatorAccessAction } = await import('./bish.server')
+    return getBishOperatorAccessAction()
+  },
+)
+
 export const createBishLocalListenerSecret = createServerFn({ method: 'POST' })
   .inputValidator((input: unknown) => createLocalListenerSecretInput.parse(input))
   .handler(async ({ data }) => {

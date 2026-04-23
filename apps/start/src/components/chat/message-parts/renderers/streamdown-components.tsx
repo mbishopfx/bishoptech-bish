@@ -61,7 +61,7 @@ function extractLanguage(className?: string): CodeBlockLanguage {
   if (!rawLanguage) return FALLBACK_LANGUAGE
 
   const normalized = LANGUAGE_ALIASES[rawLanguage] ?? rawLanguage
-  return normalized as CodeBlockLanguage
+  return normalized
 }
 
 function toLanguageLabel(language: string): string {

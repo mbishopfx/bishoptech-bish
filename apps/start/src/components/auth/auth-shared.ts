@@ -1,3 +1,5 @@
+import { readPublicRuntimeEnv } from '@/utils/public-runtime-env'
+
 const EMAIL_ADDRESS_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 export const AUTH_PASSWORD_MIN_LENGTH = 8
@@ -49,4 +51,3 @@ export function getDefaultAuthDisplayName(email: string): string {
 
   return candidate.charAt(0).toUpperCase() + candidate.slice(1)
 }
-import { readPublicRuntimeEnv } from '@/utils/public-runtime-env'

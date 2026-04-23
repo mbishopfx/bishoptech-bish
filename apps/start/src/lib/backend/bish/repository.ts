@@ -10,20 +10,22 @@ import {
 } from '@bish/automation'
 import {
   BISH_PROVIDER_LABELS,
-  BISH_PROVIDER_SCOPES,
-  type BishApprovalRequestSummary,
-  type BishCandidateVariantSummary,
-  type BishConnectorAccountSummary,
-  type BishConnectorProvider,
-  type BishOrgDashboardSnapshot,
-  type BishOperatorDashboardSnapshot,
-  type BishSyncJobSummary,
-  type CreateApprovalRequestInput,
-  type CreateCandidateVariantInput,
-  type CreateConnectorAccountInput,
-  type PromoteCandidateVariantInput,
-  type ResolveApprovalRequestInput,
-  type ScheduleConnectorSyncInput,
+  BISH_PROVIDER_SCOPES
+} from '@/lib/shared/bish'
+import type {
+  BishApprovalRequestSummary,
+  BishCandidateVariantSummary,
+  BishConnectorAccountSummary,
+  BishConnectorProvider,
+  BishOrgDashboardSnapshot,
+  BishOperatorDashboardSnapshot,
+  BishSyncJobSummary,
+  CreateApprovalRequestInput,
+  CreateCandidateVariantInput,
+  CreateConnectorAccountInput,
+  PromoteCandidateVariantInput,
+  ResolveApprovalRequestInput,
+  ScheduleConnectorSyncInput,
 } from '@/lib/shared/bish'
 
 type ConnectorRow = {
@@ -477,7 +479,7 @@ export async function scheduleConnectorSyncForOrganization(
 ) {
   const pool = requireZeroUpstreamPool()
   const timestamp = now()
-  const result = await pool.query<{ id: string }>(
+  const insertResult = await pool.query<{ id: string }>(
     `
       INSERT INTO connector_sync_jobs (
         id,
@@ -505,6 +507,10 @@ export async function scheduleConnectorSyncForOrganization(
         $7,
         $7
       )
+      -- Safety: prevent duplicate active jobs if a manual trigger races with the scheduler
+      -- or with another manual trigger. The conflict target matches the partial unique
+      -- index on (connector_account_id) for queued/running jobs.
+      ON CONFLICT (connector_account_id) WHERE status IN ('queued', 'running') DO NOTHING
       RETURNING id
     `,
     [
@@ -518,7 +524,25 @@ export async function scheduleConnectorSyncForOrganization(
     ],
   )
 
-  return result.rows[0]?.id ?? null
+  const insertedId = insertResult.rows[0]?.id ?? null
+  if (insertedId) return insertedId
+
+  const existingResult = await pool.query<{ id: string }>(
+    `
+      SELECT csj.id
+      FROM connector_sync_jobs csj
+      WHERE csj.organization_id = $1
+        AND csj.connector_account_id = $2
+        AND csj.status IN ('queued', 'running')
+      ORDER BY
+        CASE WHEN csj.status = 'running' THEN 0 ELSE 1 END,
+        csj.created_at ASC
+      LIMIT 1
+    `,
+    [organizationId, input.connectorAccountId],
+  )
+
+  return existingResult.rows[0]?.id ?? null
 }
 
 export async function createApprovalRequestForOrganization(

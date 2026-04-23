@@ -3,8 +3,10 @@ import {
   BISH_CONNECTOR_PROVIDERS,
   BISH_PROVIDER_LABELS,
   BISH_PROVIDER_SCOPES,
-  type BishConnectorInstallReadiness,
-  type BishConnectorProvider,
+} from '@bish/automation'
+import type {
+  BishConnectorInstallReadiness,
+  BishConnectorProvider,
 } from '@bish/automation'
 import type {
   LocalListenerActivityEntry,

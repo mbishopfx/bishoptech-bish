@@ -8,9 +8,10 @@ import {
 import { EMPTY_ORG_PROVIDER_KEY_STATUS } from '@/lib/shared/model-policy/types'
 import {
   ORG_KNOWLEDGE_KIND,
-  type OrgKnowledgeSourceLane,
-  summarizeOrgKnowledgeIndexError,
+  
+  summarizeOrgKnowledgeIndexError
 } from '@/lib/shared/org-knowledge'
+import type {OrgKnowledgeSourceLane} from '@/lib/shared/org-knowledge';
 import { OrgKnowledgePersistenceError } from '../domain/errors'
 
 type OrgKnowledgeRow = {

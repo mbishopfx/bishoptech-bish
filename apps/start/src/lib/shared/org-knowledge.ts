@@ -34,6 +34,9 @@ export function summarizeOrgKnowledgeIndexError(input?: string | null): string |
   const message = input.trim()
   if (!message) return undefined
 
+  if (message.toLowerCase().includes('qdrant')) {
+    return 'Vector store request failed'
+  }
   if (message.includes('timed out') || message.includes('AbortError')) {
     return 'Vector indexing timed out'
   }

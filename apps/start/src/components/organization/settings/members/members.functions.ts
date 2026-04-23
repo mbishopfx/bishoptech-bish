@@ -11,6 +11,8 @@ const createOrganizationMemberInput = z.object({
 export const createOrganizationMember = createServerFn({ method: 'POST' })
   .inputValidator((input: unknown) => createOrganizationMemberInput.parse(input))
   .handler(async ({ data }) => {
-    const { createOrganizationMemberAction } = await import('./members.server')
+    const { createOrganizationMemberAction } = await import(
+      '@/lib/frontend/organization/members.server'
+    )
     return createOrganizationMemberAction(data)
   })

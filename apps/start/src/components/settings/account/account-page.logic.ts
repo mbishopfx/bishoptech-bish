@@ -13,6 +13,7 @@ import {
 } from '@/lib/frontend/settings/account'
 import { getLocale, locales, setLocale } from '@/paraglide/runtime.js'
 import { m } from '@/paraglide/messages.js'
+import { readPublicRuntimeEnv } from '@/utils/public-runtime-env'
 
 type SupportedLocale = (typeof locales)[number]
 
@@ -393,4 +394,3 @@ export function useAccountPageLogic(): AccountPageLogicResult {
     applyAvatarChange,
   }
 }
-import { readPublicRuntimeEnv } from '@/utils/public-runtime-env'

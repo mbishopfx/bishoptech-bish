@@ -62,7 +62,14 @@ const HUBSPOT_REQUIRED_SCOPES = [
   'crm.objects.deals.read',
 ] as const
 
-const HUBSPOT_OPTIONAL_SCOPES = ['sales-email-read'] as const
+/**
+ * Optional HubSpot scopes are requested via the `optional_scope` parameter so
+ * operators can enable richer ingestion lanes (activity feed, etc) without
+ * blocking the base CRM sync (contacts/companies/deals).
+ *
+ * Today, the "activities" lane is backed by CRM notes.
+ */
+const HUBSPOT_OPTIONAL_SCOPES = ['crm.objects.notes.read'] as const
 
 const PROVIDER_ROUTE_LABELS = {
   asana: 'Asana',
@@ -75,8 +82,8 @@ const PROVIDER_ROUTE_LABELS = {
  * that the OAuth providers expect at authorization time.
  *
  * Asana's documented format is <resource>:<action>. HubSpot uses explicit CRM
- * scope names; activity reads are staged as optional `sales-email-read` access
- * because email engagement visibility is the first activity lane BISH needs.
+ * scope names; activity reads are staged as optional access so the connector can
+ * stay usable even when an org has not granted extended activity scopes yet.
  */
 function getProviderAuthorizationScopes(provider: 'asana' | 'hubspot') {
   if (provider === 'asana') {
@@ -244,7 +251,7 @@ async function updateConnectorAuthState(input: {
   await pool.query(
     `
       UPDATE connector_scopes
-      SET granted = CASE WHEN scope_key = ANY($1::text[]) THEN true ELSE granted END,
+      SET granted = scope_key = ANY($1::text[]),
           updated_at = $2
       WHERE connector_account_id = $3
     `,
@@ -265,7 +272,7 @@ function getGrantedInternalScopes(provider: 'asana' | 'hubspot', grantedProvider
     normalized.has('crm.objects.contacts.read') ? 'contacts.read' : null,
     normalized.has('crm.objects.companies.read') ? 'companies.read' : null,
     normalized.has('crm.objects.deals.read') ? 'deals.read' : null,
-    normalized.has('sales-email-read') ? 'activities.read' : null,
+    normalized.has('crm.objects.notes.read') ? 'activities.read' : null,
   ].filter((scope): scope is string => scope !== null)
 }
 

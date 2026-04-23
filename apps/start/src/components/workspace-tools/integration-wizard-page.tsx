@@ -9,9 +9,10 @@ import { Label } from '@bish/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@bish/ui/select'
 import { ContentPage } from '@/components/layout'
 import {
-  getArch3rIntegrationDefinition,
-  type Arch3rIntegrationProviderKey,
+  getArch3rIntegrationDefinition
+  
 } from '@/lib/shared/workspace-tools'
+import type {Arch3rIntegrationProviderKey} from '@/lib/shared/workspace-tools';
 import { upsertIntegrationConfig } from '@/lib/frontend/workspace-tools/workspace-tools.functions'
 import { toast } from 'sonner'
 import {

@@ -8,6 +8,8 @@ const exportHuddleNotesInput = z.object({
 export const exportHuddleNotes = createServerFn({ method: 'POST' })
   .inputValidator((input: unknown) => exportHuddleNotesInput.parse(input))
   .handler(async ({ data }) => {
-    const { exportHuddleNotesAction } = await import('./huddle.server')
+    const { exportHuddleNotesAction } = await import(
+      '@/lib/frontend/huddle/huddle.server'
+    )
     return exportHuddleNotesAction(data)
   })

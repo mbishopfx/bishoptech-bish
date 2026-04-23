@@ -98,7 +98,13 @@ export async function updateThreadParticipantsAction(
        set access_role = excluded.access_role,
            visibility = excluded.visibility,
            updated_at = excluded.updated_at`,
-      [`thread_member_${input.threadId}_${session.user.id}`, input.threadId, organizationId, session.user.id, now],
+      [
+        `thread_member_${input.threadId}_${session.user.id}`,
+        input.threadId,
+        organizationId,
+        session.user.id,
+        now,
+      ],
     )
 
     await client.query(
@@ -163,3 +169,4 @@ export async function updateThreadParticipantsAction(
     client.release()
   }
 }
+

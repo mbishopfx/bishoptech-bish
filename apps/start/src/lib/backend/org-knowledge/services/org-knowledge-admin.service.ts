@@ -10,9 +10,10 @@ import {
 import { readDirectTextFileContent } from '@/lib/backend/file/services/plain-text-file'
 import {
   ORG_KNOWLEDGE_KIND,
-  type OrgKnowledgeSourceLane,
-  summarizeOrgKnowledgeIndexError,
+  
+  summarizeOrgKnowledgeIndexError
 } from '@/lib/shared/org-knowledge'
+import type {OrgKnowledgeSourceLane} from '@/lib/shared/org-knowledge';
 import {
   CHAT_ATTACHMENT_UPLOAD_POLICY,
   ORG_KNOWLEDGE_UPLOAD_POLICY,

@@ -906,6 +906,9 @@ CREATE INDEX IF NOT EXISTS connector_sync_jobs_org_status
   ON connector_sync_jobs (organization_id, status, updated_at DESC);
 CREATE INDEX IF NOT EXISTS connector_sync_jobs_connector_status
   ON connector_sync_jobs (connector_account_id, status, updated_at DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS connector_sync_jobs_one_active_per_connector
+  ON connector_sync_jobs (connector_account_id)
+  WHERE status IN ('queued', 'running');
 
 -- connector_failures
 CREATE TABLE IF NOT EXISTS connector_failures (

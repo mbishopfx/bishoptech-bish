@@ -18,9 +18,8 @@ import {
 import { toast } from 'sonner'
 import { uploadFileToServer } from '@/lib/frontend/chat/upload'
 import { FolderOpen, Mic } from 'lucide-react'
-import { useZero } from '@rocicorp/zero/react'
+import { useZero, useQuery  } from '@rocicorp/zero/react'
 import { mutators, queries } from '@/integrations/zero'
-import { useQuery } from '@rocicorp/zero/react'
 import { useHuddleSession } from '@/components/huddle/huddle-session'
 import {
   WorkspaceEmptyState,
@@ -98,10 +97,10 @@ export function ProjectsPage({
       })
       setSnapshot((current) => ({
         ...current,
-        projects: nextProjects as ProjectsSnapshot['projects'],
+        projects: nextProjects,
       }))
       setSelectedProjectId(
-        (nextProjects as ProjectsSnapshot['projects'])[0]?.id ?? null,
+        (nextProjects)[0]?.id ?? null,
       )
       setNewProjectTitle('')
       setNewProjectDescription('')
@@ -124,7 +123,7 @@ export function ProjectsPage({
       })
       setSnapshot((current) => ({
         ...current,
-        projects: nextProjects as ProjectsSnapshot['projects'],
+        projects: nextProjects,
       }))
       setCardTitle('')
       setCardDescription('')
@@ -146,7 +145,7 @@ export function ProjectsPage({
       })
       setSnapshot((current) => ({
         ...current,
-        projects: nextProjects as ProjectsSnapshot['projects'],
+        projects: nextProjects,
       }))
       setNoteContent('')
       toast.success('Project note saved.')
@@ -168,7 +167,7 @@ export function ProjectsPage({
       })
       setSnapshot((current) => ({
         ...current,
-        projects: nextProjects as ProjectsSnapshot['projects'],
+        projects: nextProjects,
       }))
       setLinkLabel('')
       setLinkUrl('')
@@ -194,7 +193,7 @@ export function ProjectsPage({
       })
       setSnapshot((current) => ({
         ...current,
-        projects: nextProjects as ProjectsSnapshot['projects'],
+        projects: nextProjects,
       }))
       toast.success('Project file uploaded.')
     } catch (error) {

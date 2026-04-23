@@ -55,7 +55,7 @@ export function SocialPublishingPage({
             : undefined,
         },
       })
-      setSnapshot((current) => ({ ...current, posts: nextPosts as SocialSnapshot['posts'] }))
+      setSnapshot((current) => ({ ...current, posts: nextPosts }))
       setTitle('')
       setContent('')
       setScheduledFor('')

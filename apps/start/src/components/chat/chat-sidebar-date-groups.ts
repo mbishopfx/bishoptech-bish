@@ -21,11 +21,12 @@ function startOfLocalDay(timestamp: number): number | null {
     return null
   }
 
-  return new Date(
-    date.getFullYear(),
-    date.getMonth(),
-    date.getDate(),
-  ).getTime()
+  /**
+   * Use an UTC timestamp for the local calendar date. This avoids DST skew when
+   * comparing local-midnight instants (e.g. February vs March) while keeping
+   * the grouping anchored to the user's local day boundaries.
+   */
+  return Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())
 }
 
 /**

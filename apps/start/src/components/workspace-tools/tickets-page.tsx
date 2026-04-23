@@ -50,7 +50,7 @@ export function TicketsPage({
       })
       setSnapshot((current) => ({
         ...current,
-        tickets: nextTickets as TicketsSnapshot['tickets'],
+        tickets: nextTickets,
       }))
       setTitle('')
       setDescription('')
@@ -72,7 +72,7 @@ export function TicketsPage({
       })
       setSnapshot((current) => ({
         ...current,
-        tickets: nextTickets as TicketsSnapshot['tickets'],
+        tickets: nextTickets,
       }))
       toast.success(
         decision === 'approved'

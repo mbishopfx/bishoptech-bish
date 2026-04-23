@@ -119,9 +119,9 @@ HubSpot connectors use a standard OAuth code flow initiated from the BISH UI.
    - `crm.objects.companies.read`
    - `crm.objects.deals.read`
 
-Optional (staged):
+Optional:
 
-- `sales-email-read` (enables the future “activities” lane; current sync returns empty)
+- `crm.objects.notes.read` (enables the “activities” lane backed by CRM notes; without it the connector stays connected but skips that lane)
 
 ### Required environment variables
 
@@ -139,3 +139,8 @@ Optional:
 2. Click **Connect** and complete OAuth.
 3. Tokens are stored encrypted; the worker refreshes access tokens as needed.
 
+## Troubleshooting quick map
+
+- `config_required`: deployment is missing one or more required env vars for the provider (re-check the provider’s required env list above).
+- `needs_auth`: the connector does not have valid OAuth credentials (re-run **Connect** in the UI and confirm the OAuth app is installed/authorized).
+- HubSpot “activities” lane skipped: ensure `crm.objects.notes.read` is granted in the HubSpot app scope set, then reconnect.

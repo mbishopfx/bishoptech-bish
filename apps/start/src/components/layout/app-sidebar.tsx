@@ -22,10 +22,10 @@ import { Button } from '@bish/ui/button'
 import { directionClass, useDirection } from '@bish/ui/direction'
 import { SidebarGroupTooltip } from '@bish/ui/tooltip'
 import { cn } from '@bish/utils'
-import { isBishOperatorEmail } from '@/lib/backend/bish/operator-access'
 import { useAppAuth } from '@/lib/frontend/auth/use-auth'
 import { Link, useRouterState } from '@tanstack/react-router'
 import { waitForPageSettled } from '@/lib/frontend/performance/page-settled'
+import { getBishOperatorAccess } from '@/lib/frontend/bish/bish.functions'
 import {
   readWorkspaceToolNavPersistence,
   persistWorkspaceToolNavVisibility,
@@ -140,12 +140,34 @@ export const AppSidebar: ComponentType = () => {
   )
   const { isChatPageSidebarCollapsed } = usePageSidebarVisibility()
   const direction = useDirection()
-  const canAccessOperator = isBishOperatorEmail(user?.email)
+  const [canAccessOperator, setCanAccessOperator] = useState(false)
   const normalizedOrganizationId = activeOrganizationId?.trim() || null
   const [stickyPluginKeys, setStickyPluginKeys] = useState<
     readonly (keyof typeof WORKSPACE_PLUGIN_AREA_KEYS)[]
   >([])
   const [hasStickyPluginCache, setHasStickyPluginCache] = useState(false)
+
+  useEffect(() => {
+    if (loading || isAnonymous || !user) {
+      setCanAccessOperator(false)
+      return
+    }
+
+    let cancelled = false
+    void getBishOperatorAccess()
+      .then((result) => {
+        if (cancelled) return
+        setCanAccessOperator(Boolean(result?.canAccessOperator))
+      })
+      .catch(() => {
+        if (cancelled) return
+        setCanAccessOperator(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [isAnonymous, loading, user])
   const serverVisiblePluginKeys = useMemo(
     () =>
       (pluginInstallations ?? [])

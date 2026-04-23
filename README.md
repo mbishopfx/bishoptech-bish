@@ -306,7 +306,7 @@ External credential setup checklist:
 - HubSpot OAuth:
   - A HubSpot developer account + a public app created in the HubSpot developer portal
   - Redirect URI set to `HUBSPOT_REDIRECT_URI`
-  - Scopes: `crm.objects.contacts.read`, `crm.objects.companies.read`, `crm.objects.deals.read` (optional: `sales-email-read`)
+  - Scopes: `crm.objects.contacts.read`, `crm.objects.companies.read`, `crm.objects.deals.read` (optional: `crm.objects.notes.read`)
   - A HubSpot account user with permission to install/authorize the app (typically Super Admin)
 
 Google Picker uses a separate Google Cloud OAuth web application credential from the Workspace service account. In Google Cloud Console:
@@ -361,7 +361,7 @@ Current adapter maturity:
 
 - Google Workspace: Drive/Docs/Sheets ingestion is live.
 - Asana: Projects + portfolios sync, and tasks sync (assignee `me`) are live.
-- HubSpot: Contacts, companies, and deals sync are live; activities are staged behind optional scopes and return an empty sync result today.
+- HubSpot: Contacts/companies/deals are live; activities are live via CRM notes when `crm.objects.notes.read` is granted.
 
 ## Local Listener
 

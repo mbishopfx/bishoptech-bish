@@ -50,7 +50,7 @@ export function SmsCampaignsPage({
       })
       setSnapshot((current) => ({
         ...current,
-        campaigns: nextCampaigns as SmsSnapshot['campaigns'],
+        campaigns: nextCampaigns,
       }))
       setCampaignName('')
       setMessageTemplate('')
