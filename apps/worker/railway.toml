@@ -1,7 +1,10 @@
 [build]
 builder = "RAILPACK"
 buildCommand = "cd ../.. && bun install --frozen-lockfile"
-watchPatterns = ["/apps/worker/**", "/apps/start/src/lib/backend/**", "/apps/start/zero/**", "/package.json", "/bun.lock"]
+# Worker runtime behavior depends on shared connector/runtime packages as well as
+# backend code in apps/start. Keep the watch set broad enough that production
+# deploys are not skipped when the web app ships connector logic changes.
+watchPatterns = ["/apps/worker/**", "/apps/start/src/lib/backend/**", "/apps/start/zero/**", "/packages/**", "/package.json", "/bun.lock"]
 
 [deploy]
 startCommand = "cd ../.. && bun run app:worker"

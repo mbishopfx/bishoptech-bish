@@ -1,7 +1,10 @@
 [build]
 builder = "RAILPACK"
 buildCommand = "cd ../.. && bun install --frozen-lockfile"
-watchPatterns = ["/apps/scheduler/**", "/apps/start/src/lib/backend/**", "/apps/start/zero/**", "/package.json", "/bun.lock"]
+# The scheduler enqueues background work based on connector schema/runtime
+# contracts. Shared package changes need to trigger a fresh deployment here too,
+# otherwise web can advance while the queue scheduler keeps stale logic.
+watchPatterns = ["/apps/scheduler/**", "/apps/start/src/lib/backend/**", "/apps/start/zero/**", "/packages/**", "/package.json", "/bun.lock"]
 
 [deploy]
 startCommand = "cd ../.. && bun run app:scheduler"
