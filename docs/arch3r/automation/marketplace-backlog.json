@@ -1,11 +1,11 @@
 {
   "version": 1,
-  "updatedAt": "2026-04-22T00:00:00.000Z",
+  "updatedAt": "2026-04-24T12:01:33.314Z",
   "items": [
     {
       "pluginKey": "playbooks",
       "title": "Playbooks",
-      "status": "planned",
+      "status": "in_progress",
       "routeHref": "/playbooks",
       "valueHypothesis": "Reusable SOPs and step-by-step workflows create high daily utility without requiring external APIs.",
       "acceptanceChecklist": [
