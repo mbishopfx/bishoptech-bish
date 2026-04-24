@@ -30,7 +30,10 @@ function formatTimestamp(timestamp: number | null) {
   return new Date(timestamp).toLocaleString()
 }
 
-function getConnectorActionDefinition(connector: BishConnectorAccountSummary): {
+function getConnectorActionDefinition(
+  connector: BishConnectorAccountSummary,
+  providerSetup: BishConnectorInstallReadiness | null,
+): {
   readonly label: string
   readonly variant: 'ghost' | 'default'
   readonly disabled: boolean
@@ -45,7 +48,22 @@ function getConnectorActionDefinition(connector: BishConnectorAccountSummary): {
     }
   }
 
-  if (connector.status === 'config_required') {
+  if (!providerSetup) {
+    return {
+      label: 'Configure env',
+      variant: 'ghost',
+      disabled: true,
+      href: null,
+    }
+  }
+
+  /**
+   * Connector status is persisted in Postgres and can become stale relative to
+   * the current deployment env (for example after secrets are added/fixed).
+   * Use the provider readiness snapshot as the source of truth for whether we
+   * should allow a connect/activate action.
+   */
+  if (!providerSetup.configured) {
     return {
       label: 'Configure env',
       variant: 'ghost',
@@ -201,6 +219,11 @@ export function BishConnectorsPage({
   const [pendingConnectorActionId, setPendingConnectorActionId] = useState<
     string | null
   >(null)
+  const providerSetupByProvider = useMemo(() => {
+    return new Map(
+      snapshot.providerSetup.map((setup) => [setup.provider, setup]),
+    )
+  }, [snapshot.providerSetup])
 
   /**
    * OAuth callbacks land back on the connectors route with a compact query-string
@@ -296,7 +319,10 @@ export function BishConnectorsPage({
         },
         cell: ({ row }) => (
           (() => {
-            const action = getConnectorActionDefinition(row.original)
+            const action = getConnectorActionDefinition(
+              row.original,
+              providerSetupByProvider.get(row.original.provider) ?? null,
+            )
             const isSyncAction = action.href === null
             const isPending =
               isSyncAction
@@ -347,7 +373,7 @@ export function BishConnectorsPage({
         ),
       },
     ],
-    [pendingConnectorActionId, pendingSyncId],
+    [pendingConnectorActionId, pendingSyncId, providerSetupByProvider],
   )
 
   const jobColumns = useMemo<Array<DataTableColumnDef<BishSyncJobSummary>>>(

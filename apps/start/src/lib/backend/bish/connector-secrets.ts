@@ -49,6 +49,15 @@ function getBishEncryptionKey(): Buffer {
   )
 }
 
+/**
+ * Connector auth flows may redirect operators to third-party OAuth screens.
+ * Assert the encryption key is configured before we redirect so we do not
+ * accept OAuth installs that we cannot persist securely on callback.
+ */
+export function assertBishEncryptionKeyConfigured() {
+  void getBishEncryptionKey()
+}
+
 export function encryptBishSecretValue(value: string): EncryptedPayload {
   const iv = randomBytes(ENCRYPTION_IV_BYTES)
   const cipher = createCipheriv(ENCRYPTION_ALGORITHM, getBishEncryptionKey(), iv)
@@ -99,4 +108,3 @@ export function decryptBishSecretJson<T>(input: EncryptedPayload): T {
 export function __resetBishConnectorSecretsForTests() {
   encryptionKeyCache = undefined
 }
-

@@ -251,12 +251,14 @@ async function signJwtAssertion(
 }
 
 async function getGoogleWorkspaceAccessToken() {
+  const projectId = process.env.GOOGLE_WORKSPACE_PROJECT_ID?.trim()
   const clientEmail = process.env.GOOGLE_WORKSPACE_CLIENT_EMAIL?.trim()
   const privateKeyRaw = process.env.GOOGLE_WORKSPACE_PRIVATE_KEY?.trim()
   const impersonationAdmin =
     process.env.GOOGLE_WORKSPACE_IMPERSONATION_ADMIN?.trim()
 
   const missingEnv = [
+    !projectId ? 'GOOGLE_WORKSPACE_PROJECT_ID' : null,
     !clientEmail ? 'GOOGLE_WORKSPACE_CLIENT_EMAIL' : null,
     !privateKeyRaw ? 'GOOGLE_WORKSPACE_PRIVATE_KEY' : null,
     !impersonationAdmin ? 'GOOGLE_WORKSPACE_IMPERSONATION_ADMIN' : null,
@@ -273,6 +275,14 @@ async function getGoogleWorkspaceAccessToken() {
   const clientEmailValue = clientEmail!
   const privateKeyRawValue = privateKeyRaw!
   const impersonationAdminValue = impersonationAdmin!
+
+  /**
+   * `GOOGLE_WORKSPACE_PROJECT_ID` is not strictly required for the JWT assertion
+   * exchange, but we treat it as part of the connector contract because the
+   * service-account JSON key includes it and operators tend to manage Google
+   * secrets as a cohesive bundle.
+   */
+  void projectId
 
   const privateKey = normalizeGooglePrivateKey(privateKeyRawValue)
   const issuedAt = Math.floor(Date.now() / 1000)
@@ -441,6 +451,13 @@ mimeType='text/csv'
       url.searchParams.set('pageSize', String(Math.min(25, maxFiles - files.length)))
       url.searchParams.set('orderBy', 'modifiedTime desc')
       url.searchParams.set('q', queryParts.join(' and '))
+      /**
+       * Most Workspace tenants keep important artifacts in shared drives. The
+       * Drive API defaults to a user's "My Drive" scope, so we opt into shared
+       * drive listings to keep ingestion representative.
+       */
+      url.searchParams.set('supportsAllDrives', 'true')
+      url.searchParams.set('includeItemsFromAllDrives', 'true')
       if (pageToken) {
         url.searchParams.set('pageToken', pageToken)
       }
@@ -524,14 +541,17 @@ mimeType='text/csv'
 
   async fetchContent(recordRef: BishConnectorRecordReference): Promise<string> {
     const accessToken = await this.getAccessToken()
-    const metadataResponse = await fetch(
-      `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(recordRef.externalId)}?fields=id,name,mimeType`,
-      {
-        headers: {
-          authorization: `Bearer ${accessToken}`,
-        },
-      },
+    const metadataUrl = new URL(
+      `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(recordRef.externalId)}`,
     )
+    metadataUrl.searchParams.set('fields', 'id,name,mimeType')
+    metadataUrl.searchParams.set('supportsAllDrives', 'true')
+
+    const metadataResponse = await fetch(metadataUrl, {
+      headers: {
+        authorization: `Bearer ${accessToken}`,
+      },
+    })
     if (!metadataResponse.ok) {
       throw new ConnectorAdapterError({
         code: connectorErrorCodeForHttpStatus(metadataResponse.status),
@@ -547,8 +567,19 @@ mimeType='text/csv'
     const file = await metadataResponse.json() as GoogleDriveFile
     const exportPlan = GOOGLE_WORKSPACE_EXPORTS[file.mimeType]
     const downloadUrl = exportPlan
-      ? `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(recordRef.externalId)}/export?mimeType=${encodeURIComponent(exportPlan.mimeType)}`
-      : `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(recordRef.externalId)}?alt=media`
+      ? new URL(
+        `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(recordRef.externalId)}/export`,
+      )
+      : new URL(
+        `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(recordRef.externalId)}`,
+      )
+    if (exportPlan) {
+      downloadUrl.searchParams.set('mimeType', exportPlan.mimeType)
+    } else {
+      downloadUrl.searchParams.set('alt', 'media')
+    }
+    downloadUrl.searchParams.set('supportsAllDrives', 'true')
+
     const response = await fetch(downloadUrl, {
       headers: {
         authorization: `Bearer ${accessToken}`,
@@ -972,7 +1003,8 @@ class AsanaConnectorAdapter implements ConnectorAdapter {
      * coarser than the millisecond cursor we store. Skew the window slightly so
      * we do not miss modifications that land on the cursor boundary.
      */
-    const modifiedSinceIso = new Date(Math.max(0, cursorMs - 60_000)).toISOString()
+    const modifiedSinceMs = Math.max(0, cursorMs - 60_000)
+    const modifiedSinceIso = new Date(modifiedSinceMs).toISOString()
 
     const headers = { authorization: `Bearer ${accessToken}` }
     const records: BishConnectorSyncRecord[] = []
@@ -981,6 +1013,9 @@ class AsanaConnectorAdapter implements ConnectorAdapter {
       const updatedAtMs = entity.modified_at
         ? new Date(entity.modified_at).getTime()
         : Date.now()
+      if (updatedAtMs < modifiedSinceMs) {
+        return
+      }
       const content = [
         `${typeLabel}: ${entity.name}`,
         entity.notes ? `Notes: ${entity.notes}` : null,
@@ -1120,7 +1155,7 @@ class AsanaConnectorAdapter implements ConnectorAdapter {
 type HubSpotSearchResponse = {
   readonly results: ReadonlyArray<{
     readonly id: string
-    readonly properties: Record<string, string>
+    readonly properties: Record<string, string | null>
     readonly createdAt?: string
     readonly updatedAt?: string
   }>
@@ -1130,6 +1165,90 @@ type HubSpotSearchResponse = {
 type HubSpotCursorState = {
   readonly lastModifiedMs: number
   readonly after?: string | null
+}
+
+type HubSpotAssociationBatchResponse = {
+  readonly results?: ReadonlyArray<unknown>
+}
+
+/**
+ * HubSpot records often relate to other CRM objects (for example deals linked to
+ * contacts/companies). Sync payloads can optionally include those external IDs
+ * so downstream CRM projections can wire up relationships.
+ *
+ * Associations are best-effort:
+ * - Not all tenants grant the same CRM permissions.
+ * - HubSpot endpoints and association types can vary across objects.
+ * - We do not want association fetch failures to block the primary CRM sync.
+ */
+async function fetchHubSpotAssociationIds(input: {
+  readonly accessToken: string
+  readonly fromObjectType: string
+  readonly toObjectType: string
+  readonly recordIds: readonly string[]
+}): Promise<Record<string, readonly string[]>> {
+  if (input.recordIds.length === 0) return {}
+
+  try {
+    const response = await fetch(
+      `https://api.hubapi.com/crm/v3/associations/${encodeURIComponent(input.fromObjectType)}/${encodeURIComponent(input.toObjectType)}/batch/read`,
+      {
+        method: 'POST',
+        headers: {
+          authorization: `Bearer ${input.accessToken}`,
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          inputs: input.recordIds.map((id) => ({ id })),
+        }),
+      },
+    )
+
+    if (!response.ok) {
+      return {}
+    }
+
+    const payload = (await response.json()) as HubSpotAssociationBatchResponse
+    const results = Array.isArray(payload.results) ? payload.results : []
+    const mapping: Record<string, readonly string[]> = {}
+
+    for (const raw of results) {
+      if (!raw || typeof raw !== 'object') continue
+
+      const rawAny = raw as Record<string, unknown>
+      const from = rawAny.from
+      const fromId =
+        typeof from === 'object'
+        && from !== null
+        && 'id' in from
+        && typeof (from as { id?: unknown }).id === 'string'
+          ? String((from as { id: string }).id)
+          : typeof rawAny.fromObjectId === 'string'
+            ? rawAny.fromObjectId
+            : typeof rawAny.fromObjectId === 'number'
+              ? String(rawAny.fromObjectId)
+              : null
+
+      if (!fromId) continue
+
+      const to = Array.isArray(rawAny.to) ? rawAny.to : []
+      const toIds = to
+        .map((entry) => {
+          if (!entry || typeof entry !== 'object') return null
+          const id = (entry as Record<string, unknown>).id
+          if (typeof id === 'string') return id
+          if (typeof id === 'number') return String(id)
+          return null
+        })
+        .filter((value): value is string => Boolean(value))
+
+      mapping[fromId] = toIds
+    }
+
+    return mapping
+  } catch {
+    return {}
+  }
 }
 
 function parseHubSpotCursor(cursor: string | null): HubSpotCursorState {
@@ -1244,6 +1363,20 @@ class HubSpotConnectorAdapter implements ConnectorAdapter {
         },
       })
 
+      const noteIds = payload.results.map((result) => result.id)
+      const noteContacts = await fetchHubSpotAssociationIds({
+        accessToken,
+        fromObjectType: 'notes',
+        toObjectType: 'contacts',
+        recordIds: noteIds,
+      })
+      const noteDeals = await fetchHubSpotAssociationIds({
+        accessToken,
+        fromObjectType: 'notes',
+        toObjectType: 'deals',
+        recordIds: noteIds,
+      })
+
       let maxModifiedMs = state.lastModifiedMs
       const records = payload.results.map((result) => {
         const modifiedRaw = result.properties.hs_lastmodifieddate
@@ -1264,6 +1397,9 @@ class HubSpotConnectorAdapter implements ConnectorAdapter {
         const title = activityText.summary
           ? `HubSpot note: ${activityText.summary}`
           : `HubSpot note ${result.id}`
+
+        const associatedContacts = noteContacts[result.id] ?? []
+        const associatedDeals = noteDeals[result.id] ?? []
 
         const content = [
           `HubSpot activity (note): ${result.id}`,
@@ -1293,6 +1429,10 @@ class HubSpotConnectorAdapter implements ConnectorAdapter {
             activityType: 'note',
             summary: activityText.summary,
             occurredAt: Number.isFinite(occurredAtMs) ? occurredAtMs : null,
+            contactExternalId: associatedContacts[0] ?? null,
+            contactExternalIds: associatedContacts,
+            dealExternalId: associatedDeals[0] ?? null,
+            dealExternalIds: associatedDeals,
             properties: result.properties,
           },
           metadata: {
@@ -1366,6 +1506,26 @@ class HubSpotConnectorAdapter implements ConnectorAdapter {
       operation: `search.${objectType}`,
     })
 
+    const recordIds = payload.results.map((result) => result.id)
+    const dealContacts =
+      objectType === 'deals'
+        ? await fetchHubSpotAssociationIds({
+            accessToken,
+            fromObjectType: 'deals',
+            toObjectType: 'contacts',
+            recordIds,
+          })
+        : {}
+    const dealCompanies =
+      objectType === 'deals'
+        ? await fetchHubSpotAssociationIds({
+            accessToken,
+            fromObjectType: 'deals',
+            toObjectType: 'companies',
+            recordIds,
+          })
+        : {}
+
     let maxModifiedMs = state.lastModifiedMs
     const records = payload.results.map((result) => {
       const modifiedRaw = result.properties.hs_lastmodifieddate
@@ -1387,7 +1547,7 @@ class HubSpotConnectorAdapter implements ConnectorAdapter {
       const contentLines: string[] = [`${definitionFor(this.provider).label} ${objectType.slice(0, -1)}: ${title}`]
       for (const key of ['email', 'phone', 'lifecyclestage', 'domain', 'website', 'industry', 'dealstage', 'amount', 'hs_currency_code']) {
         const value = result.properties[key]
-        if (value) contentLines.push(`${key}: ${value}`)
+        if (typeof value === 'string' && value) contentLines.push(`${key}: ${value}`)
       }
 
       const sourceUrl =
@@ -1428,11 +1588,15 @@ class HubSpotConnectorAdapter implements ConnectorAdapter {
                 stage: result.properties.dealstage ?? null,
                 amount: (() => {
                   const raw = result.properties.amount
-                  if (!raw) return null
+                  if (typeof raw !== 'string' || !raw) return null
                   const parsed = Number(raw)
                   return Number.isFinite(parsed) ? parsed : null
                 })(),
                 currency: result.properties.hs_currency_code ?? null,
+                contactExternalId: (dealContacts[result.id]?.[0] ?? null),
+                contactExternalIds: dealContacts[result.id] ?? [],
+                companyExternalId: (dealCompanies[result.id]?.[0] ?? null),
+                companyExternalIds: dealCompanies[result.id] ?? [],
               }
 
       const content = contentLines.join('\n')

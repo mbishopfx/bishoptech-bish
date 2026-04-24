@@ -1,4 +1,5 @@
 import { Pool } from 'pg'
+import { listConnectorInstallReadiness } from '@bish/automation'
 
 /**
  * Scheduler responsibilities
@@ -131,6 +132,66 @@ async function rescueStaleSyncJobs() {
     `,
     [timestamp],
   )
+
+  /**
+   * Keep connector account statuses consistent with runtime env contracts.
+   *
+   * If the deployment is missing required env for a provider, do not leave
+   * connectors in a `connected` state (the worker will fail jobs immediately).
+   * This provides a faster operator signal and avoids queueing churn when the
+   * scheduler and worker are sharing the same environment.
+   */
+  const providerReadiness = listConnectorInstallReadiness(process.env)
+  const providersMissingEnv = providerReadiness
+    .filter((provider) => !provider.configured)
+    .map((provider) => provider.provider)
+  const providersConfigured = providerReadiness
+    .filter((provider) => provider.configured)
+    .map((provider) => provider.provider)
+  if (providersMissingEnv.length > 0) {
+    await pool.query(
+      `
+        UPDATE connector_accounts
+        SET status = 'config_required',
+            updated_at = $1
+        WHERE status = 'connected'
+          AND provider = ANY($2::text[])
+      `,
+      [timestamp, providersMissingEnv],
+    )
+  }
+
+  /**
+   * If env becomes configured after a connector was marked `config_required`,
+   * transition it back into an actionable auth state without waiting for a
+   * manual DB edit.
+   *
+   * - OAuth connectors: move back to `connected` when credentials exist;
+   *   otherwise move to `needs_auth` so the operator can reconnect.
+   * - Google Workspace: move to `connected` if previously activated; otherwise
+   *   move to `needs_auth` so the operator can activate.
+   */
+  if (providersConfigured.length > 0) {
+    await pool.query(
+      `
+        UPDATE connector_accounts
+        SET status = CASE
+          WHEN provider = 'google_workspace'
+            THEN CASE WHEN (metadata -> 'activation') IS NOT NULL THEN 'connected' ELSE 'needs_auth' END
+          WHEN provider IN ('asana', 'hubspot')
+            THEN CASE
+              WHEN encrypted_access_token IS NOT NULL OR (metadata -> 'oauth' -> 'credentials') IS NOT NULL THEN 'connected'
+              ELSE 'needs_auth'
+            END
+          ELSE status
+        END,
+        updated_at = $1
+        WHERE status = 'config_required'
+          AND provider = ANY($2::text[])
+      `,
+      [timestamp, providersConfigured],
+    )
+  }
 
   await pool.query(
     `

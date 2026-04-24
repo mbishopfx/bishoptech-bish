@@ -929,6 +929,23 @@ function asNullableNumber(value: unknown): number | null {
   return null
 }
 
+function asFirstExternalId(value: unknown): string | null {
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+    return trimmed.length > 0 ? trimmed : null
+  }
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? String(value) : null
+  }
+  if (Array.isArray(value)) {
+    for (const entry of value) {
+      const resolved = asFirstExternalId(entry)
+      if (resolved) return resolved
+    }
+  }
+  return null
+}
+
 async function upsertCrmProjection(input: {
   organizationId: string
   connectorAccountId: string
@@ -1028,20 +1045,26 @@ async function upsertCrmProjection(input: {
   }
 
   if (input.record.crmObjectType === 'deal') {
+    const contactExternalId = asFirstExternalId(
+      payload.contactExternalId ?? payload.contactExternalIds,
+    )
+    const companyExternalId = asFirstExternalId(
+      payload.companyExternalId ?? payload.companyExternalIds,
+    )
     const contactId =
-      typeof payload.contactExternalId === 'string'
+      contactExternalId
         ? await findCrmContactId({
             organizationId: input.organizationId,
             connectorAccountId: input.connectorAccountId,
-            externalContactId: payload.contactExternalId,
+            externalContactId: contactExternalId,
           })
         : null
     const companyId =
-      typeof payload.companyExternalId === 'string'
+      companyExternalId
         ? await findCrmCompanyId({
             organizationId: input.organizationId,
             connectorAccountId: input.connectorAccountId,
-            externalCompanyId: payload.companyExternalId,
+            externalCompanyId: companyExternalId,
           })
         : null
 
@@ -1110,20 +1133,26 @@ async function upsertCrmProjection(input: {
   }
 
   if (input.record.crmObjectType === 'activity') {
+    const contactExternalId = asFirstExternalId(
+      payload.contactExternalId ?? payload.contactExternalIds,
+    )
+    const dealExternalId = asFirstExternalId(
+      payload.dealExternalId ?? payload.dealExternalIds,
+    )
     const contactId =
-      typeof payload.contactExternalId === 'string'
+      contactExternalId
         ? await findCrmContactId({
             organizationId: input.organizationId,
             connectorAccountId: input.connectorAccountId,
-            externalContactId: payload.contactExternalId,
+            externalContactId: contactExternalId,
           })
         : null
     const dealId =
-      typeof payload.dealExternalId === 'string'
+      dealExternalId
         ? await findCrmDealId({
             organizationId: input.organizationId,
             connectorAccountId: input.connectorAccountId,
-            externalDealId: payload.dealExternalId,
+            externalDealId: dealExternalId,
           })
         : null
 

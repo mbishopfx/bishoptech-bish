@@ -1,6 +1,8 @@
 import { randomUUID } from 'node:crypto'
 import { requireZeroUpstreamPool } from '@/lib/backend/server-effect/infra/zero-upstream-pool'
+import { getConnectorInstallReadiness } from '@bish/automation'
 import {
+  assertBishEncryptionKeyConfigured,
   decryptBishSecretJson,
   encryptBishSecretJson,
   encryptBishSecretValue,
@@ -387,6 +389,13 @@ export async function beginConnectorAuthFlow(input: {
     throw new Error('Connector account not found.')
   }
 
+  const readiness = getConnectorInstallReadiness(account.provider, process.env)
+  if (!readiness.configured) {
+    throw new Error(
+      `${readiness.label} is missing required env: ${readiness.missingEnv.join(', ')}`,
+    )
+  }
+
   if (account.provider === 'google_workspace') {
     const adminEmail = process.env.GOOGLE_WORKSPACE_IMPERSONATION_ADMIN?.trim()
     if (!adminEmail) {
@@ -420,6 +429,12 @@ export async function beginConnectorAuthFlow(input: {
   }
 
   const nonce = randomUUID()
+  /**
+   * `assertBishEncryptionKeyConfigured` validates both presence and expected key
+   * length/encoding. This keeps operators from completing an OAuth flow only to
+   * discover that the callback cannot encrypt tokens for storage.
+   */
+  assertBishEncryptionKeyConfigured()
   const state = encodeState({
     organizationId: input.organizationId,
     connectorAccountId: account.id,
@@ -446,7 +461,7 @@ export async function beginConnectorAuthFlow(input: {
     `
       UPDATE connector_accounts
       SET metadata = $1::jsonb,
-          status = CASE WHEN status = 'config_required' THEN status ELSE 'needs_auth' END,
+          status = CASE WHEN status = 'connected' THEN status ELSE 'needs_auth' END,
           updated_at = $2
       WHERE id = $3
     `,
