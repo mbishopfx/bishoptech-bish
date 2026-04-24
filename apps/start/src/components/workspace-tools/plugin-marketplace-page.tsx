@@ -7,8 +7,9 @@ import { Button } from '@bish/ui/button'
 import { ContentPage } from '@/components/layout'
 import {
   getArch3rPluginDefinition
+  
 } from '@/lib/shared/workspace-tools'
-import type { Arch3rPluginKey } from '@/lib/shared/workspace-tools'
+import type {Arch3rPluginKey} from '@/lib/shared/workspace-tools';
 import { upsertPluginActivation } from '@/lib/frontend/workspace-tools/workspace-tools.functions'
 import { updateWorkspaceToolNavVisibility } from '@/lib/frontend/workspace-tools/nav-persistence'
 import { useAppAuth } from '@/lib/frontend/auth/use-auth'
@@ -42,9 +43,6 @@ export function PluginMarketplacePage({
     return {
       core: snapshot.plugins.filter(
         (plugin) => plugin.definition.category === 'core',
-      ),
-      operations: snapshot.plugins.filter(
-        (plugin) => plugin.definition.category === 'operations',
       ),
       campaigns: snapshot.plugins.filter(
         (plugin) => plugin.definition.category === 'campaigns',
@@ -132,7 +130,7 @@ export function PluginMarketplacePage({
         </div>
       </WorkspaceSurfaceCard>
 
-      {(['core', 'operations', 'campaigns', 'system'] as const).map((groupKey) => (
+      {(['core', 'campaigns', 'system'] as const).map((groupKey) => (
         <div key={groupKey} className="space-y-4">
           <div>
             <h2 className="text-lg font-semibold text-foreground-primary capitalize">
@@ -141,8 +139,6 @@ export function PluginMarketplacePage({
             <p className="text-sm text-foreground-secondary">
               {groupKey === 'core'
                 ? 'Always-installed collaboration tools that can be activated without add-on billing.'
-                : groupKey === 'operations'
-                  ? 'Operational add-ons for reusable internal workflows and standardized delivery.'
                 : groupKey === 'campaigns'
                   ? 'Revenue and outbound lanes gated by add-ons or enterprise access.'
                   : 'Platform management surfaces that stay available across every org.'}

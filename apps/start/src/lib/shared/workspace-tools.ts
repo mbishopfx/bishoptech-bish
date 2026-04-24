@@ -4,7 +4,6 @@ export const ARCH3R_PLUGIN_KEYS = [
   'marketplace',
   'projects',
   'ticket_triage',
-  'playbooks',
   'social_publishing',
   'voice_campaigns',
   'sms_campaigns',
@@ -12,7 +11,7 @@ export const ARCH3R_PLUGIN_KEYS = [
 
 export type Arch3rPluginKey = (typeof ARCH3R_PLUGIN_KEYS)[number]
 
-export type Arch3rPluginCategory = 'core' | 'operations' | 'campaigns' | 'system'
+export type Arch3rPluginCategory = 'core' | 'campaigns' | 'system'
 export type Arch3rPluginEntitlementMode = 'included' | 'addon'
 export type Arch3rEntitlementStatus = 'entitled' | 'locked'
 export type Arch3rPluginReadinessStatus =
@@ -67,16 +66,6 @@ export const ARCH3R_PLUGIN_DEFINITIONS: readonly Arch3rPluginDefinition[] = [
     entitlementMode: 'included',
     routeHref: '/tickets',
     navLabel: 'Tickets',
-  },
-  {
-    key: 'playbooks',
-    name: 'Playbooks',
-    description:
-      'Shared SOPs with reusable step-by-step workflows that teams can update without external integrations.',
-    category: 'operations',
-    entitlementMode: 'addon',
-    routeHref: '/playbooks',
-    navLabel: 'Playbooks',
   },
   {
     key: 'social_publishing',
@@ -296,26 +285,6 @@ export type Arch3rWorkspaceDashboardSnapshot = {
   }>
 }
 
-export type Arch3rPlaybookStepInput = {
-  readonly title: string
-  readonly content: string
-}
-
-export type Arch3rPlaybookSummary = {
-  readonly id: string
-  readonly title: string
-  readonly summary: string
-  readonly status: 'draft' | 'active' | 'archived'
-  readonly createdByUserId: string
-  readonly updatedAt: number
-  readonly steps: ReadonlyArray<{
-    readonly id: string
-    readonly title: string
-    readonly content: string
-    readonly position: number
-  }>
-}
-
 export const upsertPluginActivationInput = z.object({
   pluginKey: z.enum(ARCH3R_PLUGIN_KEYS),
   activationStatus: z.enum(['active', 'inactive']),
@@ -379,27 +348,6 @@ export const decideTicketInput = z.object({
   projectTitle: z.string().trim().max(160).optional(),
 })
 
-const playbookStepInput = z.object({
-  title: z.string().trim().min(1).max(140),
-  content: z.string().trim().min(2).max(2000),
-})
-
-/**
- * Playbooks stay intentionally lightweight: one summary plus an ordered set of
- * steps. Keeping the write payload explicit makes it easy to replace the full
- * sequence during edits without introducing partial step mutation bugs.
- */
-export const createPlaybookInput = z.object({
-  title: z.string().trim().min(2).max(160),
-  summary: z.string().trim().min(2).max(2000),
-  status: z.enum(['draft', 'active', 'archived']).default('draft'),
-  steps: z.array(playbookStepInput).min(1).max(25),
-})
-
-export const updatePlaybookInput = createPlaybookInput.extend({
-  playbookId: z.string().trim().min(1),
-})
-
 export const upsertSocialPostInput = z.object({
   title: z.string().trim().min(2).max(160),
   content: z.string().trim().min(2).max(5000),
@@ -449,8 +397,6 @@ export type UpdateProjectMembersInput = z.infer<
 >
 export type CreateTicketInput = z.infer<typeof createTicketInput>
 export type DecideTicketInput = z.infer<typeof decideTicketInput>
-export type CreatePlaybookInput = z.infer<typeof createPlaybookInput>
-export type UpdatePlaybookInput = z.infer<typeof updatePlaybookInput>
 export type UpsertSocialPostInput = z.infer<typeof upsertSocialPostInput>
 export type CreateVoiceCampaignInput = z.infer<typeof createVoiceCampaignInput>
 export type CreateSmsCampaignInput = z.infer<typeof createSmsCampaignInput>

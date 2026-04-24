@@ -1,6 +1,5 @@
 import { createServerFn } from '@tanstack/react-start'
 import {
-  createPlaybookInput,
   createProjectCardInput,
   createProjectArtifactInput,
   createProjectInput,
@@ -8,7 +7,6 @@ import {
   createTicketInput,
   createVoiceCampaignInput,
   decideTicketInput,
-  updatePlaybookInput,
   upsertIntegrationConfigInput,
   upsertPluginActivationInput,
   upsertProjectNoteInput,
@@ -45,13 +43,6 @@ export const getTicketsSnapshot = createServerFn({ method: 'GET' }).handler(
   async () => {
     const { getTicketsSnapshotAction } = await import('./workspace-tools.server')
     return getTicketsSnapshotAction()
-  },
-)
-
-export const getPlaybooksSnapshot = createServerFn({ method: 'GET' }).handler(
-  async () => {
-    const { getPlaybooksSnapshotAction } = await import('./workspace-tools.server')
-    return getPlaybooksSnapshotAction()
   },
 )
 
@@ -151,20 +142,6 @@ export const decideTicket = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => {
     const { decideTicketAction } = await import('./workspace-tools.server')
     return decideTicketAction(data)
-  })
-
-export const createPlaybook = createServerFn({ method: 'POST' })
-  .inputValidator((input: unknown) => createPlaybookInput.parse(input))
-  .handler(async ({ data }) => {
-    const { createPlaybookAction } = await import('./workspace-tools.server')
-    return createPlaybookAction(data)
-  })
-
-export const updatePlaybook = createServerFn({ method: 'POST' })
-  .inputValidator((input: unknown) => updatePlaybookInput.parse(input))
-  .handler(async ({ data }) => {
-    const { updatePlaybookAction } = await import('./workspace-tools.server')
-    return updatePlaybookAction(data)
   })
 
 export const upsertSocialPost = createServerFn({ method: 'POST' })

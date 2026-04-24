@@ -37,7 +37,6 @@ import { Route as appLayoutSocialRouteRouteImport } from './routes/(app)/_layout
 import { Route as appLayoutSmsRouteRouteImport } from './routes/(app)/_layout/sms/route'
 import { Route as appLayoutSettingsRouteRouteImport } from './routes/(app)/_layout/settings/route'
 import { Route as appLayoutProjectsRouteRouteImport } from './routes/(app)/_layout/projects/route'
-import { Route as appLayoutPlaybooksRouteRouteImport } from './routes/(app)/_layout/playbooks/route'
 import { Route as appLayoutOrganizationRouteRouteImport } from './routes/(app)/_layout/organization/route'
 import { Route as appLayoutOperatorRouteRouteImport } from './routes/(app)/_layout/operator/route'
 import { Route as appLayoutMarketplaceRouteRouteImport } from './routes/(app)/_layout/marketplace/route'
@@ -223,11 +222,6 @@ const appLayoutSettingsRouteRoute = appLayoutSettingsRouteRouteImport.update({
 const appLayoutProjectsRouteRoute = appLayoutProjectsRouteRouteImport.update({
   id: '/projects',
   path: '/projects',
-  getParentRoute: () => appLayoutRouteRoute,
-} as any)
-const appLayoutPlaybooksRouteRoute = appLayoutPlaybooksRouteRouteImport.update({
-  id: '/playbooks',
-  path: '/playbooks',
   getParentRoute: () => appLayoutRouteRoute,
 } as any)
 const appLayoutOrganizationRouteRoute =
@@ -516,7 +510,6 @@ export interface FileRoutesByFullPath {
   '/marketplace': typeof appLayoutMarketplaceRouteRoute
   '/operator': typeof appLayoutOperatorRouteRouteWithChildren
   '/organization': typeof appLayoutOrganizationRouteRouteWithChildren
-  '/playbooks': typeof appLayoutPlaybooksRouteRoute
   '/projects': typeof appLayoutProjectsRouteRoute
   '/settings': typeof appLayoutSettingsRouteRouteWithChildren
   '/sms': typeof appLayoutSmsRouteRoute
@@ -591,7 +584,6 @@ export interface FileRoutesByTo {
   '/marketplace': typeof appLayoutMarketplaceRouteRoute
   '/operator': typeof appLayoutOperatorRouteRouteWithChildren
   '/organization': typeof appLayoutOrganizationRouteRouteWithChildren
-  '/playbooks': typeof appLayoutPlaybooksRouteRoute
   '/projects': typeof appLayoutProjectsRouteRoute
   '/sms': typeof appLayoutSmsRouteRoute
   '/social': typeof appLayoutSocialRouteRoute
@@ -666,7 +658,6 @@ export interface FileRoutesById {
   '/(app)/_layout/marketplace': typeof appLayoutMarketplaceRouteRoute
   '/(app)/_layout/operator': typeof appLayoutOperatorRouteRouteWithChildren
   '/(app)/_layout/organization': typeof appLayoutOrganizationRouteRouteWithChildren
-  '/(app)/_layout/playbooks': typeof appLayoutPlaybooksRouteRoute
   '/(app)/_layout/projects': typeof appLayoutProjectsRouteRoute
   '/(app)/_layout/settings': typeof appLayoutSettingsRouteRouteWithChildren
   '/(app)/_layout/sms': typeof appLayoutSmsRouteRoute
@@ -744,7 +735,6 @@ export interface FileRouteTypes {
     | '/marketplace'
     | '/operator'
     | '/organization'
-    | '/playbooks'
     | '/projects'
     | '/settings'
     | '/sms'
@@ -819,7 +809,6 @@ export interface FileRouteTypes {
     | '/marketplace'
     | '/operator'
     | '/organization'
-    | '/playbooks'
     | '/projects'
     | '/sms'
     | '/social'
@@ -893,7 +882,6 @@ export interface FileRouteTypes {
     | '/(app)/_layout/marketplace'
     | '/(app)/_layout/operator'
     | '/(app)/_layout/organization'
-    | '/(app)/_layout/playbooks'
     | '/(app)/_layout/projects'
     | '/(app)/_layout/settings'
     | '/(app)/_layout/sms'
@@ -1183,13 +1171,6 @@ declare module '@tanstack/react-router' {
       path: '/projects'
       fullPath: '/projects'
       preLoaderRoute: typeof appLayoutProjectsRouteRouteImport
-      parentRoute: typeof appLayoutRouteRoute
-    }
-    '/(app)/_layout/playbooks': {
-      id: '/(app)/_layout/playbooks'
-      path: '/playbooks'
-      fullPath: '/playbooks'
-      preLoaderRoute: typeof appLayoutPlaybooksRouteRouteImport
       parentRoute: typeof appLayoutRouteRoute
     }
     '/(app)/_layout/organization': {
@@ -1672,7 +1653,6 @@ interface appLayoutRouteRouteChildren {
   appLayoutMarketplaceRouteRoute: typeof appLayoutMarketplaceRouteRoute
   appLayoutOperatorRouteRoute: typeof appLayoutOperatorRouteRouteWithChildren
   appLayoutOrganizationRouteRoute: typeof appLayoutOrganizationRouteRouteWithChildren
-  appLayoutPlaybooksRouteRoute: typeof appLayoutPlaybooksRouteRoute
   appLayoutProjectsRouteRoute: typeof appLayoutProjectsRouteRoute
   appLayoutSettingsRouteRoute: typeof appLayoutSettingsRouteRouteWithChildren
   appLayoutSmsRouteRoute: typeof appLayoutSmsRouteRoute
@@ -1689,7 +1669,6 @@ const appLayoutRouteRouteChildren: appLayoutRouteRouteChildren = {
   appLayoutMarketplaceRouteRoute: appLayoutMarketplaceRouteRoute,
   appLayoutOperatorRouteRoute: appLayoutOperatorRouteRouteWithChildren,
   appLayoutOrganizationRouteRoute: appLayoutOrganizationRouteRouteWithChildren,
-  appLayoutPlaybooksRouteRoute: appLayoutPlaybooksRouteRoute,
   appLayoutProjectsRouteRoute: appLayoutProjectsRouteRoute,
   appLayoutSettingsRouteRoute: appLayoutSettingsRouteRouteWithChildren,
   appLayoutSmsRouteRoute: appLayoutSmsRouteRoute,

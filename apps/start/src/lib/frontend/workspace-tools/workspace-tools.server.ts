@@ -1,7 +1,6 @@
 import { getRequestHeaders } from '@tanstack/react-start/server'
 import { getSessionFromHeaders } from '@/lib/backend/auth/services/server-session.service'
 import {
-  createPlaybook,
   createProject,
   createProjectCard,
   createProjectArtifact,
@@ -11,7 +10,6 @@ import {
   decideTicket,
   getWorkspaceDashboardSnapshot,
   getWorkspaceToolingSnapshot,
-  listPlaybooks,
   listOrganizationDirectory,
   listProjectsForWorkspace,
   listSmsCampaigns,
@@ -19,7 +17,6 @@ import {
   listTicketsForWorkspace,
   listVoiceAssistantInstances,
   listVoiceCampaigns,
-  updatePlaybook,
   updateProjectMembers,
   upsertIntegrationConfig,
   upsertPluginActivation,
@@ -27,7 +24,6 @@ import {
   upsertSocialPost,
 } from '@/lib/backend/workspace-tools/service'
 import type {
-  CreatePlaybookInput,
   CreateProjectCardInput,
   CreateProjectArtifactInput,
   CreateProjectInput,
@@ -35,7 +31,6 @@ import type {
   CreateTicketInput,
   CreateVoiceCampaignInput,
   DecideTicketInput,
-  UpdatePlaybookInput,
   UpsertIntegrationConfigInput,
   UpsertPluginActivationInput,
   UpsertProjectNoteInput,
@@ -108,14 +103,6 @@ export async function getTicketsSnapshotAction() {
     }),
   ])
   return { tickets, directory }
-}
-
-export async function getPlaybooksSnapshotAction() {
-  const session = await requireWorkspaceToolsSession()
-  const playbooks = await listPlaybooks({
-    organizationId: session.organizationId,
-  })
-  return { playbooks }
 }
 
 export async function getSocialPublishingSnapshotAction() {
@@ -243,24 +230,6 @@ export async function createTicketAction(input: CreateTicketInput) {
 export async function decideTicketAction(input: DecideTicketInput) {
   const session = await requireWorkspaceToolsSession()
   return decideTicket({
-    organizationId: session.organizationId,
-    userId: session.userId,
-    data: input,
-  })
-}
-
-export async function createPlaybookAction(input: CreatePlaybookInput) {
-  const session = await requireWorkspaceToolsSession()
-  return createPlaybook({
-    organizationId: session.organizationId,
-    userId: session.userId,
-    data: input,
-  })
-}
-
-export async function updatePlaybookAction(input: UpdatePlaybookInput) {
-  const session = await requireWorkspaceToolsSession()
-  return updatePlaybook({
     organizationId: session.organizationId,
     userId: session.userId,
     data: input,

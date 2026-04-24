@@ -12,13 +12,11 @@ import type {
   Arch3rEntitlementStatus,
   Arch3rIntegrationProviderKey,
   Arch3rIntegrationSummary,
-  Arch3rPlaybookSummary,
   Arch3rPluginKey,
   Arch3rPluginReadinessStatus,
   Arch3rPluginStateSummary,
   Arch3rVoiceProviderMode,
   Arch3rWorkspaceDashboardSnapshot,
-  CreatePlaybookInput,
   CreateProjectCardInput,
   CreateProjectArtifactInput,
   CreateProjectInput,
@@ -26,7 +24,6 @@ import type {
   CreateTicketInput,
   CreateVoiceCampaignInput,
   DecideTicketInput,
-  UpdatePlaybookInput,
   UpdateProjectMembersInput,
   UpsertIntegrationConfigInput,
   UpsertPluginActivationInput,
@@ -81,23 +78,6 @@ type OrgVoiceAssistantInstanceRow = {
   provisioning_status: string
   last_synced_at: string | number | null
   updated_at: string | number
-}
-
-type OrgPlaybookRow = {
-  id: string
-  title: string
-  summary: string
-  status: 'draft' | 'active' | 'archived'
-  created_by_user_id: string
-  updated_at: string | number
-}
-
-type OrgPlaybookStepRow = {
-  id: string
-  playbook_id: string
-  title: string
-  content: string
-  position: number
 }
 
 function now() {
@@ -788,50 +768,6 @@ export async function listTicketsForWorkspace(input: {
         : null,
     }
   })
-}
-
-/**
- * Playbooks are organization-scoped reference assets, so the read path keeps
- * the model simple: fetch the parent records and their ordered steps in one
- * pass, then shape the response in memory for the route loader.
- */
-export async function listPlaybooks(input: {
-  organizationId: string
-}): Promise<Arch3rPlaybookSummary[]> {
-  const pool = requireZeroUpstreamPool()
-  const [playbooksResult, stepsResult] = await Promise.all([
-    pool.query<OrgPlaybookRow>(
-      `select id, title, summary, status, created_by_user_id, updated_at
-         from playbook
-        where organization_id = $1
-        order by updated_at desc`,
-      [input.organizationId],
-    ),
-    pool.query<OrgPlaybookStepRow>(
-      `select id, playbook_id, title, content, position
-         from playbook_step
-        where organization_id = $1
-        order by playbook_id asc, position asc`,
-      [input.organizationId],
-    ),
-  ])
-
-  return playbooksResult.rows.map((playbook) => ({
-    id: playbook.id,
-    title: playbook.title,
-    summary: playbook.summary,
-    status: playbook.status,
-    createdByUserId: playbook.created_by_user_id,
-    updatedAt: toNumber(playbook.updated_at),
-    steps: stepsResult.rows
-      .filter((step) => step.playbook_id === playbook.id)
-      .map((step) => ({
-        id: step.id,
-        title: step.title,
-        content: step.content,
-        position: step.position,
-      })),
-  }))
 }
 
 export async function listOrganizationDirectory(input: {
@@ -1746,157 +1682,6 @@ export async function decideTicket(input: {
     organizationId: input.organizationId,
     userId: input.userId,
   })
-}
-
-/**
- * Playbook edits replace the full ordered step list in one transaction so the
- * page can treat the workflow as one document and never persist mixed old/new
- * step order after partial updates.
- */
-async function replacePlaybookSteps(input: {
-  pool: ReturnType<typeof requireZeroUpstreamPool>
-  playbookId: string
-  organizationId: string
-  steps: readonly { title: string; content: string }[]
-  timestamp: number
-}) {
-  await input.pool.query(
-    `delete from playbook_step
-      where playbook_id = $1
-        and organization_id = $2`,
-    [input.playbookId, input.organizationId],
-  )
-
-  for (const [position, step] of input.steps.entries()) {
-    await input.pool.query(
-      `insert into playbook_step (
-          id,
-          playbook_id,
-          organization_id,
-          title,
-          content,
-          position,
-          created_at,
-          updated_at
-        )
-        values ($1, $2, $3, $4, $5, $6, $7, $7)`,
-      [
-        crypto.randomUUID(),
-        input.playbookId,
-        input.organizationId,
-        step.title,
-        step.content,
-        position,
-        input.timestamp,
-      ],
-    )
-  }
-}
-
-export async function createPlaybook(input: {
-  organizationId: string
-  userId: string
-  data: CreatePlaybookInput
-}) {
-  const pool = requireZeroUpstreamPool()
-  const playbookId = crypto.randomUUID()
-  const timestamp = now()
-
-  await pool.query('begin')
-  try {
-    await pool.query(
-      `insert into playbook (
-          id,
-          organization_id,
-          title,
-          summary,
-          status,
-          created_by_user_id,
-          created_at,
-          updated_at
-        )
-        values ($1, $2, $3, $4, $5, $6, $7, $7)`,
-      [
-        playbookId,
-        input.organizationId,
-        input.data.title,
-        input.data.summary,
-        input.data.status,
-        input.userId,
-        timestamp,
-      ],
-    )
-
-    await replacePlaybookSteps({
-      pool,
-      playbookId,
-      organizationId: input.organizationId,
-      steps: input.data.steps,
-      timestamp,
-    })
-    await pool.query('commit')
-  } catch (error) {
-    await pool.query('rollback')
-    throw error
-  }
-
-  return listPlaybooks({ organizationId: input.organizationId })
-}
-
-export async function updatePlaybook(input: {
-  organizationId: string
-  userId: string
-  data: UpdatePlaybookInput
-}) {
-  const pool = requireZeroUpstreamPool()
-  const timestamp = now()
-  const existingResult = await pool.query<{ id: string }>(
-    `select id
-       from playbook
-      where id = $1
-        and organization_id = $2
-      limit 1`,
-    [input.data.playbookId, input.organizationId],
-  )
-
-  if (!existingResult.rows[0]) {
-    throw new Error('Playbook not found.')
-  }
-
-  await pool.query('begin')
-  try {
-    await pool.query(
-      `update playbook
-          set title = $3,
-              summary = $4,
-              status = $5,
-              updated_at = $6
-        where id = $1
-          and organization_id = $2`,
-      [
-        input.data.playbookId,
-        input.organizationId,
-        input.data.title,
-        input.data.summary,
-        input.data.status,
-        timestamp,
-      ],
-    )
-
-    await replacePlaybookSteps({
-      pool,
-      playbookId: input.data.playbookId,
-      organizationId: input.organizationId,
-      steps: input.data.steps,
-      timestamp,
-    })
-    await pool.query('commit')
-  } catch (error) {
-    await pool.query('rollback')
-    throw error
-  }
-
-  return listPlaybooks({ organizationId: input.organizationId })
 }
 
 export async function upsertSocialPost(input: {
