@@ -13,6 +13,14 @@ the worker/scheduler able to sync.
 
    - `BISH_ENCRYPTION_KEY`
 
+   Accepted formats:
+
+   - A raw 32-character secret
+   - A base64 string that decodes to 32 bytes
+
+   If the key format is invalid, connector auth flows will fail before redirecting
+   to third-party OAuth screens to avoid installs that cannot be persisted.
+
 2. **Database access**
 
    The web app, worker, and scheduler all read/write the same Postgres tables.
