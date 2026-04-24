@@ -479,6 +479,36 @@ export async function scheduleConnectorSyncForOrganization(
 ) {
   const pool = requireZeroUpstreamPool()
   const timestamp = now()
+
+  /**
+   * Multi-tenant + integrity guard:
+   * Connector sync jobs reference `connector_accounts(id)` via FK but the schema
+   * does not enforce that `connector_sync_jobs.organization_id` matches the
+   * connector's owning org. Without this check, a malicious/buggy client could
+   * enqueue a job that no worker will ever claim (worker requires org match),
+   * leaving a queued job stuck forever and polluting operator metrics.
+   */
+  const connectorResult = await pool.query<{ status: string }>(
+    `
+      SELECT status
+      FROM connector_accounts
+      WHERE id = $1
+        AND organization_id = $2
+      LIMIT 1
+    `,
+    [input.connectorAccountId, organizationId],
+  )
+  const connector = connectorResult.rows[0] ?? null
+  if (!connector) {
+    throw new Error('Connector account not found.')
+  }
+
+  if (connector.status !== 'connected') {
+    throw new Error(
+      `Connector account must be connected before scheduling a sync (current status: ${connector.status}).`,
+    )
+  }
+
   const insertResult = await pool.query<{ id: string }>(
     `
       INSERT INTO connector_sync_jobs (

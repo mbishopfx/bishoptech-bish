@@ -69,6 +69,35 @@ async function rescueStaleSyncJobs() {
   const timeoutMs = Number(process.env.BISH_SYNC_JOB_TIMEOUT_MS ?? 30 * 60_000)
   const cutoff = timestamp - timeoutMs
 
+  /**
+   * Schema integrity guard:
+   * `connector_sync_jobs.connector_account_id` is an FK, but nothing enforces
+   * that `connector_sync_jobs.organization_id` matches the owning org of the
+   * connector account. The worker refuses to claim mismatched jobs, so these
+   * can otherwise remain queued forever and skew operator metrics.
+   */
+  const mismatched = await pool.query(
+    `
+      UPDATE connector_sync_jobs csj
+      SET status = 'failed',
+          error_message = COALESCE(error_message, 'Sync job organization mismatch'),
+          completed_at = $1,
+          updated_at = $1
+      WHERE csj.status IN ('queued', 'running')
+        AND NOT EXISTS (
+          SELECT 1
+          FROM connector_accounts ca
+          WHERE ca.id = csj.connector_account_id
+            AND ca.organization_id = csj.organization_id
+        )
+    `,
+    [timestamp],
+  )
+
+  if (mismatched.rowCount) {
+    console.log(`Marked ${mismatched.rowCount} sync jobs as failed (org mismatch)`)
+  }
+
   const expired = await pool.query(
     `
       UPDATE connector_sync_jobs
