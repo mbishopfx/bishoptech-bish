@@ -46,6 +46,27 @@ const BUILT_IN_ADAPTERS: Record<string, SmokeAdapter> = {
       commit;
     `,
   },
+  playbooks: {
+    routeHref: '/playbooks',
+    sql: ({ organizationId, userId, now }) => `
+      begin;
+      insert into playbook (id, organization_id, title, summary, status, created_by_user_id, created_at, updated_at)
+      values ('smoke_playbook_${now}', '${organizationId}', 'Smoke Playbook ${now}', 'Automation smoke run', 'draft', '${userId}', ${now}, ${now});
+      insert into playbook_step (id, playbook_id, organization_id, title, content, position, created_at, updated_at)
+      values
+        ('smoke_playbook_step_1_${now}', 'smoke_playbook_${now}', '${organizationId}', 'Kickoff', 'Confirm scope and owner.', 0, ${now}, ${now}),
+        ('smoke_playbook_step_2_${now}', 'smoke_playbook_${now}', '${organizationId}', 'QA', 'Run the validation pass.', 1, ${now}, ${now});
+      update playbook
+         set title = 'Smoke Playbook ${now} Updated',
+             summary = 'Automation smoke run updated',
+             status = 'active',
+             updated_at = ${now + 1}
+       where id = 'smoke_playbook_${now}';
+      select count(*)::int from playbook where id = 'smoke_playbook_${now}';
+      delete from playbook where id = 'smoke_playbook_${now}';
+      commit;
+    `,
+  },
   social_publishing: {
     routeHref: '/social',
     sql: ({ organizationId, userId, now }) => `

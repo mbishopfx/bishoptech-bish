@@ -73,6 +73,7 @@ export type SidebarNavAreas = Record<
 export const MARKETPLACE_AREA_KEY = 'marketplace' as const
 export const PROJECTS_AREA_KEY = 'projects' as const
 export const TICKETS_AREA_KEY = 'ticket-triage' as const
+export const PLAYBOOKS_AREA_KEY = 'playbooks' as const
 export const SOCIAL_AREA_KEY = 'social-publishing' as const
 export const VOICE_AREA_KEY = 'voice-campaigns' as const
 export const SMS_AREA_KEY = 'sms-campaigns' as const
@@ -80,6 +81,7 @@ export const SMS_AREA_KEY = 'sms-campaigns' as const
 export const MARKETPLACE_HREF = '/marketplace'
 export const PROJECTS_HREF = '/projects'
 export const TICKETS_HREF = '/tickets'
+export const PLAYBOOKS_HREF = '/playbooks'
 export const SOCIAL_HREF = '/social'
 export const VOICE_HREF = '/voice'
 export const SMS_HREF = '/sms'
@@ -90,6 +92,8 @@ export const isProjectsPath = (pathname: string) =>
   isAreaPath(pathname, PROJECTS_HREF)
 export const isTicketsPath = (pathname: string) =>
   isAreaPath(pathname, TICKETS_HREF)
+export const isPlaybooksPath = (pathname: string) =>
+  isAreaPath(pathname, PLAYBOOKS_HREF)
 export const isSocialPath = (pathname: string) =>
   isAreaPath(pathname, SOCIAL_HREF)
 export const isVoicePath = (pathname: string) => isAreaPath(pathname, VOICE_HREF)
@@ -153,6 +157,28 @@ function ticketsNavArea(): SidebarNavAreaConfig {
             name: 'Queue',
             icon: WORKSPACE_PLUGIN_ICONS.ticket_triage,
             href: TICKETS_HREF,
+            exact: true,
+          },
+        ],
+      },
+    ],
+  }
+}
+
+function playbooksNavArea(): SidebarNavAreaConfig {
+  return {
+    title: 'Playbooks',
+    href: PLAYBOOKS_HREF,
+    description:
+      'Reusable SOPs and operating checklists that keep recurring delivery steps visible for the whole organization.',
+    icon: WORKSPACE_PLUGIN_ICONS.playbooks,
+    content: [
+      {
+        items: [
+          {
+            name: 'Library',
+            icon: WORKSPACE_PLUGIN_ICONS.playbooks,
+            href: PLAYBOOKS_HREF,
             exact: true,
           },
         ],
@@ -246,6 +272,7 @@ export const NAV_AREAS: SidebarNavAreas = {
   [MARKETPLACE_AREA_KEY]: marketplaceNavArea,
   [PROJECTS_AREA_KEY]: projectsNavArea,
   [TICKETS_AREA_KEY]: ticketsNavArea,
+  [PLAYBOOKS_AREA_KEY]: playbooksNavArea,
   [SOCIAL_AREA_KEY]: socialNavArea,
   [VOICE_AREA_KEY]: voiceNavArea,
   [SMS_AREA_KEY]: smsNavArea,
@@ -267,6 +294,7 @@ export function getCurrentArea(pathname: string): string | null {
   if (isMarketplacePath(pathname)) return MARKETPLACE_AREA_KEY
   if (isProjectsPath(pathname)) return PROJECTS_AREA_KEY
   if (isTicketsPath(pathname)) return TICKETS_AREA_KEY
+  if (isPlaybooksPath(pathname)) return PLAYBOOKS_AREA_KEY
   if (isSocialPath(pathname)) return SOCIAL_AREA_KEY
   if (isVoicePath(pathname)) return VOICE_AREA_KEY
   if (isSmsPath(pathname)) return SMS_AREA_KEY
