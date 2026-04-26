@@ -138,6 +138,9 @@ export const AppSidebar: ComponentType = () => {
   const [pluginInstallations] = useQuery(
     queries.workspaceTools.pluginInstallations({}),
   )
+  const [pluginEntitlements] = useQuery(
+    queries.workspaceTools.pluginEntitlements({}),
+  )
   const { isChatPageSidebarCollapsed } = usePageSidebarVisibility()
   const direction = useDirection()
   const [canAccessOperator, setCanAccessOperator] = useState(false)
@@ -169,19 +172,30 @@ export const AppSidebar: ComponentType = () => {
     }
   }, [isAnonymous, loading, user])
   const serverVisiblePluginKeys = useMemo(
-    () =>
-      (pluginInstallations ?? [])
-        .filter(
-          (installation) =>
-            installation.activationStatus === 'active' &&
-            installation.navVisible &&
-            installation.pluginKey in WORKSPACE_PLUGIN_AREA_KEYS,
-        )
-        .map(
-          (installation) =>
-            installation.pluginKey as keyof typeof WORKSPACE_PLUGIN_AREA_KEYS,
-        ),
-    [pluginInstallations],
+    () => {
+      const visible = new Set<keyof typeof WORKSPACE_PLUGIN_AREA_KEYS>()
+
+      for (const installation of pluginInstallations ?? []) {
+        if (
+          installation.activationStatus === 'active' &&
+          installation.pluginKey in WORKSPACE_PLUGIN_AREA_KEYS
+        ) {
+          visible.add(installation.pluginKey as keyof typeof WORKSPACE_PLUGIN_AREA_KEYS)
+        }
+      }
+
+      for (const entitlement of pluginEntitlements ?? []) {
+        if (
+          entitlement.entitlementStatus === 'entitled' &&
+          entitlement.pluginKey in WORKSPACE_PLUGIN_AREA_KEYS
+        ) {
+          visible.add(entitlement.pluginKey as keyof typeof WORKSPACE_PLUGIN_AREA_KEYS)
+        }
+      }
+
+      return [...visible]
+    },
+    [pluginEntitlements, pluginInstallations],
   )
 
   useEffect(() => {
@@ -246,9 +260,10 @@ export const AppSidebar: ComponentType = () => {
 
   const visiblePluginAreaKeys = useMemo(() => {
     const visible = new Set<string>([MARKETPLACE_AREA_KEY])
-    const effectivePluginKeys = hasStickyPluginCache
-      ? stickyPluginKeys
-      : serverVisiblePluginKeys
+    const effectivePluginKeys = new Set([
+      ...serverVisiblePluginKeys,
+      ...stickyPluginKeys,
+    ])
 
     for (const pluginKey of effectivePluginKeys) {
       visible.add(WORKSPACE_PLUGIN_AREA_KEYS[pluginKey])
@@ -261,7 +276,6 @@ export const AppSidebar: ComponentType = () => {
     return visible
   }, [
     effectiveCurrentArea,
-    hasStickyPluginCache,
     serverVisiblePluginKeys,
     stickyPluginKeys,
   ])

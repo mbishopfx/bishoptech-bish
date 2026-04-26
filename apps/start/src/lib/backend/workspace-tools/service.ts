@@ -278,9 +278,7 @@ function buildPluginStateSummaries(input: {
       activationStatus: installation?.activation_status ?? 'inactive',
       entitlementStatus,
       readinessStatus,
-      navVisible:
-        Boolean(installation?.nav_visible) &&
-        (definition.key === 'marketplace' || readinessStatus !== 'needs_entitlement'),
+      navVisible: entitlementStatus === 'entitled',
       activatedAt: toNullableNumber(installation?.activated_at),
     }
   })
