@@ -13,8 +13,10 @@ import {
   WorkspaceEmptyState,
   WorkspaceMetricGrid,
   WorkspaceSurfaceCard,
+  WorkspaceViewToggle,
   WORKSPACE_TOOL_BUTTON_CLASS_NAME,
 } from './workspace-tool-ui'
+import { VoiceCommandCenterPanel } from './voice-command-center-panel'
 
 type VoiceSnapshot = Awaited<
   ReturnType<
@@ -28,6 +30,7 @@ export function VoiceCampaignsPage({
   initialSnapshot: VoiceSnapshot
 }) {
   const [snapshot, setSnapshot] = useState(initialSnapshot)
+  const [view, setView] = useState<'campaigns' | 'command_center'>('command_center')
   const [campaignName, setCampaignName] = useState('')
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
 
@@ -62,182 +65,207 @@ export function VoiceCampaignsPage({
 
   return (
     <ContentPage
-      title="Voice Campaigns"
-      description="Cloud-run Vapi campaign scaffolds with managed-or-BYOK runtime ownership, CSV import, transcript capture, and shared export readiness."
+      title="Voice Operations"
+      description="Run managed-or-BYOK campaign workflows, or queue approval-gated local execution requests from the same ARCH3R lane."
     >
-      <WorkspaceMetricGrid
-        metrics={[
-          {
-            label: 'Assistants',
-            value: snapshot.assistants.length,
-            hint: 'Org-scoped assistant instances tracked against the active runtime mode.',
-          },
-          {
-            label: 'Campaigns',
-            value: snapshot.campaigns.length,
-            hint: 'Voice campaign batches visible inside the shared workspace.',
-          },
-          {
-            label: 'Imported Leads',
-            value: snapshot.campaigns.reduce(
-              (count, campaign) => count + campaign.rowCount,
-              0,
-            ),
-            hint: 'CSV lead rows already mapped into campaign batches.',
-          },
-        ]}
-      />
-
-      <div className="grid gap-4 xl:grid-cols-3">
-        {snapshot.assistants.length > 0 ? (
-          snapshot.assistants.map((assistant) => (
-            <WorkspaceSurfaceCard key={assistant.id}>
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <h3 className="text-lg font-semibold text-foreground-primary">
-                    {assistant.assistantTemplateKey}
-                  </h3>
-                  <p className="mt-2 text-sm text-foreground-secondary">
-                    {assistant.providerMode === 'managed'
-                      ? 'Using the managed Vapi runtime.'
-                      : 'Using an organization-provided Vapi runtime.'}
-                  </p>
-                </div>
-                <Badge variant="outline" className="border-border-base">
-                  {assistant.provisioningStatus}
-                </Badge>
-              </div>
-              <div className="mt-4 flex flex-wrap gap-2">
-                <Badge variant="outline" className="border-border-base">
-                  {assistant.providerMode}
-                </Badge>
-                {assistant.externalAssistantId ? (
-                  <Badge variant="outline" className="border-border-base">
-                    Assistant ID ready
-                  </Badge>
-                ) : null}
-                {assistant.phoneNumber ? (
-                  <Badge variant="outline" className="border-border-base">
-                    {assistant.phoneNumber}
-                  </Badge>
-                ) : null}
-              </div>
-            </WorkspaceSurfaceCard>
-          ))
-        ) : (
-          <WorkspaceEmptyState
-            className="xl:col-span-3"
-            title="No voice assistant instances exist yet."
-            description="The first campaign import will create the tracked assistant runtime for this organization."
-          />
-        )}
+      <div className="flex justify-end">
+        <WorkspaceViewToggle
+          value={view}
+          onChange={setView}
+          options={[
+            { value: 'command_center', label: 'Command Center' },
+            { value: 'campaigns', label: 'Campaigns' },
+          ]}
+        />
       </div>
 
-      <WorkspaceSurfaceCard>
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="text-xs uppercase tracking-[0.2em] text-foreground-secondary">
-              Outbound calls
-            </p>
-            <h2 className="mt-2 text-2xl font-semibold text-foreground-primary">
-              Outbound calling
-            </h2>
-            <p className="mt-2 text-sm text-foreground-secondary">
-              Vapi runs in the cloud. CSV import creates org-scoped lead batches and ties every campaign back to a managed or BYOK assistant instance.
-            </p>
+      {view === 'command_center' ? (
+        <VoiceCommandCenterPanel
+          snapshot={snapshot.commandCenter}
+          onSnapshotChange={(commandCenter) =>
+            setSnapshot((current) => ({
+              ...current,
+              commandCenter,
+            }))
+          }
+        />
+      ) : (
+        <>
+          <WorkspaceMetricGrid
+            metrics={[
+              {
+                label: 'Assistants',
+                value: snapshot.assistants.length,
+                hint: 'Org-scoped assistant instances tracked against the active runtime mode.',
+              },
+              {
+                label: 'Campaigns',
+                value: snapshot.campaigns.length,
+                hint: 'Voice campaign batches visible inside the shared workspace.',
+              },
+              {
+                label: 'Imported Leads',
+                value: snapshot.campaigns.reduce(
+                  (count, campaign) => count + campaign.rowCount,
+                  0,
+                ),
+                hint: 'CSV lead rows already mapped into campaign batches.',
+              },
+            ]}
+          />
+
+          <div className="grid gap-4 xl:grid-cols-3">
+            {snapshot.assistants.length > 0 ? (
+              snapshot.assistants.map((assistant) => (
+                <WorkspaceSurfaceCard key={assistant.id}>
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <h3 className="text-lg font-semibold text-foreground-primary">
+                        {assistant.assistantTemplateKey}
+                      </h3>
+                      <p className="mt-2 text-sm text-foreground-secondary">
+                        {assistant.providerMode === 'managed'
+                          ? 'Using the managed Vapi runtime.'
+                          : 'Using an organization-provided Vapi runtime.'}
+                      </p>
+                    </div>
+                    <Badge variant="outline" className="border-border-base">
+                      {assistant.provisioningStatus}
+                    </Badge>
+                  </div>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <Badge variant="outline" className="border-border-base">
+                      {assistant.providerMode}
+                    </Badge>
+                    {assistant.externalAssistantId ? (
+                      <Badge variant="outline" className="border-border-base">
+                        Assistant ID ready
+                      </Badge>
+                    ) : null}
+                    {assistant.phoneNumber ? (
+                      <Badge variant="outline" className="border-border-base">
+                        {assistant.phoneNumber}
+                      </Badge>
+                    ) : null}
+                  </div>
+                </WorkspaceSurfaceCard>
+              ))
+            ) : (
+              <WorkspaceEmptyState
+                className="xl:col-span-3"
+                title="No voice assistant instances exist yet."
+                description="The first campaign import will create the tracked assistant runtime for this organization."
+              />
+            )}
           </div>
-          <FormDialog
-            trigger={
-              <Button
-                size="default"
-                className={WORKSPACE_TOOL_BUTTON_CLASS_NAME}
-              >
-                Import Leads
-              </Button>
-            }
-            title="Create voice campaign"
-            description="Upload a CSV list and the workspace will build a campaign batch against the locked default assistant template."
-            buttonText="Create campaign"
-            handleSubmit={handleCreateCampaign}
-          >
-            <div className="space-y-3">
-              <div className="space-y-2">
-                <Label>Campaign name</Label>
-                <Input
-                  value={campaignName}
-                  onChange={(event) => setCampaignName(event.target.value)}
-                  placeholder="April Follow-up Calls"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>CSV file</Label>
-                <Input
-                  type="file"
-                  accept=".csv,text/csv"
-                  onChange={(event) =>
-                    setSelectedFile(event.target.files?.[0] ?? null)
-                  }
-                />
-              </div>
-            </div>
-          </FormDialog>
-        </div>
-      </WorkspaceSurfaceCard>
 
-      <div className="grid gap-4">
-        {snapshot.campaigns.length > 0 ? (
-          snapshot.campaigns.map((campaign) => (
-            <WorkspaceSurfaceCard key={campaign.id}>
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <h3 className="text-xl font-semibold text-foreground-primary">
-                    {campaign.title}
-                  </h3>
-                  <p className="mt-2 text-sm text-foreground-secondary">
-                    Template: {campaign.assistantTemplateKey}
-                  </p>
-                </div>
-                <Badge variant="outline" className="border-border-base">
-                  {campaign.status}
-                </Badge>
+          <WorkspaceSurfaceCard>
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs uppercase tracking-[0.2em] text-foreground-secondary">
+                  Outbound calls
+                </p>
+                <h2 className="mt-2 text-2xl font-semibold text-foreground-primary">
+                  Outbound calling
+                </h2>
+                <p className="mt-2 text-sm text-foreground-secondary">
+                  Vapi runs in the cloud. CSV import creates org-scoped lead batches and ties every campaign back to a managed or BYOK assistant instance.
+                </p>
               </div>
-              <div className="mt-4 flex flex-wrap gap-2">
-                <Badge variant="outline" className="border-border-base">
-                  {campaign.rowCount} imported rows
-                </Badge>
-                <Badge variant="outline" className="border-border-base">
-                  {campaign.providerMode}
-                </Badge>
-                <Badge variant="outline" className="border-border-base">
-                  {campaign.provisioningStatus}
-                </Badge>
-                {campaign.phoneNumber ? (
-                  <Badge variant="outline" className="border-border-base">
-                    {campaign.phoneNumber}
-                  </Badge>
-                ) : null}
-                <Badge variant="outline" className="border-border-base">
-                  {campaign.transcriptSummaryCount} summaries
-                </Badge>
-                {campaign.callStatuses.map((entry) => (
-                  <Badge
-                    key={`${campaign.id}-${entry.status}`}
-                    variant="outline"
-                    className="border-border-base"
+              <FormDialog
+                trigger={
+                  <Button
+                    size="default"
+                    className={WORKSPACE_TOOL_BUTTON_CLASS_NAME}
                   >
-                    {entry.status}: {entry.count}
-                  </Badge>
-                ))}
-              </div>
-            </WorkspaceSurfaceCard>
-          ))
-        ) : (
-          <WorkspaceEmptyState
-            title="No voice campaigns imported yet."
-            description="Import the first CSV lead batch to stand up the initial voice workflow."
-          />
-        )}
-      </div>
+                    Import Leads
+                  </Button>
+                }
+                title="Create voice campaign"
+                description="Upload a CSV list and the workspace will build a campaign batch against the locked default assistant template."
+                buttonText="Create campaign"
+                handleSubmit={handleCreateCampaign}
+              >
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <Label>Campaign name</Label>
+                    <Input
+                      value={campaignName}
+                      onChange={(event) => setCampaignName(event.target.value)}
+                      placeholder="April Follow-up Calls"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>CSV file</Label>
+                    <Input
+                      type="file"
+                      accept=".csv,text/csv"
+                      onChange={(event) =>
+                        setSelectedFile(event.target.files?.[0] ?? null)
+                      }
+                    />
+                  </div>
+                </div>
+              </FormDialog>
+            </div>
+          </WorkspaceSurfaceCard>
+
+          <div className="grid gap-4">
+            {snapshot.campaigns.length > 0 ? (
+              snapshot.campaigns.map((campaign) => (
+                <WorkspaceSurfaceCard key={campaign.id}>
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <h3 className="text-xl font-semibold text-foreground-primary">
+                        {campaign.title}
+                      </h3>
+                      <p className="mt-2 text-sm text-foreground-secondary">
+                        Template: {campaign.assistantTemplateKey}
+                      </p>
+                    </div>
+                    <Badge variant="outline" className="border-border-base">
+                      {campaign.status}
+                    </Badge>
+                  </div>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <Badge variant="outline" className="border-border-base">
+                      {campaign.rowCount} imported rows
+                    </Badge>
+                    <Badge variant="outline" className="border-border-base">
+                      {campaign.providerMode}
+                    </Badge>
+                    <Badge variant="outline" className="border-border-base">
+                      {campaign.provisioningStatus}
+                    </Badge>
+                    {campaign.phoneNumber ? (
+                      <Badge variant="outline" className="border-border-base">
+                        {campaign.phoneNumber}
+                      </Badge>
+                    ) : null}
+                    <Badge variant="outline" className="border-border-base">
+                      {campaign.transcriptSummaryCount} summaries
+                    </Badge>
+                    {campaign.callStatuses.map((entry) => (
+                      <Badge
+                        key={`${campaign.id}-${entry.status}`}
+                        variant="outline"
+                        className="border-border-base"
+                      >
+                        {entry.status}: {entry.count}
+                      </Badge>
+                    ))}
+                  </div>
+                </WorkspaceSurfaceCard>
+              ))
+            ) : (
+              <WorkspaceEmptyState
+                title="No voice campaigns imported yet."
+                description="Import the first CSV lead batch to stand up the initial voice workflow."
+              />
+            )}
+          </div>
+        </>
+      )}
     </ContentPage>
   )
 }

@@ -1,5 +1,6 @@
 import { requireZeroUpstreamPool } from '@/lib/backend/server-effect/infra/zero-upstream-pool'
 import {
+  dispatchAdHocExecutionToLocalListener,
   listLocalListenersForOrganization,
   listRecentLocalHandoffsForOrganization,
 } from '@/lib/backend/bish/local-listener'
@@ -62,6 +63,10 @@ type ApprovalRow = {
   status: string
   agent_name: string | null
   connector_label: string | null
+  request_summary: string | null
+  requested_target: string | null
+  requested_source: string | null
+  transcript_excerpt: string | null
   created_at: number
 }
 
@@ -585,6 +590,15 @@ export async function createApprovalRequestForOrganization(
   const timestamp = now()
   const targetAgentId = input.agentInstanceId ?? agentInstanceId
 
+  const proposedAction = {
+    connectorAccountId: input.connectorAccountId ?? null,
+    summary: input.requestSummary?.trim() || input.title,
+    requestSource: input.requestSource ?? null,
+    target: input.executionTarget ?? null,
+    commandText: input.commandText?.trim() ?? null,
+    transcript: input.transcript?.trim() ?? null,
+  }
+
   const result = await pool.query<{ id: string }>(
     `
       INSERT INTO approval_requests (
@@ -620,10 +634,7 @@ export async function createApprovalRequestForOrganization(
       requestedByUserId,
       input.approvalType,
       input.title,
-      JSON.stringify({
-        connectorAccountId: input.connectorAccountId ?? null,
-        summary: input.title,
-      }),
+      JSON.stringify(proposedAction),
       timestamp,
     ],
   )
@@ -642,6 +653,9 @@ export async function resolveApprovalRequestForOrganization(
 
   const approvalResult = await pool.query<{
     id: string
+    title: string
+    approval_type: string
+    requested_by_user_id: string
     proposed_action: Record<string, unknown>
   }>(
     `
@@ -653,7 +667,7 @@ export async function resolveApprovalRequestForOrganization(
           updated_at = $4
       WHERE id = $5
         AND organization_id = $6
-      RETURNING id, proposed_action
+      RETURNING id, title, approval_type, requested_by_user_id, proposed_action
     `,
     [
       status,
@@ -666,6 +680,67 @@ export async function resolveApprovalRequestForOrganization(
   )
 
   if (status === 'approved' && approvalResult.rows[0]) {
+    const approval = approvalResult.rows[0]
+    let executionType = 'approved_action'
+    let executionStatus = 'queued'
+    let responsePayload: Record<string, unknown> = {}
+
+    if (approval.approval_type === 'local_execution') {
+      executionType = 'local_listener_handoff'
+
+      try {
+        const target =
+          approval.proposed_action?.target === 'gemini' ||
+          approval.proposed_action?.target === 'codex'
+            ? approval.proposed_action.target
+            : null
+        const requestSource =
+          approval.proposed_action?.requestSource === 'manual' ||
+          approval.proposed_action?.requestSource === 'voice' ||
+          approval.proposed_action?.requestSource === 'chat'
+            ? approval.proposed_action.requestSource
+            : null
+        const commandText =
+          typeof approval.proposed_action?.commandText === 'string'
+            ? approval.proposed_action.commandText.trim()
+            : ''
+        const transcript =
+          typeof approval.proposed_action?.transcript === 'string'
+            ? approval.proposed_action.transcript.trim()
+            : null
+
+        if (!target || !requestSource || commandText.length === 0) {
+          throw new Error(
+            'The approved execution request is missing target, source, or command text.',
+          )
+        }
+
+        const dispatchResult = await dispatchAdHocExecutionToLocalListener({
+          organizationId,
+          requestedByUserId: approval.requested_by_user_id,
+          data: {
+            title: approval.title,
+            target,
+            commandText,
+            requestSource,
+            transcript,
+            approvalRequestId: approval.id,
+          },
+        })
+
+        responsePayload = {
+          handoffId: dispatchResult.handoffId,
+          dispatch: 'queued_to_listener',
+        }
+      } catch (error) {
+        executionStatus = 'failed'
+        responsePayload = {
+          dispatch: 'listener_failed',
+          error: error instanceof Error ? error.message : String(error),
+        }
+      }
+    }
+
     await pool.query(
       `
         INSERT INTO action_executions (
@@ -687,22 +762,25 @@ export async function resolveApprovalRequestForOrganization(
           $3,
           NULL,
           $4,
-          'approved_action',
-          'queued',
-          $5::jsonb,
-          '{}'::jsonb,
+          $5,
           $6,
-          $6
+          $7::jsonb,
+          $8::jsonb,
+          $9,
+          $9
         )
       `,
       [
         crypto.randomUUID(),
         organizationId,
         input.approvalRequestId,
-        typeof approvalResult.rows[0].proposed_action?.connectorAccountId === 'string'
-          ? approvalResult.rows[0].proposed_action.connectorAccountId
+        typeof approval.proposed_action?.connectorAccountId === 'string'
+          ? approval.proposed_action.connectorAccountId
           : null,
-        JSON.stringify(approvalResult.rows[0].proposed_action ?? {}),
+        executionType,
+        executionStatus,
+        JSON.stringify(approval.proposed_action ?? {}),
+        JSON.stringify(responsePayload),
         timestamp,
       ],
     )
@@ -985,6 +1063,10 @@ export async function getOrganizationControlPlaneSnapshot(
             ar.status,
             ai.display_name AS agent_name,
             ca.display_name AS connector_label,
+            ar.proposed_action->>'summary' AS request_summary,
+            ar.proposed_action->>'target' AS requested_target,
+            ar.proposed_action->>'requestSource' AS requested_source,
+            LEFT(COALESCE(ar.proposed_action->>'transcript', ar.proposed_action->>'commandText', ''), 220) AS transcript_excerpt,
             ar.created_at
           FROM approval_requests ar
           LEFT JOIN agent_instances ai
@@ -1118,6 +1200,10 @@ export async function getOrganizationControlPlaneSnapshot(
         status: row.status,
         agentName: row.agent_name,
         connectorLabel: row.connector_label,
+        requestSummary: row.request_summary,
+        requestedTarget: row.requested_target,
+        requestedSource: row.requested_source,
+        transcriptExcerpt: row.transcript_excerpt,
         createdAt: row.created_at,
       }),
     ),

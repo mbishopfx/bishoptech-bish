@@ -1,5 +1,6 @@
 import { getRequestHeaders } from '@tanstack/react-start/server'
 import { getSessionFromHeaders } from '@/lib/backend/auth/services/server-session.service'
+import { getOrganizationControlPlaneSnapshot } from '@/lib/backend/bish/repository'
 import {
   createProject,
   createProjectCard,
@@ -120,7 +121,7 @@ export async function getSocialPublishingSnapshotAction() {
 
 export async function getVoiceCampaignSnapshotAction() {
   const session = await requireWorkspaceToolsSession()
-  const [tooling, campaigns, assistants] = await Promise.all([
+  const [tooling, campaigns, assistants, commandCenter] = await Promise.all([
     getWorkspaceToolingSnapshot({
       organizationId: session.organizationId,
     }),
@@ -130,8 +131,9 @@ export async function getVoiceCampaignSnapshotAction() {
     listVoiceAssistantInstances({
       organizationId: session.organizationId,
     }),
+    getOrganizationControlPlaneSnapshot(session.organizationId),
   ])
-  return { tooling, campaigns, assistants }
+  return { tooling, campaigns, assistants, commandCenter }
 }
 
 export async function getSmsCampaignSnapshotAction() {

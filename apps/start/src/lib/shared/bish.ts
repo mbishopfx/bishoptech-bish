@@ -55,6 +55,10 @@ export type BishApprovalRequestSummary = {
   readonly status: string
   readonly agentName: string | null
   readonly connectorLabel: string | null
+  readonly requestSummary: string | null
+  readonly requestedTarget: string | null
+  readonly requestedSource: string | null
+  readonly transcriptExcerpt: string | null
   readonly createdAt: number
 }
 
@@ -140,9 +144,46 @@ export const scheduleConnectorSyncInput = z.object({
 
 export const createApprovalRequestInput = z.object({
   title: z.string().trim().min(3).max(160),
-  approvalType: z.enum(['email_send', 'calendar_write', 'crm_update', 'asana_write']),
+  approvalType: z.enum([
+    'email_send',
+    'calendar_write',
+    'crm_update',
+    'asana_write',
+    'local_execution',
+  ]),
   connectorAccountId: z.string().trim().min(1).optional(),
   agentInstanceId: z.string().trim().min(1).optional(),
+  requestSummary: z.string().trim().min(3).max(400).optional(),
+  requestSource: z.enum(['manual', 'voice', 'chat']).optional(),
+  executionTarget: z.enum(LOCAL_LISTENER_TARGETS).optional(),
+  commandText: z.string().trim().min(3).max(12_000).optional(),
+  transcript: z.string().trim().max(12_000).optional(),
+}).superRefine((input, context) => {
+  if (input.approvalType !== 'local_execution') return
+
+  if (!input.executionTarget) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['executionTarget'],
+      message: 'Execution target is required for local execution requests.',
+    })
+  }
+
+  if (!input.requestSource) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['requestSource'],
+      message: 'Request source is required for local execution requests.',
+    })
+  }
+
+  if (!input.commandText) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['commandText'],
+      message: 'Command text is required for local execution requests.',
+    })
+  }
 })
 
 export const resolveApprovalRequestInput = z.object({

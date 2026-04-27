@@ -720,6 +720,43 @@ async function buildThreadHandoffMarkdown(input: {
   }
 }
 
+/**
+ * Command-center requests do not originate from an existing chat thread, so we
+ * synthesize the same markdown handoff contract from the approved execution
+ * request. Keeping the output in markdown means the local listener continues to
+ * hand one consistent artifact shape to Gemini/Codex regardless of origin.
+ */
+function buildAdHocExecutionHandoffMarkdown(input: {
+  readonly title: string
+  readonly commandText: string
+  readonly requestSource: 'manual' | 'voice' | 'chat'
+  readonly transcript?: string | null
+}) {
+  const transcriptBlock =
+    input.transcript && input.transcript.trim().length > 0
+      ? [
+          '## Voice Transcript',
+          '',
+          input.transcript.trim(),
+          '',
+        ]
+      : []
+
+  return {
+    title: input.title.trim(),
+    markdown: [
+      `# ${input.title.trim()}`,
+      '',
+      `Request source: ${input.requestSource}`,
+      '',
+      ...transcriptBlock,
+      '## Execution Brief',
+      '',
+      input.commandText.trim(),
+    ].join('\n'),
+  }
+}
+
 async function updateListenerLastSeen(listenerId: string) {
   const pool = requireZeroUpstreamPool()
   const now = Date.now()
@@ -732,6 +769,181 @@ async function updateListenerLastSeen(listenerId: string) {
     `,
     [now, listenerId],
   )
+}
+
+async function queueAndDeliverLocalHandoff(input: {
+  readonly organizationId: string
+  readonly requestedByUserId: string
+  readonly listener: ListenerRow
+  readonly target: 'gemini' | 'codex'
+  readonly title: string
+  readonly handoffMarkdown: string
+  readonly threadId?: string | null
+  readonly metadata?: Record<string, unknown>
+}) {
+  const pool = requireZeroUpstreamPool()
+  const handoffId = crypto.randomUUID()
+  const now = Date.now()
+
+  await pool.query(
+    `
+      INSERT INTO local_handoffs (
+        id,
+        organization_id,
+        listener_registration_id,
+        thread_id,
+        requested_by_user_id,
+        target,
+        status,
+        title,
+        handoff_markdown,
+        metadata,
+        created_at,
+        updated_at
+      )
+      VALUES (
+        $1,
+        $2,
+        $3,
+        $4,
+        $5,
+        $6,
+        'queued',
+        $7,
+        $8,
+        $9::jsonb,
+        $10,
+        $10
+      )
+    `,
+    [
+      handoffId,
+      input.organizationId,
+      input.listener.id,
+      input.threadId ?? null,
+      input.requestedByUserId,
+      input.target,
+      input.title,
+      input.handoffMarkdown,
+      JSON.stringify(input.metadata ?? {}),
+      now,
+    ],
+  )
+
+  const secret = decryptBishSecretJson<string>(
+    input.listener.encrypted_listener_secret,
+  )
+  const payload: LocalListenerHandoffPayload = {
+    handoffId,
+    organizationId: input.organizationId,
+    threadId: input.threadId ?? null,
+    title: input.title,
+    target: input.target,
+    systemPrompt:
+      input.listener.system_prompt_template?.trim() || buildDefaultSystemPrompt(),
+    handoffMarkdown: input.handoffMarkdown,
+    createdAt: now,
+  }
+  const body = JSON.stringify(payload)
+  const timestamp = String(now)
+  const signature = buildLocalListenerSignature({
+    secret,
+    timestamp,
+    body,
+  })
+
+  try {
+    let delivered = false
+    let lastError: Error | null = null
+    const retryDelaysMs = [0, 1_500, 4_000]
+
+    for (const [attemptIndex, delayMs] of retryDelaysMs.entries()) {
+      if (delayMs > 0) {
+        await sleep(delayMs)
+      }
+
+      try {
+        const response = await fetch(input.listener.endpoint_url!, {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            'x-bish-timestamp': timestamp,
+            'x-bish-signature': signature,
+          },
+          body,
+        })
+
+        if (!response.ok) {
+          const message = await response.text()
+          const responseError = new Error(
+            message || 'Listener endpoint rejected the handoff.',
+          )
+
+          if (
+            !isRetryableListenerDeliveryFailure({
+              status: response.status,
+            }) ||
+            attemptIndex === retryDelaysMs.length - 1
+          ) {
+            throw responseError
+          }
+
+          lastError = responseError
+          continue
+        }
+
+        delivered = true
+        break
+      } catch (error) {
+        const normalizedError =
+          error instanceof Error ? error : new Error(String(error))
+
+        if (
+          !isRetryableListenerDeliveryFailure({
+            error: normalizedError,
+          }) ||
+          attemptIndex === retryDelaysMs.length - 1
+        ) {
+          throw normalizedError
+        }
+
+        lastError = normalizedError
+      }
+    }
+
+    if (!delivered) {
+      throw lastError ?? new Error('Listener endpoint rejected the handoff.')
+    }
+
+    await pool.query(
+      `
+        UPDATE local_handoffs
+        SET status = 'delivered',
+            delivered_at = $1,
+            updated_at = $1
+        WHERE id = $2
+      `,
+      [Date.now(), handoffId],
+    )
+    await updateListenerLastSeen(input.listener.id)
+    return { handoffId }
+  } catch (error) {
+    await pool.query(
+      `
+        UPDATE local_handoffs
+        SET status = 'failed',
+            error_message = $1,
+            updated_at = $2
+        WHERE id = $3
+      `,
+      [
+        error instanceof Error ? error.message : String(error),
+        Date.now(),
+        handoffId,
+      ],
+    )
+    throw error
+  }
 }
 
 export async function registerLocalListenerFromSecret(input: {
@@ -820,164 +1032,64 @@ export async function dispatchThreadToLocalListener(input: {
     organizationId: input.organizationId,
     threadId: input.data.threadId,
   })
-  const handoffId = crypto.randomUUID()
-  const now = Date.now()
-
-  await pool.query(
-    `
-      INSERT INTO local_handoffs (
-        id,
-        organization_id,
-        listener_registration_id,
-        thread_id,
-        requested_by_user_id,
-        target,
-        status,
-        title,
-        handoff_markdown,
-        metadata,
-        created_at,
-        updated_at
-      )
-      VALUES (
-        $1,
-        $2,
-        $3,
-        $4,
-        $5,
-        $6,
-        'queued',
-        $7,
-        $8,
-        '{}'::jsonb,
-        $9,
-        $9
-      )
-    `,
-    [
-      handoffId,
-      input.organizationId,
-      listener.id,
-      input.data.threadId,
-      input.requestedByUserId,
-      input.data.target,
-      handoff.title,
-      handoff.markdown,
-      now,
-    ],
-  )
-
-  const secret = decryptBishSecretJson<string>(listener.encrypted_listener_secret)
-  const payload: LocalListenerHandoffPayload = {
-    handoffId,
+  await queueAndDeliverLocalHandoff({
     organizationId: input.organizationId,
-    threadId: input.data.threadId,
-    title: handoff.title,
+    requestedByUserId: input.requestedByUserId,
+    listener,
     target: input.data.target,
-    systemPrompt:
-      listener.system_prompt_template?.trim() || buildDefaultSystemPrompt(),
+    title: handoff.title,
     handoffMarkdown: handoff.markdown,
-    createdAt: now,
+    threadId: input.data.threadId,
+  })
+}
+
+export async function dispatchAdHocExecutionToLocalListener(input: {
+  readonly organizationId: string
+  readonly requestedByUserId: string
+  readonly data: {
+    readonly title: string
+    readonly target: 'gemini' | 'codex'
+    readonly commandText: string
+    readonly requestSource: 'manual' | 'voice' | 'chat'
+    readonly transcript?: string | null
+    readonly approvalRequestId?: string | null
   }
-  const body = JSON.stringify(payload)
-  const timestamp = String(now)
-  const signature = buildLocalListenerSignature({
-    secret,
-    timestamp,
-    body,
+}) {
+  const listener = await readPrimaryListenerForOrganization(input.organizationId)
+  if (!listener || !listener.endpoint_url) {
+    throw new Error('Register a local listener endpoint before sending handoffs.')
+  }
+
+  const supportedTargets = Array.isArray(listener.supported_targets)
+    ? listener.supported_targets
+    : []
+  if (!supportedTargets.includes(input.data.target)) {
+    throw new Error(`The registered listener does not support ${input.data.target}.`)
+  }
+
+  const handoff = buildAdHocExecutionHandoffMarkdown({
+    title: input.data.title,
+    commandText: input.data.commandText,
+    requestSource: input.data.requestSource,
+    transcript: input.data.transcript,
   })
 
-  try {
-    let delivered = false
-    let lastError: Error | null = null
-    const retryDelaysMs = [0, 1_500, 4_000]
-
-    for (const [attemptIndex, delayMs] of retryDelaysMs.entries()) {
-      if (delayMs > 0) {
-        await sleep(delayMs)
-      }
-
-      try {
-        const response = await fetch(listener.endpoint_url, {
-          method: 'POST',
-          headers: {
-            'content-type': 'application/json',
-            'x-bish-timestamp': timestamp,
-            'x-bish-signature': signature,
-          },
-          body,
-        })
-
-        if (!response.ok) {
-          const message = await response.text()
-          const responseError = new Error(
-            message || 'Listener endpoint rejected the handoff.',
-          )
-
-          if (
-            !isRetryableListenerDeliveryFailure({
-              status: response.status,
-            }) ||
-            attemptIndex === retryDelaysMs.length - 1
-          ) {
-            throw responseError
-          }
-
-          lastError = responseError
-          continue
-        }
-
-        delivered = true
-        break
-      } catch (error) {
-        const normalizedError =
-          error instanceof Error ? error : new Error(String(error))
-
-        if (
-          !isRetryableListenerDeliveryFailure({
-            error: normalizedError,
-          }) ||
-          attemptIndex === retryDelaysMs.length - 1
-        ) {
-          throw normalizedError
-        }
-
-        lastError = normalizedError
-      }
-    }
-
-    if (!delivered) {
-      throw lastError ?? new Error('Listener endpoint rejected the handoff.')
-    }
-
-    await pool.query(
-      `
-        UPDATE local_handoffs
-        SET status = 'delivered',
-            delivered_at = $1,
-            updated_at = $1
-        WHERE id = $2
-      `,
-      [Date.now(), handoffId],
-    )
-    await updateListenerLastSeen(listener.id)
-  } catch (error) {
-    await pool.query(
-      `
-        UPDATE local_handoffs
-        SET status = 'failed',
-            error_message = $1,
-            updated_at = $2
-        WHERE id = $3
-      `,
-      [
-        error instanceof Error ? error.message : String(error),
-        Date.now(),
-        handoffId,
-      ],
-    )
-    throw error
-  }
+  return queueAndDeliverLocalHandoff({
+    organizationId: input.organizationId,
+    requestedByUserId: input.requestedByUserId,
+    listener,
+    target: input.data.target,
+    title: handoff.title,
+    handoffMarkdown: handoff.markdown,
+    metadata: {
+      source: 'command_center',
+      requestSource: input.data.requestSource,
+      approvalRequestId: input.data.approvalRequestId ?? null,
+      transcriptIncluded:
+        typeof input.data.transcript === 'string' &&
+        input.data.transcript.trim().length > 0,
+    },
+  })
 }
 
 export async function reportLocalListenerArtifactsFromSecret(input: {

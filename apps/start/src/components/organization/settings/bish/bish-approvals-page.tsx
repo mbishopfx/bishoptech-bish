@@ -139,6 +139,18 @@ export function BishApprovalsPage({
                 ? ` · ${row.original.connectorLabel}`
                 : ''}
             </p>
+            {row.original.requestSummary ? (
+              <p className="text-xs text-foreground-secondary">
+                {row.original.requestSummary}
+              </p>
+            ) : null}
+            {row.original.requestedTarget || row.original.requestedSource ? (
+              <p className="text-[11px] uppercase tracking-[0.12em] text-foreground-tertiary">
+                {[row.original.requestedTarget, row.original.requestedSource]
+                  .filter(Boolean)
+                  .join(' · ')}
+              </p>
+            ) : null}
           </div>
         ),
       },
